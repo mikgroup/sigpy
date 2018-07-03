@@ -1,11 +1,14 @@
 sigpy
 =====
-This is a Python package for signal reconstruction.
+This is a Python package for signal reconstruction, with GPU support using cupy.
 
 Requirements
 ------------
-This package requires python3, numpy, scipy, pywavelets, and numba. For optional gpu support, the package requires cupy, and for optional parallel programming support, the package requires mpi4py.
-The easiest way to setup for this package is to install python3 through Anaconda.
+This package requires python3, numpy, scipy, pywavelets, and numba. 
+
+For optional gpu support, the package requires cupy.
+
+For optional distributed programming support, the package requires mpi4py.
 
 Installation through Anaconda
 -----------------------------
@@ -27,11 +30,6 @@ To enable mpi support, you can optionally install:
 
 	conda install mpi4py
 	
-To get full performance on cpu, you can optionally install the intel based python. I recommend creating an environment:
-
-	conda create -c intel -n idp intelpython3_full
-	source activate idp
-
 Finally to link the package, go to the main directory with the setup.py script and run:
 
     python setup.py develop
