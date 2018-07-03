@@ -160,6 +160,17 @@ class GradientMethod(Alg):
 
 
 class ConjugateGradient(Alg):
+    '''Conjugate Gradient Method. Solves for A x = b.
+
+    Parameters
+    ----------
+    A - function to compute a hermitian mapping.
+    b - array.
+    x - array.
+    P - function to precondition, optional.
+    max_iter - int
+        maximum number of iterations.
+    '''
 
     def __init__(self, A, b, x, P=lambda x: x, max_iter=100):
         self.A = A
@@ -274,17 +285,19 @@ class PrimalDualHybridGradient(Alg):
     Or equivalently:
     min_x F(A x) + G(x)
 
-    Examples
-    --------
-    F(A x) = 1 / 2 || A x - y ||^2
-    F^*(u) = 1 / 2 || u ||^2 - < y, u >
-    proxfc(v) = (v - lamda * y) / (1 + lamda)
-
-    Examples
-    --------
-    F(A x) = I{|| A x - y ||_2 < e}
-    F^*(u) = e * || u ||_2 - <y, u>
-    proxfc(v) = (||v - lamda * y||_2 - lamda * e)_+ * (v - lamda * y)
+    Parameters
+    ----------
+    proxfc - function to compute proximal operator of F^*
+    proxg - function to compute proximal operator of G
+    A - function to compute linear mapping A.
+    AH - function to compute adjoint linear mapping of A.
+    x - array.
+    u - array.
+    tau - float.
+    sigma - float.
+    theta - float.
+    max_iter - int, optional.
+        maximum number of iterations.
     '''
 
     def __init__(
