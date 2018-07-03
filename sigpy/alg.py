@@ -5,12 +5,13 @@ from sigpy import util, config
 if config.cupy_enabled:
     import cupy as cp
 
-__all__ = ['PowerMethod', 'GradientMethod', 'PrimalDualHybridGradient', 'AltMin']
+__all__ = ['PowerMethod', 'GradientMethod',
+           'PrimalDualHybridGradient', 'AltMin']
 
 
 class Alg(object):
     '''Iterative algorithm object.
-    
+
     Parameters
     ----------
     max_iter: int, maximum number of iterations.
@@ -42,11 +43,11 @@ class Alg(object):
         self.iter = 0
         with self.device:
             self._init()
-                
+
     def update(self):
         with self.device:
             self._update()
-                
+
             self.iter += 1
             self._print()
 
@@ -69,6 +70,7 @@ class PowerMethod(Alg):
     ----------
         max_eig (float) - maximum eigenvalue.
     '''
+
     def __init__(self, A, x, max_iter=30):
         self.A = A
         self.x = x
@@ -83,7 +85,7 @@ class PowerMethod(Alg):
         y = self.A(self.x)
         self.max_eig = util.norm(y)
         self.x[:] = y / self.max_eig
-        
+
     def _print(self):
         self.logger.debug('Iteration={iter}/{max_iter}, Maximum Eigenvalue={max_eig}'.format(
             iter=self.iter, max_iter=self.max_iter, max_eig=self.max_eig))
@@ -143,11 +145,11 @@ class GradientMethod(Alg):
             self.residual = util.norm(self.x - self.x_old) / self.alpha
         else:
             self.residual = util.norm(gradf_x)
-            
+
     def _print(self):
         self.logger.debug('Iteration={iter}/{max_iter}, Residual={residual}'.format(
             iter=self.iter, max_iter=self.max_iter, residual=self.residual))
-            
+
     def _cleanup(self):
         if self.accelerate:
             del self.z
@@ -175,12 +177,12 @@ class ConjugateGradient(Alg):
             self.p = z.copy()
         else:
             self.p = z
-            
+
         self.zero_gradient = False
-            
+
         self.rzold = util.dot(self.r, z)
         self.residual = util.move(self.rzold**0.5, util.cpu_device)
-        
+
     def _update(self):
         Ap = self.A(self.p)
         pAp = util.dot(self.p, Ap)
@@ -188,13 +190,13 @@ class ConjugateGradient(Alg):
         if pAp == 0:
             self.zero_gradient = True
             return
-        
+
         self.alpha = self.rzold / pAp
         util.axpy(self.x, self.alpha, self.p)
 
         if self.iter < self.max_iter - 1:
             util.axpy(self.r, -self.alpha, Ap)
-            
+
             z = self.P(self.r)
             rznew = util.dot(self.r, z)
             beta = rznew / self.rzold
@@ -211,11 +213,11 @@ class ConjugateGradient(Alg):
     def _print(self):
         self.logger.debug('Iteration={iter}/{max_iter}, Residual={residual}'.format(
             iter=self.iter, max_iter=self.max_iter, residual=self.residual))
-    
+
     def _cleanup(self):
         del self.r
         del self.p
-        del self.rzold    
+        del self.rzold
 
 
 class NewtonsMethod(Alg):
@@ -314,7 +316,8 @@ class PrimalDualHybridGradient(Alg):
         self.u_old[:] = self.u
         self.x_old[:] = self.x
 
-        self.u[:] = self.proxfc(self.sigma, self.u + self.sigma * self.A(self.x_ext))
+        self.u[:] = self.proxfc(self.sigma, self.u +
+                                self.sigma * self.A(self.x_ext))
 
         self.x[:] = self.proxg(self.tau, self.x - self.tau * self.AH(self.u))
 
@@ -328,7 +331,7 @@ class PrimalDualHybridGradient(Alg):
 
 class AltMin(Alg):
     """Alternating Minimization.
-    
+
     Args:
         min1 (function): function to minimize over variable 1.
         min2 (function): funciton to minimize over variable 2.

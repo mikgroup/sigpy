@@ -4,6 +4,7 @@ from sigpy import config, util, thresh
 if config.cupy_enabled:
     import cupy as cp
 
+
 class Prox(object):
     '''
     Abstraction for proximal operator
@@ -18,13 +19,13 @@ class Prox(object):
             self.repr_str = repr_str
 
     def _check_input(self, input):
-                
+
         if list(input.shape) != self.shape:
             raise ValueError('input shape mismatch for {s}, got {input_shape}.'.format(
                 s=self, input_shape=input.shape))
-        
+
     def _check_output(self, output):
-        
+
         if list(output.shape) != self.shape:
             raise ValueError('output shape mismatch, for {s}, got {output_shape}.'.format(
                 s=self, output_shape=output.shape))
@@ -36,7 +37,7 @@ class Prox(object):
         return output
 
     def __repr__(self):
-            
+
         return '<{shape} {repr_str} Prox>.'.format(shape=self.shape, repr_str=self.repr_str)
 
 
@@ -92,9 +93,10 @@ class Stack(Prox):
     def _prox(self, alpha, input):
 
         inputs = util.split(input, self.shapes)
-        outputs = [prox(alpha, input) for prox, input in zip(self.proxs, inputs)]
+        outputs = [prox(alpha, input)
+                   for prox, input in zip(self.proxs, inputs)]
         output = util.vec(outputs)
-        
+
         return output
 
 
@@ -172,7 +174,7 @@ class L1Reg(Prox):
             return thresh.soft_thresh(self.lamda * alpha, input)
         else:
             return self.transform.H(thresh.soft_thresh(self.lamda * alpha,
-                                                     self.transform(input)))
+                                                       self.transform(input)))
 
 
 class L0Proj(Prox):
@@ -186,7 +188,7 @@ class L0Proj(Prox):
     '''
 
     def __init__(self, shape, k, axes=None):
-        
+
         self.k = k
         self.axes = axes
 
@@ -208,7 +210,7 @@ class L1Proj(Prox):
     '''
 
     def __init__(self, shape, epsilon):
-        
+
         self.epsilon = epsilon
 
         super().__init__(shape)
@@ -229,7 +231,7 @@ class L1L2Reg(Prox):
         self.axes = axes
 
         super().__init__(shape)
-    
+
     def _prox(self, alpha, input):
 
         return thresh.elitist_thresh(self.lamda * alpha, input, axes=self.axes)

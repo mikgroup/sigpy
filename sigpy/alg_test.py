@@ -14,7 +14,8 @@ class TestAlg(unittest.TestCase):
         A = np.random.random([n, n])
         x = np.random.random([n])
 
-        alg_method = alg.PowerMethod(lambda x: np.matmul(A.T, np.matmul(A, x)), x)
+        alg_method = alg.PowerMethod(
+            lambda x: np.matmul(A.T, np.matmul(A, x)), x)
 
         alg_method.init()
         while(not alg_method.done()):
@@ -30,7 +31,8 @@ class TestAlg(unittest.TestCase):
         x_orig = np.random.random([n])
         y = np.matmul(A, x_orig)
         lamda = 1.0
-        x_truth = np.linalg.solve(np.matmul(A.T, A) + lamda * np.eye(n), np.matmul(A.T, y))
+        x_truth = np.linalg.solve(
+            np.matmul(A.T, A) + lamda * np.eye(n), np.matmul(A.T, y))
 
         # Compute step-size
         lipschitz = np.linalg.svd(
@@ -112,7 +114,8 @@ class TestAlg(unittest.TestCase):
         x_orig = np.random.random([n])
         y = np.matmul(A, x_orig)
         lamda = 1.0
-        x_truth = np.linalg.solve(np.matmul(A.T, A) + lamda * np.eye(n), np.matmul(A.T, y))
+        x_truth = np.linalg.solve(
+            np.matmul(A.T, A) + lamda * np.eye(n), np.matmul(A.T, y))
 
         # Compute step-size
         lipschitz = np.linalg.svd(np.matmul(A.T, A), compute_uv=False)[0]

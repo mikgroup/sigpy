@@ -28,13 +28,16 @@ class TestApp(unittest.TestCase):
         img, mps, ksp = self.shepp_logan_setup()
         lamda = 0
 
-        img_rec = app.SenseRecon(ksp, mps, lamda, alg_name='ConjugateGradient').run()
+        img_rec = app.SenseRecon(
+            ksp, mps, lamda, alg_name='ConjugateGradient').run()
         npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
 
-        img_rec = app.SenseRecon(ksp, mps, lamda, alg_name='GradientMethod').run()
+        img_rec = app.SenseRecon(
+            ksp, mps, lamda, alg_name='GradientMethod').run()
         npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
 
-        img_rec = app.SenseRecon(ksp, mps, lamda, alg_name='PrimalDualHybridGradient').run()
+        img_rec = app.SenseRecon(
+            ksp, mps, lamda, alg_name='PrimalDualHybridGradient').run()
         npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
 
     def test_shepp_logan_SenseConstrainedRecon(self):
@@ -48,7 +51,8 @@ class TestApp(unittest.TestCase):
         img, mps, ksp = self.shepp_logan_setup()
         lamda = 0
 
-        img_rec = app.WaveletRecon(ksp, mps, lamda, alg_name='GradientMethod').run()
+        img_rec = app.WaveletRecon(
+            ksp, mps, lamda, alg_name='GradientMethod').run()
         npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
 
         img_rec = app.WaveletRecon(ksp, mps, lamda, alg_name='PrimalDualHybridGradient',

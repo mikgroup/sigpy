@@ -53,7 +53,8 @@ class Line(object):
             eps = 1e-31
             arrv = np.log(np.abs(self.arr[slices]) + eps)
 
-        self.fig.canvas.mpl_disconnect(self.fig.canvas.manager.key_press_handler_id)
+        self.fig.canvas.mpl_disconnect(
+            self.fig.canvas.manager.key_press_handler_id)
         self.fig.canvas.mpl_connect('key_press_event', self.key_press)
         self.update_axes()
         self.update_line()
@@ -64,10 +65,11 @@ class Line(object):
         if event.key == 'up':
 
             if self.d != self.x:
-                self.slices[self.d] = (self.slices[self.d] + 1) % self.shape[self.d]
+                self.slices[self.d] = (
+                    self.slices[self.d] + 1) % self.shape[self.d]
             else:
                 self.flips[self.d] *= -1
-                
+
             self.update_axes()
             self.update_line()
             self.fig.canvas.draw()
@@ -75,10 +77,11 @@ class Line(object):
         elif event.key == 'down':
 
             if self.d != self.x:
-                self.slices[self.d] = (self.slices[self.d] - 1) % self.shape[self.d]
+                self.slices[self.d] = (
+                    self.slices[self.d] - 1) % self.shape[self.d]
             else:
                 self.flips[self.d] *= -1
-                
+
             self.update_axes()
             self.update_line()
             self.fig.canvas.draw()
@@ -86,28 +89,28 @@ class Line(object):
         elif event.key == 'left':
 
             self.d = (self.d - 1) % self.ndim
-            
+
             self.update_axes()
             self.fig.canvas.draw()
 
         elif event.key == 'right':
 
             self.d = (self.d + 1) % self.ndim
-            
+
             self.update_axes()
             self.fig.canvas.draw()
 
         elif event.key == 'x' and self.d != self.x:
 
             self.x = self.d
-            
+
             self.update_axes()
             self.update_line()
             self.fig.canvas.draw()
 
         elif event.key == 'h':
             self.hide = not self.hide
-            
+
             self.update_axes()
             self.fig.canvas.draw()
 
@@ -118,29 +121,33 @@ class Line(object):
               event.key == 'r' or event.key == 'i' or event.key == 'l'):
 
             self.mode = event.key
-                
+
             self.update_axes()
             self.update_line()
             self.fig.canvas.draw()
 
         elif event.key == 's':
-            file_path = filedialog.asksaveasfilename(filetypes = (("png files","*.png"),
-                                                                  ("pdf files","*.pdf"),
-                                                                  ("eps files","*.eps"),
-                                                                  ("svg files","*.svg"),
-                                                                  ("jpeg files","*.jpg"),
-                                                                  ("all files","*.*")))
+            file_path = filedialog.asksaveasfilename(filetypes=(("png files", "*.png"),
+                                                                ("pdf files",
+                                                                 "*.pdf"),
+                                                                ("eps files",
+                                                                 "*.eps"),
+                                                                ("svg files",
+                                                                 "*.svg"),
+                                                                ("jpeg files",
+                                                                 "*.jpg"),
+                                                                ("all files", "*.*")))
 
             if not file_path:
                 return
-            
+
         elif event.key == 'v':
-            file_path = filedialog.asksaveasfilename(filetypes = (("mp4 files","*.mp4"),
-                                                                  ("all files","*.*")))
-            
+            file_path = filedialog.asksaveasfilename(filetypes=(("mp4 files", "*.mp4"),
+                                                                ("all files", "*.*")))
+
             if not file_path:
                 return
-            
+
             try:
                 FFMpegWriter = ani.writers['ffmpeg']
             except:
@@ -183,10 +190,9 @@ class Line(object):
             eps = 1e-31
             arrv = np.log(np.abs(arrv) + eps)
 
-
         if self.axarr is None:
             self.axarr = self.ax.plot(arrv)[0]
-            
+
         else:
             self.axarr.set_xdata(np.arange(len(arrv)))
             self.axarr.set_ydata(arrv)

@@ -20,7 +20,7 @@ class TestConv(unittest.TestCase):
             x2 = np.array([1, 1, 1], np.complex)
             y = conv.convolve(x1, x2, mode=mode)
             npt.assert_allclose(y, convolve(x1, x2, mode=mode), atol=1e-10)
-            
+
             x1 = np.array([[0, 1, 0]], np.complex)
             x2 = np.array([[1, 1, 1]] * 2, np.complex)
             y = conv.convolve(x1, x2, mode=mode)
@@ -56,7 +56,7 @@ class TestConv(unittest.TestCase):
             npt.assert_allclose(y, correlate(x1, x2, mode=mode), atol=1e-10)
 
     if config.cudnn_enabled:
-        
+
         def test_cudnn_convolve(self):
 
             for dtype in [np.float, np.complex]:
@@ -68,7 +68,7 @@ class TestConv(unittest.TestCase):
                     y = conv.convolve(x, W.reshape([5, 2, 3]), mode=mode)
                     cp.testing.assert_allclose(y, conv.cudnn_convolve(x, W, mode=mode),
                                                atol=1e-5, rtol=1e-5)
-                    
+
         def test_cudnn_convolve_backward_data(self):
 
             for dtype in [np.float, np.complex]:
@@ -84,7 +84,7 @@ class TestConv(unittest.TestCase):
                     x = conv.cudnn_convolve_backward_data(W, y, mode=mode)
 
                     npt.assert_allclose(x_shape, x.shape)
-                    
+
         def test_cudnn_convolve_backward_filter(self):
 
             for dtype in [np.float, np.complex]:
@@ -100,5 +100,3 @@ class TestConv(unittest.TestCase):
                     W = conv.cudnn_convolve_backward_filter(x, y, mode=mode)
 
                     npt.assert_allclose(W_shape, W.shape)
-
-                    

@@ -20,7 +20,7 @@ class SenseMultiply(sp.linop.Linop):
                 mps = self.mps.asarray()
             else:
                 mps = self.mps
-                
+
             return input * mps
 
     def _adjoint_linop(self):
@@ -52,7 +52,7 @@ class SenseCombine(sp.linop.Linop):
     def _adjoint_linop(self):
 
         return SenseMultiply(self.mps)
-                
+
 
 def Sense(mps, coord=None):
 
@@ -75,28 +75,28 @@ def ConvSense(img_ker_shape, mps_ker, coord=None):
     ndim = len(img_ker_shape)
     A = sp.linop.Convolve(
         img_ker_shape, mps_ker, axes=range(-ndim, 0), mode='valid')
-    
+
     if coord is not None:
         num_coils = mps_ker.shape[0]
         grd_shape = [num_coils] + util.estimate_img_shape(coord)
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
         A = N * iF * A
-        
+
     return A
 
 
 def ConvImage(mps_ker_shape, img_ker, coord=None):
     ndim = img_ker.ndim
-    
+
     A = sp.linop.Convolve(
         mps_ker_shape, img_ker, axes=range(-ndim, 0), mode='valid')
-    
+
     if coord is not None:
         num_coils = mps_ker_shape[0]
         grd_shape = [num_coils] + util.estimate_img_shape(coord)
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
         A = N * iF * A
-        
+
     return A

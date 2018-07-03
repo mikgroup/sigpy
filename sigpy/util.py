@@ -36,12 +36,13 @@ class Device(object):
         else:
             raise ValueError('Only accepts int, Device or cupy device as input, got {input}'.format(
                 input=input))
-                             
+
         if id != -1:
             if config.cupy_enabled:
                 self.device = cp.cuda.device.Device(id)
             else:
-                raise ValueError('cupy not installed, but set device {id}'.format(id=id))
+                raise ValueError(
+                    'cupy not installed, but set device {id}'.format(id=id))
 
         self.id = id
 
@@ -53,7 +54,7 @@ class Device(object):
             return cp
 
     def __eq__(self, other):
-        
+
         if isinstance(other, int):
             return self.id == other
         elif isinstance(other, Device):
@@ -81,8 +82,8 @@ class Device(object):
             return '<cpu Device>'
         else:
             return '<gpu{id} Device>'.format(id=self.id)
-        
-            
+
+
 cpu_device = Device(-1)
 
 
@@ -91,7 +92,8 @@ def profile(func):
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
-        logging.info('%s takes %f secs', func.__qualname__, end_time - start_time)
+        logging.info('%s takes %f secs', func.__qualname__,
+                     end_time - start_time)
         return result
 
     return wrap
@@ -110,10 +112,10 @@ def _expand_shapes(*shapes):
     max_ndim = max(len(shape) for shape in shapes)
     shapes_exp = [[1] * (max_ndim - len(shape)) + shape
                   for shape in shapes]
-    
+
     return tuple(shapes_exp)
 
-      
+
 def _check_same_dtype(*arrays):
 
     dtype = arrays[0].dtype
@@ -151,7 +153,7 @@ def move(input, device=cpu_device):
     else:
         with device:
             output = cp.array(input)
-                
+
     return output
 
 
@@ -168,7 +170,7 @@ def move_to(output, input):
     elif get_device(input) == cpu_device:
         with get_device(output):
             output.set(input)
-        
+
     else:
         with get_device(output):
             output[:] = cp.array(input)
@@ -224,17 +226,19 @@ def rss(input, axes=(0, )):
 
 
 def resize(input, oshape, ishift=None, oshift=None):
-    
+
     ishape_exp, oshape_exp = _expand_shapes(input.shape, oshape)
-    
+
     if ishape_exp == oshape_exp:
         return input.reshape(oshape)
 
     if ishift is None:
-        ishift = [max(i // 2 - o // 2, 0) for i, o in zip(ishape_exp, oshape_exp)]
-        
+        ishift = [max(i // 2 - o // 2, 0)
+                  for i, o in zip(ishape_exp, oshape_exp)]
+
     if oshift is None:
-        oshift = [max(o // 2 - i // 2, 0) for i, o in zip(ishape_exp, oshape_exp)]
+        oshift = [max(o // 2 - i // 2, 0)
+                  for i, o in zip(ishape_exp, oshape_exp)]
 
     copy_shape = [min(i - si, o - so) for i, si, o, so in zip(ishape_exp, ishift,
                                                               oshape_exp, oshift)]
@@ -278,11 +282,11 @@ def circshift(input, shifts, axes=None):
     assert(len(axes) == len(shifts))
     device = get_device(input)
     xp = device.xp
-        
+
     with device:
         for axis, shift in zip(axes, shifts):
             input = xp.roll(input, shift, axis=axis)
-            
+
         return input
 
 
@@ -317,7 +321,7 @@ def dirac(shape, dtype=np.complex, device=cpu_device):
 
     device = Device(device)
     xp = device.xp
-        
+
     with device:
         return resize(xp.ones([1], dtype=dtype), shape)
 
@@ -326,74 +330,77 @@ def randn(shape, scale=1, dtype=np.complex, device=cpu_device):
 
     device = Device(device)
     xp = device.xp
-        
+
     with device:
         if np.issubdtype(dtype, np.complexfloating):
-            output = (xp.random.normal(size=shape, scale=scale / 2**0.5) * 1j).astype(dtype)
+            output = (xp.random.normal(
+                size=shape, scale=scale / 2**0.5) * 1j).astype(dtype)
             output += xp.random.normal(size=shape, scale=scale / 2**0.5)
             return output
         else:
             return xp.random.normal(size=shape, scale=scale).astype(dtype)
 
+
 def randn_like(input, scale=1):
 
     return randn(input.shape, scale=scale, dtype=input.dtype, device=get_device(input))
 
-        
+
 def array(arr, dtype=np.complex, device=cpu_device):
 
     device = Device(device)
     xp = device.xp
-        
+
     with device:
         return xp.array(arr, dtype=dtype)
 
-        
+
 def empty(shape, dtype=np.complex, device=cpu_device):
 
     device = Device(device)
     xp = device.xp
-        
+
     with device:
         return xp.empty(shape, dtype=dtype)
+
 
 def empty_like(input):
 
     return empty(input.shape, dtype=input.dtype, device=get_device(input))
 
-        
+
 def zeros(shape, dtype=np.complex, device=cpu_device):
 
     device = Device(device)
     xp = device.xp
-        
+
     with device:
         return xp.zeros(shape, dtype=dtype)
 
-    
+
 def zeros_like(input):
 
     return zeros(input.shape, dtype=input.dtype, device=get_device(input))
 
-        
+
 def ones(shape, dtype=np.complex, device=cpu_device):
 
     device = Device(device)
     xp = device.xp
-        
+
     with device:
         return xp.ones(shape, dtype=dtype)
 
-    
+
 def ones_like(input):
 
     return ones(input.shape, dtype=input.dtype, device=get_device(input))
 
-        
+
 def dot(input1, input2):
     device = get_device(input1)
     xp = device.xp
-    
+
     with device:
         return xp.real(xp.vdot(input1, input2))
 
@@ -401,14 +408,14 @@ def dot(input1, input2):
 def norm2(input):
     device = get_device(input)
     xp = device.xp
-    
+
     return dot(input, input)
 
 
 def norm(input):
     device = get_device(input)
     xp = device.xp
-    
+
     with device:
         return norm2(input)**0.5
 
@@ -429,26 +436,27 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
     b = randn(y.shape, dtype=y.dtype, device=device)
     with device:
         divf_y = dot(b, (f(y + eps * b) - f_y)) / eps
-        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + 2 * sigma**2 * divf_y / n
+        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + \
+            2 * sigma**2 * divf_y / n
 
     return sure
-    
+
 
 def get_ugly_number(n):
     if n <= 1:
         return n
-    
+
     ugly_nums = [1]
     i2, i3, i5 = 0, 0, 0
     while(True):
-        
+
         ugly_num = min(ugly_nums[i2] * 2,
                        ugly_nums[i3] * 3,
                        ugly_nums[i5] * 5)
 
         if ugly_num >= n:
             return ugly_num
-        
+
         ugly_nums.append(ugly_num)
         if ugly_num == ugly_nums[i2] * 2:
             i2 += 1
@@ -457,7 +465,7 @@ def get_ugly_number(n):
         elif ugly_num == ugly_nums[i5] * 5:
             i5 += 1
 
-            
+
 def axpy(y, a, x):
 
     device = get_device(x)
@@ -470,7 +478,7 @@ def axpy(y, a, x):
         else:
             _axpy_cuda(y, a, x)
 
-            
+
 def xpay(y, a, x):
 
     device = get_device(y)
@@ -483,17 +491,19 @@ def xpay(y, a, x):
         else:
             _xpay_cuda(y, a, x)
 
-            
+
 @nb.vectorize(nopython=True, cache=True)
 def _axpy(y, a, x):
     return a * x + y
+
 
 @nb.vectorize(nopython=True, cache=True)
 def _xpay(y, a, x):
     return x + a * y
 
+
 if config.cupy_enabled:
-    
+
     _axpy_cuda = cp.ElementwiseKernel(
         'T y, S a, T x',
         '',
@@ -501,7 +511,7 @@ if config.cupy_enabled:
         y += (T) a * x;
         ''',
         name='axpy')
-    
+
     _xpay_cuda = cp.ElementwiseKernel(
         'T y, S a, T x',
         '',
@@ -524,11 +534,12 @@ class Comm(object):
                 nccl_comm_id = nccl.get_unique_id()
             else:
                 nccl_comm_id = None
-                
+
             nccl_comm_id = self.mpi_comm.bcast(nccl_comm_id)
 
             with self.device:
-                self.nccl_comm = nccl.NcclCommunicator(self.mpi_size, nccl_comm_id, self.mpi_rank)
+                self.nccl_comm = nccl.NcclCommunicator(
+                    self.mpi_size, nccl_comm_id, self.mpi_rank)
 
     def allreduce(self, input):
         if get_device(input) == cpu_device:
@@ -548,7 +559,8 @@ class Comm(object):
                     nccl_dtype = nccl.NCCL_FLOAT64
                     nccl_size = input.size * 2
                 else:
-                    raise ValueError('dtype not supported, got {dtype}.'.format(dtype=input.dtype))
+                    raise ValueError(
+                        'dtype not supported, got {dtype}.'.format(dtype=input.dtype))
 
                 with self.device:
                     self.nccl_comm.allReduce(

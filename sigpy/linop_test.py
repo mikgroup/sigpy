@@ -41,7 +41,7 @@ def check_linop_adjoint(A, dtype=np.complex, device=util.cpu_device):
     with device:
         lhs = xp.vdot(A * x, y)
         rhs = xp.vdot(x, A.H * y)
-    
+
         xp.testing.assert_allclose(lhs, rhs, atol=1e-5, rtol=1e-5)
 
 
@@ -131,7 +131,7 @@ class TestLinop(unittest.TestCase):
         check_linop_linear(A)
         check_linop_adjoint(A)
         check_linop_pickleable(A)
-        
+
         shape = [5, 3]
         device = util.cpu_device
         I = linop.Identity(shape)
@@ -157,7 +157,7 @@ class TestLinop(unittest.TestCase):
         check_linop_linear(A)
         check_linop_adjoint(A)
         check_linop_pickleable(A)
-        
+
         shape = [5, 3]
         device = util.cpu_device
         I = linop.Identity(shape)
@@ -202,9 +202,9 @@ class TestLinop(unittest.TestCase):
             check_linop_adjoint(A)
             check_linop_unitary(A)
             check_linop_pickleable(A)
-            
+
     def test_NUFFT(self):
-        
+
         for ndim in [1, 2, 3]:
             ishape = [3] * ndim
             coord = np.random.random([10, ndim])
@@ -213,18 +213,18 @@ class TestLinop(unittest.TestCase):
             check_linop_linear(A)
             check_linop_adjoint(A)
             check_linop_pickleable(A)
-            
+
     def test_MatMul(self):
-        
+
         mshape = (5, 4, 2)
         ishape = (5, 2, 3)
         A = linop.MatMul(ishape, util.randn(mshape))
         check_linop_adjoint(A)
         check_linop_linear(A)
         check_linop_pickleable(A)
-            
+
     def test_RightMatMul(self):
-        
+
         ishape = (5, 4, 2)
         mshape = (5, 2, 3)
         A = linop.RightMatMul(ishape, util.randn(mshape))
@@ -303,7 +303,7 @@ class TestLinop(unittest.TestCase):
         check_linop_linear(A)
         check_linop_adjoint(A)
         check_linop_pickleable(A)
-        
+
     def test_Downsample(self):
         ishape = [5]
         factors = [2]
@@ -317,7 +317,7 @@ class TestLinop(unittest.TestCase):
         check_linop_linear(A)
         check_linop_adjoint(A)
         check_linop_pickleable(A)
-        
+
     def test_Upsample(self):
         oshape = [5]
         factors = [2]
@@ -407,7 +407,7 @@ class TestLinop(unittest.TestCase):
         check_linop_adjoint(A)
         check_linop_linear(A)
         check_linop_pickleable(A)
-        
+
     def test_Transpose(self):
 
         shape = [3, 4]
@@ -428,7 +428,7 @@ class TestLinop(unittest.TestCase):
         check_linop_adjoint(A)
         check_linop_linear(A)
         check_linop_pickleable(A)
-        
+
     def test_TensorToBlocks(self):
 
         ishape = [4]
@@ -440,7 +440,7 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
         x = np.array([1, 2, 3, 4], np.complex)
-        
+
         npt.assert_allclose(A(x), [[1, 2],
                                    [3, 4]])
 
@@ -457,7 +457,7 @@ class TestLinop(unittest.TestCase):
         check_linop_linear(A)
         check_linop_adjoint(A)
         check_linop_pickleable(A)
-        
+
         ishape = [2, 3]
         filt = util.randn([3, 4])
 
@@ -470,7 +470,6 @@ class TestLinop(unittest.TestCase):
         check_linop_linear(A)
         check_linop_adjoint(A)
         check_linop_pickleable(A)
-
 
     def test_Correlate(self):
         ishape = [3, 4]
@@ -485,7 +484,7 @@ class TestLinop(unittest.TestCase):
         check_linop_linear(A)
         check_linop_adjoint(A)
         check_linop_pickleable(A)
-        
+
         ishape = [2, 3]
         filt = util.randn([3, 4])
 

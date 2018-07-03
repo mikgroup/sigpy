@@ -28,12 +28,12 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
     with device:
         if not np.issubdtype(input.dtype, np.complexfloating):
             input = input.astype(np.complex)
-        
+
         if center:
             output = _fftc(input, oshape=oshape, axes=axes, norm=norm)
         else:
             output = xp.fft.fftn(input, s=oshape, axes=axes, norm=norm)
-            
+
         if np.issubdtype(input.dtype, np.complexfloating) and input.dtype != output.dtype:
             output = output.astype(input.dtype)
 
@@ -56,11 +56,11 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
     '''
     device = util.get_device(input)
     xp = device.xp
-    
+
     with device:
         if not np.issubdtype(input.dtype, np.complexfloating):
             input = input.astype(np.complex)
-        
+
         if center:
             output = _ifftc(input, oshape=oshape, axes=axes, norm=norm)
         else:
@@ -71,7 +71,7 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
 
         return output
 
-    
+
 def _fftc(input, oshape=None, axes=None, norm='ortho'):
 
     ndim = input.ndim
@@ -86,28 +86,29 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
         tmp = input.copy()
         tshape = list(input.shape)
         for a in axes:
-            
+
             i = oshape[a]
             tshape[a] = i
             idx = xp.arange(i, dtype=input.dtype)
-            mod = xp.exp(1j * 2 * np.pi * (idx - (i // 2) / 2) * ((i // 2) / i))
+            mod = xp.exp(1j * 2 * np.pi * (idx - (i // 2) / 2)
+                         * ((i // 2) / i))
 
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
-            
+
             tmp = util.resize(tmp, tshape)
             tmp *= mod
             tmp = xp.fft.fft(tmp, axis=-1, norm=norm)
             tmp *= mod
-            
+
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
 
         output = tmp
-        
+
     return output
 
-    
+
 def _ifftc(input, oshape=None, axes=None, norm='ortho'):
 
     ndim = input.ndim
@@ -122,23 +123,24 @@ def _ifftc(input, oshape=None, axes=None, norm='ortho'):
         tmp = input.copy()
         tshape = list(input.shape)
         for a in axes:
-            
+
             i = oshape[a]
             tshape[a] = i
             idx = xp.arange(i, dtype=input.dtype)
-            mod = xp.exp(-1j * 2 * np.pi * (idx - (i // 2) / 2) * ((i // 2) / i))
+            mod = xp.exp(-1j * 2 * np.pi *
+                         (idx - (i // 2) / 2) * ((i // 2) / i))
 
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
-            
+
             tmp = util.resize(tmp, tshape)
             tmp *= mod
             tmp = xp.fft.ifft(tmp, axis=-1, norm=norm)
             tmp *= mod
-            
+
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
 
         output = tmp
-        
+
     return output

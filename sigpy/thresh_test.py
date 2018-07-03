@@ -29,10 +29,10 @@ class TestThresh(unittest.TestCase):
         y = np.array([-2, -1.5, 0, 0, 0, 0, 0, 1.5, 2])
 
         npt.assert_allclose(thresh.l0_proj(4, x), y)
-        
+
     def test_elitist_thresh(self):
         x = np.array([-2, -1.5, -1, 0.5, 0, 0.5, 1, 1.5, 2])
-        
+
         lamda = 1
         # Subgradient method
         u = np.zeros(len(x))
@@ -42,7 +42,7 @@ class TestThresh(unittest.TestCase):
 
         npt.assert_allclose(thresh.elitist_thresh(lamda, x), u,
                             atol=1e-2, rtol=1e-2)
-        
+
         lamda = 1e-5
         # Subgradient method
         u = np.zeros(len(x))
@@ -52,7 +52,7 @@ class TestThresh(unittest.TestCase):
 
         npt.assert_allclose(thresh.elitist_thresh(lamda, x), u,
                             atol=1e-2, rtol=1e-2)
-        
+
         lamda = 100
         # Subgradient method
         u = np.zeros(len(x))
@@ -64,21 +64,20 @@ class TestThresh(unittest.TestCase):
                             atol=1e-2, rtol=1e-2)
 
     if config.cupy_enabled:
-        
+
         def test_soft_thresh_cuda(self):
             x = cp.array([-2, -1.5, -1, 0.5, 0, 0.5, 1, 1.5, 2])
             y = cp.array([-1, -0.5, 0, 0, 0, 0, 0, 0.5, 1])
             lamda = cp.array([1.0])
 
             cp.testing.assert_allclose(thresh.soft_thresh(lamda, x), y)
-        
+
         def test_hard_thresh_cuda(self):
             x = cp.array([-2, -1.5, -1, 0.5, 0, 0.5, 1, 1.5, 2])
             y = cp.array([-2, -1.5, 0, 0, 0, 0, 0, 1.5, 2])
             lamda = cp.array([1.0])
 
             cp.testing.assert_allclose(thresh.hard_thresh(lamda, x), y)
-            
 
         def test_elitist_thresh_cuda(self):
             lamda = 1.0
@@ -86,7 +85,7 @@ class TestThresh(unittest.TestCase):
             y = thresh.elitist_thresh(lamda, x)
 
             y_cuda = thresh.elitist_thresh(lamda, cp.array(x))
-            
+
             cp.testing.assert_allclose(y, y_cuda,
                                        atol=1e-7, rtol=1e-7)
 
@@ -94,6 +93,6 @@ class TestThresh(unittest.TestCase):
             y = thresh.elitist_thresh(lamda, x)
 
             y_cuda = thresh.elitist_thresh(lamda, cp.array(x))
-            
+
             cp.testing.assert_allclose(y, y_cuda,
                                        atol=1e-7, rtol=1e-7)

@@ -20,9 +20,9 @@ def whiten(ksp, cov):
     L - [num_coils, num_coils]
     '''
     num_coils = ksp.shape[0]
-    
+
     x = ksp.reshape([num_coils, -1])
-    
+
     L = np.linalg.cholesky(cov)
     x_w = solve_triangular(L, x, lower=True)
     ksp_w = x_w.reshape(ksp.shape)

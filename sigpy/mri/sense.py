@@ -19,12 +19,13 @@ class SenseMaps(object):
         self.device = sp.util.Device(device)
         self.mps_ker = sp.util.move(self.mps_ker, device)
         self.img_mask = sp.util.move(self.img_mask, device)
-        
+
     def __getitem__(self, slc):
 
         with self.device:
             if isinstance(slc, int):
-                mps_c = sp.fft.ifft(self.mps_ker[slc], oshape=self.img_mask.shape)
+                mps_c = sp.fft.ifft(
+                    self.mps_ker[slc], oshape=self.img_mask.shape)
                 mps_c *= self.img_mask
                 return mps_c
 
@@ -33,14 +34,16 @@ class SenseMaps(object):
 
             elif isinstance(slc, tuple) or isinstance(slc, list):
                 if isinstance(slc[0], int):
-                    mps = sp.fft.ifft(self.mps_ker[slc[0]], oshape=self.img_mask.shape)
+                    mps = sp.fft.ifft(
+                        self.mps_ker[slc[0]], oshape=self.img_mask.shape)
                     mps *= self.img_mask
                     return mps[slc[1:]]
 
     def asarray(self):
         ndim = self.img_mask.ndim
         with self.device:
-            mps = sp.fft.ifft(self.mps_ker, oshape=self.shape, axes=range(-ndim, 0))
+            mps = sp.fft.ifft(self.mps_ker, oshape=self.shape,
+                              axes=range(-ndim, 0))
             mps *= self.img_mask
             return mps
 

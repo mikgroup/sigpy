@@ -6,7 +6,7 @@ from sigpy import config, util
 
 if config.cupy_enabled:
     import cupy as cp
-    
+
 
 def soft_thresh(lamda, input):
     '''Soft threshold.
@@ -25,7 +25,7 @@ def soft_thresh(lamda, input):
         dtype = np.float32
     else:
         dtype = np.float64
-        
+
     lamda = util.array(lamda, dtype=dtype, device=device)
 
     if device == util.cpu_device:
@@ -47,7 +47,7 @@ def hard_thresh(lamda, input):
 
 
 def l0_proj(k, input, axes=None):
-    
+
     device = util.get_device(input)
     xp = device.xp
     shape = input.shape
@@ -55,7 +55,7 @@ def l0_proj(k, input, axes=None):
     remain_axes = tuple(set(range(input.ndim)) - set(axes))
     batch = util.prod([shape[a] for a in remain_axes])
     length = util.prod([shape[a] for a in axes])
-    
+
     with device:
         input = input.transpose(remain_axes + axes)
         input = input.reshape([batch, length])
@@ -63,7 +63,7 @@ def l0_proj(k, input, axes=None):
         idx = xp.argpartition(xp.abs(input), -k, axis=-1)
         output = input
         output[xp.arange(batch), idx[0, :-k]] = 0
-        
+
         output = output.reshape([shape[a] for a in remain_axes + axes])
         output = output.transpose(np.argsort(remain_axes + axes))
 
@@ -82,7 +82,7 @@ def l1_proj(eps, input):
     with device:
         shape = input.shape
         input = input.ravel()
-        
+
         if xp.linalg.norm(input, 1) < eps:
             return input
         else:
@@ -94,11 +94,11 @@ def l1_proj(eps, input):
 
 
 def l2_proj(eps, input, axes=None):
-    
+
     device = util.get_device(input)
     xp = device.xp
     with device:
-        
+
         norm = xp.sum(xp.abs(input)**2, axis=axes, keepdims=True)**0.5
         mask = norm < eps
 
@@ -140,10 +140,10 @@ def elitist_thresh(lamda, input, axes=None):
 
     input = input.transpose(remain_axes + axes)
     input = input.reshape([batch, length])
-    
+
     thresh = find_elitist_thresh(lamda, input)
     output = soft_thresh(thresh, input)
-    
+
     output = output.reshape([shape[a] for a in remain_axes + axes])
     output = output.transpose(np.argsort(remain_axes + axes))
 
@@ -172,7 +172,7 @@ def _hard_thresh(lamda, input):
     else:
         return 0
 
-    
+
 @nb.jit(nopython=True, cache=True)
 def _find_elitist_thresh(thresh, lamda, input):
 
@@ -189,9 +189,9 @@ def _find_elitist_thresh(thresh, lamda, input):
                 thresh[i, 0] = t
                 break
 
-            
+
 if config.cupy_enabled:
-    
+
     _soft_thresh_cuda = cp.ElementwiseKernel(
         'S lamda, T input',
         'T output',
@@ -208,7 +208,7 @@ if config.cupy_enabled:
         output = mag * sign;
         ''',
         name='soft_thresh')
-    
+
     _hard_thresh_cuda = cp.ElementwiseKernel(
         'S lamda, T input',
         'T output',
@@ -220,7 +220,7 @@ if config.cupy_enabled:
             output = 0;
         ''',
         name='hard_thresh')
-    
+
     _find_elitist_thresh_cuda = cp.ElementwiseKernel(
         'raw T thresh, T lamda, raw T input',
         '',

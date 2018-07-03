@@ -113,13 +113,14 @@ def dynamic_shepp_logan(shape, dtype=np.complex):
     output = np.zeros(shape, dtype=dtype)
 
     for t in range(nt):
-        
+
         amps = (np.array(sl_amps) +
                 oscillation_a * np.sin(2 * np.pi * t / nt * np.array(oscillation_f)) +
                 enhancement_a * (1 - np.exp(-np.array(enhancement_f) * t / nt)))
 
-        output[t, ...] = phantom(shape[1:], amps, sl_scales, sl_offsets, sl_angles, dtype)
-        
+        output[t, ...] = phantom(
+            shape[1:], amps, sl_scales, sl_offsets, sl_angles, dtype)
+
     return output
 
 

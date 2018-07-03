@@ -11,7 +11,7 @@ if __name__ == '__main__':
 class TestUtil(unittest.TestCase):
 
     def test_device(self):
-        
+
         device = util.Device(-1)
         pickle.dumps(device)
 
@@ -124,4 +124,5 @@ class TestUtil(unittest.TestCase):
         def f(y):
             return y
 
-        npt.assert_allclose(sigma**2, util.monte_carlo_sure(f, y, sigma), atol=1e-3)
+        npt.assert_allclose(
+            sigma**2, util.monte_carlo_sure(f, y, sigma), atol=1e-3)

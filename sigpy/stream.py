@@ -9,7 +9,7 @@ class ShuffleIndexStream(object):
         self.stream = np.arange(n)
         self.next_stream = np.arange(n)
         self.batch_size = batch_size
-        
+
         np.random.shuffle(self.stream)
         np.random.shuffle(self.next_stream)
         self.count = -1
@@ -17,7 +17,7 @@ class ShuffleIndexStream(object):
     def current(self):
         assert self.count >= 0
         return self.stream[self.count]
-    
+
     def next(self):
         self.count += 1
         if self.count == len(self.stream):
@@ -32,7 +32,7 @@ class ShuffleIndexStream(object):
         for i in range(self.batch_size):
 
             ret.append(self.stream[self.count])
-        
+
             self.count += 1
             if self.count == len(self.stream):
                 self.stream[:] = self.next_stream
@@ -53,7 +53,7 @@ class ZigzagIndexStream(object):
     def current(self):
         assert self.count >= 0
         return self.stream[self.count]
-    
+
     def next(self):
         self.count += self.direction
         if self.count == -1:
@@ -71,7 +71,7 @@ class ZigzagIndexStream(object):
         for i in range(self.batch_size):
 
             ret.append(self.stream[self.count])
-        
+
             self.count += self.direction
             if self.count == -1:
                 self.count = 0

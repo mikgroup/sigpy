@@ -6,18 +6,18 @@ from sigpy import config, util
 
 if config.cupy_enabled:
     import cupy as cp
-    
+
 
 __all__ = ['interp, gridding']
-    
+
 
 def interp(input, width, table, coord):
 
     ndim = coord.shape[-1]
-    
+
     batch_shape = input.shape[:-ndim]
     batch = util.prod(batch_shape)
-    
+
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
 
@@ -37,17 +37,17 @@ def interp(input, width, table, coord):
             _interp(output, input, width, table, coord)
         else:
             _interp(output, input, width, table, coord, size=npts)
-            
+
         return output.reshape(batch_shape + pts_shape)
 
 
 def gridding(input, shape, width, table, coord):
 
     ndim = coord.shape[-1]
-    
+
     batch_shape = shape[:-ndim]
     batch = util.prod(batch_shape)
-    
+
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
 
@@ -65,10 +65,10 @@ def gridding(input, shape, width, table, coord):
             _gridding(output, input, width, table, coord)
         else:
             _gridding(output, input, width, table, coord, size=npts)
-        
+
         return output.reshape(shape)
 
-    
+
 def _select_interp(ndim, npts, device, isreal):
 
     if ndim == 1:
@@ -87,7 +87,8 @@ def _select_interp(ndim, npts, device, isreal):
         else:
             _interp = _interp3_cuda
     else:
-        raise ValueError('Number of dimensions can only be 1, 2 or 3, got {}'.format(ndim))
+        raise ValueError(
+            'Number of dimensions can only be 1, 2 or 3, got {}'.format(ndim))
 
     return _interp
 
@@ -119,7 +120,8 @@ def _select_gridding(ndim, npts, device, isreal):
             else:
                 _gridding = _gridding3_cuda_complex
     else:
-        raise ValueError('Number of dimensions can only be 1, 2 or 3, got {}'.format(ndim))
+        raise ValueError(
+            'Number of dimensions can only be 1, 2 or 3, got {}'.format(ndim))
 
     return _gridding
 
@@ -144,7 +146,7 @@ def lin_interp(table, x):
 def _interp1(output, input, width, table, coord):
     batch, nx = input.shape
     npts = coord.shape[0]
-    
+
     for i in nb.prange(npts):
 
         posx = coord[i, -1]
@@ -155,7 +157,7 @@ def _interp1(output, input, width, table, coord):
         for x in range(startx, endx + 1):
 
             w = lin_interp(table, abs(x - posx) / (width / 2))
-            
+
             for b in range(batch):
                 output[b, i] += w * input[b, x % nx]
 
@@ -166,7 +168,7 @@ def _interp1(output, input, width, table, coord):
 def _gridding1(output, input, width, table, coord):
     batch, nx = output.shape
     npts = coord.shape[0]
-    
+
     for i in nb.prange(npts):
 
         posx = coord[i, -1]
@@ -186,7 +188,7 @@ def _gridding1(output, input, width, table, coord):
 
 @nb.jit(nopython=True, cache=True)
 def _interp2(output, input, width, table, coord):
-    
+
     batch, ny, nx = input.shape
     npts = coord.shape[0]
 
@@ -202,7 +204,7 @@ def _interp2(output, input, width, table, coord):
 
         for y in range(starty, endy + 1):
             wy = lin_interp(table, abs(y - posy) / (width / 2))
-            
+
             for x in range(startx, endx + 1):
                 w = wy * lin_interp(table, abs(x - posx) / (width / 2))
 
@@ -229,7 +231,7 @@ def _gridding2(output, input, width, table, coord):
 
         for y in range(starty, endy + 1):
             wy = lin_interp(table, abs(y - posy) / (width / 2))
-            
+
             for x in range(startx, endx + 1):
                 w = wy * lin_interp(table, abs(x - posx) / (width / 2))
 
@@ -258,10 +260,10 @@ def _interp3(output, input, width, table, coord):
 
         for z in range(startz, endz + 1):
             wz = lin_interp(table, abs(z - posz) / (width / 2))
-            
+
             for y in range(starty, endy + 1):
                 wy = wz * lin_interp(table, abs(y - posy) / (width / 2))
-                
+
                 for x in range(startx, endx + 1):
                     w = wy * lin_interp(table, abs(x - posx) / (width / 2))
 
@@ -290,10 +292,10 @@ def _gridding3(output, input, width, table, coord):
 
         for z in range(startz, endz + 1):
             wz = lin_interp(table, abs(z - posz) / (width / 2))
-            
+
             for y in range(starty, endy + 1):
                 wy = wz * lin_interp(table, abs(y - posy) / (width / 2))
-                
+
                 for x in range(startx, endx + 1):
                     w = wy * lin_interp(table, abs(x - posx) / (width / 2))
 
@@ -351,7 +353,6 @@ if config.cupy_enabled:
         ''',
         name='interp1', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
-    
     _gridding1_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
@@ -376,7 +377,6 @@ if config.cupy_enabled:
         }
         ''',
         name='gridding1', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
-
 
     _gridding1_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
@@ -406,7 +406,6 @@ if config.cupy_enabled:
         preamble=lin_interp_cuda + pos_mod_cuda,
         reduce_dims=False)
 
-    
     _interp2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
@@ -442,7 +441,6 @@ if config.cupy_enabled:
         ''',
         name='interp2', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
-    
     _gridding2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
@@ -478,7 +476,6 @@ if config.cupy_enabled:
         ''',
         name='gridding2', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
-    
     _gridding2_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
@@ -517,7 +514,6 @@ if config.cupy_enabled:
         preamble=lin_interp_cuda + pos_mod_cuda,
         reduce_dims=False)
 
-    
     _interp3_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
@@ -561,7 +557,6 @@ if config.cupy_enabled:
         ''',
         name='interp3', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
-    
     _gridding3_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
@@ -605,7 +600,6 @@ if config.cupy_enabled:
         ''',
         name='gridding3', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
-    
     _gridding3_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
