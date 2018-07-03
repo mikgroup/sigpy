@@ -1,5 +1,5 @@
 '''
-Convenient utilities that work on numpy arrays
+Convenient utilities.
 '''
 import math
 import time
@@ -519,54 +519,3 @@ if config.cupy_enabled:
         y = x + (T) a * y;
         ''',
         name='axpy')
-
-
-class Comm(object):
-
-    def __init__(self, device=cpu_device):
-        self.mpi_comm = MPI.COMM_WORLD
-        self.mpi_size = self.mpi_comm.Get_size()
-        self.mpi_rank = self.mpi_comm.Get_rank()
-        self.device = Device(device)
-
-        if config.nccl_enabled:
-            if self.mpi_rank == 0:
-                nccl_comm_id = nccl.get_unique_id()
-            else:
-                nccl_comm_id = None
-
-            nccl_comm_id = self.mpi_comm.bcast(nccl_comm_id)
-
-            with self.device:
-                self.nccl_comm = nccl.NcclCommunicator(
-                    self.mpi_size, nccl_comm_id, self.mpi_rank)
-
-    def allreduce(self, input):
-        if get_device(input) == cpu_device:
-            self.mpi_comm.Allreduce(MPI.IN_PLACE, input)
-        else:
-            if config.nccl_enabled:
-                if input.dtype == np.float32:
-                    nccl_dtype = nccl.NCCL_FLOAT32
-                    nccl_size = input.size
-                elif input.dtype == np.float64:
-                    nccl_dtype = nccl.NCCL_FLOAT64
-                    nccl_size = input.size
-                elif input.dtype == np.complex64:
-                    nccl_dtype = nccl.NCCL_FLOAT32
-                    nccl_size = input.size * 2
-                elif input.dtype == np.complex128:
-                    nccl_dtype = nccl.NCCL_FLOAT64
-                    nccl_size = input.size * 2
-                else:
-                    raise ValueError(
-                        'dtype not supported, got {dtype}.'.format(dtype=input.dtype))
-
-                with self.device:
-                    self.nccl_comm.allReduce(
-                        input.data.ptr, input.data.ptr, nccl_size, nccl_dtype,
-                        nccl.NCCL_SUM, cp.cuda.Stream.null.ptr)
-            else:
-                mpi_buffer = move(input)
-                self.mpi_comm.Allreduce(MPI.IN_PLACE, mpi_buffer)
-                move_to(input, mpi_buffer)
