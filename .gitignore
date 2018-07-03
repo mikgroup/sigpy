@@ -1,0 +1,12 @@
+__pycache__
+*.egg-info
+_build
+#*
+*#
+.DS_Store
+GPATH
+GRTAGS
+GTAGS
+.cache
+*.npy
+*.ra

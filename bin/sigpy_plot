@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(prog='sigpy_plot')
+    
+    subparsers = parser.add_subparsers(dest='command')
+
+    image = subparsers.add_parser('image', description='Plot .npy file as image.')
+    image.add_argument("filename", type=str, help=".npy file name.")
+    
+    line = subparsers.add_parser('line', description='Plot .npy file as line.')
+    line.add_argument("filename", type=str, help=".npy file name.")
+    
+    scatter = subparsers.add_parser('scatter', description='Plot .npy file as scatter plot.')
+    scatter.add_argument("filename", type=str, help=".npy file name.")
+
+    args = parser.parse_args()
+
+    if args.command == 'image':
+        import numpy as np
+        import sigpy.plot as plt
+        input = np.load(args.filename, mmap_mode='r')
+        plt.Image(input)
+        
+    elif args.command == 'line':
+        import numpy as np
+        import sigpy.plot as plt
+        input = np.load(args.filename, mmap_mode='r')
+        plt.Line(input)
+    elif args.command == 'scatter':
+        import numpy as np
+        import sigpy.plot as plt
+        input = np.load(args.filename, mmap_mode='r')
+        plt.Scatter(input)
+    else:
+        parser.print_help()
