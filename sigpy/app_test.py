@@ -39,7 +39,7 @@ class TestApp(unittest.TestCase):
                                alg_name='PrimalDualHybridGradient').run()
         npt.assert_allclose(x_rec, x_lstsq)
 
-    def test_SecondOrderConeConstraint(self):
+    def test_SecondOrderConeConstraintMinimization(self):
         n = 5
         mat = np.eye(n) + 0.1 * util.randn([n, n])
         A = linop.MatMul([n, 1], mat)
@@ -52,7 +52,7 @@ class TestApp(unittest.TestCase):
             return x / (1 + lamda)
 
         x_rec = util.zeros([n, 1])
-        app.SecondOrderConeConstraint(A, y, x_rec, proxg, eps).run()
+        app.SecondOrderConeConstraintMinimization(A, y, x_rec, proxg, eps).run()
         npt.assert_allclose(x_rec, x)
 
     def test_weighted_LinearLeastSquares(self):
