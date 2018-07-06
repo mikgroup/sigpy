@@ -2,7 +2,24 @@ import numpy as np
 from sigpy import fft, util, config
 
 
+__all__ = ['convolve', 'correlate',
+           'cudnn_convolve', 'cudnn_convolve_backward_filter',
+           'cudnn_convolve_backward_data']
+
+
 def convolve(input1, input2, axes=None, mode='full'):
+    """Multi-dimensional convolution.
+
+    Args:
+        input1 (array): Input 1.
+        input2 (array): Input 2.
+        axes (None or array of ints): Axes to perform convolution.
+        mode (str): {'full', 'valid'}
+
+    Returns:
+        array: Convolved result of shape input1.shape + input2.shape - 1
+            if mode='full', and input1.shape - input2.shape + 1 otherwise.
+    """
 
     util._check_same_dtype(input1, input2)
     axes = util._normalize_axes(axes, max(input1.ndim, input2.ndim))
@@ -36,6 +53,18 @@ def convolve(input1, input2, axes=None, mode='full'):
 
 
 def correlate(input1, input2, axes=None, mode='full'):
+    """Multi-dimensional cross-correlation.
+
+    Args:
+        input1 (array): Input 1.
+        input2 (array): Input 2.
+        axes (None or array of ints): Axes to perform cross-correlation.
+        mode (str): {'full', 'valid'}
+
+    Returns:
+        array: Correlated result of shape input1.shape + input2.shape - 1
+            if mode='full', and input1.shape - input2.shape + 1 otherwise.
+    """
 
     device = util.get_device(input1)
     xp = device.xp
@@ -87,11 +116,11 @@ if config.cudnn_enabled:
             conv_mode=libcudnn.CUDNN_CONVOLUTION,
             pref=libcudnn.CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT
     ):
-        '''
+        """
         x - (b, c_I, m_1, m_2, ..., m_N)
         W - (c_O, c_I, n_1, n_2, ..., n_N)
         y - (b, c_O, p_1, p_2, ..., p_N)
-        '''
+        """
         assert x.shape[1] == W.shape[1]
         assert x.ndim == W.ndim
         util._check_same_dtype(W, x)
@@ -165,11 +194,11 @@ if config.cudnn_enabled:
             conv_mode=libcudnn.CUDNN_CONVOLUTION,
             pref=libcudnn.CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT
     ):
-        '''
+        """
         x - (b, c_I, m_1, m_2, ..., m_N)
         y - (b, c_O, p_1, p_2, ..., p_N)
         W - (c_O, c_I, n_1, n_2, ..., n_N)
-        '''
+        """
         assert x.shape[0] == y.shape[0]
         assert x.ndim == y.ndim
         util._check_same_dtype(x, y)
@@ -243,11 +272,11 @@ if config.cudnn_enabled:
                                      workspace_size=1024 * 1024 * 1024,
                                      conv_mode=libcudnn.CUDNN_CONVOLUTION,
                                      pref=libcudnn.CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT):
-        '''
+        """
         x - (b, c_I, m_1, m_2, ..., m_N)
         W - (c_O, c_I, n_1, n_2, ..., n_N)
         y - (b, c_O, p_1, p_2, ..., p_N)
-        '''
+        """
         assert W.shape[0] == y.shape[1]
         assert y.ndim == W.ndim
         util._check_same_dtype(W, y)
