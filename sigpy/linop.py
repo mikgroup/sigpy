@@ -15,19 +15,22 @@ def _check_shape_positive(shape):
 
 
 class Linop(object):
-    '''Abstraction for linear operator.
-    Linops can be scaled, added and composed.
+    """Abstraction for linear operator.
+
+    Linop can be called on or multiply to an array to perform a linear operation.
+    Its adjoint linear operator can be obtained using the .H attribute.
+    Linops can be scaled, added, subtracted, stacked and composed.
 
     Args:
-        oshape: output shape.
-        ishape: input shape.
+        oshape: Output shape.
+        ishape: Input shape.
         repr_str (string or None): default: class name.
 
     Attributes:
         oshape: output shape.
         ishape: input shape.
         H: adjoint linear operator.
-    '''
+    """
 
     def __init__(self, oshape, ishape, repr_str=None):
         self.oshape = list(oshape)
@@ -117,11 +120,11 @@ class Linop(object):
 
 
 class Identity(Linop):
-    '''Identity linear operator.
+    """Identity linear operator.
 
     Args:
-        shape : input shape
-    '''
+        shape (tuple of ints): Input shape
+    """
 
     def __init__(self, shape):
 
@@ -135,13 +138,13 @@ class Identity(Linop):
 
 
 class Move(Linop):
-    '''Move input between devices.
+    """Move input between devices.
 
     Args:
-        shape: input/output shape.
-        odevice - output device
-        idevice - input device
-    '''
+        shape (tuple of ints): Input/output shape.
+        odevice (tuple of ints): Output device
+        idevice (tuple of ints): Input device
+    """
 
     def __init__(self, shape, odevice, idevice):
 
@@ -158,9 +161,11 @@ class Move(Linop):
 
 
 class Conj(Linop):
-    '''
-    Complex conjugate of linear operator.
-    '''
+    """Returns complex conjugate of linear operator.
+
+    Args:
+        A (Linop): Input linear operator.
+    """
 
     def __init__(self, A):
 
@@ -185,7 +190,8 @@ class Conj(Linop):
 
 
 class Add(Linop):
-    '''Addition of linear operators.
+    """Addition of linear operators.
+
     ishape, and oshape must match.
 
     Parameters
@@ -193,7 +199,7 @@ class Add(Linop):
     linops - list of linear operators
 
     Returns: linops[0] + linops[1] + ... + linops[n - 1]
-    '''
+    """
 
     def __init__(self, linops):
 
@@ -242,15 +248,14 @@ def _combine_compose_linops(linops):
 
 
 class Compose(Linop):
-    '''
-    Composition of linear operators.
+    """Composition of linear operators.
 
-    Parameters
-    ----------
-    linops
+    Args:
+        linops (list of Linops): Linear operators to be composed.
 
-    Returns: linops[0] * linops[1] * ... * linops[n - 1]
-    '''
+    Returns: 
+        Linop: linops[0] * linops[1] * ... * linops[n - 1]
+    """
 
     def __init__(self, linops):
 
@@ -317,14 +322,16 @@ def _hstack_params(shapes, axis):
 
 
 class Hstack(Linop):
-    '''Horizontally stack linear operators.
-    In matrix form, given matrices {A1, ..., An}, returns [A1, ..., An].
-    ie create a Linop that splits the input, applies Linops independently, and sums outputs.
+    """Horizontally stack linear operators.
+
+    Creates a Linop that splits the input, applies Linops independently, and sums outputs.
+    In matrix form, this is equivalant to given matrices {A1, ..., An}, returns [A1, ..., An].
 
     Args:
         linops (list of Linops): list of linops with the same output shape.
         axis (int or None): If None, inputs are vectorized and concatenated.
-    '''
+            Otherwise, inputs are stacked along axis.
+    """
 
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
@@ -402,14 +409,16 @@ def _vstack_params(shapes, axis):
 
 
 class Vstack(Linop):
-    '''Vertically stack linear operators.
-    In matrix form, given matrices {A1, ..., An}, returns [A1.T, ..., An.T].T.
-    ie create a Linop that applies linops independently, and concatenates outputs.
+    """Vertically stack linear operators.
+
+    Creates a Linop that applies linops independently, and concatenates outputs.
+    In matrix form, this is equivalant to given matrices {A1, ..., An}, 
+    returns [A1.T, ..., An.T].T.
 
     Args:
         linops (list of Linops): list of linops with the same input shape.
         axis (int or None): If None, outputs are vectorized and concatenated.
-    '''
+    """
 
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
@@ -458,14 +467,15 @@ class Vstack(Linop):
 
 
 class Diag(Linop):
-    '''Diagonally stack linear operators.
-    In matrix form, given matrices {A1, ..., An}, returns diag([A1, ..., An])
-    ie create a Linop that splits input, applies linops independently, and concatenates outputs.
+    """Diagonally stack linear operators.
+
+    Create a Linop that splits input, applies linops independently, and concatenates outputs.
+    In matrix form, given matrices {A1, ..., An}, returns diag([A1, ..., An]).
 
     Args:
         linops (list of Linops): list of linops with the same input and output shape.
         axis (int or None): If None, inputs/outputs are vectorized and concatenated.
-    '''
+    """
 
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
@@ -524,6 +534,12 @@ class Diag(Linop):
 
 
 class Reshape(Linop):
+    """Linear operator that reshapes input to given output shape.
+
+    Args:
+        oshape (tuple of ints): Output shape.
+        ishape (tuple of ints): Input shape.
+    """
 
     def __init__(self, oshape, ishape):
         super().__init__(oshape, ishape)
@@ -536,6 +552,12 @@ class Reshape(Linop):
 
 
 class Transpose(Linop):
+    """Linear operator that transposes input with the given axes.
+
+    Args:
+        ishape (tuple of ints): Input shape.
+        axes (None or tuple of ints): Axes to transpose input.
+    """
 
     def __init__(self, ishape, axes=None):
         self.axes = axes
@@ -564,13 +586,13 @@ class Transpose(Linop):
 
 
 class FFT(Linop):
-    '''FFT linear operator.
+    """FFT linear operator.
 
     Args:
-        ishape (tuple of int): input shape
-        axes (None or tuple of int): axes to perform FFT. If None, applies on all axes.
-        center (bool): toggle center FFT.
-    '''
+        ishape (tuple of int): Input shape
+        axes (None or tuple of int): Axes to perform FFT. If None, applies on all axes.
+        center (bool): Toggle center FFT.
+    """
 
     def __init__(self, shape, axes=None, center=True):
 
@@ -588,13 +610,13 @@ class FFT(Linop):
 
 
 class IFFT(Linop):
-    '''IFFT linear operator.
+    """IFFT linear operator.
 
     Args:
-        ishape (tuple of int): input shape
-        axes (None or tuple of int): axes to perform FFT. If None, applies on all axes.
-        center (bool): toggle center FFT.
-    '''
+        ishape (tuple of int): Input shape
+        axes (None or tuple of int): Axes to perform FFT. If None, applies on all axes.
+        center (bool): Toggle center FFT.
+    """
 
     def __init__(self, shape, axes=None, center=True):
 
@@ -648,6 +670,14 @@ def _get_matmul_adjoint_sum_axes(oshape, ishape, mshape):
 
 
 class MatMul(Linop):
+    """Linear operator that performs matrix multiplication.
+
+    Args:
+        ishape (tuple of ints): Input shape. It must be able to broadcast with mat.shape.
+        mat (array): Matrix of shape [..., m, n]
+        adjoint (bool): Toggle adjoint. If True, performs conj(mat).swapaxes(-1, -2)
+            before performing matrix multiplication.
+    """
 
     def __init__(self, ishape, mat, adjoint=False):
         self.mat = mat
@@ -704,6 +734,14 @@ def _get_right_matmul_oshape(ishape, mshape, adjoint):
 
 
 class RightMatMul(Linop):
+    """Linear operator that performs matrix multiplication on the right.
+
+    Args:
+        ishape (tuple of ints): Input shape. It must be able to broadcast with mat.shape.
+        mat (array): Matrix of shape [..., m, n]
+        adjoint (bool): Toggle adjoint. If True, performs conj(mat).swapaxes(-1, -2)
+            before performing matrix multiplication.
+    """
 
     def __init__(self, ishape, mat, adjoint=False):
         self.mat = mat
@@ -763,15 +801,12 @@ def _get_multiply_adjoint_sum_axes(oshape, ishape, mshape):
 
 
 class Multiply(Linop):
-    '''
-    Point-wise multiplication linear operator.
-    Supports broadcasting.
+    """Multiplication linear operator.
 
-    Parameters
-    ----------
-    ishape : tuple of int, input shape
-    mult : dtype array, array to multiply
-    '''
+    Args:
+        ishape (tuple of ints): Input shape.
+        mult (array): Array to multiply.
+    """
 
     def __init__(self, ishape, mult, conj=False):
         self.mult = mult
@@ -815,19 +850,17 @@ class Multiply(Linop):
 
 
 class Interp(Linop):
-    '''Interpolation linear operator.
+    """Interpolation linear operator.
 
-    Parameters
-    ----------
-    ishape : input shape = batch_shape + grd_shape
-    coord : coordinates, values from - nx / 2 to nx / 2 - 1.
-            ndim can only be 1, 2 or 3.
-            of shape pts_shape + [ndim]
-    width : float, width of interp. kernel in grid size
-    table : float array
-            look-up table of kernel K, from K[0] to K[width]
-    dtype : data-type of input, optional
-    '''
+    Args:
+        ishape (tuple of ints): Input shape = batch_shape + grd_shape
+        coord (array): Coordinates, values from - nx / 2 to nx / 2 - 1.
+                ndim can only be 1, 2 or 3, of shape pts_shape + [ndim]
+        width (float): Width of interp. kernel in grid size.
+        table (array): Look-up table of kernel K, from K[0] to K[width].
+        scale (float): Scaling of coordinates.
+        shift (float): Shifting of coordinates.
+    """
 
     def __init__(self, ishape, coord, width, table, scale=1, shift=0):
 
@@ -861,20 +894,18 @@ class Interp(Linop):
 
 
 class Gridding(Linop):
-    '''Gridding linear operator.
+    """Gridding linear operator.
 
-    Parameters
-    ----------
-    oshape : output shape = batch_shape + pts_shape
-    ishape : input shape = batch_shape + grd_shape
-    coord : coordinates, values from - nx / 2 to nx / 2 - 1.
-            ndim can only be 1, 2 or 3.
-            of shape pts_shape + [ndim]
-    width : float, width of interp. kernel in grid size
-    table : float array
-            look-up table of kernel K, from K[0] to K[width]
-    dtype : data-type of input, optional
-    '''
+    Args:
+        oshape (tuple of ints): Output shape = batch_shape + pts_shape
+        ishape (tuple of ints): Input shape = batch_shape + grd_shape
+        coord (array): Coordinates, values from - nx / 2 to nx / 2 - 1.
+                ndim can only be 1, 2 or 3. of shape pts_shape + [ndim]
+        width (float): Width of interp. kernel in grid size
+        table (array): Llook-up table of kernel K, from K[0] to K[width]
+            scale (float): Scaling of coordinates.
+            shift (float): Shifting of coordinates.
+    """
 
     def __init__(self, oshape, coord, width, table, scale=1, shift=0):
 
@@ -907,13 +938,12 @@ class Gridding(Linop):
 
 
 class Resize(Linop):
-    '''Resize linear operator.
+    """Resize linear operator.
 
-    Parameters
-    ----------
-    oshape : tuple of int, output shape.
-    ishape : tuple of int, input shape
-    '''
+    Args:
+        oshape (tuple of int): Output shape.
+        ishape (tuple of int): Input shape
+    """
 
     def __init__(self, oshape, ishape, ishift=None, oshift=None):
 
@@ -932,12 +962,11 @@ class Resize(Linop):
 
 
 class Flip(Linop):
-    '''
-    Flip linear operator.
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    '''
+    """Flip linear operator.
+
+    Args:
+        shape (tuple of int): Input shape
+    """
 
     def __init__(self, shape, axes=None):
         self.axes = axes
@@ -952,9 +981,13 @@ class Flip(Linop):
 
 
 class Downsample(Linop):
-    '''
-    Downsample linear operator.
-    '''
+    """Downsampling linear operator.
+
+    Args:
+        ishape (tuple of ints): Input shape.
+        factor (tuple of ints): Downsampling factor.
+        shift (None of tuple of ints): Shifts before down-sampling.
+    """
 
     def __init__(self, ishape, factors, shift=None):
         self.factors = factors
@@ -976,9 +1009,13 @@ class Downsample(Linop):
 
 
 class Upsample(Linop):
-    '''
-    Upsample linear operator.
-    '''
+    """Upsampling linear operator.
+
+    Args:
+        ishape (tuple of ints): Input shape.
+        factor (tuple of ints): Upsampling factor.
+        shift (None of tuple of ints): Shifts before up-sampling.
+    """
 
     def __init__(self, oshape, factors, shift=None):
         self.factors = factors
@@ -1000,6 +1037,13 @@ class Upsample(Linop):
 
 
 class Circshift(Linop):
+    """Circular shift linear operator.
+    
+    Args:
+        shape (tuple of ints): Input/output shape.
+        shift (tuple of ints): Shifts.
+        axes (None or tuple of ints): Axes to perform circular shift.
+    """
 
     def __init__(self, shape, shift, axes=None):
 
@@ -1019,16 +1063,17 @@ class Circshift(Linop):
 
 
 class Wavelet(Linop):
-    '''
-    Wavelet transform linear operator.
-    Supports only cpu.
+    """Wavelet transform linear operator.
 
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    wavelet : string, optional, wavelet name
-    level : optional, number of wavelet levels
-    '''
+    Currently only has CPU implementation. GPU inputs will be copied to CPU,
+    and back to compute on CPU.
+
+    Args:
+        ishape (tuple of int): Input shape.
+        axes (None or tuple of int): Axes to perform wavelet transform.
+        wave_name (str): Wavelet name.
+        level (None or int): Number of wavelet levels.
+    """
 
     def __init__(self, ishape, axes=None, wave_name='db4', level=None):
         self.wave_name = wave_name
@@ -1048,16 +1093,17 @@ class Wavelet(Linop):
 
 
 class InverseWavelet(Linop):
-    '''
-    Wavelet transform linear operator.
-    Supports only cpu.
+    """Wavelet transform linear operator.
 
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    wavelet : string, optional, wavelet name
-    level : optional, number of wavelet levels
-    '''
+    Currently only has CPU implementation. GPU inputs will be copied to CPU,
+    and back to compute on CPU.
+
+    Args:
+        oshape (tuple of int): Output shape.
+        axes (None or tuple of int): Axes to perform wavelet transform.
+        wave_name (str): Wavelet name.
+        level (None or int): Number of wavelet levels.
+    """
 
     def __init__(self, oshape, axes=None, wave_name='db4', level=None):
         self.wave_name = wave_name
@@ -1077,6 +1123,12 @@ class InverseWavelet(Linop):
 
 
 class Sum(Linop):
+    """Sum linear operator. Accumulate axes by summing.
+    
+    Args:
+        ishape (tuple of ints): Input shape.
+        axes (tuple of ints): Axes to sum over.
+    """
 
     def __init__(self, ishape, axes):
 
@@ -1098,6 +1150,12 @@ class Sum(Linop):
 
 
 class Tile(Linop):
+    """Tile linear operator.
+    
+    Args:
+        oshape (tuple of ints): Output shape.
+        axes (tuple of ints): Axes to tile.
+    """
 
     def __init__(self, oshape, axes):
 
@@ -1128,6 +1186,12 @@ class Tile(Linop):
 
 
 class TensorToBlocks(Linop):
+    """Block partition input array. Block shape must divide input shape.
+    
+    Args:
+        ishape (tuple of ints): Input shape.
+        blk_shape (tuple of ints): Block shape.
+    """
 
     def __init__(self, ishape, blk_shape):
 
@@ -1164,12 +1228,18 @@ class TensorToBlocks(Linop):
 
 
 class BlocksToTensor(Linop):
+    """Sum blocks to array. Block shape must divide output shape.
+    
+    Args:
+        oshape (tuple of ints): Output shape.
+        blk_shape (tuple of ints): Block shape.
+    """
 
     def __init__(self, oshape, blk_shape):
 
         if not all([o % b == 0 for o, b in zip(oshape, blk_shape)]):
             raise ValueError(
-                'blk_shape should divide oshape, got {oshape}, and {blk_shape}.')
+                'blk_shape must divide oshape, got {oshape}, and {blk_shape}.')
 
         ndim = len(blk_shape)
         self.blk_shape = list(blk_shape)
@@ -1196,6 +1266,11 @@ class BlocksToTensor(Linop):
 
 
 def Gradient(ishape):
+    """Linear operator that computes numerical gradient.
+
+    Args:
+       ishape (tuple of ints): Input shape.
+    """
 
     I = Identity(ishape)
     shifts = list(product(*([[0, 1]] * len(ishape))))
@@ -1208,18 +1283,15 @@ def Gradient(ishape):
 
 
 class NUFFT(Linop):
-    '''
-    NUFFT linear operator.
+    """NUFFT linear operator.
 
-    Parameters
-    ----------
-    oshape : tuple of int, output shape
-    ishape : tuple of int, input shape
-        nx, ny, [nz], [...]
-        everything in [...] is considered as batch
-    coord : array, coordinates, with values [-ishape / 2, ishape / 2]
-        ndim, [...]
-    '''
+    Args:
+        ishape (tuple of int): Input shape.
+        coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
+        oversamp (float): Oversampling factor.
+        width (float): Kernel width.
+        n (int): Table sampling number.
+    """
 
     def __init__(self, ishape, coord, oversamp=1.25, width=4.0, n=128):
         self.coord = coord
@@ -1244,18 +1316,15 @@ class NUFFT(Linop):
 
 
 class NUFFTAdjoint(Linop):
-    '''
-    NUFFT adjoint linear operator.
+    """NUFFT adjoint linear operator.
 
-    Parameters
-    ----------
-    oshape : tuple of int, output shape
-    ishape : tuple of int, input shape
-        nx, ny, [nz], [...]
-        everything in [...] is considered as batch
-    coord : array, coordinates, with values [-ishape / 2, ishape / 2]
-        ndim, [...]
-    '''
+    Args:
+        oshape (tuple of int): Output shape
+        coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
+        oversamp (float): Oversampling factor.
+        width (float): Kernel width.
+        n (int): Table sampling number.
+    """
 
     def __init__(self, oshape, coord, oversamp=1.25, width=4.0, n=128):
         self.coord = coord
@@ -1334,6 +1403,14 @@ def _get_convolve_adjoint_sum_axes(oshape, ishape, fshape, axes):
 
 
 class Convolve(Linop):
+    """Convolve linear operator.
+    
+    Args:
+        ishape (tuple of ints): Input shape.
+        filt (array): Filter.
+        axes (None or tuple of ints): Axes to perform convolution.
+        mode (str): {'full', 'valid'}
+    """
 
     def __init__(self, ishape, filt, axes=None, mode='full'):
         self.filt = filt
@@ -1366,6 +1443,14 @@ class Convolve(Linop):
 
 
 class Correlate(Linop):
+    """Correlate linear operator.
+    
+    Args:
+        ishape (tuple of ints): Input shape.
+        filt (array): Filter.
+        axes (None or tuple of ints): Axes to perform convolution.
+        mode (str): {'full', 'valid'}
+    """
 
     def __init__(self, ishape, filt, axes=None, mode='full'):
         self.filt = filt
@@ -1399,10 +1484,10 @@ class Correlate(Linop):
 if config.cudnn_enabled:
 
     class CudnnConvolveData(Linop):
-        '''
+        """
         ishape - (b, c_I, m_1, m_2, ..., m_N)
         filt - (c_O, c_I, n_1, n_2, ..., n_N)
-        '''
+        """
 
         def __init__(self, x_shape, W, mode='full'):
             self.W = W

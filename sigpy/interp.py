@@ -8,10 +8,21 @@ if config.cupy_enabled:
     import cupy as cp
 
 
-__all__ = ['interp, gridding']
+__all__ = ['interp', 'gridding']
 
 
 def interp(input, width, table, coord):
+    """Interpolation from array to points specified by coordinates.
+
+    Args:
+        input (array): Input array of shape [..., ny, nx]
+        width (float): Interpolation kernel width.
+        table (array): Interpolation kernel.
+        coord (array): Coordinate array of shape [..., ndim]
+
+    Returns:
+        output (array): Output array of coord.shape[:-1]
+    """
 
     ndim = coord.shape[-1]
 
@@ -42,6 +53,18 @@ def interp(input, width, table, coord):
 
 
 def gridding(input, shape, width, table, coord):
+    """Gridding of points specified by coordinates to array.
+
+    Args:
+        input (array): Input array.
+        shape (array of ints): Output shape.
+        width (float): Interpolation kernel width.
+        table (array): Interpolation kernel.
+        coord (array): Coordinate array of shape [..., ndim]
+
+    Returns:
+        output (array): Output array.
+    """
 
     ndim = coord.shape[-1]
 
@@ -307,7 +330,7 @@ def _gridding3(output, input, width, table, coord):
 
 if config.cupy_enabled:
 
-    lin_interp_cuda = '''
+    lin_interp_cuda = """
     __device__ inline S lin_interp(S* table, int n, S x) {
         if (x >= 1)
            return 0;
@@ -321,17 +344,17 @@ if config.cupy_enabled:
 
         return (1 - frac) * left + frac * right;
     }
-    '''
-    pos_mod_cuda = '''
+    """
+    pos_mod_cuda = """
     __device__ inline int pos_mod(int x, int n) {
         return (x % n + n) % n;
     }
-    '''
+    """
 
     _interp1_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = input.shape()[0];
         const int nx = input.shape()[1];
 
@@ -350,13 +373,13 @@ if config.cupy_enabled:
                 output[output_idx] += v;
             }
         }
-        ''',
+        """,
         name='interp1', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
     _gridding1_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = output.shape()[0];
         const int nx = output.shape()[1];
 
@@ -375,13 +398,13 @@ if config.cupy_enabled:
                 atomicAdd(&output[output_idx], v);
             }
         }
-        ''',
+        """,
         name='gridding1', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
     _gridding1_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = output.shape()[0];
         const int nx = output.shape()[1];
 
@@ -401,7 +424,7 @@ if config.cupy_enabled:
                 atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
             }
         }
-        ''',
+        """,
         name='gridding1_complex',
         preamble=lin_interp_cuda + pos_mod_cuda,
         reduce_dims=False)
@@ -409,7 +432,7 @@ if config.cupy_enabled:
     _interp2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = input.shape()[0];
         const int ny = input.shape()[1];
         const int nx = input.shape()[2];
@@ -438,13 +461,13 @@ if config.cupy_enabled:
                 }
             }
         }
-        ''',
+        """,
         name='interp2', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
     _gridding2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = output.shape()[0];
         const int ny = output.shape()[1];
         const int nx = output.shape()[2];
@@ -473,13 +496,13 @@ if config.cupy_enabled:
                 }
             }
         }
-        ''',
+        """,
         name='gridding2', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
     _gridding2_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = output.shape()[0];
         const int ny = output.shape()[1];
         const int nx = output.shape()[2];
@@ -509,7 +532,7 @@ if config.cupy_enabled:
                 }
             }
         }
-        ''',
+        """,
         name='gridding2_complex',
         preamble=lin_interp_cuda + pos_mod_cuda,
         reduce_dims=False)
@@ -517,7 +540,7 @@ if config.cupy_enabled:
     _interp3_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = input.shape()[0];
         const int nz = input.shape()[1];
         const int ny = input.shape()[2];
@@ -554,13 +577,13 @@ if config.cupy_enabled:
                 }
             }
         }
-        ''',
+        """,
         name='interp3', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
     _gridding3_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = output.shape()[0];
         const int nz = output.shape()[1];
         const int ny = output.shape()[2];
@@ -597,13 +620,13 @@ if config.cupy_enabled:
                 }
             }
         }
-        ''',
+        """,
         name='gridding3', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
 
     _gridding3_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
-        '''
+        """
         const int batch = output.shape()[0];
         const int nz = output.shape()[1];
         const int ny = output.shape()[2];
@@ -641,7 +664,7 @@ if config.cupy_enabled:
                 }
             }
         }
-        ''',
+        """,
         name='gridding3_complex',
         preamble=lin_interp_cuda + pos_mod_cuda,
         reduce_dims=False)

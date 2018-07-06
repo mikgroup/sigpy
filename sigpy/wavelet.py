@@ -15,8 +15,14 @@ def get_wavelet_shape(shape, wave_name, axes, level):
 
 
 def fwt(input, wave_name='db4', axes=None, level=None):
-    '''Forward wavelet transform.
-    '''
+    """Forward wavelet transform.
+
+    Args:
+        input (array): Input array.
+        axes (None or tuple of int): Axes to perform wavelet transform.
+        wave_name (str): Wavelet name.
+        level (None or int): Number of wavelet levels.
+    """
     device = util.get_device(input)
     input = util.move(input)
 
@@ -32,8 +38,16 @@ def fwt(input, wave_name='db4', axes=None, level=None):
 
 
 def iwt(input, oshape, coeff_slices, wave_name='db4', axes=None, level=None):
-    '''Inverse wavelet transform.
-    '''
+    """Inverse wavelet transform.
+
+    Args:
+        input (array): Input array.
+        oshape (tuple of ints): Output shape.
+        coeff_slices (list of slice): Slices to split coefficients.
+        axes (None or tuple of int): Axes to perform wavelet transform.
+        wave_name (str): Wavelet name.
+        level (None or int): Number of wavelet levels.
+    """
     device = util.get_device(input)
     input = util.move(input)
 

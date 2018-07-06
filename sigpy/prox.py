@@ -6,9 +6,19 @@ if config.cupy_enabled:
 
 
 class Prox(object):
-    '''
-    Abstraction for proximal operator
-    '''
+    """Abstraction for proximal operator.
+
+    Prox can be called on to a float and an array to perform a proximal operation,
+    which is defined as a, x -> argmin_z 1 / 2 || x - z ||_2^2 + a g(z), for some function g.
+    Prox can be stacked, and conjugated.
+
+    Args:
+        shape: Input/output shape.
+        repr_str (string or None): default: class name.
+
+    Attributes:
+        shape: Input/output shape.
+    """
 
     def __init__(self, shape, repr_str=None):
         self.shape = list(shape)
@@ -42,9 +52,11 @@ class Prox(object):
 
 
 class Conj(Prox):
-    '''
-    Convex conjugate of proximal operator
-    '''
+    """Returns the convex conjugate of proximal operator.
+
+    The convex conjugate of a proximal operator P is defined as:
+    a, x -> x - a * P(1 / a, x / a)
+    """
 
     def __init__(self, prox):
 
@@ -58,13 +70,11 @@ class Conj(Prox):
 
 
 class NoOp(Prox):
-    '''
-    Proximal operator for empty function.
+    """Proximal operator for empty function. Equivalant to an identity function.
 
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    '''
+    Args:
+       shape (tuple of ints): Input shape
+    """
 
     def __init__(self, shape):
         super().__init__(shape)
@@ -74,11 +84,11 @@ class NoOp(Prox):
 
 
 class Stack(Prox):
-    '''Stack outputs of proximal operators.
-    Parameters
-    ----------
-    proxs : arrays of proxs with same shape
-    '''
+    """Stack outputs of proximal operators.
+
+    Args:
+       proxs (list of proxs): Prox of the same shape.
+    """
 
     def __init__(self, proxs):
         self.nops = len(proxs)
@@ -101,18 +111,16 @@ class Stack(Prox):
 
 
 class L2Reg(Prox):
-    '''
-    Proximal operator for lamda / 2 || x - y ||_2^2.
+    """Proximal operator for lamda / 2 || x - y ||_2^2.
 
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    lamda : float, regularization parameter
+    Performs:
+    a, x -> (x + lamda * alpha * y) / (1 + lamda * alpha)
 
-    Returns:
-    --------
-    prox(alpha, x) = (x + lamda * alpha * y) / (1 + lamda * alpha)
-    '''
+    Args:
+        shape (tuple of ints): Input shape.
+        lamda (float): Regularization parameter.
+        y (scalar or array): Bias term.
+    """
 
     def __init__(self, shape, lamda, y=0):
         self.lamda = lamda
@@ -123,20 +131,17 @@ class L2Reg(Prox):
     def _prox(self, alpha, input):
 
         with util.get_device(input):
-            return ((input + self.lamda * alpha * self.y) /
-                    (1 + self.lamda * alpha))
+            return (input + self.lamda * alpha * self.y) / (1 + self.lamda * alpha)
 
 
 class L2Proj(Prox):
-    '''
-    Proximal operator for I{ ||x - y||_2 < e}.
+    """Proximal operator for I{ ||x - y||_2 < epsilon}.
 
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    epsilon : float, regularization parameter
-    y : optional bias term
-    '''
+    Args:
+        shape (tuple of ints): Input shape.
+        epsilon (float): Regularization parameter.
+        y (scalar or array): Bias term.
+    """
 
     def __init__(self, shape, epsilon, y=0, axes=None):
         self.epsilon = epsilon
@@ -152,15 +157,13 @@ class L2Proj(Prox):
 
 
 class L1Reg(Prox):
-    '''
-    Proximal operator for lamda * || W x ||_1. Soft threshold input.
+    """Proximal operator for lamda * || x ||_1. Soft threshold input.
 
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    lamda : float, regularization parameter
-    transform : Linop x -> y, unitary transform
-    '''
+    Args:
+        shape (tuple of ints): input shape
+        lamda (float): regularization parameter
+        transform (Linop): Unitary linear operator.
+    """
 
     def __init__(self, shape, lamda, transform=None):
         self.lamda = lamda
@@ -178,14 +181,12 @@ class L1Reg(Prox):
 
 
 class L0Proj(Prox):
-    '''
-    Proximal operator for 1{ ||x||_0 < k}.
+    """Proximal operator for 1{ ||x||_0 < k}.
 
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    k : int, sparsity
-    '''
+    Args:
+        shape (tuple of ints): input shape.
+        k (int): Sparsity.
+    """
 
     def __init__(self, shape, k, axes=None):
 
@@ -200,14 +201,12 @@ class L0Proj(Prox):
 
 
 class L1Proj(Prox):
-    '''
-    Proximal operator for 1{ ||x||_1 < epsilon}.
+    """Proximal operator for 1{ ||x||_1 < epsilon}.
 
-    Parameters
-    ----------
-    shape : tuple of int, input shape
-    epsilon : float, regularization parameter
-    '''
+    Args:
+        shape (tuple of ints): input shape.
+        epsilon (float): regularization parameter.
+    """
 
     def __init__(self, shape, epsilon):
 
@@ -221,9 +220,13 @@ class L1Proj(Prox):
 
 
 class L1L2Reg(Prox):
-    '''
-    Proximal operator for lamda * sum_j ||x_j||_1^2
-    '''
+    """Proximal operator for lamda * sum_j ||x_j||_1^2
+
+    Args:
+        shape (tuple of ints): input shape.
+        lamda (float): regularization parameter.
+        axes (None or tuple of ints): Axes to perform operation.
+    """
 
     def __init__(self, shape, lamda, axes=None):
 

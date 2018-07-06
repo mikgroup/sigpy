@@ -9,16 +9,17 @@ if config.cupy_enabled:
 
 
 def soft_thresh(lamda, input):
-    '''Soft threshold.
-    Parameters
-    ----------
-    lamda - float, or array.
-    input - numpy/cupy array
+    """Soft threshold.
 
-    Returns
-    -------
-    (abs(input) - lamda)_+ * sign(input)
-    '''
+    Performs: (abs(input) - lamda)_+ * sign(input)
+
+    Args:
+        lamda (float, or array): Threshold parameter.
+        input (array)
+
+    Returns:
+        array: soft-thresholded result.
+    """
 
     device = util.get_device(input)
     if input.dtype == np.float32 or input.dtype == np.complex64:
@@ -36,6 +37,17 @@ def soft_thresh(lamda, input):
 
 
 def hard_thresh(lamda, input):
+    """Hard threshold.
+
+    Performs: 1{abs(input) > lamda} * input.
+
+    Args:
+        lamda (float, or array): Threshold parameter.
+        input (array)
+
+    Returns:
+        array: hard-thresholded result.
+    """
 
     device = util.get_device(input)
 
@@ -47,6 +59,15 @@ def hard_thresh(lamda, input):
 
 
 def l0_proj(k, input, axes=None):
+    """Projection onto L0 ball.
+
+    Args:
+        k (float, or array): Sparsity.
+        input (array)
+
+    Returns:
+        array: Result.
+    """
 
     device = util.get_device(input)
     xp = device.xp
@@ -71,11 +92,19 @@ def l0_proj(k, input, axes=None):
 
 
 def l1_proj(eps, input):
-    '''
+    """Projection onto L1 ball.
+
+    Args:
+        eps (float, or array): L1 ball scaling.
+        input (array)
+
+    Returns:
+        array: Result.
+
     Reference:
-    J. Duchi, S. Shalev-Shwartz, and Y. Singer,
-    “Efficient projections onto the l1-ball for learning in high dimensions,” 2008.
-    '''
+        J. Duchi, S. Shalev-Shwartz, and Y. Singer, “Efficient projections onto 
+        the l1-ball for learning in high dimensions,” 2008.
+    """
     device = util.get_device(input)
     xp = device.xp
 
@@ -94,6 +123,15 @@ def l1_proj(eps, input):
 
 
 def l2_proj(eps, input, axes=None):
+    """Projection onto L2 ball.
+
+    Args:
+        eps (float, or array): L2 ball scaling.
+        input (array)
+
+    Returns:
+        array: Result.
+    """
 
     device = util.get_device(input)
     xp = device.xp
@@ -108,7 +146,7 @@ def l2_proj(eps, input, axes=None):
     return output
 
 
-def find_elitist_thresh(lamda, input):
+def _find_elitist_thresh(lamda, input):
 
     device = util.get_device(input)
     xp = device.xp
@@ -128,6 +166,20 @@ def find_elitist_thresh(lamda, input):
 
 
 def elitist_thresh(lamda, input, axes=None):
+    """Elitist threshold.
+
+    Args:
+        lamda (float, or array): Threshold parameter.
+        input (array)
+        axes (None or tuple of ints): Axes to perform threshold.
+
+    Returns:
+        array: Result.
+
+    References:
+        Kowalski, M. 2009. Sparse regression using mixed norms. 
+        Applied and Computational Harmonic Analysis. 27, 3 (2009), 303–324.
+    """
 
     shape = input.shape
     axes = util._normalize_axes(axes, input.ndim)
@@ -141,7 +193,7 @@ def elitist_thresh(lamda, input, axes=None):
     input = input.transpose(remain_axes + axes)
     input = input.reshape([batch, length])
 
-    thresh = find_elitist_thresh(lamda, input)
+    thresh = _find_elitist_thresh(lamda, input)
     output = soft_thresh(thresh, input)
 
     output = output.reshape([shape[a] for a in remain_axes + axes])
@@ -195,7 +247,7 @@ if config.cupy_enabled:
     _soft_thresh_cuda = cp.ElementwiseKernel(
         'S lamda, T input',
         'T output',
-        '''
+        """
         S abs_input = abs(input);
         T sign;
         if (abs_input == 0)
@@ -206,25 +258,25 @@ if config.cupy_enabled:
         mag = (abs(mag) + mag) / 2.;
 
         output = mag * sign;
-        ''',
+        """,
         name='soft_thresh')
 
     _hard_thresh_cuda = cp.ElementwiseKernel(
         'S lamda, T input',
         'T output',
-        '''
+        """
         S abs_input = abs(input);
         if (abs_input > lamda)
             output = input;
         else
             output = 0;
-        ''',
+        """,
         name='hard_thresh')
 
     _find_elitist_thresh_cuda = cp.ElementwiseKernel(
         'raw T thresh, T lamda, raw T input',
         '',
-        '''
+        """
         const int length = input.shape()[1];
         T l1 = 0;
         for (int j = 0; j < length; j++) {
@@ -243,5 +295,5 @@ if config.cupy_enabled:
                 break;
             }
         }
-        ''',
+        """,
         name='find_elitist_thresh', reduce_dims=False)

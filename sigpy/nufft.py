@@ -2,20 +2,23 @@ import numpy as np
 from sigpy import fft, util, interp
 
 
+__all__ = ['nufft', 'nufft_adjoint', 'estimate_shape']
+
+
 def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
-    '''Non-uniform Fast Fourier Transform.
+    """Non-uniform Fast Fourier Transform.
 
     Args:
-        input (numpy/cupy array): input array.
-        coord (numpy/cupy array): coordinate array of shape (..., ndim). 
+        input (array): input array.
+        coord (array): coordinate array of shape (..., ndim). 
             ndim determines the number of dimension to apply nufft.
         oversamp (float): oversampling factor.
         width (float): interpolation kernel full-width in terms of oversampled grid.
         n (int): number of sampling points of interpolation kernel.
 
     Returns:
-        numpy/cupy array of shape input.shape[:-ndim] + coord.shape[:-1]
-    '''
+        array: Fourier domain points of shape input.shape[:-ndim] + coord.shape[:-1]
+    """
     device = util.get_device(input)
     xp = device.xp
     ndim = coord.shape[-1]
@@ -28,7 +31,7 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         for a in range(-ndim, 0):
 
             i = input.shape[a]
-            os_i = util.get_ugly_number(oversamp * i)
+            os_i = _get_ugly_number(oversamp * i)
             os_shape[a] = os_i
             idx = xp.arange(i, dtype=input.dtype)
             os_idx = xp.arange(os_i, dtype=input.dtype)
@@ -58,7 +61,7 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
 
         coord = _scale_coord(util.move(coord, device), input.shape, oversamp)
         table = util.move(
-            kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
+            _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
 
         output = interp.interp(output, width, table, coord)
 
@@ -66,6 +69,14 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
 
 
 def estimate_shape(coord):
+    """Estimate array shape from coordinates.
+
+    Shape is estimated by the different between maximum and minimum of
+    coordinates in each axis.
+
+    Args:
+        coord (array): Coordinates.
+    """
     ndim = coord.shape[-1]
     with util.get_device(coord):
         shape = [int(coord[..., i].max() - coord[..., i].min())
@@ -75,11 +86,11 @@ def estimate_shape(coord):
 
 
 def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
-    '''Adjoint non-uniform Fast Fourier Transform.
+    """Adjoint non-uniform Fast Fourier Transform.
 
     Args:
-        input (numpy/cupy array): input array.
-        coord (numpy/cupy array): coordinate array of shape (..., ndim). 
+        input (array): Input Fourier domain array.
+        coord (array): coordinate array of shape (..., ndim). 
             ndim determines the number of dimension to apply nufft adjoint.
         oshape (tuple of ints): output shape.
         oversamp (float): oversampling factor.
@@ -87,8 +98,8 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         n (int): number of sampling points of interpolation kernel.
 
     Returns:
-        numpy/cupy array.
-    '''
+        array: Transformed array.
+    """
     device = util.get_device(input)
     xp = device.xp
     ndim = coord.shape[-1]
@@ -102,9 +113,9 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
 
         coord = _scale_coord(util.move(coord, device), oshape, oversamp)
         table = util.move(
-            kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
+            _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
         os_shape = oshape[:-ndim] + \
-            [util.get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
+            [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
         output = interp.gridding(input, os_shape, width, table, coord)
 
         for a in range(-ndim, 0):
@@ -143,7 +154,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         return output
 
 
-def kb(x, width, beta, dtype=np.complex):
+def _kb(x, width, beta, dtype=np.complex):
     return 1 / width * np.i0(beta * np.sqrt(1 - x**2)).astype(dtype)
 
 
@@ -151,12 +162,36 @@ def _scale_coord(coord, shape, oversamp):
 
     ndim = coord.shape[-1]
     device = util.get_device(coord)
-    scale = util.move([util.get_ugly_number(oversamp * i) /
+    scale = util.move([_get_ugly_number(oversamp * i) /
                        i for i in shape[-ndim:]], device)
-    shift = util.move([util.get_ugly_number(oversamp * i) //
+    shift = util.move([_get_ugly_number(oversamp * i) //
                        2 for i in shape[-ndim:]], device)
 
     with device:
         coord = scale * coord + shift
 
     return coord
+
+
+def _get_ugly_number(n):
+    if n <= 1:
+        return n
+
+    ugly_nums = [1]
+    i2, i3, i5 = 0, 0, 0
+    while(True):
+
+        ugly_num = min(ugly_nums[i2] * 2,
+                       ugly_nums[i3] * 3,
+                       ugly_nums[i5] * 5)
+
+        if ugly_num >= n:
+            return ugly_num
+
+        ugly_nums.append(ugly_num)
+        if ugly_num == ugly_nums[i2] * 2:
+            i2 += 1
+        elif ugly_num == ugly_nums[i3] * 3:
+            i3 += 1
+        elif ugly_num == ugly_nums[i5] * 5:
+            i5 += 1

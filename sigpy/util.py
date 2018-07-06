@@ -1,6 +1,6 @@
-'''
+"""
 Convenient utilities.
-'''
+"""
 import math
 import time
 import logging
@@ -24,18 +24,31 @@ __all__ = ['rss',
 
 
 class Device(object):
+    """Device class.
 
-    def __init__(self, input):
+    This class extends from cupy.Device, with id = -1 representing CPU,
+    and other ids representing the corresponding GPUs. 
+    Similar to cupy.Device, the Device object can be used as a context. 
 
-        if isinstance(input, int):
-            id = input
-        elif isinstance(input, Device):
-            id = input.id
-        elif config.cupy_enabled and isinstance(input, cp.cuda.device.Device):
-            id = input.id
+    Args:
+        id_or_device (int or Device or cupy.Device): id = -1 represents CPU.
+            and other ids represents corresponding GPUs.
+
+    Attributes:
+        id (int): id = -1 represents CPU, and other ids represents corresponding GPUs.
+    """
+
+    def __init__(self, id_or_device):
+
+        if isinstance(id_or_device, int):
+            id = id_or_device
+        elif isinstance(id_or_device, Device):
+            id = id_or_device.id
+        elif config.cupy_enabled and isinstance(id_or_device, cp.cuda.device.Device):
+            id = id_or_device.id
         else:
-            raise ValueError('Only accepts int, Device or cupy device as input, got {input}'.format(
-                input=input))
+            raise ValueError('Accepts int, Device or cupy.Device, got {id_or_device}'.format(
+                id_or_device=id_or_device))
 
         if id != -1:
             if config.cupy_enabled:
@@ -48,6 +61,7 @@ class Device(object):
 
     @property
     def xp(self):
+        """module: numpy or cupy module for the device."""
         if self.id == -1:
             return np
         else:
@@ -87,18 +101,6 @@ class Device(object):
 cpu_device = Device(-1)
 
 
-def profile(func):
-    def wrap(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        logging.info('%s takes %f secs', func.__qualname__,
-                     end_time - start_time)
-        return result
-
-    return wrap
-
-
 def _normalize_axes(axes, ndim):
     if axes is None:
         return tuple(range(ndim))
@@ -126,6 +128,14 @@ def _check_same_dtype(*arrays):
 
 
 def get_xp(input):
+    """Get numpy or cupy module from input array.
+
+    Args:
+        input (array): Input.
+    
+    Returns:
+        module: numpy or cupy module.
+    """
     if config.cupy_enabled:
         return cp.get_array_module(input)
     else:
@@ -133,7 +143,14 @@ def get_xp(input):
 
 
 def get_device(input):
+    """Get Device from input array.
 
+    Args:
+        input (array): Input.
+    
+    Returns:
+        Device.
+    """
     if get_xp(input) == np:
         return cpu_device
     else:
@@ -141,7 +158,15 @@ def get_device(input):
 
 
 def move(input, device=cpu_device):
+    """Move input to device. Does not copy if same device.
 
+    Args:
+        input (array): Input.
+        device (int or Device or cupy.Device): Output device.
+    
+    Returns:
+        array: Output array placed in device.
+    """
     device = Device(device)
 
     if get_device(input) == device:
@@ -158,7 +183,12 @@ def move(input, device=cpu_device):
 
 
 def move_to(output, input):
+    """Copy from input to output. Input/output can be in different device.
 
+    Args:
+        input (array): Input.
+        output (array): Output.
+    """
     if get_device(input) == get_device(output):
         with get_device(input):
             output[:] = input
@@ -176,11 +206,27 @@ def move_to(output, input):
             output[:] = cp.array(input)
 
 
-def prod(x):
-    return np.prod(x, dtype=np.long)
+def prod(shape):
+    """Computes product of shape.
+
+    Args:
+        shape (tuple or list): shape.
+
+    Returns:
+        Product.
+    """
+    return np.prod(shape, dtype=np.long)
 
 
 def vec(inputs):
+    """Vectorize inputs.
+
+    Args:
+        shape (tuple or list): shape.
+
+    Returns:
+        array: Vectorized result.
+    """
     device = get_device(inputs[0])
     xp = device.xp
 
@@ -189,6 +235,14 @@ def vec(inputs):
 
 
 def split(vec, oshapes):
+    """Split input into specified output shapes.
+
+    Args:
+        oshapes (list of tuple of ints): Output shapes.
+
+    Returns:
+        list of arrays: Splitted outputs.
+    """
     device = get_device(vec)
     with device:
         outputs = []
@@ -200,23 +254,16 @@ def split(vec, oshapes):
     return outputs
 
 
-def mse(x, y):
-    device = get_device(x)
-    xp = device.xp
-
-    with device:
-        return xp.mean(xp.abs(x - y).ravel()**2)
-
-
-def psnr(ref, rec):
-    device = get_device(ref)
-    xp = device.xp
-
-    with device:
-        return 10 * xp.log10(xp.abs(ref).max()**2 / mse(ref, rec))
-
-
 def rss(input, axes=(0, )):
+    """Root sum of squares.
+
+    Args:
+        input (array): Input array.
+        axes (None or tuple of ints): Axes to perform operation.
+
+    Returns:
+        array: Result.
+    """
 
     device = get_device(input)
     xp = device.xp
@@ -226,6 +273,17 @@ def rss(input, axes=(0, )):
 
 
 def resize(input, oshape, ishift=None, oshift=None):
+    """Resize with zero-padding or cropping.
+
+    Args:
+        input (array): Input array.
+        oshape (tuple of ints): Output shape.
+        ishift (None or tuple of ints): Input shift.
+        oshift (None or tuple of ints): Output shift.
+
+    Returns:
+        array: Zero-padded or cropped result.
+    """
 
     ishape_exp, oshape_exp = _expand_shapes(input.shape, oshape)
 
@@ -255,6 +313,16 @@ def resize(input, oshape, ishift=None, oshift=None):
 
 
 def flip(input, axes=None):
+    """Flip input.
+
+    Args:
+        input (array): Input array.
+        axes (None or tuple of ints): Axes to perform operation.
+
+    Returns:
+        array: Flipped result.
+    """
+    
     if axes is None:
         axes = range(input.ndim)
     else:
@@ -276,6 +344,17 @@ def flip(input, axes=None):
 
 
 def circshift(input, shifts, axes=None):
+    """Circular shift input.
+
+    Args:
+        input (array): Input array.
+        shifts (tuple of ints): Shifts.
+        axes (None or tuple of ints): Axes to perform operation.
+
+    Returns:
+        array: Result.
+    """
+    
     if axes is None:
         axes = range(input.ndim)
 
@@ -291,6 +370,16 @@ def circshift(input, shifts, axes=None):
 
 
 def downsample(input, factors, shift=None):
+    """Downsample input.
+
+    Args:
+        input (array): Input array.
+        factors (tuple of ints): Downsampling factors.
+        shifts (None or tuple of ints): Shifts.
+
+    Returns:
+        array: Result.
+    """
 
     if shift is None:
         shift = [0] * len(factors)
@@ -303,6 +392,16 @@ def downsample(input, factors, shift=None):
 
 
 def upsample(input, oshape, factors, shift=None):
+    """Upsample input.
+
+    Args:
+        input (array): Input array.
+        factors (tuple of ints): Upsampling factors.
+        shifts (None or tuple of ints): Shifts.
+
+    Returns:
+        array: Result.
+    """
 
     if shift is None:
         shift = [0] * len(factors)
@@ -318,6 +417,16 @@ def upsample(input, oshape, factors, shift=None):
 
 
 def dirac(shape, dtype=np.complex, device=cpu_device):
+    """Create Dirac delta.
+
+    Args:
+        shape (tuple of ints): Output shape.
+        dtype (Dtype): Output data-type.
+        device (Device): Output device.
+
+    Returns:
+        array: Dirac delta array.
+    """
 
     device = Device(device)
     xp = device.xp
@@ -327,6 +436,17 @@ def dirac(shape, dtype=np.complex, device=cpu_device):
 
 
 def randn(shape, scale=1, dtype=np.complex, device=cpu_device):
+    """Create random Gaussian array.
+
+    Args:
+        shape (tuple of ints): Output shape.
+        scale (float): Standard deviation.
+        dtype (Dtype): Output data-type.
+        device (Device): Output device.
+
+    Returns:
+        array: Random Gaussian array.
+    """
 
     device = Device(device)
     xp = device.xp
@@ -342,11 +462,30 @@ def randn(shape, scale=1, dtype=np.complex, device=cpu_device):
 
 
 def randn_like(input, scale=1):
+    """Create random Gaussian array with shape and dtype as input.
+
+    Args:
+        input (array): Input array as reference.
+        scale (float): Standard deviation.
+
+    Returns:
+        array: Random Gaussian array.
+    """
 
     return randn(input.shape, scale=scale, dtype=input.dtype, device=get_device(input))
 
 
 def array(arr, dtype=np.complex, device=cpu_device):
+    """Creates array on device.
+
+    Args:
+        arr (array): Input array.
+        dtype (Dtype): Output data-type.
+        device (Device): Output device.
+
+    Returns:
+        array: Array on device with dtype.
+    """
 
     device = Device(device)
     xp = device.xp
@@ -356,6 +495,16 @@ def array(arr, dtype=np.complex, device=cpu_device):
 
 
 def empty(shape, dtype=np.complex, device=cpu_device):
+    """Create empty array.
+
+    Args:
+        shape (tuple of ints): Output shape.
+        dtype (Dtype): Output data-type.
+        device (Device): Output device.
+
+    Returns:
+        array: Empty array.
+    """
 
     device = Device(device)
     xp = device.xp
@@ -365,11 +514,29 @@ def empty(shape, dtype=np.complex, device=cpu_device):
 
 
 def empty_like(input):
+    """Create empty array with shape and dtype as input.
+
+    Args:
+        input (array): Input array as reference.
+
+    Returns:
+        array: Empty array.
+    """
 
     return empty(input.shape, dtype=input.dtype, device=get_device(input))
 
 
 def zeros(shape, dtype=np.complex, device=cpu_device):
+    """Create all-zeros array.
+
+    Args:
+        shape (tuple of ints): Output shape.
+        dtype (Dtype): Output data-type.
+        device (Device): Output device.
+
+    Returns:
+        array: All-zeros array.
+    """
 
     device = Device(device)
     xp = device.xp
@@ -379,11 +546,29 @@ def zeros(shape, dtype=np.complex, device=cpu_device):
 
 
 def zeros_like(input):
+    """Create all-zeros array with shape and dtype as input.
+
+    Args:
+        input (array): Input array as reference.
+
+    Returns:
+        array: All-zeros array.
+    """
 
     return zeros(input.shape, dtype=input.dtype, device=get_device(input))
 
 
 def ones(shape, dtype=np.complex, device=cpu_device):
+    """Create all-ones array.
+
+    Args:
+        shape (tuple of ints): Output shape.
+        dtype (Dtype): Output data-type.
+        device (Device): Output device.
+
+    Returns:
+        array: All-ones array.
+    """
 
     device = Device(device)
     xp = device.xp
@@ -393,11 +578,29 @@ def ones(shape, dtype=np.complex, device=cpu_device):
 
 
 def ones_like(input):
+    """Create all-ones array with shape and dtype as input.
+
+    Args:
+        input (array): Input array as reference.
+
+    Returns:
+        array: All-ones array.
+    """
 
     return ones(input.shape, dtype=input.dtype, device=get_device(input))
 
 
 def dot(input1, input2):
+    """Compute dot product.
+
+    Args:
+        input1 (array)
+        input2 (array)
+
+    Returns:
+        float: Dot product between input1 and input2.
+    """
+    
     device = get_device(input1)
     xp = device.xp
 
@@ -406,6 +609,15 @@ def dot(input1, input2):
 
 
 def norm2(input):
+    """Compute sum of squares.
+
+    Args:
+        input (array)
+
+    Returns:
+        float: Sum of squares of input.
+    """
+    
     device = get_device(input)
     xp = device.xp
 
@@ -413,6 +625,15 @@ def norm2(input):
 
 
 def norm(input):
+    """Compute L2 norm.
+
+    Args:
+        input (array)
+
+    Returns:
+        float: L2 norm of input.
+    """
+    
     device = get_device(input)
     xp = device.xp
 
@@ -421,13 +642,27 @@ def norm(input):
 
 
 def monte_carlo_sure(f, y, sigma, eps=1e-10):
-    '''
-    Monte Carlo SURE.
+    """Monte Carlo Stein Unbiased Risk Estimator (SURE).
 
-    f - function x -> f(x)
-    y - observed measurement
-    sigma - noise standard deviation
-    '''
+    Monte carlo SURE assumes the observation y = x + e,
+    where e is a white Gaussian array with standard deviation sigma.
+    Monte carlo SURE provides an unbiased estimate of mean-squared error, ie:
+    1 / n || f(y) - x ||_2^2
+
+    Args:
+        f (function): x -> f(x).
+        y (array): observed measurement.
+        sigma (float): noise standard deviation.
+
+    Returns:
+       float: SURE.
+
+    References:
+        Ramani, S., Blu, T. and Unser, M. 2008. 
+        Monte-Carlo Sure: A Black-Box Optimization of Regularization Parameters 
+        for General Denoising Algorithms. IEEE Transactions on Image Processing. 
+        17, 9 (2008), 1540–1554.
+    """
     device = get_device(y)
     xp = device.xp
 
@@ -442,31 +677,14 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
     return sure
 
 
-def get_ugly_number(n):
-    if n <= 1:
-        return n
-
-    ugly_nums = [1]
-    i2, i3, i5 = 0, 0, 0
-    while(True):
-
-        ugly_num = min(ugly_nums[i2] * 2,
-                       ugly_nums[i3] * 3,
-                       ugly_nums[i5] * 5)
-
-        if ugly_num >= n:
-            return ugly_num
-
-        ugly_nums.append(ugly_num)
-        if ugly_num == ugly_nums[i2] * 2:
-            i2 += 1
-        elif ugly_num == ugly_nums[i3] * 3:
-            i3 += 1
-        elif ugly_num == ugly_nums[i5] * 5:
-            i5 += 1
-
-
 def axpy(y, a, x):
+    """Compute y = a * x + y.
+
+    Args:
+        y (array): Output array.
+        a (scalar): Input scalar.
+        x (array): Input array.
+    """
 
     device = get_device(x)
     x = move(x, device)
@@ -480,6 +698,13 @@ def axpy(y, a, x):
 
 
 def xpay(y, a, x):
+    """Compute y = x + a * y.
+
+    Args:
+        y (array): Output array.
+        a (scalar): Input scalar.
+        x (array): Input array.
+    """
 
     device = get_device(y)
     x = move(x, device)
@@ -507,15 +732,15 @@ if config.cupy_enabled:
     _axpy_cuda = cp.ElementwiseKernel(
         'T y, S a, T x',
         '',
-        '''
+        """
         y += (T) a * x;
-        ''',
+        """,
         name='axpy')
 
     _xpay_cuda = cp.ElementwiseKernel(
         'T y, S a, T x',
         '',
-        '''
+        """
         y = x + (T) a * y;
-        ''',
+        """,
         name='axpy')

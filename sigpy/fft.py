@@ -9,19 +9,19 @@ __all__ = ['fft', 'ifft']
 
 
 def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
-    ''' FFT function that supports centering option.
+    """FFT function that supports centering.
 
     Args:
-    input (numpy/cupy array): input array.
-    oshape (None or tuple of ints): output shape.
-    axes (None or tuple of ints): Axes over which to compute the FFT.
-    norm (Nonr or ``"ortho"``): Keyword to specify the normalization mode.
+        input (array): input array.
+        oshape (None or array of ints): output shape.
+        axes (None or array of ints): Axes over which to compute the FFT.
+        norm (Nonr or ``"ortho"``): Keyword to specify the normalization mode.
 
     Returns:
-    numpy/cupy array of dimension oshape.
+        array: FFT result of dimension oshape.
 
     .. seealso:: :func:`numpy.fft.fftn`
-    '''
+    """
     device = util.get_device(input)
     xp = device.xp
 
@@ -41,19 +41,19 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
 
 
 def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
-    ''' IFFT function that supports centering option.
+    """IFFT function that supports centering.
 
     Args:
-    input (numpy/cupy array): input array.
-    oshape (None or tuple of ints): output shape.
-    axes (None or tuple of ints): Axes over which to compute the inverse FFT.
-    norm (Nonr or ``"ortho"``): Keyword to specify the normalization mode.
+        input (array): input array.
+        oshape (None or array of ints): output shape.
+        axes (None or array of ints): Axes over which to compute the inverse FFT.
+        norm (Nonr or ``"ortho"``): Keyword to specify the normalization mode.
 
     Returns:
-    numpy/cupy array of dimension oshape.
+        numpy/cupy array of dimension oshape.
 
     .. seealso:: :func:`numpy.fft.ifftn`
-    '''
+    """
     device = util.get_device(input)
     xp = device.xp
 
