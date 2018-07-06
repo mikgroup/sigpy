@@ -8,7 +8,7 @@ if sys.version_info < (3, 0):
 REQUIRED_PACKAGES = ['numpy', 'pywavelets', 'numba']
 
 setup(name='sigpy',
-      version='0.1',
+      version='0.0.1',
       description='Python package for signal reconstruction.',
       url='http://github.com/mikgroup/sigpy',
       author='Frank Ong',
@@ -17,4 +17,9 @@ setup(name='sigpy',
       packages=['sigpy'],
       install_requires=REQUIRED_PACKAGES,
       scripts=['bin/sigpy_plot'],
-      zip_safe=False)
+      classifiers=(
+          "Programming Language :: Python :: 3",
+          "License :: OSI Approved :: BSD License",
+          "Operating System :: OS Independent",
+      )
+)
