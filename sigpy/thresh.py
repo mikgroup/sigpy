@@ -180,8 +180,7 @@ def elitist_thresh(lamda, input, axes=None):
         array: Result.
 
     References:
-        Kowalski, M. 2009. Sparse regression using mixed norms. 
-        Applied and Computational Harmonic Analysis. 27, 3 (2009), 303–324.
+        Kowalski, M. 2009. Sparse regression using mixed norms.
     """
 
     shape = input.shape
