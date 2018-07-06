@@ -5,18 +5,17 @@ from sigpy import util, config
 if config.cupy_enabled:
     import cupy as cp
 
-__all__ = ['PowerMethod', 'GradientMethod',
-           'PrimalDualHybridGradient', 'AltMin']
+__all__ = ['PowerMethod', 'ConjugateGradient', 'GradientMethod',
+           'PrimalDualHybridGradient', 'AltMin', 'Alg']
 
 
 class Alg(object):
-    '''Iterative algorithm object.
+    """Iterative algorithm object.
 
-    Parameters
-    ----------
-    max_iter: int, maximum number of iterations.
-    device: int or Device object, device
-    '''
+    Args:
+        max_iter (int): Maximum number of iterations.
+        device (int or Device): Device.
+    """
 
     def __init__(self, max_iter, device):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -57,19 +56,17 @@ class Alg(object):
 
 
 class PowerMethod(Alg):
-    '''Power method to estimate maximum eigenvalue and eigenvector
+    """Power method to estimate maximum eigenvalue and eigenvector
     of a hermitian linear operator A
 
-    Parameter
-    ---------
-        A (function) - function to a hermitian linear mapping.
-        x (numpy/cupy array) - variable to optimize over.
-        max_iter (int) - maximum number of iterations.
+    Args:
+        A (function): Function to a hermitian linear mapping.
+        x (array): Variable to optimize over.
+        max_iter (int): Maximum number of iterations.
 
-    Attributes
-    ----------
-        max_eig (float) - maximum eigenvalue.
-    '''
+    Attributes:
+        max_eig (float): Maximum eigenvalue of A.
+    """
 
     def __init__(self, A, x, max_iter=30):
         self.A = A
@@ -92,23 +89,28 @@ class PowerMethod(Alg):
 
 
 class GradientMethod(Alg):
-    '''First order gradient method.
-    Considers the composite cost function f(x) + g(x), where f is smooth, and g is simple.
+    """First order gradient method.
+
+    Considers the composite cost function f(x) + g(x), where f is smooth, and g is simple,
+    ie proximal operator of g is simple to compute.
 
     Args:
-        gradf (function) - function to compute gradient of f.
-        x (numpy/cupy array) - variable to optimize over.
-        alpha (float) - step size.
-        proxg (function or None) - function to compute proximal mapping of g.
-        accelerate (bool) - toggle Nesterov acceleration.
-        max_iter (int) - maximum number of iterations.
-    '''
+        gradf (function): function to compute gradient of f.
+        x (array): variable to optimize over.
+        alpha (float): step size.
+        proxg (function or None): function to compute proximal mapping of g.
+        accelerate (bool): toggle Nesterov acceleration.
+        P (function): function to precondition, assumes proxg has already incorporated P.
+        max_iter (int): maximum number of iterations.
+    """
 
-    def __init__(self, gradf, x, alpha, proxg=None, accelerate=False, max_iter=100):
+    def __init__(self, gradf, x, alpha, proxg=None,
+                 accelerate=False, P=lambda x: x, max_iter=100):
         self.gradf = gradf
         self.alpha = alpha
         self.accelerate = accelerate
         self.proxg = proxg
+        self.P = P
         self.x = x
 
         super().__init__(max_iter, util.get_device(x))
@@ -130,7 +132,7 @@ class GradientMethod(Alg):
         if self.accelerate:
             self.x[:] = self.z
 
-        gradf_x = self.gradf(self.x)
+        gradf_x = self.P(self.gradf(self.x))
         util.axpy(self.x, -self.alpha, gradf_x)
 
         if self.proxg is not None:
@@ -160,17 +162,15 @@ class GradientMethod(Alg):
 
 
 class ConjugateGradient(Alg):
-    '''Conjugate Gradient Method. Solves for A x = b.
+    """Conjugate Gradient Method. Solves for A x = b.
 
-    Parameters
-    ----------
-    A - function to compute a hermitian mapping.
-    b - array.
-    x - array.
-    P - function to precondition, optional.
-    max_iter - int
-        maximum number of iterations.
-    '''
+    Args:
+        A (function): A hermitian linear function.
+        b (array): Observation.
+        x (array): Variable.
+        P (function): Preconditioner.
+        max_iter (int): Maximum number of iterations.
+    """
 
     def __init__(self, A, b, x, P=lambda x: x, max_iter=100):
         self.A = A
@@ -232,16 +232,16 @@ class ConjugateGradient(Alg):
 
 
 class NewtonsMethod(Alg):
-    """Newton's Method with the formulation of
-    Composite Self-Concordant Minimization
+    """Newton's Method with composite self-concordant formulation.
+
+    Considers the objective function: f(x) + g(x),
+    where f is smooth and g is simple.
 
     Args:
-    gradf - A function gradf(x): x -> gradient of f at x
-    hessf - A function H(x): x -> Hessian of f at x,
-            which is another function: y -> Hessian of f at x times y
-    proxHg - A function proxHg(H(x), u):
-            H(x), u -> argmin_y 1/2 y^* H(x) y - u^* y + g(y)
-    x - solution
+        gradf (function): Function to compute gradient of f.
+        hessf (function): Function to compute Hessian of f at x,
+        proxHg (function): Function to compute proximal operator of g.
+        x (array): Optimization variable.
     """
 
     def __init__(self, gradf, hessf, proxHg, x,
@@ -278,31 +278,31 @@ class NewtonsMethod(Alg):
 
 
 class PrimalDualHybridGradient(Alg):
-    '''Primal dual hybrid gradient.
+    """Primal dual hybrid gradient.
+
     Considers the problem:
-    min_x max_y G(x) - F^*(u) + <Ax, u>
-
+    min_x max_y g(x) - f^*(u) + <Ax, u>
     Or equivalently:
-    min_x F(A x) + G(x)
+    min_x f(A x) + g(x)
 
-    Parameters
-    ----------
-    proxfc - function to compute proximal operator of F^*
-    proxg - function to compute proximal operator of G
-    A - function to compute linear mapping A.
-    AH - function to compute adjoint linear mapping of A.
-    x - array.
-    u - array.
-    tau - float.
-    sigma - float.
-    theta - float.
-    max_iter - int, optional.
-        maximum number of iterations.
-    '''
+    Args:
+        proxfc (function): Function to compute proximal operator of f^*.
+        proxg (function): Function to compute proximal operator of g.
+        A (function): Function to compute linear mapping A.
+        AH (function): Function to compute adjoint linear mapping of A.
+        x (array): Primal solution.
+        u (array): Dual solution.
+        tau (float): Primal step-size.
+        sigma (float): Dual step-size.
+        theta (float): Primal extrapolation parameter.
+        P (function): Function to compute precondition x.
+        D (function): Function to compute precondition u.
+        max_iter (int): Maximum number of iterations.
+    """
 
     def __init__(
             self, proxfc, proxg, A, AH, x, u,
-            tau, sigma, theta, max_iter=100
+            tau, sigma, theta, P=lambda x: x, D=lambda x: x, max_iter=100
     ):
 
         self.proxfc = proxfc
@@ -318,6 +318,9 @@ class PrimalDualHybridGradient(Alg):
         self.sigma = sigma
         self.theta = theta
 
+        self.P = P
+        self.D = D
+
         super().__init__(max_iter, util.get_device(x))
 
     def _init(self):
@@ -329,10 +332,9 @@ class PrimalDualHybridGradient(Alg):
         self.u_old[:] = self.u
         self.x_old[:] = self.x
 
-        self.u[:] = self.proxfc(self.sigma, self.u +
-                                self.sigma * self.A(self.x_ext))
+        self.u[:] = self.proxfc(self.sigma, self.u + self.sigma * self.D(self.A(self.x_ext)))
 
-        self.x[:] = self.proxg(self.tau, self.x - self.tau * self.AH(self.u))
+        self.x[:] = self.proxg(self.tau, self.x - self.tau * self.P(self.AH(self.u)))
 
         self.x_ext[:] = self.x + self.theta * (self.x - self.x_old)
 
@@ -346,9 +348,9 @@ class AltMin(Alg):
     """Alternating Minimization.
 
     Args:
-        min1 (function): function to minimize over variable 1.
-        min2 (function): funciton to minimize over variable 2.
-        max_iter (int): maximum number of iterations.
+        min1 (function): Function to minimize over variable 1.
+        min2 (function): Funciton to minimize over variable 2.
+        max_iter (int): Maximum number of iterations.
     """
 
     def __init__(self, min1, min2, max_iter=30):
