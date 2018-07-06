@@ -654,10 +654,10 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
        float: SURE.
 
     References:
-        Ramani, S., Blu, T. and Unser, M. 2008. 
+        Ramani, S., Blu, T. and Unser, M. 2008.
         Monte-Carlo Sure: A Black-Box Optimization of Regularization Parameters 
-        for General Denoising Algorithms. IEEE Transactions on Image Processing. 
-        17, 9 (2008), 1540–1554.
+        for General Denoising Algorithms. IEEE Transactions on Image Processing.
+        17, 9 (2008), 1540-1554.
     """
     device = get_device(y)
     xp = device.xp
