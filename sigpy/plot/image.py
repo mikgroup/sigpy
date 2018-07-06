@@ -7,24 +7,28 @@ from sigpy.util import prod, move
 
 
 class Image(object):
-    '''Plot numpy ndarray as image.
-    Options can be selected through keypress
+    """Plot array as image.
 
-    Key options:
-    ------------
-    <x/y>        : select current dimension as x and y dimension
-    <z>          : toggle current dimension as z dimension
-    <t>          : swap between x and y axis
-    <left/right> : increment/decrement current dimension
-    <up/down>    : flip axis when current dimension is x or y
-                   otherwise increment/decrement slice at current dimension
-    <h>          : toggle hide all labels, titles and axes
-    <m>          : magnitude mode
-    <p>          : phase mode
-    <r>          : real mode
-    <i>          : imaginary mode
-    <l>          : log mode
-    '''
+    Key press options:
+        <x/y>: select current dimension as x and y dimension.
+        <t>: swap between x and y axis.
+        <z>: toggle current dimension as z dimension.
+        <c>: toggle current dimension as color channel. 
+            Only works if current dimension is of length 3.
+        <left/right>: increment/decrement current dimension
+        <up/down>: flip axis when current dimension is x or y.
+            Otherwise increment/decrement slice at current dimension.
+        <h>: toggle hide all labels, titles and axes.
+        <m>: magnitude mode.
+        <p>: phase mode.
+        <r>: real mode.
+        <i>: imaginary mode.
+        <l>: log mode.
+        <s>: save as image.
+        <v>: save as video by traversing current dimension.
+        <0-9>: enter slice number.
+        <enter>: Set current dimension as slice number.
+    """
 
     def __init__(self, im, x=-1, y=-2, z=None, c=None, hide=False, mode='m', title='',
                  interpolation='lanczos', fps=10):
@@ -356,9 +360,9 @@ def mosaic_shape(batch):
 
 
 def array_to_image(arr, color=False):
-    '''
+    """
     Flattens all dimensions except the last two
-    '''
+    """
 
     if color:
         eps = 1e-31

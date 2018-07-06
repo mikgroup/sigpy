@@ -7,22 +7,20 @@ from sigpy.util import prod
 
 
 class Line(object):
-    '''Plot numpy ndarray as lines.
-    Options can be selected through keypress
+    """Plot array as lines.
 
     Key options:
-    ------------
-    <x>        : select current dimension as x
-    <left/right> : increment/decrement current dimension
-    <up/down>    : flip axis when current dimension is x or y
-                   otherwise increment/decrement slice at current dimension
-    <h>          : toggle hide all labels, titles and axes
-    <m>          : magnitude mode
-    <p>          : phase mode
-    <r>          : real mode
-    <i>          : imaginary mode
-    <l>          : log mode
-    '''
+        <x>: select current dimension as x
+        <left/right>: increment/decrement current dimension
+        <up/down>: flip axis when current dimension is x or y
+            otherwise increment/decrement slice at current dimension
+        <h>: toggle hide all labels, titles and axes
+        <m>: magnitude mode
+        <p>: phase mode
+        <r>: real mode
+        <i>: imaginary mode
+        <l>: log mode
+    """
 
     def __init__(self, arr, x=-1, hide=False, mode='m', title=''):
         self.arr = arr
