@@ -19,6 +19,7 @@ def convolve(input1, input2, axes=None, mode='full'):
     Returns:
         array: Convolved result of shape input1.shape + input2.shape - 1
             if mode='full', and input1.shape - input2.shape + 1 otherwise.
+
     """
 
     util._check_same_dtype(input1, input2)
@@ -64,6 +65,7 @@ def correlate(input1, input2, axes=None, mode='full'):
     Returns:
         array: Correlated result of shape input1.shape + input2.shape - 1
             if mode='full', and input1.shape - input2.shape + 1 otherwise.
+
     """
 
     device = util.get_device(input1)

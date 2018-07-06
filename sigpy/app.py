@@ -100,7 +100,7 @@ class LinearLeastSquares(App):
     used otherwise.
 
     Args:
-        A (Linop object): Forward model linear operator.
+        A (Linop): Forward model linear operator.
         y (array): Observation.
         x (array): Solution.
         proxg (Prox): Proximal operator of g.
@@ -117,6 +117,7 @@ class LinearLeastSquares(App):
         tau (float): Primal step-size for PrimalDualHybridGradient.
         sigma (float): Dual step-size for PrimalDualHybridGradient.
         theta (float): Primal extrapolation parameter for PrimalDualHybridGradient.
+
     """
     def __init__(self, A, y, x, proxg=None,
                  lamda=0, G=None, g=None, R=None, weights=1,
@@ -167,12 +168,12 @@ class SecondOrderConeConstraintMinimization(App):
     min g(G x)
     s.t.  ||A x - y||_2 <= eps
 
-    Parameters
-    ----------
-    A (Linop): Forward model linear operator.
-    y (array): Observation.
-    proxg (Prox): Proximal operator of objective.
-    eps (float): Residual.
+    Args:
+        A (Linop): Forward model linear operator.
+        y (array): Observation.
+        proxg (Prox): Proximal operator of objective.
+        eps (float): Residual.
+
     """
 
     def __init__(self, A, y, x, proxg, eps, G=None, weights=1,

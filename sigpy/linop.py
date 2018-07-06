@@ -194,11 +194,11 @@ class Add(Linop):
 
     ishape, and oshape must match.
 
-    Parameters
-    ----------
-    linops - list of linear operators
+    Args:
+        linops (list of Linops): Input linear operators.
 
-    Returns: linops[0] + linops[1] + ... + linops[n - 1]
+    Returns: 
+        Linop: linops[0] + linops[1] + ... + linops[n - 1]
     """
 
     def __init__(self, linops):

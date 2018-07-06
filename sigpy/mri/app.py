@@ -285,7 +285,7 @@ class JsenseRecon(sp.app.App):
 
     def __init__(self, ksp,
                  mps_ker_width=12, ksp_calib_width=24,
-                 lamda=0, device=util.cpu_device,
+                 lamda=0, device=sp.util.cpu_device,
                  weights=1, coord=None, max_iter=5,
                  max_inner_iter=5, thresh=0):
 

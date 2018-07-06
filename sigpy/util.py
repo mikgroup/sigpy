@@ -18,11 +18,6 @@ if config.mpi4py_enabled:
         from cupy.cuda import nccl
 
 
-__all__ = ['rss',
-           'resize', 'flip', 'circshift',
-           'randn', 'rand', 'mse']
-
-
 class Device(object):
     """Device class.
 
@@ -36,6 +31,7 @@ class Device(object):
 
     Attributes:
         id (int): id = -1 represents CPU, and other ids represents corresponding GPUs.
+
     """
 
     def __init__(self, id_or_device):

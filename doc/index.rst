@@ -9,4 +9,6 @@ Welcome to sigpy's documentation!
 .. toctree::
    :maxdepth: 2
 
-   linop
+   main
+   signal
+   mri
