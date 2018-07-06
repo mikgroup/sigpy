@@ -10,5 +10,4 @@ Welcome to sigpy's documentation!
    :maxdepth: 2
 
    main
-   signal
    mri

@@ -8,3 +8,4 @@ Signal processing functions
    fft
    nufft
    thresh
+   util

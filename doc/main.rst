@@ -1,11 +1,11 @@
-Main classes
-============
+Main
+====
 
 .. toctree::
    :maxdepth: 2
 	 
    linop
    prox
-   util
+   signal
    alg
    app
