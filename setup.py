@@ -7,9 +7,13 @@ if sys.version_info < (3, 0):
 
 REQUIRED_PACKAGES = ['numpy', 'pywavelets', 'numba']
 
+with open("README.md", "r") as f:
+    long_description = f.read()
+
 setup(name='sigpy',
       version='0.0.1',
       description='Python package for signal reconstruction.',
+      long_description=long_description,
       url='http://github.com/mikgroup/sigpy',
       author='Frank Ong',
       author_email='frankong@berkeley.edu',
