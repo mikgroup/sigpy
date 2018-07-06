@@ -105,8 +105,8 @@ def l1_proj(eps, input):
         array: Result.
 
     References:
-        J. Duchi, S. Shalev-Shwartz, and Y. Singer, “Efficient projections onto 
-        the l1-ball for learning in high dimensions,” 2008.
+        J. Duchi, S. Shalev-Shwartz, and Y. Singer, "Efficient projections onto
+        the l1-ball for learning in high dimensions" 2008.
     """
     device = util.get_device(input)
     xp = device.xp
