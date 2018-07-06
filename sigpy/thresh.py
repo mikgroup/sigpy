@@ -1,4 +1,3 @@
-import math
 import numpy as np
 import numba as nb
 
@@ -9,9 +8,11 @@ if config.cupy_enabled:
 
 
 def soft_thresh(lamda, input):
-    """Soft threshold.
+    r"""Soft threshold.
 
-    Performs: (abs(input) - lamda)_+ * sign(input)
+    Performs:
+
+    .. math:: (| x | - \lambda)_+  \text{sgn}(x)
 
     Args:
         lamda (float, or array): Threshold parameter.
@@ -39,7 +40,9 @@ def soft_thresh(lamda, input):
 def hard_thresh(lamda, input):
     """Hard threshold.
 
-    Performs: 1{abs(input) > lamda} * input.
+    Performs: 
+
+    .. math:: 1\{|x| > \lambda\} x.
 
     Args:
         lamda (float, or array): Threshold parameter.
@@ -101,7 +104,7 @@ def l1_proj(eps, input):
     Returns:
         array: Result.
 
-    Reference:
+    References:
         J. Duchi, S. Shalev-Shwartz, and Y. Singer, “Efficient projections onto 
         the l1-ball for learning in high dimensions,” 2008.
     """
@@ -146,7 +149,7 @@ def l2_proj(eps, input, axes=None):
     return output
 
 
-def _find_elitist_thresh(lamda, input):
+def find_elitist_thresh(lamda, input):
 
     device = util.get_device(input)
     xp = device.xp
@@ -193,7 +196,7 @@ def elitist_thresh(lamda, input, axes=None):
     input = input.transpose(remain_axes + axes)
     input = input.reshape([batch, length])
 
-    thresh = _find_elitist_thresh(lamda, input)
+    thresh = find_elitist_thresh(lamda, input)
     output = soft_thresh(thresh, input)
 
     output = output.reshape([shape[a] for a in remain_axes + axes])

@@ -88,10 +88,12 @@ class MaxEig(App):
     
 
 class LinearLeastSquares(App):
-    """Linear least squares application.
+    r"""Linear least squares application.
 
     Solves for the following problem, with optional weights and regularizations:
-    minimize_x 1 / 2 || W^0.5 (A x - y) ||_2^2 + g(G x) + lamda / 2 || R x ||_2^2
+
+    .. math::
+        \min_x \frac{1}{2} \| W^{0.5} (A x - y) \|_2^2 + g(G x) + \frac{\lambda}{2} \| R x \|_2^2
 
     Three algorithms can be used: ConjugateGradient, GradientMethod,
     and PrimalDualHybridGradient. If alg_name is None, ConjugateGradient is used
@@ -128,14 +130,21 @@ class LinearLeastSquares(App):
         
         alg = _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
                            proxg, G, weights, precond, dual_precond,
-                           alpha, accelerate, max_power_iter, tau, sigma, theta)
+                           alpha, accelerate, tau, sigma, theta)
 
+        self.A = A
+        self.y = y
+        self.x = x
+        self.weights = weights
+        self.precond = precond
+        self.dual_precond = dual_precond
+        self.device = util.get_device(x)
+        
         if isinstance(alg, GradientMethod) and alpha is None or \
            isinstance(alg, PrimalDualHybridGradient) and (tau is None or sigma is None):
             self.max_eig_app = _get_LLS_max_eig_app(A, x, weights, lamda,
-                                                    R, precond, dual_precond)
+                                                    R, precond, dual_precond, max_power_iter)
 
-        self.x = x
         self.save_objs = save_objs
         if save_objs:
             self.objective = _get_LLS_objective(A, y, x, weights, lamda, R, g, G)
@@ -143,12 +152,15 @@ class LinearLeastSquares(App):
         super().__init__(alg)
 
     def _init(self):
-        if isinstance(self.alg, GradientMethod) and self.alg.alpha is None:
-            self.alg.alpha = 1 / self.max_eig_app.run()
-        elif isinstance(self.alg, PrimalDualHybridGradient) and \
-             (self.alg.tau is None or self.alg.sigma is None):
-            self.alg.tau = 1
-            self.alg.sigma = 1 / self.max_eig_app.run()
+        with self.device:
+            if isinstance(self.alg, ConjugateGradient):
+                self.alg.b = self.A.H(self.weights * self.y)
+            elif isinstance(self.alg, GradientMethod) and self.alg.alpha is None:
+                self.alg.alpha = 1 / self.max_eig_app.run()
+            elif isinstance(self.alg, PrimalDualHybridGradient) and \
+                 (self.alg.tau is None or self.alg.sigma is None):
+                self.alg.tau = 1
+                self.alg.sigma = 1 / self.max_eig_app.run()
 
         if self.save_objs:
             self.objs = []
@@ -161,12 +173,12 @@ class LinearLeastSquares(App):
         return self.x
 
 
-class SecondOrderConeConstraintMinimization(App):
-    """Second order cone constraint minimization application.
+class L2ConstrainedMinimization(App):
+    """L2 contrained minimization application.
 
-    Solves for the second order cone constraint minimization problem, ie:
+    Solves for problem:
     min g(G x)
-    s.t.  ||A x - y||_2 <= eps
+    s.t. ||A x - y||_2 <= eps
 
     Args:
         A (Linop): Forward model linear operator.
@@ -228,7 +240,7 @@ class SecondOrderConeConstraintMinimization(App):
     
 def _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
                  proxg, G, weights, precond, dual_precond,
-                 alpha, accelerate, max_power_iter, tau, sigma, theta):
+                 alpha, accelerate, tau, sigma, theta):
     
     if alg_name is None:
         if proxg is None:
@@ -246,7 +258,7 @@ def _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
     elif alg_name == 'PrimalDualHybridGradient':
         alg = _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
                                                 weights, precond, dual_precond,
-                                                max_iter, max_power_iter,
+                                                max_iter,
                                                 tau, sigma, theta)
     else:
         raise ValueError('Invalid alg_name: {alg_name}.'.format(alg_name=alg_name))
@@ -301,7 +313,7 @@ def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, precond,
 
 def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
                                       weights, precond, dual_precond, max_iter,
-                                      max_power_iter, tau, sigma, theta):
+                                      tau, sigma, theta):
 
     device = util.get_device(x)
     P = linop.Multiply(x.shape, precond)
@@ -343,15 +355,13 @@ def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
     return alg
 
 
-def _get_LLS_max_eig_app(A, x, weights, lamda, R, precond, dual_precond):
+def _get_LLS_max_eig_app(A, x, weights, lamda, R,
+                         precond, dual_precond, max_power_iter):
     device = util.get_device(x)
 
     I = linop.Identity(x.shape)
     W = linop.Multiply(A.oshape, weights)
     D = linop.Multiply(A.oshape, dual_precond)
-    
-    with device:
-        precond_sqrt = precond**0.5
 
     AHA = A.H * W * D * A
     if lamda != 0:
@@ -360,10 +370,10 @@ def _get_LLS_max_eig_app(A, x, weights, lamda, R, precond, dual_precond):
         else:
             AHA += lamda * R.H * R
 
-    P_sqrt = linop.Multiply(A.ishape, precond_sqrt)
-    AHA = P_sqrt * AHA * P_sqrt
+    P = linop.Multiply(A.ishape, precond)
+    AHA = P * AHA
 
-    app = MaxEig(AHA, dtype=x.dtype, device=device)
+    app = MaxEig(AHA, dtype=x.dtype, device=device, max_iter=max_power_iter)
 
     return app
 

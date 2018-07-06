@@ -10,7 +10,7 @@ __all__ = ['PowerMethod', 'ConjugateGradient', 'GradientMethod',
 
 
 class Alg(object):
-    """Iterative algorithm object.
+    """Abstraction for iterative algorithm.
 
     Args:
         max_iter (int): Maximum number of iterations.
@@ -56,8 +56,7 @@ class Alg(object):
 
 
 class PowerMethod(Alg):
-    """Power method to estimate maximum eigenvalue and eigenvector
-    of a hermitian linear operator A
+    """Power method to estimate maximum eigenvalue and eigenvector.
 
     Args:
         A (function): Function to a hermitian linear mapping.
@@ -91,7 +90,11 @@ class PowerMethod(Alg):
 class GradientMethod(Alg):
     """First order gradient method.
 
-    Considers the composite cost function f(x) + g(x), where f is smooth, and g is simple,
+    Considers the composite cost function:
+
+    .. math:: f(x) + g(x)
+
+    where f is smooth, and g is simple,
     ie proximal operator of g is simple to compute.
 
     Args:
@@ -162,7 +165,10 @@ class GradientMethod(Alg):
 
 
 class ConjugateGradient(Alg):
-    """Conjugate Gradient Method. Solves for A x = b.
+    r"""Conjugate Gradient Method. Solves for:
+
+    .. math:: A x = b
+    where A is hermitian.
 
     Args:
         A (function): A hermitian linear function.
@@ -232,9 +238,11 @@ class ConjugateGradient(Alg):
 
 
 class NewtonsMethod(Alg):
-    """Newton's Method with composite self-concordant formulation.
+    r"""Newton's Method with composite self-concordant formulation.
 
-    Considers the objective function: f(x) + g(x),
+    Considers the objective function:
+    
+    .. math:: f(x) + g(x),
     where f is smooth and g is simple.
 
     Args:
@@ -278,12 +286,15 @@ class NewtonsMethod(Alg):
 
 
 class PrimalDualHybridGradient(Alg):
-    """Primal dual hybrid gradient.
+    r"""Primal dual hybrid gradient.
 
     Considers the problem:
-    min_x max_y g(x) - f^*(u) + <Ax, u>
+
+    .. math:: \min_x \max_y g(x) - f^*(u) + <Ax, u>
+
     Or equivalently:
-    min_x f(A x) + g(x)
+
+    .. math:: \min_x f(A x) + g(x)
 
     Args:
         proxfc (function): Function to compute proximal operator of f^*.

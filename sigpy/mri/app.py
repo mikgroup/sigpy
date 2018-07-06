@@ -38,10 +38,11 @@ def move_to_device(ksp, mps, weights, coord, device):
 
 
 class SenseRecon(sp.app.LinearLeastSquares):
-    """SENSE Reconstruction.
+    r"""SENSE Reconstruction.
 
-    Considers the problem:
-        min_x 1 / 2 || P F S x - y ||_2^2 + lamda / 2 || x ||_2^2
+    Considers the problem
+
+    .. math:: \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \frac{\lambda}{2} \| x \|_2^2
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, x is the image, and y is the k-space measurements.
 
@@ -67,12 +68,14 @@ class SenseRecon(sp.app.LinearLeastSquares):
         super().__init__(A, ksp, self.img, lamda=lamda, weights=weights, **kwargs)
 
 
-class SenseConstrainedRecon(sp.app.SecondOrderConeConstraintMinimization):
-    """SENSE constrained reconstruction.
+class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
+    r"""SENSE constrained reconstruction.
 
-    Considers the problem:
-        min_x || x ||_2^2 
-        s.t. || P F S x - y ||_2^2 <= eps
+    Considers the problem
+
+    .. math::
+        \min_x &\| x \|_2^2 \\
+        \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, x is the image, and y is the k-space measurements.
 
@@ -104,10 +107,11 @@ class SenseConstrainedRecon(sp.app.SecondOrderConeConstraintMinimization):
 
 
 class WaveletRecon(sp.app.LinearLeastSquares):
-    """L1 Wavelet regularized reconstruction.
+    r"""L1 Wavelet regularized reconstruction.
 
-    Considers the problem:
-        min_x 1 / 2 || P F S x - y ||_2^2 + lamda / 2 || W x ||_1
+    Considers the problem
+
+    .. math:: \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| W x \|_1
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, W is the wavelet operator,
     x is the image, and y is the k-space measurements.
@@ -146,12 +150,14 @@ class WaveletRecon(sp.app.LinearLeastSquares):
         super().__init__(A, ksp, self.img, proxg=proxg, g=g, weights=weights, **kwargs)
 
 
-class WaveletConstrainedRecon(sp.app.SecondOrderConeConstraintMinimization):
-    """L1 wavelet regularized constrained reconstruction.
+class WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
+    r"""L1 wavelet regularized constrained reconstruction.
 
-    Considers the problem:
-        min_x || W x ||_1
-        s.t. || P F S x - y ||_2^2 <= eps
+    Considers the problem
+
+    .. math::
+        \min_x &\| W x \|_1 \\
+        \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, W is the wavelet operator, 
     x is the image, and y is the k-space measurements.
@@ -186,10 +192,11 @@ class WaveletConstrainedRecon(sp.app.SecondOrderConeConstraintMinimization):
 
 
 class TotalVariationRecon(sp.app.LinearLeastSquares):
-    """Total variation regularized reconstruction.
+    r"""Total variation regularized reconstruction.
 
-    Considers the problem:
-        min_x 1 / 2 || P F S x - y ||_2^2 + lamda / 2 || G x ||_1
+    Considers the problem
+:
+    .. math:: \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| G x \|_1
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, G is the gradient operator,
     x is the image, and y is the k-space measurements.
@@ -225,12 +232,14 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         super().__init__(A, ksp, self.img, proxg=proxg, g=g, G=G, weights=weights, **kwargs)
 
 
-class TotalVariationConstrainedRecon(sp.app.SecondOrderConeConstraintMinimization):
-    """Total variation regularized constrained reconstruction.
+class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
+    r"""Total variation regularized constrained reconstruction.
 
-    Considers the problem:
-        min_x || G x ||_1
-        s.t. || P F S x - y ||_2^2 <= eps
+    Considers the problem
+
+    .. math::
+        \min_x &\| G x \|_1 \\
+        \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, G is the gradient operator,
     x is the image, and y is the k-space measurements.
@@ -264,10 +273,13 @@ class TotalVariationConstrainedRecon(sp.app.SecondOrderConeConstraintMinimizatio
 
 
 class JsenseRecon(sp.app.App):
-    """JSENSE reconstruction.
+    r"""JSENSE reconstruction.
 
-    Considers the problem:
-        min_{l, r} 1 / 2 || l \ast r - y ||_2^2 + lamda / 2 (||l||_2^2 + ||r||_2^2)
+    Considers the problem 
+
+    .. math:: 
+        \min_{l, r} \frac{1}{2} \| l \ast r - y ||_2^2 + 
+        \frac{\lambda}{2} (\| l \|_2^2 + \| r \|_2^2)
     where \ast is the convolution operator.
 
     Args:
