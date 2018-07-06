@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 
 from sigpy import linop, prox, util, config

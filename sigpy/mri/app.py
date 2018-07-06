@@ -1,12 +1,7 @@
-import os
-import logging
-import itertools
 import numpy as np
 import sigpy as sp
 
-from scipy.signal import triang
-from sigpy.util import prod
-from sigpy.mri import linop, precond, util, sense
+from sigpy.mri import linop, util, sense
 
 
 if sp.config.mpi4py_enabled:

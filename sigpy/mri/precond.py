@@ -1,6 +1,5 @@
 import numpy as np
 import logging
-from scipy.signal import triang
 import sigpy as sp
 from sigpy.mri import sense
 

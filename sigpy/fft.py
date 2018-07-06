@@ -20,7 +20,8 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
     Returns:
         array: FFT result of dimension oshape.
 
-    .. seealso:: :func:`numpy.fft.fftn`
+    See Also:
+        :func:`numpy.fft.fftn`
     """
     device = util.get_device(input)
     xp = device.xp
@@ -47,12 +48,13 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
         input (array): input array.
         oshape (None or array of ints): output shape.
         axes (None or array of ints): Axes over which to compute the inverse FFT.
-        norm (Nonr or ``"ortho"``): Keyword to specify the normalization mode.
+        norm (None or ``"ortho"``): Keyword to specify the normalization mode.
 
     Returns:
-        numpy/cupy array of dimension oshape.
+        array of dimension oshape.
 
-    .. seealso:: :func:`numpy.fft.ifftn`
+    See Also:
+        :func:`numpy.fft.ifftn`
     """
     device = util.get_device(input)
     xp = device.xp
