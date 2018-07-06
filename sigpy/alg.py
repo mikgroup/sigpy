@@ -267,11 +267,11 @@ class NewtonsMethod(Alg):
         self.lamda = util.dot(d, hessfx(d))**0.5
         if self.lamda >= self.sigma:
             alpha = 1 / (1 + self.lamda)
-            self.logger.debug(u'Damped region: λ={} > {}'.
+            self.logger.debug(u'Damped region: lamda={} > {}'.
                               format(self.lamda, self.sigma))
         else:
             alpha = 1
-            self.logger.debug(u'Full-step region: λ={} < {}'
+            self.logger.debug(u'Full-step region: lamda={} < {}'
                               .format(self.lamda, self.sigma))
 
         self.x += alpha * d
