@@ -5,6 +5,16 @@ from sigpy.util import prod
 
 
 class SenseMaps(object):
+    """Sensitivity maps class.
+
+    Implicitly stored as sensitvity map kernels in k-space and an image mask.
+    Can be sliced.
+
+    Args:
+        mps_ker (array): sensitivity map kernels.
+        img_mask (array): image mask.
+        device (Device): device to store mps_ker and img_mask.
+    """
 
     def __init__(self, mps_ker, img_mask, device=sp.util.cpu_device):
         self.num_coils = len(mps_ker)

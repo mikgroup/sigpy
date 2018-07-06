@@ -38,14 +38,25 @@ def move_to_device(ksp, mps, weights, coord, device):
 
 
 class SenseRecon(sp.app.LinearLeastSquares):
-    '''
-    Sense Reconstruction
-    min_1 / 2|| P F S x - y ||_2^2 + lamda / 2 || x ||_2^2
-    '''
+    """SENSE Reconstruction.
 
-    def __init__(
-            self, ksp, mps,
-            lamda=0, weights=1, coord=None, device=sp.util.cpu_device, **kwargs):
+    Considers the problem:
+        min_x 1 / 2 || P F S x - y ||_2^2 + lamda / 2 || x ||_2^2
+    where P is the sampling operator, F is the Fourier transform operator,
+    S is the SENSE operator, x is the image, and y is the k-space measurements.
+
+    Args:
+        ksp (array): k-space measurements.
+        mps (array or SenseMaps): sensitivity maps.
+        lamda (float): regularization parameter.
+        weights (float or array): weights for data consistency.
+        coord (None or array): coordinates.
+        device (Device): device to perform reconstruction.
+        **kwargs: Other optional arguments.
+    """
+
+    def __init__(self, ksp, mps, lamda=0, weights=1,
+                 coord=None, device=sp.util.cpu_device, **kwargs):
         ksp, mps, weights, coord = move_to_device(
             ksp, mps, weights, coord, device)
 
@@ -56,16 +67,31 @@ class SenseRecon(sp.app.LinearLeastSquares):
         super().__init__(A, ksp, self.img, lamda=lamda, weights=weights, **kwargs)
 
 
-class SenseConstrainedRecon(sp.app.SecondOrderConeConstraint):
-    '''
-    Sense Constrained Reconstruction
-    min || x ||_2^2
-    s.t. || P F S x - y ||_2 <= eps
-    '''
+class SenseConstrainedRecon(sp.app.SecondOrderConeConstraintMinimization):
+    """SENSE constrained reconstruction.
 
-    def __init__(
-            self, ksp, mps, eps,
-            weights=1, coord=None, device=sp.util.cpu_device, **kwargs):
+    Considers the problem:
+        min_x || x ||_2^2 
+        s.t. || P F S x - y ||_2^2 <= eps
+    where P is the sampling operator, F is the Fourier transform operator,
+    S is the SENSE operator, x is the image, and y is the k-space measurements.
+
+    Args:
+        ksp (array): k-space measurements.
+        mps (array or SenseMaps): sensitivity maps.
+        eps (float): constraint parameter.
+        weights (float or array): weights for data consistency.
+        coord (None or array): coordinates.
+        device (Device): device to perform reconstruction.
+        **kwargs: Other optional arguments.
+
+    See also:
+       SenseRecon
+    """
+
+    def __init__(self, ksp, mps, eps,
+                 weights=1, coord=None,
+                 device=sp.util.cpu_device, **kwargs):
         ksp, mps, weights, coord = move_to_device(
             ksp, mps, weights, coord, device)
         weights = estimate_weights(ksp, weights, coord)
@@ -78,14 +104,28 @@ class SenseConstrainedRecon(sp.app.SecondOrderConeConstraint):
 
 
 class WaveletRecon(sp.app.LinearLeastSquares):
-    '''
-    l1 wavelet Reconstruction
-    min_x 1 / 2|| P F S W^H x - y ||_2^2 + lamda || x ||_1
-    '''
+    """L1 Wavelet regularized reconstruction.
 
-    def __init__(
-            self, ksp, mps, lamda,
-            weights=1, coord=None, wave_name='db4', device=sp.util.cpu_device, **kwargs):
+    Considers the problem:
+        min_x 1 / 2 || P F S x - y ||_2^2 + lamda / 2 || W x ||_1
+    where P is the sampling operator, F is the Fourier transform operator,
+    S is the SENSE operator, W is the wavelet operator,
+    x is the image, and y is the k-space measurements.
+
+    Args:
+        ksp (array): k-space measurements.
+        mps (array or SenseMaps): sensitivity maps.
+        lamda (float): regularization parameter.
+        weights (float or array): weights for data consistency.
+        coord (None or array): coordinates.
+        wave_name (str): wavelet name.
+        device (Device): device to perform reconstruction.
+        **kwargs: Other optional arguments.
+    """
+
+    def __init__(self, ksp, mps, lamda,
+                 weights=1, coord=None,
+                 wave_name='db4', device=sp.util.cpu_device, **kwargs):
         ksp, mps, weights, coord = move_to_device(
             ksp, mps, weights, coord, device)
         weights = estimate_weights(ksp, weights, coord)
@@ -106,12 +146,29 @@ class WaveletRecon(sp.app.LinearLeastSquares):
         super().__init__(A, ksp, self.img, proxg=proxg, g=g, weights=weights, **kwargs)
 
 
-class WaveletConstrainedRecon(sp.app.SecondOrderConeConstraint):
-    '''
-    Wavelet Constrained Reconstruction
-    min || x ||_1
-    s.t. || A x - y ||_2 <= eps
-    '''
+class WaveletConstrainedRecon(sp.app.SecondOrderConeConstraintMinimization):
+    """L1 wavelet regularized constrained reconstruction.
+
+    Considers the problem:
+        min_x || W x ||_1
+        s.t. || P F S x - y ||_2^2 <= eps
+    where P is the sampling operator, F is the Fourier transform operator,
+    S is the SENSE operator, W is the wavelet operator, 
+    x is the image, and y is the k-space measurements.
+
+    Args:
+        ksp (array): k-space measurements.
+        mps (array or SenseMaps): sensitivity maps.
+        eps (float): constraint parameter.
+        wave_name (str): wavelet name.
+        weights (float or array): weights for data consistency.
+        coord (None or array): coordinates.
+        device (Device): device to perform reconstruction.
+        **kwargs: Other optional arguments.
+
+    See also:
+       WaveletRecon
+    """
 
     def __init__(
             self, ksp, mps, eps,
@@ -129,10 +186,23 @@ class WaveletConstrainedRecon(sp.app.SecondOrderConeConstraint):
 
 
 class TotalVariationRecon(sp.app.LinearLeastSquares):
-    '''
-    l1 wavelet Reconstruction
-    min_x 1 / 2|| A x - y ||_2^2 + lamda || G x ||_1
-    '''
+    """Total variation regularized reconstruction.
+
+    Considers the problem:
+        min_x 1 / 2 || P F S x - y ||_2^2 + lamda / 2 || G x ||_1
+    where P is the sampling operator, F is the Fourier transform operator,
+    S is the SENSE operator, G is the gradient operator,
+    x is the image, and y is the k-space measurements.
+
+    Args:
+        ksp (array): k-space measurements.
+        mps (array or SenseMaps): sensitivity maps.
+        lamda (float): regularization parameter.
+        weights (float or array): weights for data consistency.
+        coord (None or array): coordinates.
+        device (Device): device to perform reconstruction.
+        **kwargs: Other optional arguments.
+    """
 
     def __init__(self, ksp, mps, lamda,
                  weights=1, coord=None, device=sp.util.cpu_device, **kwargs):
@@ -155,12 +225,28 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         super().__init__(A, ksp, self.img, proxg=proxg, g=g, G=G, weights=weights, **kwargs)
 
 
-class TotalVariationConstrainedRecon(sp.app.SecondOrderConeConstraint):
-    '''
-    TotalVariation Constrained Reconstruction
-    min || G x ||_1
-    s.t. || A x - y ||_2 <= eps
-    '''
+class TotalVariationConstrainedRecon(sp.app.SecondOrderConeConstraintMinimization):
+    """Total variation regularized constrained reconstruction.
+
+    Considers the problem:
+        min_x || G x ||_1
+        s.t. || P F S x - y ||_2^2 <= eps
+    where P is the sampling operator, F is the Fourier transform operator,
+    S is the SENSE operator, G is the gradient operator,
+    x is the image, and y is the k-space measurements.
+
+    Args:
+        ksp (array): k-space measurements.
+        mps (array or SenseMaps): sensitivity maps.
+        eps (float): constraint parameter.
+        weights (float or array): weights for data consistency.
+        coord (None or array): coordinates.
+        device (Device): device to perform reconstruction.
+        **kwargs: Other optional arguments.
+
+    See also:
+       TotalVariationRecon
+    """
 
     def __init__(
             self, ksp, mps, eps,
@@ -178,15 +264,30 @@ class TotalVariationConstrainedRecon(sp.app.SecondOrderConeConstraint):
 
 
 class JsenseRecon(sp.app.App):
-    '''
-    Joint Sense Reconstruction
-    min 1 / 2 || A(l, r) - y ||_2^2 + lamda / 2 (||l||_2^2 + ||r||_2^2)
-    '''
+    """JSENSE reconstruction.
 
-    def __init__(
-            self, ksp,
-            mps_ker_width=12, ksp_calib_width=24, lamda=0, device=-1,
-            weights=1, coord=None, max_iter=5, max_inner_iter=5, thresh=0):
+    Considers the problem:
+        min_{l, r} 1 / 2 || l \ast r - y ||_2^2 + lamda / 2 (||l||_2^2 + ||r||_2^2)
+    where \ast is the convolution operator.
+
+    Args:
+        ksp (array): k-space measurements.
+        mps_ker_width (int): sensitivity maps kernel width.
+        ksp_calib_width (int): k-space calibration width.
+        lamda (float): regularization parameter.
+        device (Device): device to perform reconstruction.
+        weights (float or array): weights for data consistency.
+        coord (None or array): coordinates.
+        max_iter (int): Maximum number of iterations.
+        max_inner_iter (int): Maximum number of inner iterations.
+        thresh (float): threshold parameter for output, from 0 to 1.
+    """
+
+    def __init__(self, ksp,
+                 mps_ker_width=12, ksp_calib_width=24,
+                 lamda=0, device=util.cpu_device,
+                 weights=1, coord=None, max_iter=5,
+                 max_inner_iter=5, thresh=0):
 
         self.ksp = ksp
         self.mps_ker_width = mps_ker_width

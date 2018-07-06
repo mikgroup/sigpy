@@ -3,16 +3,31 @@ import numpy as np
 __all__ = ['birdcage_maps', 'shepp_logan']
 
 
-def birdcage_maps(shape, r=1.5, nzz=8, dtype=np.complex):
-    '''
-    Simulates birdcage coil sensitivies
+def shepp_logan(shape, dtype=np.complex):
+    """Generates a Shepp Logan phantom with a given shape and dtype.
 
-    Parameters:
-    -----------
-    shape - map shape, can have length 3, and 4.
-    r - relative radius of birdcage.
-    nzz - number of coils per ring
-    '''
+    Args:
+        shape (tuple of ints): shape, can be of length 2 or 3.
+        dtype (Dtype): data type.
+
+    Returns:
+        array.
+    """
+    return phantom(shape, sl_amps, sl_scales, sl_offsets, sl_angles, dtype)
+
+
+def birdcage_maps(shape, r=1.5, nzz=8, dtype=np.complex):
+    """Simulates birdcage coil sensitivies.
+
+    Args:
+        shape (tuple of ints): sensitivity maps shape, can be of length 3, and 4.
+        r (float): relative radius of birdcage.
+        nzz (int): number of coils per ring.
+        dtype (Dtype): data type.
+
+    Returns:
+        array.
+    """
 
     if len(shape) == 3:
 
@@ -89,14 +104,6 @@ sl_angles = [[0, 0, 0],
              [0, 0, 0],
              [0, 0, 0],
              [0, 0, 0]]
-
-
-def shepp_logan(shape, dtype=np.complex):
-    """
-    Generates a Shepp Logan phantom with a given shape and
-    dtype.
-    """
-    return phantom(shape, sl_amps, sl_scales, sl_offsets, sl_angles, dtype)
 
 
 oscillation_a = [0, 0, 0, 0, 0.0, 0.3, 0.3, 0.3, 0.3, 0.3]

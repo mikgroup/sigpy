@@ -6,21 +6,22 @@ from sigpy.mri import sense
 
 
 def sense_kspace_precond(mps, weights=1, coord=None, lamda=0, device=sp.util.cpu_device):
-    '''Compute L2 optimized Sense diagonal preconditioner in Fourier domain.
+    """Compute L2 optimized Sense diagonal preconditioner in Fourier domain.
+
     Considers the optimization problem:
         p = argmin_p 1 / 2 || diag(p) W F S S^H F^H W^H - I ||_2^2
     where W is the weighting operator,
     F is the Fourier operator, and S is the sensitivity operator.
 
     Args:
-        mps (numpy/cupy array) - sensitivity maps of shape [num_coils] + image shape.
-        weights (numpy/cupy array) - k-space weights.
-        coord (numpy/cupy array) - k-space coordinates of shape [...] + [ndim].
+        mps (array) - sensitivity maps of shape [num_coils] + image shape.
+        weights (array) - k-space weights.
+        coord (array) - k-space coordinates of shape [...] + [ndim].
         lamda (float) - regularization.
 
     Returns:
-       precond (numpy/cupy array) - k-space preconditioner of same shape as k-space.
-    '''
+        precond (array) - k-space preconditioner of same shape as k-space.
+    """
     if isinstance(mps, sense.SenseMaps):
         dtype = mps.mps_ker.dtype
         mps.use_device(device)
