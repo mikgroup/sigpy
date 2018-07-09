@@ -255,7 +255,7 @@ def _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
         alg = _get_LLS_GradientMethod(A, y, x, weights, R, lamda, precond,
                                       max_iter, alpha, proxg, accelerate)
     elif alg_name == 'PrimalDualHybridGradient':
-        alg = _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
+        alg = _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G, lamda, R,
                                                 weights, precond, dual_precond,
                                                 max_iter,
                                                 tau, sigma, theta)
@@ -310,7 +310,7 @@ def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, precond,
     return alg
 
 
-def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
+def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G, lamda, R,
                                       weights, precond, dual_precond, max_iter,
                                       tau, sigma, theta):
 
@@ -324,8 +324,28 @@ def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
     w_A = W_sqrt * A
     
     if proxg is None:
-        proxg = prox.NoOp(x.shape)
-    
+        if lamda == 0:
+            proxg = prox.NoOp(x.shape)
+        elif R is None:
+            proxg = prox.L2Reg(x.shape, lamda)
+        else:
+            proxg = prox.L2Reg(R.oshape, lamda)
+    elif lamda != 0:
+        if G is None:
+            if R is None:
+                G = linop.Vstack([linop.Identity(x.shape), linop.Identity(x.shape)])
+                proxg = prox.Stack([proxg, prox.L2Reg(x.shape, lamda)])
+            else:
+                G = linop.Vstack([linop.Identity(x.shape), R])
+                proxg = prox.Stack([proxg, prox.L2Reg(R.oshape, lamda)])
+        else:
+            if R is None:
+                G = linop.Vstack([G, linop.Identity(x.shape)])
+                proxg = prox.Stack([proxg, prox.L2Reg(x.shape, lamda)])
+            else:
+                G = linop.Vstack([G, R])
+                proxg = prox.Stack([proxg, prox.L2Reg(R.oshape, lamda)])
+                    
     if G is None:
         D = linop.Multiply(y.shape, dual_precond)
         proxfc = prox.L2Reg(y.shape, dual_precond, y=-w_y)

@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import numpy.testing as npt
-from sigpy import app, linop, util
+from sigpy import app, linop, util, prox
 
 if __name__ == '__main__':
     unittest.main()
@@ -60,6 +60,48 @@ class TestApp(unittest.TestCase):
 
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(A, y, x_rec, max_iter=1000, lamda=lamda,
+                               alg_name='PrimalDualHybridGradient').run()
+        npt.assert_allclose(x_rec, x_lstsq)
+        
+    def test_proxg_LinearLeastSquares(self):
+        n = 5
+        mat = np.eye(n) + 0.1 * util.randn([n, n])
+        A = linop.MatMul([n, 1], mat)
+        x = util.randn([n, 1])
+        y = A(x)
+        lamda = 0.1
+        x_lstsq = np.linalg.solve(np.matmul(mat.conjugate().T, mat) + lamda * np.eye(n),
+                                  np.matmul(mat.conjugate().T, y))
+
+        proxg = prox.L2Reg([n, 1], lamda)
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(
+            A, y, x_rec, alg_name='GradientMethod', max_iter=1000, proxg=proxg).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(A, y, x_rec, max_iter=1000, proxg=proxg,
+                               alg_name='PrimalDualHybridGradient').run()
+        npt.assert_allclose(x_rec, x_lstsq)
+        
+    def test_l2reg_proxg_LinearLeastSquares(self):
+        n = 5
+        mat = np.eye(n) + 0.1 * util.randn([n, n])
+        A = linop.MatMul([n, 1], mat)
+        x = util.randn([n, 1])
+        y = A(x)
+        lamda = 0.1
+        x_lstsq = np.linalg.solve(np.matmul(mat.conjugate().T, mat) + 2 * lamda * np.eye(n),
+                                  np.matmul(mat.conjugate().T, y))
+
+        proxg = prox.L2Reg([n, 1], lamda)
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(
+            A, y, x_rec, alg_name='GradientMethod', max_iter=1000, lamda=lamda, proxg=proxg).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(A, y, x_rec, max_iter=1000, lamda=lamda, proxg=proxg,
                                alg_name='PrimalDualHybridGradient').run()
         npt.assert_allclose(x_rec, x_lstsq)
 
