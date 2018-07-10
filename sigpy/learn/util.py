@@ -33,6 +33,7 @@ def scores_to_labels(scores):
 
     Returns:
         array: Label array of lengths scores.shape[0].
+
     """
 
     device = sp.util.get_device(scores)
