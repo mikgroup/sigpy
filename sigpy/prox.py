@@ -184,22 +184,15 @@ class L1Reg(Prox):
     Args:
         shape (tuple of ints): input shape
         lamda (float): regularization parameter
-        transform (Linop): Unitary linear operator.
     """
 
-    def __init__(self, shape, lamda, transform=None):
+    def __init__(self, shape, lamda):
         self.lamda = lamda
-        self.transform = transform
 
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-
-        if self.transform is None:
-            return thresh.soft_thresh(self.lamda * alpha, input)
-        else:
-            return self.transform.H(thresh.soft_thresh(self.lamda * alpha,
-                                                       self.transform(input)))
+        return thresh.soft_thresh(self.lamda * alpha, input)
 
 
 class L0Proj(Prox):
