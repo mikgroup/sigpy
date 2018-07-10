@@ -7,9 +7,6 @@ if config.cupy_enabled:
     import cupy as cp
 
 
-__all__ = ["MaxEig", "LinearLeastSquares", "SecondOrderConeConstraint"]
-
-
 class App(object):
     """Iterative algorithm application. Each App has its own Alg.
 
@@ -94,10 +91,10 @@ class LinearLeastSquares(App):
     .. math::
         \min_x \frac{1}{2} \| W^{0.5} (A x - y) \|_2^2 + g(G x) + \frac{\lambda}{2} \| R x \|_2^2
 
-    Three algorithms can be used: ConjugateGradient, GradientMethod,
-    and PrimalDualHybridGradient. If alg_name is None, ConjugateGradient is used
-    when proxg is not specified. If proximal operator is specified,
-    then GradientMethod is used when G is specified, and PrimalDualHybridGradient is
+    Three algorithms can be used: `ConjugateGradient`, `GradientMethod`,
+    and `PrimalDualHybridGradient`. If `alg_name` is None, `ConjugateGradient` is used
+    when `proxg` is not specified. If `proxg` is specified,
+    then `GradientMethod` is used when `G` is specified, and `PrimalDualHybridGradient` is
     used otherwise.
 
     Args:
@@ -106,18 +103,18 @@ class LinearLeastSquares(App):
         x (array): Solution.
         proxg (Prox): Proximal operator of g.
         lamda (float): l2 regularization parameter.
-        g (None or function): Regularization function. Only used for when save_objs is true.
+        g (None or function): Regularization function. Only used for when `save_objs` is true.
         G (None or Linop): Regularization linear operator.
         R (None or Linop): l2 regularization linear operator.
         weights (float or array): Weights for least squares.
-        alg_name (str): {'ConjugateGradient', 'GradientMethod', 'PrimalDualHybridGradient'}.
-        alpha (None or float): Step size for GradientMethod.
-        accelerate (bool): Toggle Nesterov acceleration for GradientMethod.
+        alg_name (str): {`'ConjugateGradient'`, `'GradientMethod'`, `'PrimalDualHybridGradient'`}.
+        alpha (None or float): Step size for `GradientMethod`.
+        accelerate (bool): Toggle Nesterov acceleration for `GradientMethod`.
         max_power_iter (int): Maximum number of iterations for power method. 
-            Used for GradientMethod and PrimalDualHybridGradient when alpha is not specified.
-        tau (float): Primal step-size for PrimalDualHybridGradient.
-        sigma (float): Dual step-size for PrimalDualHybridGradient.
-        theta (float): Primal extrapolation parameter for PrimalDualHybridGradient.
+            Used for `GradientMethod` and `PrimalDualHybridGradient` when `alpha` is not specified.
+        tau (float): Primal step-size for `PrimalDualHybridGradient`.
+        sigma (float): Dual step-size for `PrimalDualHybridGradient`.
+        theta (float): Primal extrapolation parameter for `PrimalDualHybridGradient`.
 
     """
     def __init__(self, A, y, x, proxg=None,

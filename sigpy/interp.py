@@ -8,9 +8,6 @@ if config.cupy_enabled:
     import cupy as cp
 
 
-__all__ = ['interp', 'gridding']
-
-
 def interp(input, width, table, coord):
     """Interpolation from array to points specified by coordinates.
 

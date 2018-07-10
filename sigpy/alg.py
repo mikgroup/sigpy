@@ -5,9 +5,6 @@ from sigpy import util, config
 if config.cupy_enabled:
     import cupy as cp
 
-__all__ = ['PowerMethod', 'ConjugateGradient', 'GradientMethod',
-           'PrimalDualHybridGradient', 'AltMin', 'Alg']
-
 
 class Alg(object):
     """Abstraction for iterative algorithm.
@@ -64,7 +61,7 @@ class PowerMethod(Alg):
         max_iter (int): Maximum number of iterations.
 
     Attributes:
-        max_eig (float): Maximum eigenvalue of A.
+        float: Maximum eigenvalue of `A`.
     """
 
     def __init__(self, A, x, max_iter=30):
@@ -250,6 +247,7 @@ class NewtonsMethod(Alg):
         hessf (function): Function to compute Hessian of f at x,
         proxHg (function): Function to compute proximal operator of g.
         x (array): Optimization variable.
+
     """
 
     def __init__(self, gradf, hessf, proxHg, x,
@@ -299,16 +297,17 @@ class PrimalDualHybridGradient(Alg):
     Args:
         proxfc (function): Function to compute proximal operator of f^*.
         proxg (function): Function to compute proximal operator of g.
-        A (function): Function to compute linear mapping A.
-        AH (function): Function to compute adjoint linear mapping of A.
+        A (function): Function to compute a linear mapping.
+        AH (function): Function to compute the adjoint linear mapping of `A`.
         x (array): Primal solution.
         u (array): Dual solution.
         tau (float): Primal step-size.
         sigma (float): Dual step-size.
         theta (float): Primal extrapolation parameter.
-        P (function): Function to compute precondition x.
-        D (function): Function to compute precondition u.
+        P (function): Function to compute precondition primal variable.
+        D (function): Function to compute precondition dual variable.
         max_iter (int): Maximum number of iterations.
+
     """
 
     def __init__(
