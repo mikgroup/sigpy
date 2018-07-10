@@ -110,6 +110,28 @@ class Stack(Prox):
         return output
 
 
+class UnitaryTransform(Prox):
+    """Unitary transform input space.
+    
+    Returns a proximal operator that does
+
+    .. math:: A^H \text{prox}(A x)
+    
+    Args:
+        prox (Prox): Proximal operator.
+        A (Linop): Unitary linear operator.
+    """
+    def __init__(self, prox, A):
+        self.prox = prox
+        self.A = A
+
+        super().__init__(A.ishape)
+
+    def _prox(self, alpha, input):
+
+        return self.A.H(self.prox(alpha, self.A(input)))
+
+
 class L2Reg(Prox):
     """Proximal operator for lamda / 2 || x - y ||_2^2.
 

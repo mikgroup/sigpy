@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import numpy.testing as npt
-from sigpy import prox, util
+from sigpy import prox, util, linop
 
 if __name__ == '__main__':
     unittest.main()
@@ -32,6 +32,15 @@ class TestProx(unittest.TestCase):
         y = P(1.0, x)
         z = 1.0 if np.linalg.norm(x, 1) > 1.0 else np.linalg.norm(x, 1)
         npt.assert_allclose(np.linalg.norm(y, 1), z)
+
+    def test_UnitaryTransform(self):
+        shape = [6]
+        lamda = 1.0
+        A = linop.FFT(shape)
+        P = prox.UnitaryTransform(prox.L2Reg(shape, lamda), A)
+        x = util.randn(shape)
+        y = P(0.1, x)
+        npt.assert_allclose(y, x / (1 + lamda * 0.1))
 
     def test_L2Reg(self):
         shape = [6]
