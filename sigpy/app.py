@@ -140,6 +140,9 @@ class LinearLeastSquares(App):
            isinstance(alg, PrimalDualHybridGradient) and (tau is None or sigma is None):
             self.max_eig_app = _get_LLS_max_eig_app(A, x, weights, lamda,
                                                     R, precond, dual_precond, max_power_iter)
+            self.get_max_eig = True
+        else:
+            self.get_max_eig = False
 
         self.save_objs = save_objs
         if save_objs:
@@ -148,15 +151,17 @@ class LinearLeastSquares(App):
         super().__init__(alg)
 
     def _init(self):
+        if self.get_max_eig:
+            max_eig = self.max_eig_app.run()
+        
         with self.device:
             if isinstance(self.alg, ConjugateGradient):
                 self.alg.b = self.A.H(self.weights * self.y)
-            elif isinstance(self.alg, GradientMethod) and self.alg.alpha is None:
-                self.alg.alpha = 1 / self.max_eig_app.run()
-            elif isinstance(self.alg, PrimalDualHybridGradient) and \
-                 (self.alg.tau is None or self.alg.sigma is None):
+            elif isinstance(self.alg, GradientMethod) and self.get_max_eig:
+                self.alg.alpha = 1 / max_eig
+            elif isinstance(self.alg, PrimalDualHybridGradient) and self.get_max_eig:
                 self.alg.tau = 1
-                self.alg.sigma = 1 / self.max_eig_app.run()
+                self.alg.sigma = 1 / max_eig
 
         if self.save_objs:
             self.objs = []
