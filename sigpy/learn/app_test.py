@@ -29,6 +29,24 @@ class TestApp(unittest.TestCase):
         batch_size = 1
         dat = np.array([[1, 1]], dtype=np.float) / 2**0.5
 
-        dic = app.ConvSparseCoding(dat, num_atoms, dic_width, batch_size).run()
+        dic = app.ConvSparseCoding(dat, num_atoms, dic_width, batch_size, max_iter=10).run()
 
         npt.assert_allclose(np.abs(dic), [[1 / 2**0.5, 1 / 2**0.5]])
+
+    def test_LinearRegression(self):
+
+        n = 2
+        k = 5
+        m = 4
+        batch_size = n
+
+        fea = np.random.randn(n, k)
+        dat = np.random.randn(n, m)
+        
+        alpha = 1 / np.linalg.svd(fea, compute_uv=False)[0]**2
+
+        mat = app.LinearRegression(fea, dat, batch_size, alpha).run()
+        
+        mat_lstsq = np.linalg.lstsq(fea, dat)[0]
+
+        npt.assert_allclose(mat, mat_lstsq)

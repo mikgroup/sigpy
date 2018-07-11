@@ -31,6 +31,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
 
     See Also:
         :func:`sigpy.app.LinearLeastSquares`
+
     """
 
     def __init__(self, dat, dic, lamda=0.001, mode='full', multi_channel=False, **kwargs):
@@ -126,6 +127,70 @@ class ConvSparseCoding(sp.app.App):
 
     def _output(self):
         return self.dic
+
+    
+class LinearRegression(sp.app.LinearLeastSquares):
+    """Performs linear regression to fit features to data.
+
+    Considers the model dat = fea * mat, and solves
+
+    .. math::
+        \min_mat || fea * mat - dat ||_2^2
+
+    Args:
+        fea (array): feature of shape (num_dat, ...).
+        dat (array): data of shape (num_dat, ...).
+        batch_size (int): batch size.
+        alpha (float): step size.
+
+    Returns:
+       array: matrix of shape fea.shape[1:] + dat.shape[1:].
+
+    """
+
+    def __init__(self, fea, dat, batch_size, alpha,
+                 max_iter=100, device=sp.util.cpu_device, **kwargs):
+        
+        dtype = dat.dtype
+
+        num_dat = len(dat)
+        num_batches = num_dat // batch_size
+        self.batch_size = batch_size
+        self.fea = fea
+        self.dat = dat
+
+        mat = sp.util.zeros(fea.shape[1:] + dat.shape[1:], dtype=dtype, device=device)
+        
+        self.j_idx = sp.index.ShuffledIndex(num_batches)
+        self.fea_j = sp.util.empty(
+            (batch_size, ) + fea.shape[1:], dtype=dtype, device=device)
+        self.dat_j = sp.util.empty(
+            (batch_size, ) + dat.shape[1:], dtype=dtype, device=device)
+        
+        A = _get_lr_A(self.fea_j, self.dat_j, mat, batch_size)
+        
+        super().__init__(A, self.dat_j, mat, alg_name='GradientMethod', accelerate=False,
+                         alpha=alpha, max_iter=max_iter)
+        
+    def _pre_update(self):
+        j = self.j_idx.next()
+        j_start = j * self.batch_size
+        j_end = (j + 1) * self.batch_size
+        
+        sp.util.move_to(self.fea_j, self.fea[j_start:j_end])
+        sp.util.move_to(self.dat_j, self.dat[j_start:j_end])
+
+        
+def _get_lr_A(fea_j, dat_j, mat, batch_size):
+    Ri = sp.linop.Reshape([sp.util.prod(fea_j.shape[1:]), sp.util.prod(dat_j.shape[1:])], mat.shape)
+    M = sp.linop.MatMul([sp.util.prod(fea_j.shape[1:]), sp.util.prod(dat_j.shape[1:])],
+                        fea_j.reshape([batch_size, -1]))
+
+    Ro = sp.linop.Reshape(dat_j.shape, [batch_size, sp.util.prod(dat_j.shape[1:])])
+
+    A = Ro * M * Ri
+
+    return A
 
 
 def _get_csc_update_dic(A_dic, dic, dat_j, num_batches, alpha, proxg):
