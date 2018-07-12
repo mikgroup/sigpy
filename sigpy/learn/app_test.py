@@ -13,25 +13,25 @@ class TestApp(unittest.TestCase):
 
         lamda = 0.1
 
-        dic = np.array([[1 , 1],
+        filt = np.array([[1 , 1],
                         [1, -1]], dtype=np.float) / 2**0.5
-        dat = np.array([[1, 1]], dtype=np.float) / 2**0.5
+        data = np.array([[1, 1]], dtype=np.float) / 2**0.5
 
-        fea = app.ConvSparseDecom(dat, dic, lamda=lamda).run()
+        coef = app.ConvSparseDecom(data, filt, lamda=lamda).run()
 
-        npt.assert_allclose(fea, [[[0.9], [0]]])
+        npt.assert_allclose(coef, [[[0.9], [0]]])
 
 
     def test_ConvSparseCoding(self):
 
         num_atoms = 1
-        dic_width = 2
+        filt_width = 2
         batch_size = 1
-        dat = np.array([[1, 1]], dtype=np.float) / 2**0.5
+        data = np.array([[1, 1]], dtype=np.float) / 2**0.5
 
-        dic = app.ConvSparseCoding(dat, num_atoms, dic_width, batch_size, max_iter=10).run()
+        filt = app.ConvSparseCoding(data, num_atoms, filt_width, batch_size, max_iter=10).run()
 
-        npt.assert_allclose(np.abs(dic), [[1 / 2**0.5, 1 / 2**0.5]])
+        npt.assert_allclose(np.abs(filt), [[1 / 2**0.5, 1 / 2**0.5]])
 
     def test_LinearRegression(self):
 
@@ -40,13 +40,13 @@ class TestApp(unittest.TestCase):
         m = 4
         batch_size = n
 
-        fea = np.random.randn(n, k)
-        dat = np.random.randn(n, m)
+        coef = np.random.randn(n, k)
+        data = np.random.randn(n, m)
         
-        alpha = 1 / np.linalg.svd(fea, compute_uv=False)[0]**2
+        alpha = 1 / np.linalg.svd(coef, compute_uv=False)[0]**2
 
-        mat = app.LinearRegression(fea, dat, batch_size, alpha).run()
+        mat = app.LinearRegression(coef, data, batch_size, alpha).run()
         
-        mat_lstsq = np.linalg.lstsq(fea, dat)[0]
+        mat_lstsq = np.linalg.lstsq(coef, data)[0]
 
         npt.assert_allclose(mat, mat_lstsq)

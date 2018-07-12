@@ -11,63 +11,63 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
     Considers the model :math:`y_j = \sum_i d_i \ast f_{ij}`, and the problem
 
     .. math:: 
-        \min_{f_{ij}\frac{1}{2}\|y_j - \sum_i d_i \ast f_{ij}\|_2^2 + \lambda \|f_{ij}\|_1
-    where :math:`y_j` is the jth data, :math:`d_i` is the ith dictionary, 
-    :math:`f_{ij}` is the ith feature for jth data.
+        \min_{f_{ij}\frac{1}{2}\|y_j - \sum_i c_i \ast f_{ij}\|_2^2 + \lambda \|f_{ij}\|_1
+    where :math:`y_j` is the jth data, :math:`f_i` is the ith filter, 
+    :math:`c_{ij}` is the ith coefficient for jth data.
 
     Args:
-        dat (array): data array y, the first dimension is the number of data.
+        data (array): data array, the first dimension is the number of data.
             If multi_channel is True, then the second dimension should be the number of channels.
-        dic (array): dictionary d. If multi_channel is True,
-            the first dimension is the number of atoms. Otherwise, the first dimension
-            is the number of channels, and second dimension is the number of atoms.
+        filt (array): filter. If multi_channel is True,
+            the first dimension is the number of filters. Otherwise, the first dimension
+            is the number of channels, and second dimension is the number of filters.
         lamda (float): regularization parameter.
         mode (str): convolution mode in forward model. {'full', 'valid'}.
         multi_channel (bool): whether data is multi-channel or not.
         **kwargs: other LinearLeastSquares arguments.
 
     Returns:
-        array: Feature array f. First two dimensions are number of data and number of atoms.
+        array: Coefficient array f. First two dimensions are number of data and number of filters.
 
     See Also:
         :func:`sigpy.app.LinearLeastSquares`
 
     """
 
-    def __init__(self, dat, dic, lamda=0.001, mode='full', multi_channel=False, **kwargs):
+    def __init__(self, data, filt, lamda=0.001, mode='full', multi_channel=False, **kwargs):
 
         if multi_channel:
-            num_atoms = dic.shape[1]
+            num_filters = filt.shape[1]
         else:
-            num_atoms = dic.shape[0]
+            num_filters = filt.shape[0]
             
-        dic_width = dic.shape[-1]
+        filt_width = filt.shape[-1]
 
         if multi_channel:
-            ndim = len(dat.shape) - 2
+            ndim = len(data.shape) - 2
         else:
-            ndim = len(dat.shape) - 1
+            ndim = len(data.shape) - 1
         
-        num_dat = len(dat)
-        fea_shape = _get_csc_fea_shape(
-            dat.shape, num_dat, num_atoms, dic_width, mode, multi_channel)
+        num_data = len(data)
+        coef_shape = _get_csc_coef_shape(
+            data.shape, num_data, num_filters, filt_width, mode, multi_channel)
 
-        self.fea = sp.util.zeros(fea_shape, dtype=dat.dtype, device=sp.util.get_device(dat))
+        self.coef = sp.util.zeros(coef_shape, dtype=data.dtype, device=sp.util.get_device(data))
             
-        A_fea = _get_csc_A_fea(self.fea, dic, mode, multi_channel)
-        proxg = sp.prox.L1Reg(A_fea.ishape, lamda)
+        A_coef = _get_csc_A_coef(self.coef, filt, mode, multi_channel)
+        proxg = sp.prox.L1Reg(A_coef.ishape, lamda)
         
-        super().__init__(A_fea, dat, self.fea, proxg=proxg, **kwargs)
+        super().__init__(A_coef, data, self.coef, proxg=proxg, **kwargs)
 
 
 class ConvSparseCoding(sp.app.App):
     """Convolutional sparse coding application.
 
     Args:
-        dat (array): data array y, the first dimension is the number of data.
+        data (array): data array y, the first dimension is the number of data.
             If multi_channel is True, then the second dimension should be the number of channels.
-        num_atoms (int): number of atoms in dictionary.
-        dic_width (int): dictionary widith.
+        num_filters (int): number of filters.
+        filt_width (int): filter widith.
         batch_size (int): batch size.
         lamda (float): regularization parameter.
         alpha (float): step-size.
@@ -78,98 +78,98 @@ class ConvSparseCoding(sp.app.App):
         **kwargs: other LinearLeastSquares arguments.
 
     Returns:
-        array: Feature array f. First two dimensions are number of data and number of atoms.
+        array: Coefficient array. First two dimensions are number of data and number of filters.
 
     """
 
-    def __init__(self, dat, num_atoms, dic_width, batch_size,
+    def __init__(self, data, num_filters, filt_width, batch_size,
                  lamda=0.001, alpha=1,
                  max_inner_iter=100, max_power_iter=10, max_iter=100,
                  mode='full', multi_channel=False, device=sp.util.cpu_device):
     
-        dtype = dat.dtype
-        self.dat = dat
+        dtype = data.dtype
+        self.data = data
         
         self.batch_size = batch_size
-        num_batches = len(dat) // batch_size
+        num_batches = len(data) // batch_size
         self.j_idx = sp.index.ShuffledIndex(num_batches)
-        self.dat_j = sp.util.empty((batch_size, ) + dat.shape[1:], dtype=dtype, device=device)
+        self.data_j = sp.util.empty((batch_size, ) + data.shape[1:], dtype=dtype, device=device)
         
-        dic_shape = _get_csc_dic_shape(dat.shape, num_atoms, dic_width, mode, multi_channel)
-        self.dic = sp.util.empty(dic_shape, dtype=dtype, device=device)
-        self.proxg = sp.prox.L2Proj(self.dic.shape, 1, axes=tuple(range(1, self.dic.ndim)))
+        filt_shape = _get_csc_filt_shape(data.shape, num_filters, filt_width, mode, multi_channel)
+        self.filt = sp.util.empty(filt_shape, dtype=dtype, device=device)
+        self.proxg = sp.prox.L2Proj(self.filt.shape, 1, axes=tuple(range(1, self.filt.ndim)))
 
-        min_fea_j_app = ConvSparseDecom(self.dat_j, self.dic, lamda=lamda,
+        min_coef_j_app = ConvSparseDecom(self.data_j, self.filt, lamda=lamda,
                                         mode=mode, multi_channel=multi_channel,
                                         max_power_iter=max_power_iter, max_iter=max_inner_iter)
-        self.fea_j = min_fea_j_app.x
+        self.coef_j = min_coef_j_app.x
         
-        A_dic = _get_csc_A_dic(self.fea_j, self.dic, mode, multi_channel)
-        update_dic = _get_csc_update_dic(A_dic, self.dic, self.dat_j,
-                                         num_batches, alpha, self.proxg)
+        A_filt = _get_csc_A_filt(self.coef_j, self.filt, mode, multi_channel)
+        update_filt = _get_csc_update_filt(A_filt, self.filt, self.data_j,
+                                           num_batches, alpha, self.proxg)
 
-        alg = sp.alg.AltMin(min_fea_j_app.run, update_dic, max_iter=max_iter)
+        alg = sp.alg.AltMin(min_coef_j_app.run, update_filt, max_iter=max_iter)
 
         super().__init__(alg)
 
     def _init(self):
-        sp.util.move_to(self.dic, self.proxg(1, sp.util.randn_like(self.dic)))
+        sp.util.move_to(self.filt, self.proxg(1, sp.util.randn_like(self.filt)))
 
     def _pre_update(self):
         j = self.j_idx.next()
         j_start = j * self.batch_size
         j_end = (j + 1) * self.batch_size
         
-        sp.util.move_to(self.dat_j, self.dat[j_start:j_end])
+        sp.util.move_to(self.data_j, self.data[j_start:j_end])
         
-        with sp.util.get_device(self.fea_j):
-            self.fea_j.fill(0)
+        with sp.util.get_device(self.coef_j):
+            self.coef_j.fill(0)
 
     def _output(self):
-        return self.dic
+        return self.filt
 
     
 class LinearRegression(sp.app.LinearLeastSquares):
-    """Performs linear regression to fit features to data.
+    """Performs linear regression to fit coefficients to data.
 
-    Considers the model dat = fea * mat, and solves
+    Considers the model data = coef * mat, and solves
 
     .. math::
-        \min_mat || fea * mat - dat ||_2^2
+        \min_mat || coef * mat - data ||_2^2
 
     Args:
-        fea (array): feature of shape (num_dat, ...).
-        dat (array): data of shape (num_dat, ...).
+        coef (array): coefficient of shape (num_data, ...).
+        data (array): data of shape (num_data, ...).
         batch_size (int): batch size.
         alpha (float): step size.
 
     Returns:
-       array: matrix of shape fea.shape[1:] + dat.shape[1:].
+       array: matrix of shape coef.shape[1:] + data.shape[1:].
 
     """
 
-    def __init__(self, fea, dat, batch_size, alpha,
+    def __init__(self, coef, data, batch_size, alpha,
                  max_iter=100, device=sp.util.cpu_device, **kwargs):
         
-        dtype = dat.dtype
+        dtype = data.dtype
 
-        num_dat = len(dat)
-        num_batches = num_dat // batch_size
+        num_data = len(data)
+        num_batches = num_data // batch_size
         self.batch_size = batch_size
-        self.fea = fea
-        self.dat = dat
+        self.coef = coef
+        self.data = data
 
-        mat = sp.util.zeros(fea.shape[1:] + dat.shape[1:], dtype=dtype, device=device)
+        mat = sp.util.zeros(coef.shape[1:] + data.shape[1:], dtype=dtype, device=device)
         
         self.j_idx = sp.index.ShuffledIndex(num_batches)
-        self.fea_j = sp.util.empty(
-            (batch_size, ) + fea.shape[1:], dtype=dtype, device=device)
-        self.dat_j = sp.util.empty(
-            (batch_size, ) + dat.shape[1:], dtype=dtype, device=device)
+        self.coef_j = sp.util.empty(
+            (batch_size, ) + coef.shape[1:], dtype=dtype, device=device)
+        self.data_j = sp.util.empty(
+            (batch_size, ) + data.shape[1:], dtype=dtype, device=device)
         
-        A = _get_lr_A(self.fea_j, self.dat_j, mat, batch_size)
+        A = _get_lr_A(self.coef_j, self.data_j, mat, batch_size)
         
-        super().__init__(A, self.dat_j, mat, alg_name='GradientMethod', accelerate=False,
+        super().__init__(A, self.data_j, mat, alg_name='GradientMethod', accelerate=False,
                          alpha=alpha, max_iter=max_iter)
         
     def _pre_update(self):
@@ -177,121 +177,122 @@ class LinearRegression(sp.app.LinearLeastSquares):
         j_start = j * self.batch_size
         j_end = (j + 1) * self.batch_size
         
-        sp.util.move_to(self.fea_j, self.fea[j_start:j_end])
-        sp.util.move_to(self.dat_j, self.dat[j_start:j_end])
+        sp.util.move_to(self.coef_j, self.coef[j_start:j_end])
+        sp.util.move_to(self.data_j, self.data[j_start:j_end])
 
         
-def _get_lr_A(fea_j, dat_j, mat, batch_size):
-    Ri = sp.linop.Reshape([sp.util.prod(fea_j.shape[1:]), sp.util.prod(dat_j.shape[1:])], mat.shape)
-    M = sp.linop.MatMul([sp.util.prod(fea_j.shape[1:]), sp.util.prod(dat_j.shape[1:])],
-                        fea_j.reshape([batch_size, -1]))
-
-    Ro = sp.linop.Reshape(dat_j.shape, [batch_size, sp.util.prod(dat_j.shape[1:])])
+def _get_lr_A(coef_j, data_j, mat, batch_size):
+    coef_j_size = sp.util.prod(coef_j.shape[1:])
+    data_j_size = sp.util.prod(data_j.shape[1:])
+    
+    Ri = sp.linop.Reshape([coef_j_size, data_j_size], mat.shape)
+    M = sp.linop.MatMul([coef_j_size, data_j_size], coef_j.reshape([batch_size, -1]))
+    Ro = sp.linop.Reshape(data_j.shape, [batch_size, data_j_size])
 
     A = Ro * M * Ri
 
     return A
 
 
-def _get_csc_update_dic(A_dic, dic, dat_j, num_batches, alpha, proxg):
+def _get_csc_update_filt(A_filt, filt, data_j, num_batches, alpha, proxg):
 
-    device = sp.util.get_device(dic)
-    def update_dic():
+    device = sp.util.get_device(filt)
+    def update_filt():
         with device:
-            gradf_dic = A_dic.H(A_dic(dic) - dat_j)
-            gradf_dic *= num_batches
+            gradf_filt = A_filt.H(A_filt(filt) - data_j)
+            gradf_filt *= num_batches
 
-            sp.util.axpy(dic, -alpha, gradf_dic)
+            sp.util.axpy(filt, -alpha, gradf_filt)
             
-        sp.util.move_to(dic, proxg(alpha, dic))
+        sp.util.move_to(filt, proxg(alpha, filt))
 
-    return update_dic
+    return update_filt
 
 
-def _get_csc_fea_shape(dat_shape, num_dat, num_atoms, dic_width, mode, multi_channel):
+def _get_csc_coef_shape(data_shape, num_data, num_filters, filt_width, mode, multi_channel):
     if multi_channel:
-        ndim = len(dat_shape) - 2
+        ndim = len(data_shape) - 2
     else:
-        ndim = len(dat_shape) - 1
+        ndim = len(data_shape) - 1
 
     if mode == 'full':
-        fea_shape = tuple([num_dat, num_atoms] +
-                          [i - min(i, dic_width) + 1 for i in dat_shape[-ndim:]])
+        coef_shape = tuple([num_data, num_filters] +
+                          [i - min(i, filt_width) + 1 for i in data_shape[-ndim:]])
     else:
-        fea_shape = tuple([num_dat, num_atoms] +
-                          [i + min(i, dic_width) - 1 for i in dat_shape[-ndim:]])
+        coef_shape = tuple([num_data, num_filters] +
+                          [i + min(i, filt_width) - 1 for i in data_shape[-ndim:]])
 
-    return fea_shape
+    return coef_shape
 
 
-def _get_csc_A_fea(fea, dic, mode, multi_channel):
+def _get_csc_A_coef(coef, filt, mode, multi_channel):
     
-    if sp.util.get_device(dic) != sp.util.cpu_device and sp.config.cudnn_enabled:
+    if sp.util.get_device(filt) != sp.util.cpu_device and sp.config.cudnn_enabled:
         if multi_channel:
-            dic_cudnn_shape = dic.shape
+            filt_cudnn_shape = filt.shape
         else:
-            dic_cudnn_shape = (1, ) + dic.shape
+            filt_cudnn_shape = (1, ) + filt.shape
             
-        A_fea = sp.linop.CudnnConvolveData(fea.shape, dic.reshape(dic_cudnn_shape), mode=mode)
+        A_coef = sp.linop.CudnnConvolveData(coef.shape, filt.reshape(filt_cudnn_shape), mode=mode)
         
         if not multi_channel:
-            dat_shape = [A_fea.oshape[0]] + A_fea.oshape[2:]
-            R_dat = sp.linop.Reshape(dat_shape, A_fea.oshape)
+            data_shape = [A_coef.oshape[0]] + A_coef.oshape[2:]
+            R_data = sp.linop.Reshape(data_shape, A_coef.oshape)
         
-            A_fea = R_dat * A_fea
+            A_coef = R_data * A_coef
     else:
         if multi_channel:
-            ndim = dic.ndim - 2
+            ndim = filt.ndim - 2
         else:
-            ndim = dic.ndim - 1
+            ndim = filt.ndim - 1
             
-        C_fea = sp.linop.Convolve(fea.shape, dic, axes=range(-ndim, 0), mode=mode)
-        S_fea = sp.linop.Sum(C_fea.oshape, axes=[-(ndim + 1)])
+        C_coef = sp.linop.Convolve(coef.shape, filt, axes=range(-ndim, 0), mode=mode)
+        S_coef = sp.linop.Sum(C_coef.oshape, axes=[-(ndim + 1)])
 
-        A_fea = S_fea * C_fea
+        A_coef = S_coef * C_coef
 
-    return A_fea
+    return A_coef
 
 
-def _get_csc_dic_shape(dat_shape, num_atoms, dic_width, mode, multi_channel):
+def _get_csc_filt_shape(data_shape, num_filters, filt_width, mode, multi_channel):
     if multi_channel:
-        ndim = len(dat_shape) - 2
+        ndim = len(data_shape) - 2
     else:
-        ndim = len(dat_shape) - 1
+        ndim = len(data_shape) - 1
 
     if multi_channel:
-        num_channels = dat_shape[1]
-        dic_shape = tuple([num_channels, num_atoms] +
-                          [min(d, dic_width) for d in dat_shape[-ndim:]])
+        num_channels = data_shape[1]
+        filt_shape = tuple([num_channels, num_filters] +
+                          [min(d, filt_width) for d in data_shape[-ndim:]])
     else:
-        dic_shape = tuple([num_atoms] + [min(d, dic_width) for d in dat_shape[-ndim:]])
+        filt_shape = tuple([num_filters] + [min(d, filt_width) for d in data_shape[-ndim:]])
 
-    return dic_shape
+    return filt_shape
 
 
-def _get_csc_A_dic(fea, dic, mode, multi_channel):
+def _get_csc_A_filt(coef, filt, mode, multi_channel):
 
-    if sp.util.get_device(dic) != sp.util.cpu_device and sp.config.cudnn_enabled:
+    if sp.util.get_device(filt) != sp.util.cpu_device and sp.config.cudnn_enabled:
         if multi_channel:
-            dic_cudnn_shape = dic.shape
+            filt_cudnn_shape = filt.shape
         else:
-            dic_cudnn_shape = (1, ) + dic.shape
+            filt_cudnn_shape = (1, ) + filt.shape
             
-        R_dic = sp.linop.Reshape(dic_cudnn_shape, dic.shape)
-        C_dic = sp.linop.CudnnConvolveFilter(dic_cudnn_shape, fea, mode=mode)
+        R_filt = sp.linop.Reshape(filt_cudnn_shape, filt.shape)
+        C_filt = sp.linop.CudnnConvolveFilter(filt_cudnn_shape, coef, mode=mode)
         
-        A_dic = C_dic * R_dic
+        A_filt = C_filt * R_filt
 
         if not multi_channel:
-            dat_shape = [A_dic.oshape[0]] + A_dic.oshape[2:]
-            R_dat = sp.linop.Reshape(dat_shape, A_dic.oshape)
+            data_shape = [A_filt.oshape[0]] + A_filt.oshape[2:]
+            R_data = sp.linop.Reshape(data_shape, A_filt.oshape)
 
-            A_dic = R_dat * A_dic
+            A_filt = R_data * A_filt
     else:
-        ndim = dic.ndim - 1
-        C_dic = sp.linop.Convolve(dic.shape, fea, axes=range(-ndim, 0), mode=mode)
-        S_dic = sp.linop.Sum(C_dic.oshape, axes=[1])
+        ndim = filt.ndim - 1
+        C_filt = sp.linop.Convolve(filt.shape, coef, axes=range(-ndim, 0), mode=mode)
+        S_filt = sp.linop.Sum(C_filt.oshape, axes=[1])
 
-        A_dic = S_dic * C_dic
+        A_filt = S_filt * C_filt
 
-    return A_dic
+    return A_filt
