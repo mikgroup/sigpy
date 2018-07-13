@@ -27,14 +27,15 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         **kwargs: other LinearLeastSquares arguments.
 
     Returns:
-        array: Coefficient array f. First two dimensions are number of data and number of filters.
+        array: Coefficients. First two dimensions are number of data and number of filters.
 
     See Also:
         :func:`sigpy.app.LinearLeastSquares`
 
     """
 
-    def __init__(self, data, filt, lamda=0.001, mode='full', multi_channel=False, **kwargs):
+    def __init__(self, data, filt, lamda=0.001,
+                 mode='full', multi_channel=False, **kwargs):
 
         if multi_channel:
             num_filters = filt.shape[1]
@@ -55,6 +56,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         self.coef = sp.util.zeros(coef_shape, dtype=data.dtype, device=sp.util.get_device(data))
             
         A_coef = _get_csc_A_coef(self.coef, filt, mode, multi_channel)
+
         proxg = sp.prox.L1Reg(A_coef.ishape, lamda)
         
         super().__init__(A_coef, data, self.coef, proxg=proxg, **kwargs)
@@ -78,17 +80,20 @@ class ConvSparseCoding(sp.app.App):
         **kwargs: other LinearLeastSquares arguments.
 
     Returns:
-        array: Coefficient array. First two dimensions are number of data and number of filters.
+        array: Filters.
 
     """
 
     def __init__(self, data, num_filters, filt_width, batch_size,
-                 lamda=0.001, alpha=1,
+                 lamda=0.001, alpha=1, output_iter=False,
                  max_inner_iter=100, max_power_iter=10, max_iter=100,
                  mode='full', multi_channel=False, device=sp.util.cpu_device):
     
         dtype = data.dtype
         self.data = data
+        self.output_iter = output_iter
+        if output_iter:
+            self.filt_iter = []
         
         self.batch_size = batch_size
         num_batches = len(data) // batch_size
@@ -97,11 +102,12 @@ class ConvSparseCoding(sp.app.App):
         
         filt_shape = _get_csc_filt_shape(data.shape, num_filters, filt_width, mode, multi_channel)
         self.filt = sp.util.empty(filt_shape, dtype=dtype, device=device)
+
         self.proxg = sp.prox.L2Proj(self.filt.shape, 1, axes=tuple(range(1, self.filt.ndim)))
 
         min_coef_j_app = ConvSparseDecom(self.data_j, self.filt, lamda=lamda,
-                                        mode=mode, multi_channel=multi_channel,
-                                        max_power_iter=max_power_iter, max_iter=max_inner_iter)
+                                         mode=mode, multi_channel=multi_channel,
+                                         max_power_iter=max_power_iter, max_iter=max_inner_iter)
         self.coef_j = min_coef_j_app.x
         
         A_filt = _get_csc_A_filt(self.coef_j, self.filt, mode, multi_channel)
@@ -125,8 +131,15 @@ class ConvSparseCoding(sp.app.App):
         with sp.util.get_device(self.coef_j):
             self.coef_j.fill(0)
 
+    def _post_update(self):
+        if self.output_iter:
+            self.filt_iter.append(sp.util.move(self.filt).copy())
+
     def _output(self):
-        return self.filt
+        if self.output_iter:
+            return self.filt_iter
+        else:
+            return self.filt
 
     
 class LinearRegression(sp.app.LinearLeastSquares):
@@ -203,7 +216,7 @@ def _get_csc_update_filt(A_filt, filt, data_j, num_batches, alpha, proxg):
             gradf_filt *= num_batches
 
             sp.util.axpy(filt, -alpha, gradf_filt)
-            
+
         sp.util.move_to(filt, proxg(alpha, filt))
 
     return update_filt
