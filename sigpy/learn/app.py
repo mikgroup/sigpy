@@ -10,7 +10,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
     r"""Convolutional sparse decomposition app.
 
     Considers the convolutional sparse linear model :math:`y_j = \sum_i c_{ij} * \psi_i`, 
-    with $\psi$ fixed, and the problem,
+    with :math:`\psi` fixed, and the problem,
 
     .. math:: 
         \min_{c_{ij}} \sum_j \frac{1}{2}\|y_j - \sum_i c_{ij} * \psi_i\|_2^2 
