@@ -62,7 +62,6 @@ class MaxEig(App):
         device (Device): Device.
 
     Attributes:
-        A (Linop)
         x (int): Eigenvector with largest eigenvalue.
 
     Output:

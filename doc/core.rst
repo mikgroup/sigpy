@@ -1,5 +1,5 @@
-Main
-====
+Core Module
+===========
 
 .. toctree::
    :maxdepth: 2

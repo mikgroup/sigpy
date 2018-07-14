@@ -9,5 +9,6 @@ Welcome to sigpy's documentation!
 .. toctree::
    :maxdepth: 2
 
-   main
+   core
    mri
+   learn
