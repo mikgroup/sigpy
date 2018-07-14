@@ -1,18 +1,21 @@
 '''
 Machine Learning Apps.
 '''
+import pickle
 import logging
 import sigpy as sp
         
 
 class ConvSparseDecom(sp.app.LinearLeastSquares):
-    """Convolutional sparse decomposition app.
+    r"""Convolutional sparse decomposition app.
 
-    Considers the model :math:`y_j = \sum_i d_i \ast f_{ij}`, and the problem
+    Considers the convolutional sparse linear model :math:`y_j = \sum_i c_{ij} * \psi_i`, 
+    with $\psi$ fixed, and the problem,
 
     .. math:: 
-        \min_{f_{ij}\frac{1}{2}\|y_j - \sum_i c_i \ast f_{ij}\|_2^2 + \lambda \|f_{ij}\|_1
-    where :math:`y_j` is the jth data, :math:`f_i` is the ith filter, 
+        \min_{c_{ij}} \sum_j \frac{1}{2}\|y_j - \sum_i c_{ij} * \psi_i\|_2^2 
+        + \lambda \|c_{ij}\|_1
+    where :math:`y_j` is the jth data, :math:`\psi_i` is the ith filter, 
     :math:`c_{ij}` is the ith coefficient for jth data.
 
     Args:
@@ -35,7 +38,8 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
     """
 
     def __init__(self, data, filt, lamda=0.001,
-                 mode='full', multi_channel=False, **kwargs):
+                 mode='full', multi_channel=False,
+                 device=sp.util.cpu_device, **kwargs):
 
         if multi_channel:
             num_filters = filt.shape[1]
@@ -50,23 +54,31 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
             ndim = len(data.shape) - 1
         
         num_data = len(data)
-        coef_shape = _get_csc_coef_shape(
-            data.shape, num_data, num_filters, filt_width, mode, multi_channel)
-
-        self.coef = sp.util.zeros(coef_shape, dtype=data.dtype, device=sp.util.get_device(data))
-            
+        coef_shape = _get_csc_coef_shape(data.shape, num_data, num_filters,
+                                         filt_width, mode, multi_channel)
+        self.coef = sp.util.zeros(coef_shape, dtype=data.dtype, device=device)
+        
         A_coef = _get_csc_A_coef(self.coef, filt, mode, multi_channel)
-
         proxg = sp.prox.L1Reg(A_coef.ishape, lamda)
         
         super().__init__(A_coef, data, self.coef, proxg=proxg, **kwargs)
 
 
 class ConvSparseCoding(sp.app.App):
-    """Convolutional sparse coding application.
+    r"""Convolutional sparse coding application.
+
+    Considers the convolutional sparse bi-linear model :math:`y_j = \sum_i c_{ij} * \psi_i`,
+    and the objective function
+
+    .. math:: 
+        f(\psi, c) = 
+        \sum_j \frac{1}{2} \|y_j - \sum_i c_{ij} * \psi_i\|_2^2 + \lambda \|c_{ij}\|_1
+        + 1\{\| \psi_i \|_2 \leq 1\}
+    where :math:`y_j` is the jth data, :math:`\psi_i` is the ith filter, 
+    :math:`c_{ij}` is the ith coefficient for jth data.
 
     Args:
-        data (array): data array y, the first dimension is the number of data.
+        data (array): data array, the first dimension is the number of data.
             If multi_channel is True, then the second dimension should be the number of channels.
         num_filters (int): number of filters.
         filt_width (int): filter widith.
@@ -107,7 +119,8 @@ class ConvSparseCoding(sp.app.App):
 
         min_coef_j_app = ConvSparseDecom(self.data_j, self.filt, lamda=lamda,
                                          mode=mode, multi_channel=multi_channel,
-                                         max_power_iter=max_power_iter, max_iter=max_inner_iter)
+                                         max_power_iter=max_power_iter,
+                                         max_iter=max_inner_iter)
         self.coef_j = min_coef_j_app.x
         
         A_filt = _get_csc_A_filt(self.coef_j, self.filt, mode, multi_channel)
@@ -143,46 +156,48 @@ class ConvSparseCoding(sp.app.App):
 
     
 class LinearRegression(sp.app.LinearLeastSquares):
-    """Performs linear regression to fit coefficients to data.
+    r"""Performs linear regression to fit input to output.
 
-    Considers the model data = coef * mat, and solves
+    Considers the linear model :math:`y_j = M x_j`, and the problem,
 
     .. math::
-        \min_mat || coef * mat - data ||_2^2
+        \min_M \sum_j \frac{1}{2} \| y_j - M x_j \|_2^2
+    where :math:`y_j` is the jth output, :math:`M` is the learned matrix,
+    and :math:`x_j` is the jth input.
 
     Args:
-        coef (array): coefficient of shape (num_data, ...).
-        data (array): data of shape (num_data, ...).
+        input (array): input data of shape (num_data, ...).
+        output (array): output data of shape (num_data, ...).
         batch_size (int): batch size.
         alpha (float): step size.
 
     Returns:
-       array: matrix of shape coef.shape[1:] + data.shape[1:].
+       array: matrix of shape input.shape[1:] + output.shape[1:].
 
     """
 
-    def __init__(self, coef, data, batch_size, alpha,
+    def __init__(self, input, output, batch_size, alpha,
                  max_iter=100, device=sp.util.cpu_device, **kwargs):
         
-        dtype = data.dtype
+        dtype = output.dtype
 
-        num_data = len(data)
+        num_data = len(output)
         num_batches = num_data // batch_size
         self.batch_size = batch_size
-        self.coef = coef
-        self.data = data
+        self.input = input
+        self.output = output
 
-        mat = sp.util.zeros(coef.shape[1:] + data.shape[1:], dtype=dtype, device=device)
+        mat = sp.util.zeros(input.shape[1:] + output.shape[1:], dtype=dtype, device=device)
         
         self.j_idx = sp.index.ShuffledIndex(num_batches)
-        self.coef_j = sp.util.empty(
-            (batch_size, ) + coef.shape[1:], dtype=dtype, device=device)
-        self.data_j = sp.util.empty(
-            (batch_size, ) + data.shape[1:], dtype=dtype, device=device)
+        self.input_j = sp.util.empty((batch_size, ) + input.shape[1:],
+                                     dtype=dtype, device=device)
+        self.output_j = sp.util.empty((batch_size, ) + output.shape[1:],
+                                      dtype=dtype, device=device)
         
-        A = _get_lr_A(self.coef_j, self.data_j, mat, batch_size)
+        A = _get_lr_A(self.input_j, self.output_j, mat, batch_size)
         
-        super().__init__(A, self.data_j, mat, alg_name='GradientMethod', accelerate=False,
+        super().__init__(A, self.output_j, mat, alg_name='GradientMethod', accelerate=False,
                          alpha=alpha, max_iter=max_iter)
         
     def _pre_update(self):
@@ -190,21 +205,107 @@ class LinearRegression(sp.app.LinearLeastSquares):
         j_start = j * self.batch_size
         j_end = (j + 1) * self.batch_size
         
-        sp.util.move_to(self.coef_j, self.coef[j_start:j_end])
-        sp.util.move_to(self.data_j, self.data[j_start:j_end])
+        sp.util.move_to(self.input_j, self.input[j_start:j_end])
+        sp.util.move_to(self.output_j, self.output[j_start:j_end])
 
         
-def _get_lr_A(coef_j, data_j, mat, batch_size):
-    coef_j_size = sp.util.prod(coef_j.shape[1:])
-    data_j_size = sp.util.prod(data_j.shape[1:])
+def _get_lr_A(input_j, output_j, mat, batch_size):
+    input_j_size = sp.util.prod(input_j.shape[1:])
+    output_j_size = sp.util.prod(output_j.shape[1:])
     
-    Ri = sp.linop.Reshape([coef_j_size, data_j_size], mat.shape)
-    M = sp.linop.MatMul([coef_j_size, data_j_size], coef_j.reshape([batch_size, -1]))
-    Ro = sp.linop.Reshape(data_j.shape, [batch_size, data_j_size])
+    Ri = sp.linop.Reshape([input_j_size, output_j_size], mat.shape)
+    M = sp.linop.MatMul([input_j_size, output_j_size], input_j.reshape([batch_size, -1]))
+    Ro = sp.linop.Reshape(output_j.shape, [batch_size, output_j_size])
 
     A = Ro * M * Ri
 
     return A
+
+
+class ConvSparseCoefficients(object):
+    r"""Convolutional sparse coefficients.
+
+    Generates coefficients on the fly using convolutional sparse decomposition.
+    ConvSparseCoefficients can be sliced like arrays.
+
+    Args:
+        data (array): data array, the first dimension is the number of data.
+            If multi_channel is True, then the second dimension should be the number of channels.
+        filt (array): filter. If multi_channel is True,
+            the first dimension is the number of filters. Otherwise, the first dimension
+            is the number of channels, and second dimension is the number of filters.
+        lamda (float): regularization parameter.
+        mode (str): convolution mode in forward model. {'full', 'valid'}.
+        multi_channel (bool): whether data is multi-channel or not.
+        max_iter (bool): maximum number of iterations.
+        max_power_iter (bool): maximum number of power iterations.
+
+    Attributes:
+        shape (tuple of ints): coefficient shape.
+        ndim (int): number of dimensions of coefficient.
+
+    """
+
+    def __init__(self, data, filt,
+                 lamda=0.001, multi_channel=False, mode='full',
+                 max_iter=100, max_power_iter=10, device=sp.util.cpu_device):
+        
+        self.data = data
+        self.filt = filt
+        self.lamda = lamda
+        self.multi_channel = multi_channel
+        self.mode = mode
+        self.max_iter = max_iter
+        self.max_power_iter = max_power_iter
+
+        if multi_channel:
+            num_filters = filt.shape[1]
+        else:
+            num_filters = filt.shape[0]
+            
+        filt_width = filt.shape[-1]
+        self.shape = _get_csc_coef_shape(
+            data.shape, len(data), num_filters, filt_width, mode, multi_channel)
+        self.ndim = len(self.shape)
+        self.device = sp.util.Device(device)
+        
+    def __getitem__(self, slc):
+        if isinstance(slc, int):
+            data_j = self.data[slc:(slc + 1)]
+            slc = 0
+
+        elif isinstance(slc, slice):
+            data_j = self.data[slc]
+            slc = slice(None)
+
+        elif isinstance(slc, tuple) or isinstance(slc, list):
+            if isinstance(slc[0], int):
+                data_j = self.data[slc[0]:(slc[0] + 1)]
+                slc = [0] + list(slc[1:])
+            else:
+                data_j = self.data[slc[0]]
+                slc = [slice(None)] + list(slc[1:])
+
+        data_j = sp.util.move(data_j, self.device)
+        filt = sp.util.move(self.filt, self.device)
+        app_j = ConvSparseDecom(data_j, filt, lamda=self.lamda,
+                                multi_channel=self.multi_channel, mode=self.mode,
+                                max_iter=self.max_iter, max_power_iter=self.max_power_iter)
+
+        fea = app_j.run()
+
+        with self.device:
+            return fea[slc]
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename, "rb") as f:
+            return pickle.load(f)
+
+    def save(self, filename):
+        self.use_device(sp.util.cpu_device)
+        with open(filename, "wb") as f:
+            pickle.dump(self, f)
 
 
 def _get_csc_update_filt(A_filt, filt, data_j, num_batches, alpha, proxg):

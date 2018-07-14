@@ -12,7 +12,6 @@ class TestApp(unittest.TestCase):
     def test_ConvSparseDecom(self):
 
         lamda = 0.1
-
         filt = np.array([[1 , 1],
                         [1, -1]], dtype=np.float) / 2**0.5
         data = np.array([[1, 1]], dtype=np.float) / 2**0.5
@@ -21,6 +20,20 @@ class TestApp(unittest.TestCase):
 
         npt.assert_allclose(coef, [[[0.9], [0]]])
 
+    def test_ConvSparseCoefficients(self):
+
+        lamda = 0.1
+        filt = np.array([[1 , 1],
+                        [1, -1]], dtype=np.float) / 2**0.5
+        data = np.array([[1, 1]], dtype=np.float) / 2**0.5
+
+        coef = app.ConvSparseCoefficients(data, filt, lamda=lamda)
+        
+        npt.assert_allclose(coef[:], [[[0.9], [0]]])        
+        npt.assert_allclose(coef[0, :], [[0.9], [0]])
+        npt.assert_allclose(coef[:, 0], [[0.9]])
+        npt.assert_allclose(coef[:, :, 0], [[0.9, 0]])
+        
 
     def test_ConvSparseCoding(self):
 
@@ -49,4 +62,4 @@ class TestApp(unittest.TestCase):
         
         mat_lstsq = np.linalg.lstsq(coef, data)[0]
 
-        npt.assert_allclose(mat, mat_lstsq)
+        npt.assert_allclose(mat, mat_lstsq, atol=1e-3, rtol=1e-3)
