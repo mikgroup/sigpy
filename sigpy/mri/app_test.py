@@ -47,23 +47,23 @@ class TestApp(unittest.TestCase):
         img_rec = app.SenseConstrainedRecon(ksp, mps, std).run()
         npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
 
-    def test_shepp_logan_WaveletRecon(self):
+    def test_shepp_logan_L1WaveletRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         lamda = 0
 
-        img_rec = app.WaveletRecon(
+        img_rec = app.L1WaveletRecon(
             ksp, mps, lamda, alg_name='GradientMethod').run()
         npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
 
-        img_rec = app.WaveletRecon(ksp, mps, lamda, alg_name='PrimalDualHybridGradient',
-                                   max_iter=100).run()
+        img_rec = app.L1WaveletRecon(ksp, mps, lamda, alg_name='PrimalDualHybridGradient',
+                                     max_iter=100).run()
         npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
 
-    def test_shepp_logan_WaveletConstrainedRecon(self):
+    def test_shepp_logan_L1WaveletConstrainedRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         std = 0
 
-        img_rec = app.WaveletConstrainedRecon(ksp, mps, std).run()
+        img_rec = app.L1WaveletConstrainedRecon(ksp, mps, std).run()
         npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
 
     def test_shepp_logan_TotalVariationRecon(self):

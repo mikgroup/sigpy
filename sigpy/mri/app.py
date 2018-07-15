@@ -101,7 +101,7 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
         super().__init__(A, ksp, self.img, proxg, eps, weights=weights, **kwargs)
 
 
-class WaveletRecon(sp.app.LinearLeastSquares):
+class L1WaveletRecon(sp.app.LinearLeastSquares):
     r"""L1 Wavelet regularized reconstruction.
 
     Considers the problem
@@ -145,7 +145,7 @@ class WaveletRecon(sp.app.LinearLeastSquares):
         super().__init__(A, ksp, self.img, proxg=proxg, g=g, weights=weights, **kwargs)
 
 
-class WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
+class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
     r"""L1 wavelet regularized constrained reconstruction.
 
     Considers the problem
