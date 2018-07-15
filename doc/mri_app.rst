@@ -1,5 +1,5 @@
-MRI App
-=======
+MRI Applications
+================
 
 .. _mri_app:
 

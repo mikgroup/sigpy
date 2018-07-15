@@ -1,5 +1,5 @@
-Threshold
-=========
+Thresholding Functions
+======================
 
 .. _thresh:
 

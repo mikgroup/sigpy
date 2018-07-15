@@ -1,5 +1,5 @@
-Linop
-=====
+Linear Operators
+================
 
 .. _linop:
 

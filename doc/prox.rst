@@ -1,5 +1,5 @@
-Prox
-====
+Proximal Operators
+==================
 
 .. _prox:
 

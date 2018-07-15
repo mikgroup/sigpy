@@ -1,5 +1,5 @@
-App
-===
+Applications
+============
 
 .. _app:
 

@@ -1,5 +1,5 @@
-Alg
-===
+Iterative Algorithms
+====================
 
 .. _alg:
 

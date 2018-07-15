@@ -1,5 +1,5 @@
-MRI Linop
-=========
+MRI Linear Operators
+====================
 
 .. _mri_linop:
 
