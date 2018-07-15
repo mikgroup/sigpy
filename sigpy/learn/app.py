@@ -27,6 +27,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         lamda (float): regularization parameter.
         mode (str): convolution mode in forward model. {'full', 'valid'}.
         multi_channel (bool): whether data is multi-channel or not.
+        elitist (bool): whether use elitist threshold.
         **kwargs: other LinearLeastSquares arguments.
 
     Returns:
@@ -39,35 +40,42 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
 
     def __init__(self, data, filt, lamda=0.001,
                  mode='full', multi_channel=False,
+                 elitist=True,
                  device=sp.util.cpu_device, **kwargs):
 
+        filt_width = filt.shape[-1]
         if multi_channel:
             num_filters = filt.shape[1]
-        else:
-            num_filters = filt.shape[0]
-            
-        filt_width = filt.shape[-1]
-
-        if multi_channel:
             ndim = len(data.shape) - 2
         else:
+            num_filters = filt.shape[0]
             ndim = len(data.shape) - 1
         
         num_data = len(data)
         coef_shape = _get_csc_coef_shape(data.shape, num_data, num_filters,
                                          filt_width, mode, multi_channel)
-        self.coef = sp.util.zeros(coef_shape, dtype=data.dtype, device=device)
+        coef = sp.util.zeros(coef_shape, dtype=data.dtype, device=device)
         
-        A_coef = _get_csc_A_coef(self.coef, filt, mode, multi_channel)
-        proxg = sp.prox.L1Reg(A_coef.ishape, lamda)
+        A_coef = _get_csc_A_coef(coef, filt, mode, multi_channel)
+
+        if elitist:
+            proxg = sp.prox.L1L2Reg(A_coef.ishape, lamda, axes=range(2, ndim + 2))
+        else:
+            proxg = sp.prox.L1Reg(A_coef.ishape, lamda)
         
-        super().__init__(A_coef, data, self.coef, proxg=proxg, **kwargs)
+        super().__init__(A_coef, data, coef, proxg=proxg, **kwargs)
+
+    def _init(self):
+        with sp.util.get_device(self.x):
+            self.x.fill(0)
+            
+        super()._init()
 
 
 class ConvSparseCoding(sp.app.App):
     r"""Convolutional sparse coding application.
 
-    Considers the convolutional sparse bi-linear model :math:`y_j = \sum_i c_{ij} * \psi_i`,
+    Considers the convolutional sparse bilinear model :math:`y_j = \sum_i c_{ij} * \psi_i`,
     and the objective function
 
     .. math:: 
@@ -89,6 +97,7 @@ class ConvSparseCoding(sp.app.App):
         max_power_iter (int): maximum number of iteration for power method.
         mode (str): convolution mode in forward model. {'full', 'valid'}.
         multi_channel (bool): whether data is multi-channel or not.
+        elitist (bool): whether use elitist threshold.
         **kwargs: other LinearLeastSquares arguments.
 
     Returns:
@@ -106,6 +115,7 @@ class ConvSparseCoding(sp.app.App):
 
     def __init__(self, data, num_filters, filt_width, batch_size,
                  lamda=0.001, alpha=1, output_iter=False,
+                 elitist=True, init_scale=1e-5,
                  max_inner_iter=100, max_power_iter=10, max_iter=100,
                  mode='full', multi_channel=False, device=sp.util.cpu_device):
     
@@ -123,24 +133,32 @@ class ConvSparseCoding(sp.app.App):
         filt_shape = _get_csc_filt_shape(data.shape, num_filters, filt_width, mode, multi_channel)
         self.filt = sp.util.empty(filt_shape, dtype=dtype, device=device)
 
-        self.proxg = sp.prox.L2Proj(self.filt.shape, 1, axes=tuple(range(1, self.filt.ndim)))
+        if elitist:
+            self.proxg = None
+            self.init_scale = init_scale
+        else:
+            self.proxg = sp.prox.L2Proj(self.filt.shape, 1, axes=tuple(range(1, self.filt.ndim)))
 
         min_coef_j_app = ConvSparseDecom(self.data_j, self.filt, lamda=lamda,
                                          mode=mode, multi_channel=multi_channel,
+                                         elitist=elitist,
                                          max_power_iter=max_power_iter,
-                                         max_iter=max_inner_iter)
+                                         max_iter=max_inner_iter, device=device)
         self.coef_j = min_coef_j_app.x
         
         A_filt = _get_csc_A_filt(self.coef_j, self.filt, mode, multi_channel)
         update_filt = _get_csc_update_filt(A_filt, self.filt, self.data_j,
-                                           num_batches, alpha, self.proxg)
+                                           num_batches, alpha, self.proxg, lamda)
 
         alg = sp.alg.AltMin(min_coef_j_app.run, update_filt, max_iter=max_iter)
 
         super().__init__(alg)
 
     def _init(self):
-        sp.util.move_to(self.filt, self.proxg(1, sp.util.randn_like(self.filt)))
+        if self.proxg is None:
+            sp.util.move_to(self.filt, sp.util.randn_like(self.filt, scale=self.init_scale))
+        else:
+            sp.util.move_to(self.filt, self.proxg(1, sp.util.randn_like(self.filt)))
 
     def _pre_update(self):
         j = self.j_idx.next()
@@ -148,9 +166,6 @@ class ConvSparseCoding(sp.app.App):
         j_end = (j + 1) * self.batch_size
         
         sp.util.move_to(self.data_j, self.data[j_start:j_end])
-        
-        with sp.util.get_device(self.coef_j):
-            self.coef_j.fill(0)
 
     def _post_update(self):
         if self.output_iter:
@@ -245,17 +260,19 @@ class ConvSparseCoefficients(object):
         lamda (float): regularization parameter.
         mode (str): convolution mode in forward model. {'full', 'valid'}.
         multi_channel (bool): whether data is multi-channel or not.
+        elitist (bool): whether use elitist threshold.
         max_iter (bool): maximum number of iterations.
         max_power_iter (bool): maximum number of power iterations.
 
     Attributes:
         shape (tuple of ints): coefficient shape.
         ndim (int): number of dimensions of coefficient.
+        dtype (Dtype): Data type.
 
     """
 
     def __init__(self, data, filt,
-                 lamda=0.001, multi_channel=False, mode='full',
+                 lamda=0.001, multi_channel=False, mode='full', elitist=True,
                  max_iter=100, max_power_iter=10, device=sp.util.cpu_device):
         
         self.data = data
@@ -265,6 +282,7 @@ class ConvSparseCoefficients(object):
         self.mode = mode
         self.max_iter = max_iter
         self.max_power_iter = max_power_iter
+        self.elitist = True
 
         if multi_channel:
             num_filters = filt.shape[1]
@@ -276,6 +294,7 @@ class ConvSparseCoefficients(object):
             data.shape, len(data), num_filters, filt_width, mode, multi_channel)
         self.ndim = len(self.shape)
         self.device = sp.util.Device(device)
+        self.dtype = data.dtype
         
     def __getitem__(self, slc):
         if isinstance(slc, int):
@@ -298,7 +317,8 @@ class ConvSparseCoefficients(object):
         filt = sp.util.move(self.filt, self.device)
         app_j = ConvSparseDecom(data_j, filt, lamda=self.lamda,
                                 multi_channel=self.multi_channel, mode=self.mode,
-                                max_iter=self.max_iter, max_power_iter=self.max_power_iter)
+                                max_iter=self.max_iter, max_power_iter=self.max_power_iter,
+                                device=self.device, elitist=self.elitist)
 
         fea = app_j.run()
 
@@ -316,7 +336,7 @@ class ConvSparseCoefficients(object):
             pickle.dump(self, f)
 
 
-def _get_csc_update_filt(A_filt, filt, data_j, num_batches, alpha, proxg):
+def _get_csc_update_filt(A_filt, filt, data_j, num_batches, alpha, proxg, lamda):
 
     device = sp.util.get_device(filt)
     def update_filt():
@@ -324,9 +344,13 @@ def _get_csc_update_filt(A_filt, filt, data_j, num_batches, alpha, proxg):
             gradf_filt = A_filt.H(A_filt(filt) - data_j)
             gradf_filt *= num_batches
 
+            if proxg is None:
+                sp.util.axpy(gradf_filt, lamda, filt)
+                
             sp.util.axpy(filt, -alpha, gradf_filt)
 
-        sp.util.move_to(filt, proxg(alpha, filt))
+        if proxg is not None:
+            sp.util.move_to(filt, proxg(alpha, filt))
 
     return update_filt
 
