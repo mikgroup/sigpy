@@ -62,6 +62,7 @@ class PowerMethod(Alg):
 
     Attributes:
         float: Maximum eigenvalue of `A`.
+
     """
 
     def __init__(self, A, x, max_iter=30):
@@ -102,6 +103,16 @@ class GradientMethod(Alg):
         accelerate (bool): toggle Nesterov acceleration.
         P (function): function to precondition, assumes proxg has already incorporated P.
         max_iter (int): maximum number of iterations.
+
+    References:
+        Nesterov, Y. E. (1983). 
+        A method for solving the convex programming problem with convergence rate 
+        O (1/k^ 2). In Dokl. Akad. Nauk SSSR (Vol. 269, pp. 543-547).
+
+        Beck, A., & Teboulle, M. (2009). 
+        A fast iterative shrinkage-thresholding algorithm for linear inverse problems. 
+        SIAM journal on imaging sciences, 2(1), 183-202.
+
     """
 
     def __init__(self, gradf, x, alpha, proxg=None,
@@ -248,6 +259,11 @@ class NewtonsMethod(Alg):
         proxHg (function): Function to compute proximal operator of g.
         x (array): Optimization variable.
 
+    References:
+        Tran-Dinh, Q., Kyrillidis, A., & Cevher, V. (2015). 
+        Composite self-concordant minimization. 
+        The Journal of Machine Learning Research, 16(1), 371-416.
+
     """
 
     def __init__(self, gradf, hessf, proxHg, x,
@@ -308,6 +324,11 @@ class PrimalDualHybridGradient(Alg):
         D (function): Function to compute precondition dual variable.
         max_iter (int): Maximum number of iterations.
 
+    References:
+       Chambolle, A., & Pock, T. (2011).
+       A first-order primal-dual algorithm for convex problems with 
+       applications to imaging. Journal of mathematical imaging and vision, 40(1), 120-145.
+
     """
 
     def __init__(
@@ -361,6 +382,7 @@ class AltMin(Alg):
         min1 (function): Function to minimize over variable 1.
         min2 (function): Funciton to minimize over variable 2.
         max_iter (int): Maximum number of iterations.
+
     """
 
     def __init__(self, min1, min2, max_iter=30):

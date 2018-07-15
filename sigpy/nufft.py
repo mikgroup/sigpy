@@ -15,6 +15,15 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
 
     Returns:
         array: Fourier domain points of shape input.shape[:-ndim] + coord.shape[:-1]
+
+    References:
+        Fessler, J. A., & Sutton, B. P. (2003). 
+        Nonuniform fast Fourier transforms using min-max interpolation. 
+        IEEE Transactions on Signal Processing, 51(2), 560-574.
+
+        Beatty, P. J., Nishimura, D. G., & Pauly, J. M. (2005). 
+        Rapid gridding reconstruction with a minimal oversampling ratio. 
+        IEEE transactions on medical imaging, 24(6), 799-808.
     """
     device = util.get_device(input)
     xp = device.xp
@@ -96,6 +105,10 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
 
     Returns:
         array: Transformed array.
+
+    See Also:
+        :func: sigpy.nufft.nufft
+
     """
     device = util.get_device(input)
     xp = device.xp

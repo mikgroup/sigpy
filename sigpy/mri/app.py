@@ -1,24 +1,25 @@
+import pickle
 import numpy as np
 import sigpy as sp
 
-from sigpy.mri import linop, util, sense
+from sigpy.mri import linop, util
 
 
 if sp.config.mpi4py_enabled:
     from mpi4py import MPI
 
 
-def estimate_weights(ksp, weights, coord):
+def _estimate_weights(ksp, weights, coord):
     if np.isscalar(weights) and coord is None:
         with sp.util.get_device(ksp):
             weights = sp.util.rss(ksp, axes=(0, )) > 0
     return weights
 
 
-def move_to_device(ksp, mps, weights, coord, device):
+def _move_to_device(ksp, mps, weights, coord, device):
     ksp = sp.util.move(ksp, device=device)
 
-    if isinstance(mps, sense.SenseMaps):
+    if isinstance(mps, SenseMaps):
         mps.use_device(device)
     else:
         mps = sp.util.move(mps, device=device)
@@ -49,14 +50,24 @@ class SenseRecon(sp.app.LinearLeastSquares):
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
         **kwargs: Other optional arguments.
+
+    References:
+        Pruessmann, K. P., Weiger, M., Scheidegger, M. B., & Boesiger, P. (1999). 
+        SENSE: sensitivity encoding for fast MRI. 
+        Magnetic resonance in medicine, 42(5), 952-962.
+
+        Pruessmann, K. P., Weiger, M., Börnert, P., & Boesiger, P. (2001). 
+        Advances in sensitivity encoding with arbitrary k‐space trajectories. 
+        Magnetic resonance in medicine, 46(4), 638-651.
+       
     """
 
     def __init__(self, ksp, mps, lamda=0, weights=1,
                  coord=None, device=sp.util.cpu_device, **kwargs):
-        ksp, mps, weights, coord = move_to_device(
+        ksp, mps, weights, coord = _move_to_device(
             ksp, mps, weights, coord, device)
 
-        weights = estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(ksp, weights, coord)
         A = linop.Sense(mps, coord=coord)
         self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
 
@@ -90,9 +101,9 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
     def __init__(self, ksp, mps, eps,
                  weights=1, coord=None,
                  device=sp.util.cpu_device, **kwargs):
-        ksp, mps, weights, coord = move_to_device(
+        ksp, mps, weights, coord = _move_to_device(
             ksp, mps, weights, coord, device)
-        weights = estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(ksp, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
         proxg = sp.prox.L2Reg(A.ishape, 1)
@@ -120,14 +131,20 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         wave_name (str): wavelet name.
         device (Device): device to perform reconstruction.
         **kwargs: Other optional arguments.
+
+    References:
+        Lustig, M., Donoho, D., & Pauly, J. M. (2007). 
+        Sparse MRI: The application of compressed sensing for rapid MR imaging. 
+        Magnetic Resonance in Medicine, 58(6), 1182-1195.
+
     """
 
     def __init__(self, ksp, mps, lamda,
                  weights=1, coord=None,
                  wave_name='db4', device=sp.util.cpu_device, **kwargs):
-        ksp, mps, weights, coord = move_to_device(
+        ksp, mps, weights, coord = _move_to_device(
             ksp, mps, weights, coord, device)
-        weights = estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(ksp, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
         self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
@@ -168,15 +185,16 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
         **kwargs: Other optional arguments.
 
     See also:
-       WaveletRecon
+       :func:`sigpy.mri.app.WaveletRecon`
+
     """
 
     def __init__(
             self, ksp, mps, eps,
             wave_name='db4', weights=1, coord=None, device=sp.util.cpu_device, **kwargs):
-        ksp, mps, weights, coord = move_to_device(
+        ksp, mps, weights, coord = _move_to_device(
             ksp, mps, weights, coord, device)
-        weights = estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(ksp, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
         self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
@@ -189,8 +207,7 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
 class TotalVariationRecon(sp.app.LinearLeastSquares):
     r"""Total variation regularized reconstruction.
 
-    Considers the problem
-:
+    Considers the problem:
     .. math:: \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| G x \|_1
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, G is the gradient operator,
@@ -204,13 +221,19 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
         **kwargs: Other optional arguments.
+
+    References:
+        Block, K. T., Uecker, M., & Frahm, J. (2007). 
+        Undersampled radial MRI with multiple coils. 
+        Iterative image reconstruction using a total variation constraint. 
+        Magnetic Resonance in Medicine, 57(6), 1086-1098.
     """
 
     def __init__(self, ksp, mps, lamda,
                  weights=1, coord=None, device=sp.util.cpu_device, **kwargs):
-        ksp, mps, weights, coord = move_to_device(
+        ksp, mps, weights, coord = _move_to_device(
             ksp, mps, weights, coord, device)
-        weights = estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(ksp, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
         self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
@@ -249,15 +272,16 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
         **kwargs: Other optional arguments.
 
     See also:
-       TotalVariationRecon
+       :func:`sigpy.mri.app.TotalVariationRecon`
+
     """
 
     def __init__(
             self, ksp, mps, eps,
             weights=1, coord=None, device=sp.util.cpu_device, **kwargs):
-        ksp, mps, weights, coord = move_to_device(
+        ksp, mps, weights, coord = _move_to_device(
             ksp, mps, weights, coord, device)
-        weights = estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(ksp, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
         self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
@@ -288,6 +312,17 @@ class JsenseRecon(sp.app.App):
         max_iter (int): Maximum number of iterations.
         max_inner_iter (int): Maximum number of inner iterations.
         thresh (float): threshold parameter for output, from 0 to 1.
+
+    References:
+        Ying, L., & Sheng, J. (2007). 
+        Joint image reconstruction and sensitivity estimation in SENSE (JSENSE). 
+        Magnetic Resonance in Medicine, 57(6), 1196-1202.
+
+        Uecker, M., Hohage, T., Block, K. T., & Frahm, J. (2008). 
+        Image reconstruction by regularized nonlinear inversion—joint 
+        estimation of coil sensitivities and image content. 
+        Magnetic Resonance in Medicine, 60(3), 674-682.
+
     """
 
     def __init__(self, ksp,
@@ -345,7 +380,7 @@ class JsenseRecon(sp.app.App):
         if not np.isscalar(self.weights):
             self.weights = sp.util.move(self.weights, self.device)
 
-        self.weights = estimate_weights(self.ksp, self.weights, self.coord)
+        self.weights = _estimate_weights(self.ksp, self.weights, self.coord)
 
     def _init_vars(self):
         ndim = len(self.img_shape)
@@ -402,4 +437,68 @@ class JsenseRecon(sp.app.App):
             img_weights = 1 / mps_rss
             img_weights *= img > self.thresh * img.max()
 
-        return sense.SenseMaps(self.mps_ker, img_weights)
+        return SenseMaps(self.mps_ker, img_weights)
+
+
+class SenseMaps(object):
+    """Sensitivity maps class.
+
+    Implicitly stored as sensitvity map kernels in k-space and an image mask.
+    Can be sliced like an array.
+
+    Args:
+        mps_ker (array): sensitivity map kernels.
+        img_mask (array): image mask.
+        device (Device): device to store mps_ker and img_mask.
+
+    """
+
+    def __init__(self, mps_ker, img_mask, device=sp.util.cpu_device):
+        self.num_coils = len(mps_ker)
+        self.shape = (self.num_coils, ) + img_mask.shape
+        self.ndim = len(self.shape)
+        self.mps_ker = mps_ker
+        self.img_mask = img_mask
+        self.use_device(device)
+        self.dtype = self.mps_ker.dtype
+
+    def use_device(self, device):
+        self.device = sp.util.Device(device)
+        self.mps_ker = sp.util.move(self.mps_ker, device)
+        self.img_mask = sp.util.move(self.img_mask, device)
+
+    def __getitem__(self, slc):
+
+        with self.device:
+            if isinstance(slc, int):
+                mps_c = sp.fft.ifft(
+                    self.mps_ker[slc], oshape=self.img_mask.shape)
+                mps_c *= self.img_mask
+                return mps_c
+
+            elif isinstance(slc, slice):
+                return SenseMaps(self.mps_ker[slc], self.img_mask, device=self.device)
+
+            elif isinstance(slc, tuple) or isinstance(slc, list):
+                if isinstance(slc[0], int):
+                    mps = sp.fft.ifft(self.mps_ker[slc[0]], oshape=self.img_mask.shape)
+                    mps *= self.img_mask
+                    return mps[slc[1:]]
+
+    def asarray(self):
+        ndim = self.img_mask.ndim
+        with self.device:
+            mps = sp.fft.ifft(self.mps_ker, oshape=self.shape,
+                              axes=range(-ndim, 0))
+            mps *= self.img_mask
+            return mps
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename, "rb") as f:
+            return pickle.load(f)
+
+    def save(self, filename):
+        self.use_device(sp.util.cpu_device)
+        with open(filename, "wb") as f:
+            pickle.dump(self, f)

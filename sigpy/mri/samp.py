@@ -7,7 +7,7 @@ __all__ = ['poisson', 'radial']
 
 def poisson(img_shape, accel, K=30, calib=[0, 0], dtype=np.complex,
             crop_corner=True, return_density=False, seed=0):
-    """Generate Poisson-disk sampling pattern
+    """Generate Poisson-disc sampling pattern
 
     Args:
         img_shape (tuple of ints): length-2 image shape.
@@ -20,7 +20,12 @@ def poisson(img_shape, accel, K=30, calib=[0, 0], dtype=np.complex,
         seed (int): Random seed.
 
     Returns:
-        array: poisson sampling mask.
+        array: Poisson-disc sampling mask.
+
+    References:
+        Bridson, Robert. "Fast Poisson disk sampling in arbitrary dimensions."
+        SIGGRAPH sketches. 2007.
+
     """
 
     y, x = np.mgrid[:img_shape[-2], :img_shape[-1]]
@@ -66,6 +71,7 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
     
     Returns:
         array: radial coordinates.
+
     """
     ntr, nro, ndim = coord_shape
 

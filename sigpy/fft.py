@@ -19,6 +19,7 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
 
     See Also:
         :func:`numpy.fft.fftn`
+
     """
     device = util.get_device(input)
     xp = device.xp
@@ -52,6 +53,7 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
 
     See Also:
         :func:`numpy.fft.ifftn`
+
     """
     device = util.get_device(input)
     xp = device.xp
