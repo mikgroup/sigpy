@@ -1185,7 +1185,7 @@ class Tile(Linop):
         return Sum(self.oshape, self.axes)
 
 
-class TensorToBlocks(Linop):
+class ArrayToBlocks(Linop):
     """Block partition input array. Block shape must divide input shape.
     
     Args:
@@ -1224,10 +1224,10 @@ class TensorToBlocks(Linop):
 
     def _adjoint_linop(self):
 
-        return BlocksToTensor(self.ishape, self.blk_shape)
+        return BlocksToArray(self.ishape, self.blk_shape)
 
 
-class BlocksToTensor(Linop):
+class BlocksToArray(Linop):
     """Sum blocks to array. Block shape must divide output shape.
     
     Args:
@@ -1262,7 +1262,7 @@ class BlocksToTensor(Linop):
 
     def _adjoint_linop(self):
 
-        return TensorToBlocks(self.oshape, self.blk_shape)
+        return ArrayToBlocks(self.oshape, self.blk_shape)
 
 
 def Gradient(ishape):

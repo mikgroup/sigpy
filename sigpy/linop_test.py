@@ -429,12 +429,12 @@ class TestLinop(unittest.TestCase):
         check_linop_linear(A)
         check_linop_pickleable(A)
 
-    def test_TensorToBlocks(self):
+    def test_ArrayToBlocks(self):
 
         ishape = [4]
         bshape = [2]
 
-        A = linop.TensorToBlocks(ishape, bshape)
+        A = linop.ArrayToBlocks(ishape, bshape)
         check_linop_adjoint(A)
         check_linop_linear(A)
         check_linop_pickleable(A)
