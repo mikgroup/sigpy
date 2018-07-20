@@ -1,6 +1,5 @@
 import numpy as np
 import sigpy as sp
-from sigpy.mri import util, sense
 
 
 __all__ = ['Sense', 'SenseMultiply', 'SenseCombine', 'ConvImage', 'ConvSense']
@@ -10,7 +9,7 @@ def Sense(mps, coord=None):
     """Sense linear operator.
     
     Args:
-        mps (array or sense.SenseMaps): sensitivity maps of length = number of channels.
+        mps (array or SenseMaps): sensitivity maps of length = number of channels.
         coord (None or array): coordinates.
     """
 
@@ -33,7 +32,7 @@ class SenseMultiply(sp.linop.Linop):
     """Sense multiply linear operator.
     
     Args:
-        mps (array or sense.SenseMaps): sensitivity maps of length = number of channels.
+        mps (array or SenseMaps): sensitivity maps of length = number of channels.
     """
 
     def __init__(self, mps):
@@ -47,12 +46,7 @@ class SenseMultiply(sp.linop.Linop):
         device = sp.util.get_device(input)
 
         with device:
-            if isinstance(self.mps, sense.SenseMaps):
-                mps = self.mps.asarray()
-            else:
-                mps = self.mps
-
-            return input * mps
+            return self.mps * input
 
     def _adjoint_linop(self):
 
@@ -63,7 +57,7 @@ class SenseCombine(sp.linop.Linop):
     """Sense combine linear operator.
     
     Args:
-        mps (array or sense.SenseMaps): sensitivity maps of length = number of channels.
+        mps (array or SenseMaps): sensitivity maps of length = number of channels.
     """
 
     def __init__(self, mps):
@@ -78,12 +72,7 @@ class SenseCombine(sp.linop.Linop):
         xp = device.xp
 
         with device:
-            if isinstance(self.mps, sense.SenseMaps):
-                mps = self.mps.asarray()
-            else:
-                mps = self.mps
-
-            return xp.sum(input * xp.conj(mps), axis=0)
+            return xp.sum(self.mps.conjugate() * input, axis=0)
 
     def _adjoint_linop(self):
 

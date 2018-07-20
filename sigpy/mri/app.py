@@ -453,7 +453,7 @@ class SenseMaps(object):
 
     """
 
-    def __init__(self, mps_ker, img_mask, device=sp.util.cpu_device):
+    def __init__(self, mps_ker, img_mask, conj=False, device=sp.util.cpu_device):
         self.num_coils = len(mps_ker)
         self.shape = (self.num_coils, ) + img_mask.shape
         self.ndim = len(self.shape)
@@ -461,6 +461,7 @@ class SenseMaps(object):
         self.img_mask = img_mask
         self.use_device(device)
         self.dtype = self.mps_ker.dtype
+        self.conj = conj
 
     def use_device(self, device):
         self.device = sp.util.Device(device)
@@ -469,34 +470,51 @@ class SenseMaps(object):
 
     def __getitem__(self, slc):
 
+        xp = self.device.xp
         with self.device:
             if isinstance(slc, int):
-                mps_c = sp.fft.ifft(
-                    self.mps_ker[slc], oshape=self.img_mask.shape)
+                mps_c = sp.fft.ifft(self.mps_ker[slc], oshape=self.img_mask.shape)
                 mps_c *= self.img_mask
-                return mps_c
+                if self.conj:
+                    return xp.conj(mps_c)
+                else:
+                    return mps_c
 
             elif isinstance(slc, slice):
-                return SenseMaps(self.mps_ker[slc], self.img_mask, device=self.device)
+                return SenseMaps(self.mps_ker[slc], self.img_mask,
+                                 conj=self.conj, device=self.device)
 
             elif isinstance(slc, tuple) or isinstance(slc, list):
                 if isinstance(slc[0], int):
                     mps = sp.fft.ifft(self.mps_ker[slc[0]], oshape=self.img_mask.shape)
                     mps *= self.img_mask
-                    return mps[slc[1:]]
+                    if self.conj:
+                        return xp.conj(mps[slc[1:]])
+                    else:
+                        return mps[slc[1:]]
 
     def asarray(self):
         ndim = self.img_mask.ndim
+        xp = self.device.xp
         with self.device:
-            mps = sp.fft.ifft(self.mps_ker, oshape=self.shape,
-                              axes=range(-ndim, 0))
+            mps = sp.fft.ifft(self.mps_ker, oshape=self.shape, axes=range(-ndim, 0))
             mps *= self.img_mask
-            return mps
 
-    @classmethod
-    def load(cls, filename):
-        with open(filename, "rb") as f:
-            return pickle.load(f)
+            if self.conj:
+                return xp.conj(mps)
+            else:
+                return mps
+
+    def __mul__(self, input):
+        mps = self.asarray()
+        return mps * input
+
+    def __rmul__(self, input):
+        return self.__mul__(input)
+
+    def conjugate(self):
+        return SenseMaps(self.mps_ker, self.img_mask,
+                         conj=not self.conj, device=self.device)
 
     def save(self, filename):
         self.use_device(sp.util.cpu_device)

@@ -1,7 +1,6 @@
 import numpy as np
 import logging
 import sigpy as sp
-from sigpy.mri import sense
 
 
 def sense_kspace_precond(mps, weights=1, coord=None, lamda=0, device=sp.util.cpu_device):
@@ -21,12 +20,8 @@ def sense_kspace_precond(mps, weights=1, coord=None, lamda=0, device=sp.util.cpu
     Returns:
         precond (array) - k-space preconditioner of same shape as k-space.
     """
-    if isinstance(mps, sense.SenseMaps):
-        dtype = mps.mps_ker.dtype
-        mps.use_device(device)
-    else:
-        dtype = mps.dtype
-        mps = sp.util.move(mps, device)
+    dtype = mps.dtype
+    mps = sp.util.move(mps, device)
 
     if coord is not None:
         coord = sp.util.move(coord, device)
