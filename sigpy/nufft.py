@@ -107,7 +107,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         array: Transformed array.
 
     See Also:
-        :func: sigpy.nufft.nufft
+        :func:`sigpy.nufft.nufft`
 
     """
     device = util.get_device(input)

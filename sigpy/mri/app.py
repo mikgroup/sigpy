@@ -56,8 +56,8 @@ class SenseRecon(sp.app.LinearLeastSquares):
         SENSE: sensitivity encoding for fast MRI. 
         Magnetic resonance in medicine, 42(5), 952-962.
 
-        Pruessmann, K. P., Weiger, M., Börnert, P., & Boesiger, P. (2001). 
-        Advances in sensitivity encoding with arbitrary k‐space trajectories. 
+        Pruessmann, K. P., Weiger, M., Bornert, P., & Boesiger, P. (2001).
+        Advances in sensitivity encoding with arbitrary k-space trajectories.
         Magnetic resonance in medicine, 46(4), 638-651.
        
     """
