@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 import sigpy as sp
 
-from sigpy.mri import linop, util
+from sigpy.mri import linop
 
 
 if sp.config.mpi4py_enabled:
@@ -363,7 +363,7 @@ class JsenseRecon(sp.app.App):
                     self.weights, ndim * [self.ksp_calib_width])
 
         else:
-            self.img_shape = util.estimate_img_shape(self.coord)
+            self.img_shape = sp.nufft.estimate_shape(self.coord)
             calib_idx = np.amax(np.abs(self.coord), axis=-
                                 1) < self.ksp_calib_width / 2
 
@@ -390,7 +390,7 @@ class JsenseRecon(sp.app.App):
             img_ker_shape = [i + self.mps_ker_width -
                              1 for i in self.ksp.shape[1:]]
         else:
-            grd_shape = util.estimate_img_shape(self.coord)
+            grd_shape = sp.nufft.estimate_shape(self.coord)
             img_ker_shape = [i + self.mps_ker_width - 1 for i in grd_shape]
 
         self.img_ker = sp.util.dirac(

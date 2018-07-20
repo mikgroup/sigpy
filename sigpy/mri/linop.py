@@ -105,7 +105,7 @@ def ConvSense(img_ker_shape, mps_ker, coord=None):
 
     if coord is not None:
         num_coils = mps_ker.shape[0]
-        grd_shape = [num_coils] + util.estimate_img_shape(coord)
+        grd_shape = [num_coils] + sp.nufft.estimate_shape(coord)
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
         A = N * iF * A
@@ -128,7 +128,7 @@ def ConvImage(mps_ker_shape, img_ker, coord=None):
 
     if coord is not None:
         num_coils = mps_ker_shape[0]
-        grd_shape = [num_coils] + util.estimate_img_shape(coord)
+        grd_shape = [num_coils] + sp.nufft.estimate_shape(coord)
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
         A = N * iF * A
