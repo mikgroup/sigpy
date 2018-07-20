@@ -91,16 +91,14 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
             i = oshape[a]
             tshape[a] = i
             idx = xp.arange(i, dtype=input.dtype)
-            mod = xp.exp(1j * 2 * np.pi * (idx - (i // 2) / 2)
-                         * ((i // 2) / i))
 
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
 
             tmp = util.resize(tmp, tshape)
-            tmp *= mod
+            tmp = xp.fft.ifftshift(tmp, axes=-1)
             tmp = xp.fft.fft(tmp, axis=-1, norm=norm)
-            tmp *= mod
+            tmp = xp.fft.fftshift(tmp, axes=-1)
 
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
@@ -128,16 +126,14 @@ def _ifftc(input, oshape=None, axes=None, norm='ortho'):
             i = oshape[a]
             tshape[a] = i
             idx = xp.arange(i, dtype=input.dtype)
-            mod = xp.exp(-1j * 2 * np.pi *
-                         (idx - (i // 2) / 2) * ((i // 2) / i))
 
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
 
             tmp = util.resize(tmp, tshape)
-            tmp *= mod
+            tmp = xp.fft.ifftshift(tmp, axes=-1)
             tmp = xp.fft.ifft(tmp, axis=-1, norm=norm)
-            tmp *= mod
+            tmp = xp.fft.fftshift(tmp, axes=-1)
 
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
