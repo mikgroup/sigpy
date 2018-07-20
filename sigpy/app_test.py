@@ -63,6 +63,31 @@ class TestApp(unittest.TestCase):
                                alg_name='PrimalDualHybridGradient').run()
         npt.assert_allclose(x_rec, x_lstsq)
         
+    def test_l2reg_bias_LinearLeastSquares(self):
+        n = 5
+        mat = np.eye(n) + 0.1 * util.randn([n, n])
+        A = linop.MatMul([n, 1], mat)
+        x = util.randn([n, 1])
+        y = A(x)
+        z = util.randn([n, 1])
+        lamda = 0.1
+        x_lstsq = np.linalg.solve(np.matmul(mat.conjugate().T, mat) + lamda * np.eye(n),
+                                  np.matmul(mat.conjugate().T, y) + lamda * z)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(A, y, x_rec, lamda=lamda, z=z).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(
+            A, y, x_rec, alg_name='GradientMethod', max_iter=1000, lamda=lamda, z=z).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(A, y, x_rec, max_iter=1000, lamda=lamda, z=z,
+                               alg_name='PrimalDualHybridGradient').run()
+        npt.assert_allclose(x_rec, x_lstsq)
+        
     def test_proxg_LinearLeastSquares(self):
         n = 5
         mat = np.eye(n) + 0.1 * util.randn([n, n])
@@ -103,6 +128,29 @@ class TestApp(unittest.TestCase):
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(A, y, x_rec, max_iter=1000, lamda=lamda, proxg=proxg,
                                alg_name='PrimalDualHybridGradient').run()
+        npt.assert_allclose(x_rec, x_lstsq)
+        
+    def test_l2reg_bias_proxg_LinearLeastSquares(self):
+        n = 5
+        mat = np.eye(n) + 0.1 * util.randn([n, n])
+        A = linop.MatMul([n, 1], mat)
+        x = util.randn([n, 1])
+        y = A(x)
+        z = util.randn([n, 1])
+        lamda = 0.1
+        x_lstsq = np.linalg.solve(np.matmul(mat.conjugate().T, mat) + 2 * lamda * np.eye(n),
+                                  np.matmul(mat.conjugate().T, y) + lamda * z)
+
+        proxg = prox.L2Reg([n, 1], lamda)
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(
+            A, y, x_rec, alg_name='GradientMethod', max_iter=1000, lamda=lamda, z=z,
+            proxg=proxg).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(A, y, x_rec, max_iter=1000, lamda=lamda, proxg=proxg,
+                               z=z, alg_name='PrimalDualHybridGradient').run()
         npt.assert_allclose(x_rec, x_lstsq)
 
     def test_L2ConstrainedMinimization(self):

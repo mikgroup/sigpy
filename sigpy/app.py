@@ -88,7 +88,8 @@ class LinearLeastSquares(App):
     Solves for the following problem, with optional weights and regularizations:
 
     .. math::
-        \min_x \frac{1}{2} \| W^{0.5} (A x - y) \|_2^2 + g(G x) + \frac{\lambda}{2} \| R x \|_2^2
+        \min_x \frac{1}{2} \| W^{1/2} (A x - y) \|_2^2 + g(G x) + 
+        \frac{\lambda}{2} \| R x - z \|_2^2
 
     Three algorithms can be used: `ConjugateGradient`, `GradientMethod`,
     and `PrimalDualHybridGradient`. If `alg_name` is None, `ConjugateGradient` is used
@@ -106,6 +107,7 @@ class LinearLeastSquares(App):
         G (None or Linop): Regularization linear operator.
         R (None or Linop): l2 regularization linear operator.
         weights (float or array): Weights for least squares.
+        z (float or array): Bias for l2 regularization.
         alg_name (str): {`'ConjugateGradient'`, `'GradientMethod'`, `'PrimalDualHybridGradient'`}.
         alpha (None or float): Step size for `GradientMethod`.
         accelerate (bool): Toggle Nesterov acceleration for `GradientMethod`.
@@ -117,21 +119,23 @@ class LinearLeastSquares(App):
 
     """
     def __init__(self, A, y, x, proxg=None,
-                 lamda=0, G=None, g=None, R=None, weights=1,
+                 lamda=0, G=None, g=None, R=None, weights=1, z=0,
                  alg_name=None, max_iter=100, save_objs=False,
                  precond=1, dual_precond=1,
                  alpha=None, max_power_iter=10, accelerate=True,
                  tau=None, sigma=None, theta=1):
         
         alg = _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
-                           proxg, G, weights, precond, dual_precond,
+                           proxg, G, weights, z, precond, dual_precond,
                            alpha, accelerate, tau, sigma, theta)
 
         self.A = A
         self.y = y
         self.x = x
+        self.z = z
         self.weights = weights
         self.precond = precond
+        self.lamda = lamda
         self.dual_precond = dual_precond
         self.device = util.get_device(x)
         
@@ -145,7 +149,7 @@ class LinearLeastSquares(App):
 
         self.save_objs = save_objs
         if save_objs:
-            self.objective = _get_LLS_objective(A, y, x, weights, lamda, R, g, G)
+            self.objective = _get_LLS_objective(A, y, x, weights, lamda, R, g, G, z)
 
         super().__init__(alg)
 
@@ -155,7 +159,7 @@ class LinearLeastSquares(App):
         
         with self.device:
             if isinstance(self.alg, ConjugateGradient):
-                self.alg.b = self.A.H(self.weights * self.y)
+                self.alg.b = self.A.H(self.weights * self.y) + self.lamda * self.z
             elif isinstance(self.alg, GradientMethod) and self.get_max_eig:
                 self.alg.alpha = 1 / max_eig
             elif isinstance(self.alg, PrimalDualHybridGradient) and self.get_max_eig:
@@ -239,7 +243,7 @@ class L2ConstrainedMinimization(App):
 
     
 def _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
-                 proxg, G, weights, precond, dual_precond,
+                 proxg, G, weights, z, precond, dual_precond,
                  alpha, accelerate, tau, sigma, theta):
     
     if alg_name is None:
@@ -251,22 +255,21 @@ def _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
             alg_name = 'PrimalDualHybridGradient'
             
     if alg_name == 'ConjugateGradient':
-        alg = _get_LLS_ConjugateGradient(A, y, x, weights, R, lamda, precond, max_iter)
+        alg = _get_LLS_ConjugateGradient(A, x, weights, R, lamda, precond, max_iter)
     elif alg_name == 'GradientMethod':
-        alg = _get_LLS_GradientMethod(A, y, x, weights, R, lamda, precond,
+        alg = _get_LLS_GradientMethod(A, y, x, weights, R, lamda, z, precond,
                                       max_iter, alpha, proxg, accelerate)
     elif alg_name == 'PrimalDualHybridGradient':
         alg = _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G, lamda, R,
-                                                weights, precond, dual_precond,
-                                                max_iter,
-                                                tau, sigma, theta)
+                                                weights, z, precond, dual_precond,
+                                                max_iter, tau, sigma, theta)
     else:
         raise ValueError('Invalid alg_name: {alg_name}.'.format(alg_name=alg_name))
 
     return alg
 
 
-def _get_LLS_ConjugateGradient(A, y, x, weights, R, lamda, precond, max_iter):
+def _get_LLS_ConjugateGradient(A, x, weights, R, lamda, precond, max_iter):
     device = util.get_device(x)
     I = linop.Identity(x.shape)
     W = linop.Multiply(A.oshape, weights)
@@ -278,16 +281,13 @@ def _get_LLS_ConjugateGradient(A, y, x, weights, R, lamda, precond, max_iter):
         else:
             AHA += lamda * R.H * R
 
-    with device:
-        AHy = A.H(weights * y)
-        
     P = linop.Multiply(x.shape, precond)
-    alg = ConjugateGradient(AHA, AHy, x, P=P, max_iter=max_iter)
+    alg = ConjugateGradient(AHA, None, x, P=P, max_iter=max_iter)
 
     return alg
 
 
-def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, precond,
+def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, z, precond,
                             max_iter, alpha, proxg, accelerate):
     device = util.get_device(x)
     
@@ -297,9 +297,9 @@ def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, precond,
 
             if lamda != 0:
                 if R is None:
-                    util.axpy(gradf_x, lamda, x)
+                    util.axpy(gradf_x, lamda, x - z)
                 else:
-                    util.axpy(gradf_x, lamda, R.H(R(x)))
+                    util.axpy(gradf_x, lamda, R.H(R(x) - z))
 
             return gradf_x
 
@@ -312,7 +312,7 @@ def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, precond,
 
 
 def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G, lamda, R,
-                                      weights, precond, dual_precond, max_iter,
+                                      weights, z, precond, dual_precond, max_iter,
                                       tau, sigma, theta):
 
     device = util.get_device(x)
@@ -328,24 +328,24 @@ def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G, lamda, R,
         if lamda == 0:
             proxg = prox.NoOp(x.shape)
         elif R is None:
-            proxg = prox.L2Reg(x.shape, lamda)
+            proxg = prox.L2Reg(x.shape, lamda, y=z)
         else:
-            proxg = prox.L2Reg(R.oshape, lamda)
+            proxg = prox.L2Reg(R.oshape, lamda, y=z)
     elif lamda != 0:
         if G is None:
             if R is None:
                 G = linop.Vstack([linop.Identity(x.shape), linop.Identity(x.shape)])
-                proxg = prox.Stack([proxg, prox.L2Reg(x.shape, lamda)])
+                proxg = prox.Stack([proxg, prox.L2Reg(x.shape, lamda, y=z)])
             else:
                 G = linop.Vstack([linop.Identity(x.shape), R])
-                proxg = prox.Stack([proxg, prox.L2Reg(R.oshape, lamda)])
+                proxg = prox.Stack([proxg, prox.L2Reg(R.oshape, lamda, y=z)])
         else:
             if R is None:
                 G = linop.Vstack([G, linop.Identity(x.shape)])
-                proxg = prox.Stack([proxg, prox.L2Reg(x.shape, lamda)])
+                proxg = prox.Stack([proxg, prox.L2Reg(x.shape, lamda, y=z)])
             else:
                 G = linop.Vstack([G, R])
-                proxg = prox.Stack([proxg, prox.L2Reg(R.oshape, lamda)])
+                proxg = prox.Stack([proxg, prox.L2Reg(R.oshape, lamda, y=z)])
                     
     if G is None:
         D = linop.Multiply(y.shape, dual_precond)
@@ -398,7 +398,7 @@ def _get_LLS_max_eig_app(A, x, weights, lamda, R,
     return app
 
 
-def _get_LLS_objective(A, y, x, weights, lamda, R, g, G):
+def _get_LLS_objective(A, y, x, weights, lamda, R, g, G, z):
 
     device = util.get_device(x)
     xp = device.xp
@@ -408,9 +408,9 @@ def _get_LLS_objective(A, y, x, weights, lamda, R, g, G):
             l2loss = 1 / 2 * xp.sum(xp.abs(weights**0.5 * (A(x) - y))**2)
 
             if R is None:
-                l2reg = lamda / 2 * xp.sum(xp.abs(x)**2)
+                l2reg = lamda / 2 * xp.sum(xp.abs(x - z)**2)
             else:
-                l2reg = lamda / 2 * xp.sum(xp.abs(R(x)**2))
+                l2reg = lamda / 2 * xp.sum(xp.abs(R(x) - z)**2)
 
             if g is None:
                 return l2loss + l2reg
