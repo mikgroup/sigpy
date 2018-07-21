@@ -586,6 +586,30 @@ def ones_like(input):
     return ones(input.shape, dtype=input.dtype, device=get_device(input))
 
 
+def triang(shape, dtype=np.complex, device=cpu_device):
+    """Create multi-dimensional triangular window.
+
+    Args:
+        shape (tuple of ints): Output shape.
+        dtype (Dtype): Output data-type.
+        device (Device): Output device.
+
+    Returns:
+        array: All-ones array.
+
+    """
+    device = Device(device)
+    xp = device.xp
+
+    with device:
+        window = 1
+        for n, i in enumerate(shape[::-1]):
+            w = 1 - xp.abs(xp.arange(i, dtype=dtype) - i // 2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
+            window *= w.reshape([i] + [1] * n)
+
+    return window
+
+
 def dot(input1, input2):
     """Compute dot product.
 
@@ -634,7 +658,7 @@ def norm(input):
     xp = device.xp
 
     with device:
-        return norm2(input)**0.5
+        return norm2(input)**0.5 
 
 
 def monte_carlo_sure(f, y, sigma, eps=1e-10):

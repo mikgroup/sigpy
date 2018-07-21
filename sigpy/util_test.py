@@ -24,6 +24,10 @@ class TestUtil(unittest.TestCase):
         truth = [0, 0, 1, 0]
         npt.assert_allclose(output, truth)
 
+    def test_triang(self):
+        npt.assert_allclose(util.triang([3]), [0.5, 1, 0.5])
+        npt.assert_allclose(util.triang([4]), [0.25, 0.75, 0.75, 0.25])
+
     def test_resize(self):
 
         # Zero-pad
