@@ -44,7 +44,7 @@ class SenseRecon(sp.app.LinearLeastSquares):
 
     Args:
         ksp (array): k-space measurements.
-        mps (array or SenseMaps): sensitivity maps.
+        mps (array): sensitivity maps.
         lamda (float): regularization parameter.
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
@@ -87,7 +87,7 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
 
     Args:
         ksp (array): k-space measurements.
-        mps (array or SenseMaps): sensitivity maps.
+        mps (array): sensitivity maps.
         eps (float): constraint parameter.
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
@@ -124,7 +124,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
 
     Args:
         ksp (array): k-space measurements.
-        mps (array or SenseMaps): sensitivity maps.
+        mps (array): sensitivity maps.
         lamda (float): regularization parameter.
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
@@ -176,7 +176,7 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
 
     Args:
         ksp (array): k-space measurements.
-        mps (array or SenseMaps): sensitivity maps.
+        mps (array): sensitivity maps.
         eps (float): constraint parameter.
         wave_name (str): wavelet name.
         weights (float or array): weights for data consistency.
@@ -215,7 +215,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
 
     Args:
         ksp (array): k-space measurements.
-        mps (array or SenseMaps): sensitivity maps.
+        mps (array): sensitivity maps.
         lamda (float): regularization parameter.
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
@@ -264,7 +264,7 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
 
     Args:
         ksp (array): k-space measurements.
-        mps (array or SenseMaps): sensitivity maps.
+        mps (array): sensitivity maps.
         eps (float): constraint parameter.
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
@@ -424,99 +424,14 @@ class JsenseRecon(sp.app.App):
         # Coil by coil to save memory
         with self.device:
             mps_rss = 0
+            mps = []
             for mps_ker_c in self.mps_ker:
                 mps_c = sp.fft.ifft(sp.util.resize(mps_ker_c, self.img_shape))
+                mps.append(sp.util.move(mps_c))
                 mps_rss += xp.abs(mps_c)**2
 
-            mps_rss = mps_rss**0.5
+            mps_rss = sp.util.move(mps_rss**0.5)
+            mps = np.stack(mps)
+            mps /= mps_rss
 
-            img = xp.abs(sp.fft.ifft(
-                sp.util.resize(self.img_ker, self.img_shape)))
-            img *= mps_rss
-
-            img_weights = 1 / mps_rss
-            img_weights *= img > self.thresh * img.max()
-
-        return SenseMaps(self.mps_ker, img_weights)
-
-
-class SenseMaps(object):
-    """Sensitivity maps class.
-
-    Implicitly stored as sensitvity map kernels in k-space and an image mask.
-    Can be sliced like an array.
-
-    Args:
-        mps_ker (array): sensitivity map kernels.
-        img_mask (array): image mask.
-        device (Device): device to store mps_ker and img_mask.
-
-    """
-
-    def __init__(self, mps_ker, img_mask, conj=False, device=sp.util.cpu_device):
-        self.num_coils = len(mps_ker)
-        self.shape = (self.num_coils, ) + img_mask.shape
-        self.ndim = len(self.shape)
-        self.mps_ker = mps_ker
-        self.img_mask = img_mask
-        self.use_device(device)
-        self.dtype = self.mps_ker.dtype
-        self.conj = conj
-
-    def use_device(self, device):
-        self.device = sp.util.Device(device)
-        self.mps_ker = sp.util.move(self.mps_ker, device)
-        self.img_mask = sp.util.move(self.img_mask, device)
-
-    def __getitem__(self, slc):
-
-        xp = self.device.xp
-        with self.device:
-            if isinstance(slc, int):
-                mps_c = sp.fft.ifft(self.mps_ker[slc], oshape=self.img_mask.shape)
-                mps_c *= self.img_mask
-                if self.conj:
-                    return xp.conj(mps_c)
-                else:
-                    return mps_c
-
-            elif isinstance(slc, slice):
-                return SenseMaps(self.mps_ker[slc], self.img_mask,
-                                 conj=self.conj, device=self.device)
-
-            elif isinstance(slc, tuple) or isinstance(slc, list):
-                if isinstance(slc[0], int):
-                    mps = sp.fft.ifft(self.mps_ker[slc[0]], oshape=self.img_mask.shape)
-                    mps *= self.img_mask
-                    if self.conj:
-                        return xp.conj(mps[slc[1:]])
-                    else:
-                        return mps[slc[1:]]
-
-    def asarray(self):
-        ndim = self.img_mask.ndim
-        xp = self.device.xp
-        with self.device:
-            mps = sp.fft.ifft(self.mps_ker, oshape=self.shape, axes=range(-ndim, 0))
-            mps *= self.img_mask
-
-            if self.conj:
-                return xp.conj(mps)
-            else:
-                return mps
-
-    def __mul__(self, input):
-        mps = self.asarray()
-        return mps * input
-
-    def __rmul__(self, input):
-        return self.__mul__(input)
-
-    def conjugate(self):
-        return SenseMaps(self.mps_ker, self.img_mask,
-                         conj=not self.conj, device=self.device)
-
-    def save(self, filename):
-        self.use_device(sp.util.cpu_device)
-        with open(filename, "wb") as f:
-            pickle.dump(self, f)
+        return mps

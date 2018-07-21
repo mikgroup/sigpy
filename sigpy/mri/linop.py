@@ -9,13 +9,14 @@ def Sense(mps, coord=None):
     """Sense linear operator.
     
     Args:
-        mps (array or SenseMaps): sensitivity maps of length = number of channels.
+        mps (array): sensitivity maps of length = number of channels.
         coord (None or array): coordinates.
     """
 
     ndim = mps.ndim - 1
+    img_shape = mps.shape[1:]
 
-    S = SenseMultiply(mps)
+    S = sp.linop.Multiply(img_shape, mps)
 
     if coord is None:
         F = sp.linop.FFT(S.oshape, axes=range(-ndim, 0))
@@ -26,57 +27,6 @@ def Sense(mps, coord=None):
     A.repr_str = 'Sense'
 
     return A
-
-
-class SenseMultiply(sp.linop.Linop):
-    """Sense multiply linear operator.
-    
-    Args:
-        mps (array or SenseMaps): sensitivity maps of length = number of channels.
-    """
-
-    def __init__(self, mps):
-        self.mps = mps
-        ishape = self.mps.shape[1:]
-        oshape = self.mps.shape
-
-        super().__init__(oshape, ishape)
-
-    def _apply(self, input):
-        device = sp.util.get_device(input)
-
-        with device:
-            return self.mps * input
-
-    def _adjoint_linop(self):
-
-        return SenseCombine(self.mps)
-
-
-class SenseCombine(sp.linop.Linop):
-    """Sense combine linear operator.
-    
-    Args:
-        mps (array or SenseMaps): sensitivity maps of length = number of channels.
-    """
-
-    def __init__(self, mps):
-        self.mps = mps
-        oshape = self.mps.shape[1:]
-        ishape = self.mps.shape
-
-        super().__init__(oshape, ishape)
-
-    def _apply(self, input):
-        device = sp.util.get_device(input)
-        xp = device.xp
-
-        with device:
-            return xp.sum(self.mps.conjugate() * input, axis=0)
-
-    def _adjoint_linop(self):
-
-        return SenseMultiply(self.mps)
 
 
 def ConvSense(img_ker_shape, mps_ker, coord=None):
