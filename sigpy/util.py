@@ -602,7 +602,7 @@ def triang(shape, dtype=np.complex, device=cpu_device):
     xp = device.xp
 
     with device:
-        window = 1
+        window = ones(shape, dtype=dtype, device=device)
         for n, i in enumerate(shape[::-1]):
             w = 1 - xp.abs(xp.arange(i, dtype=dtype) - i // 2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
             window *= w.reshape([i] + [1] * n)
