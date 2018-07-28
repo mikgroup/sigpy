@@ -18,11 +18,7 @@ def _estimate_weights(ksp, weights, coord):
 
 def _move_to_device(ksp, mps, weights, coord, device):
     ksp = sp.util.move(ksp, device=device)
-
-    if isinstance(mps, SenseMaps):
-        mps.use_device(device)
-    else:
-        mps = sp.util.move(mps, device=device)
+    mps = sp.util.move(mps, device=device)
 
     if not np.isscalar(weights):
         weights = sp.util.move(weights, device=device)
