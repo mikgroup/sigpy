@@ -91,4 +91,4 @@ class TestApp(unittest.TestCase):
         _app = app.JsenseRecon(ksp, mps_ker_width=6, ksp_calib_width=6)
         mps_rec = _app.run()
 
-        npt.assert_allclose(mps, mps_rec.asarray(), atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(mps, mps_rec, atol=1e-1, rtol=1e-1)

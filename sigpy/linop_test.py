@@ -196,23 +196,26 @@ class TestLinop(unittest.TestCase):
     def test_FFT(self):
 
         for ndim in [1, 2, 3]:
-            ishape = [3] * ndim
-            A = linop.FFT(ishape)
-            check_linop_linear(A)
-            check_linop_adjoint(A)
-            check_linop_unitary(A)
-            check_linop_pickleable(A)
+            for n in [3, 4, 5, 6]:
+                ishape = [n] * ndim
+                A = linop.FFT(ishape)
+                check_linop_linear(A)
+                check_linop_adjoint(A)
+                check_linop_unitary(A)
+                check_linop_pickleable(A)
 
     def test_NUFFT(self):
 
         for ndim in [1, 2, 3]:
-            ishape = [3] * ndim
-            coord = np.random.random([10, ndim])
+            for n in [3, 4, 5, 6]:
+                print(ndim)
+                ishape = [3] * ndim
+                coord = np.random.random([10, ndim])
 
-            A = linop.NUFFT(ishape, coord)
-            check_linop_linear(A)
-            check_linop_adjoint(A)
-            check_linop_pickleable(A)
+                A = linop.NUFFT(ishape, coord)
+                check_linop_linear(A)
+                check_linop_adjoint(A)
+                check_linop_pickleable(A)
 
     def test_MatMul(self):
 
