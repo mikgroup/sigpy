@@ -81,7 +81,7 @@ def gridding(input, shape, width, table, coord):
         output = xp.zeros([batch] + list(shape[-ndim:]), dtype=input.dtype)
 
         _gridding = _select_gridding(ndim, npts, device, isreal)
-        if device == -1:
+        if device == util.cpu_device:
             _gridding(output, input, width, table, coord)
         else:
             _gridding(output, input, width, table, coord, size=npts)
@@ -167,7 +167,7 @@ def _interp1(output, input, width, table, coord):
     batch, nx = input.shape
     npts = coord.shape[0]
 
-    for i in nb.prange(npts):
+    for i in range(npts):
 
         posx = coord[i, -1]
 
@@ -189,7 +189,7 @@ def _gridding1(output, input, width, table, coord):
     batch, nx = output.shape
     npts = coord.shape[0]
 
-    for i in nb.prange(npts):
+    for i in range(npts):
 
         posx = coord[i, -1]
 
@@ -212,7 +212,7 @@ def _interp2(output, input, width, table, coord):
     batch, ny, nx = input.shape
     npts = coord.shape[0]
 
-    for i in nb.prange(npts):
+    for i in range(npts):
 
         posx, posy = coord[i, -1], coord[i, -2]
 
@@ -239,7 +239,7 @@ def _gridding2(output, input, width, table, coord):
     batch, ny, nx = output.shape
     npts = coord.shape[0]
 
-    for i in nb.prange(npts):
+    for i in range(npts):
 
         posx, posy = coord[i, -1], coord[i, -2]
 
@@ -266,7 +266,7 @@ def _interp3(output, input, width, table, coord):
     batch, nz, ny, nx = input.shape
     npts = coord.shape[0]
 
-    for i in nb.prange(npts):
+    for i in range(npts):
 
         posx, posy, posz = coord[i, -1], coord[i, -2], coord[i, -3]
 
@@ -298,7 +298,7 @@ def _gridding3(output, input, width, table, coord):
     batch, nz, ny, nx = output.shape
     npts = coord.shape[0]
 
-    for i in nb.prange(npts):
+    for i in range(npts):
 
         posx, posy, posz = coord[i, -1], coord[i, -2], coord[i, -3]
 
