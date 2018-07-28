@@ -84,10 +84,9 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
         oshape = input.shape
 
     with device:
-        tmp = input.copy()
+        tmp = input
         tshape = list(input.shape)
         for a in axes:
-
             i = oshape[a]
             tshape[a] = i
             idx = xp.arange(i, dtype=input.dtype)
@@ -119,7 +118,7 @@ def _ifftc(input, oshape=None, axes=None, norm='ortho'):
         oshape = input.shape
 
     with device:
-        tmp = input.copy()
+        tmp = input
         tshape = list(input.shape)
         for a in axes:
 
