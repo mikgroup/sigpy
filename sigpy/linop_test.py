@@ -55,7 +55,6 @@ class TestLinop(unittest.TestCase):
     def test_Identity(self):
 
         shape = [5]
-        device = util.cpu_device
         A = linop.Identity(shape)
         x = util.randn(shape)
 
@@ -81,7 +80,6 @@ class TestLinop(unittest.TestCase):
     def test_Conj(self):
 
         shape = [5]
-        device = util.cpu_device
         I = linop.Identity(shape)
         A = linop.Conj(I)
         x = util.randn(shape)
@@ -94,7 +92,6 @@ class TestLinop(unittest.TestCase):
     def test_Add(self):
 
         shape = [5]
-        device = util.cpu_device
         I = linop.Identity(shape)
         A = linop.Add([I, I])
         x = util.randn(shape)
@@ -107,7 +104,6 @@ class TestLinop(unittest.TestCase):
     def test_Compose(self):
 
         shape = [5]
-        device = util.cpu_device
         I = linop.Identity(shape)
         A = linop.Compose([I, I])
         x = util.randn(shape)
@@ -120,7 +116,6 @@ class TestLinop(unittest.TestCase):
     def test_Hstack(self):
 
         shape = [5]
-        device = util.cpu_device
         I = linop.Identity(shape)
         x1 = util.randn(shape)
         x2 = util.randn(shape)
@@ -133,7 +128,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
         shape = [5, 3]
-        device = util.cpu_device
         I = linop.Identity(shape)
         x1 = util.randn(shape)
         x2 = util.randn(shape)
@@ -148,7 +142,6 @@ class TestLinop(unittest.TestCase):
     def test_Vstack(self):
 
         shape = [5]
-        device = util.cpu_device
         I = linop.Identity(shape)
         x = util.randn(shape)
 
@@ -159,7 +152,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
         shape = [5, 3]
-        device = util.cpu_device
         I = linop.Identity(shape)
         x = util.randn(shape)
 
@@ -172,7 +164,6 @@ class TestLinop(unittest.TestCase):
     def test_Diag(self):
 
         shape = [5]
-        device = util.cpu_device
         I = linop.Identity(shape)
         x = util.randn([10])
 
@@ -183,7 +174,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
         shape = [5, 3]
-        device = util.cpu_device
         I = linop.Identity(shape)
         x = util.randn([5, 6])
 
@@ -207,8 +197,7 @@ class TestLinop(unittest.TestCase):
     def test_NUFFT(self):
 
         for ndim in [1, 2, 3]:
-            for n in [3, 4, 5, 6]:
-                print(ndim)
+            for n in [2, 3, 4, 5, 6]:
                 ishape = [3] * ndim
                 coord = np.random.random([10, ndim])
 
