@@ -24,6 +24,7 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         Beatty, P. J., Nishimura, D. G., & Pauly, J. M. (2005). 
         Rapid gridding reconstruction with a minimal oversampling ratio. 
         IEEE transactions on medical imaging, 24(6), 799-808.
+
     """
     device = util.get_device(input)
     xp = device.xp
@@ -54,12 +55,9 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
             output *= apod
 
             # Oversampled FFT
-            mod = xp.exp(1j * 2 * np.pi * (os_idx - (os_i // 2) / 2)
-                         * ((os_i // 2) / os_i))
             output = util.resize(output, os_shape)
-            output *= mod
-            output = fft.fft(output, axes=[-1], center=False, norm=None)
-            output *= mod / i**0.5
+            output = fft.fft(output, axes=[-1], norm=None)
+            output /= i**0.5
 
             # Swap back
             output = output.swapaxes(a, -1)
@@ -124,12 +122,10 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         coord = _scale_coord(util.move(coord, device), oshape, oversamp)
         table = util.move(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
-        os_shape = oshape[:-ndim] + \
-            [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
+        os_shape = oshape[:-ndim] + [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
         output = interp.gridding(input, os_shape, width, table, coord)
 
         for a in range(-ndim, 0):
-
             i = oshape[a]
             os_i = os_shape[a]
             idx = xp.arange(i, dtype=input.dtype)
@@ -142,12 +138,8 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
             os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
 
             # Oversampled IFFT
-            imod = xp.exp(-1j * 2 * np.pi * (os_idx -
-                                             (os_i // 2) / 2) * ((os_i // 2) / os_i))
-
-            output *= imod
-            output = fft.ifft(output, axes=[-1], center=False, norm=None)
-            output *= imod * os_i / i**0.5
+            output = fft.ifft(output, axes=[-1], norm=None)
+            output *= os_i / i**0.5
             output = util.resize(output, os_shape)
 
             # Calculate apodization
@@ -165,17 +157,15 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
 
 
 def _kb(x, width, beta, dtype=np.complex):
-    return 1 / width * np.i0(beta * np.sqrt(1 - x**2)).astype(dtype)
+    return 1 / width * np.i0(beta * (1 - x**2)**0.5).astype(dtype)
 
 
 def _scale_coord(coord, shape, oversamp):
 
     ndim = coord.shape[-1]
     device = util.get_device(coord)
-    scale = util.move([_get_ugly_number(oversamp * i) /
-                       i for i in shape[-ndim:]], device)
-    shift = util.move([_get_ugly_number(oversamp * i) //
-                       2 for i in shape[-ndim:]], device)
+    scale = util.move([_get_ugly_number(oversamp * i) / i for i in shape[-ndim:]], device)
+    shift = util.move([_get_ugly_number(oversamp * i) // 2 for i in shape[-ndim:]], device)
 
     with device:
         coord = scale * coord + shift
@@ -184,6 +174,14 @@ def _scale_coord(coord, shape, oversamp):
 
 
 def _get_ugly_number(n):
+    """Get closest ugly number greater than n.
+
+    An ugly number is defined as a positive integer that is a multiple of 2, 3, and 5.
+    
+    Args:
+        n (int): Base number.
+
+    """
     if n <= 1:
         return n
 
