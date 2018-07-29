@@ -44,7 +44,7 @@ def interp(input, width, table, coord):
         if device == util.cpu_device:
             _interp(output, input, width, table, coord)
         else:
-            _interp(output, input, width, table, coord, size=npts)
+            _interp(output, input, width, table, coord, size=npts * batch)
 
         return output.reshape(batch_shape + pts_shape)
 
