@@ -11,28 +11,28 @@ class TestApp(unittest.TestCase):
 
     def test_ConvSparseDecom(self):
 
-        lamda = 0.1
-        filt = np.array([[1 , 1],
-                        [1, -1]], dtype=np.float) / 2**0.5
+        lamda = 1e-9
+        l = np.array([[1 , 1],
+                      [1, -1]], dtype=np.float) / 2**0.5
         data = np.array([[1, 1]], dtype=np.float) / 2**0.5
 
-        coef = app.ConvSparseDecom(data, filt, lamda=lamda).run()
+        r_j = app.ConvSparseDecom(data, l, lamda=lamda).run()
 
-        npt.assert_allclose(coef, [[[0.9], [0]]])
+        npt.assert_allclose(r_j, [[[1], [0]]])
 
     def test_ConvSparseCoefficients(self):
 
-        lamda = 0.1
-        filt = np.array([[1 , 1],
-                        [1, -1]], dtype=np.float) / 2**0.5
+        lamda = 1e-10
+        l = np.array([[1 , 1],
+                      [1, -1]], dtype=np.float) / 2**0.5
         data = np.array([[1, 1]], dtype=np.float) / 2**0.5
 
-        coef = app.ConvSparseCoefficients(data, filt, lamda=lamda)
+        r_j = app.ConvSparseCoefficients(data, l, lamda=lamda)
         
-        npt.assert_allclose(coef[:], [[[0.9], [0]]])        
-        npt.assert_allclose(coef[0, :], [[0.9], [0]])
-        npt.assert_allclose(coef[:, 0], [[0.9]])
-        npt.assert_allclose(coef[:, :, 0], [[0.9, 0]])
+        npt.assert_allclose(r_j[:], [[[1], [0]]])        
+        npt.assert_allclose(r_j[0, :], [[1], [0]])
+        npt.assert_allclose(r_j[:, 0], [[1]])
+        npt.assert_allclose(r_j[:, :, 0], [[1, 0]])
         
 
     def test_ConvSparseCoding(self):
@@ -41,10 +41,13 @@ class TestApp(unittest.TestCase):
         filt_width = 2
         batch_size = 1
         data = np.array([[1, 1]], dtype=np.float) / 2**0.5
+        lamda = 1e-3
+        alpha = np.infty
 
-        filt = app.ConvSparseCoding(data, num_atoms, filt_width, batch_size, max_iter=10).run()
+        l = app.ConvSparseCoding(data, num_atoms, filt_width, batch_size,
+                                 alpha=alpha, lamda=lamda, max_iter=10).run()
 
-        npt.assert_allclose(np.abs(filt), [[1 / 2**0.5, 1 / 2**0.5]])
+        npt.assert_allclose(np.abs(l) / np.abs(l).max(), [[1, 1]])
 
     def test_LinearRegression(self):
 
@@ -53,13 +56,13 @@ class TestApp(unittest.TestCase):
         m = 4
         batch_size = n
 
-        coef = np.random.randn(n, k)
+        r_j = np.random.randn(n, k)
         data = np.random.randn(n, m)
         
-        alpha = 1 / np.linalg.svd(coef, compute_uv=False)[0]**2
+        alpha = 1 / np.linalg.svd(r_j, compute_uv=False)[0]**2
 
-        mat = app.LinearRegression(coef, data, batch_size, alpha).run()
+        mat = app.LinearRegression(r_j, data, batch_size, alpha).run()
         
-        mat_lstsq = np.linalg.lstsq(coef, data)[0]
+        mat_lstsq = np.linalg.lstsq(r_j, data, rcond=None)[0]
 
         npt.assert_allclose(mat, mat_lstsq, atol=1e-3, rtol=1e-3)
