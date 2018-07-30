@@ -179,6 +179,10 @@ class LinearLeastSquares(App):
     def _output(self):
         return self.x
 
+    def _cleanup(self):
+        if isinstance(self.alg, ConjugateGradient):
+            del self.alg.b
+
 
 class L2ConstrainedMinimization(App):
     """L2 contrained minimization application.

@@ -206,7 +206,7 @@ class ConjugateGradient(Alg):
         self.zero_gradient = False
 
         self.rzold = util.dot(self.r, z)
-        self.residual = util.move(self.rzold**0.5, util.cpu_device)
+        self.residual = util.move(self.rzold**0.5)
 
     def _update(self):
         Ap = self.A(self.p)
@@ -230,7 +230,7 @@ class ConjugateGradient(Alg):
 
             self.rzold = rznew
 
-        self.residual = util.move(self.rzold**0.5, util.cpu_device)
+        self.residual = util.move(self.rzold**0.5)
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.zero_gradient or self.residual == 0
