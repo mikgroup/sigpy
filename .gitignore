@@ -54,3 +54,5 @@ Thumbs.db
 # Editor backup files #
 #######################
 *~
+
+.pytest_cache
