@@ -1265,7 +1265,7 @@ class BlocksToArray(Linop):
         return ArrayToBlocks(self.oshape, self.blk_shape)
 
 
-def Gradient(ishape):
+def Gradient(ishape, axes=None):
     """Linear operator that computes numerical gradient.
 
     Args:
@@ -1273,10 +1273,17 @@ def Gradient(ishape):
     """
 
     I = Identity(ishape)
-    shifts = list(product(*([[0, 1]] * len(ishape))))
-    scale = 1 / (2 * len(shifts))**0.5
+    axes = util._normalize_axes(axes, len(ishape))
+    shift_candidates = []
+    for i in range(len(ishape)):
+        if i in axes:
+            shift_candidates.append([0, 1])
+        else:
+            shift_candidates.append([0])
+            
+        shifts = list(product(*shift_candidates))
 
-    G = scale * Vstack([I - Circshift(ishape, shift) for shift in shifts])
+    G = Vstack([I - Circshift(ishape, shift) for shift in shifts])
     G.repr_str = 'Gradient'
 
     return G
