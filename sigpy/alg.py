@@ -196,7 +196,8 @@ class ConjugateGradient(Alg):
         super().__init__(max_iter, util.get_device(x))
 
     def _init(self):
-        self.r = self.b - self.A(self.x)
+        self.b -= self.A(self.x)
+        self.r = self.b
         z = self.P(self.r)
         if self.max_iter > 1:
             self.p = z.copy()
