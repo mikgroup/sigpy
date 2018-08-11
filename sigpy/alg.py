@@ -85,6 +85,25 @@ class PowerMethod(Alg):
             iter=self.iter, max_iter=self.max_iter, max_eig=self.max_eig))
 
 
+class ProximalPointMethod(Alg):
+    """Proximal point method.
+
+    """
+    def __init__(self, proxf, alpha, x, max_iter=100, device=util.cpu_device):
+        self.proxf = proxf
+        self.alpha = alpha
+        self.x = x
+        
+        super().__init__(max_iter, device=device)
+
+    def _update(self):
+        util.move_to(self.x, self.proxf(self.alpha, self.x))  
+
+    def _print(self):
+        self.logger.debug('Iteration={iter}/{max_iter}'.format(
+            iter=self.iter, max_iter=self.max_iter))  
+
+
 class GradientMethod(Alg):
     """First order gradient method.
 
