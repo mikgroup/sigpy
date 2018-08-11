@@ -1,7 +1,7 @@
 import numpy as np
 
 from itertools import product
-from sigpy import config, fft, nufft, util, interp, conv, wavelet
+from sigpy import config, comm, fft, nufft, util, interp, conv, wavelet
 
 if config.cupy_enabled:
     import cupy as cp
@@ -142,8 +142,8 @@ class Move(Linop):
 
     Args:
         shape (tuple of ints): Input/output shape.
-        odevice (tuple of ints): Output device
-        idevice (tuple of ints): Input device
+        odevice (Device): Output device
+        idevice (Device): Input device
     """
 
     def __init__(self, shape, odevice, idevice):
@@ -158,6 +158,46 @@ class Move(Linop):
 
     def _adjoint_linop(self):
         return Move(self.ishape, self.idevice, self.odevice)
+
+
+class AllReduce(Linop):
+    """Performs all reduce between MPI ranks.
+
+    Args:
+        shape (tuple of ints): Input/output shape.
+        device (Device): Device.
+    """
+    def __init__(self, shape, comm):
+        self.comm = comm
+
+        super().__init__(shape, shape)
+
+    def _apply(self, input):
+        self.comm.allreduce(input)
+        return input
+
+    def _adjoint_linop(self):
+        return AllReduceAdjoint(self.ishape, self.comm)
+
+
+class AllReduceAdjoint(Linop):
+    """All reduce adjoint operator. Equivalant to identity.
+
+    Args:
+        shape (tuple of ints): Input/output shape.
+        device (Device): Device.
+    """
+    def __init__(self, shape, comm):
+        self.comm = comm
+
+        super().__init__(shape, shape)
+
+    def _apply(self, input):
+        return input
+
+    def _adjoint_linop(self):
+        return AllReduce(self.ishape, self.comm)
+
 
 
 class Conj(Linop):
