@@ -36,7 +36,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
 
     """
 
-    def __init__(self, data, l, lamda=0.001,
+    def __init__(self, data, l, lamda=1,
                  mode='full', multi_channel=False, device=sp.util.cpu_device, **kwargs):
 
         filt_width = l.shape[-1]
@@ -105,7 +105,7 @@ class ConvSparseCoding(sp.app.App):
     """
 
     def __init__(self, data, num_filters, filt_width, batch_size,
-                 lamda=0.001, alpha=1, init_scale=1e-5,
+                 lamda=1, alpha=1, init_scale=1e-5,
                  max_inner_iter=100, max_power_iter=10, max_iter=100,
                  mode='full', multi_channel=False, device=sp.util.cpu_device):
     
@@ -151,7 +151,7 @@ class ConvSparseCoding(sp.app.App):
         return self.l
 
     
-class LinearRegression(sp.app.LinearLeastSquares):
+class LinearRegression(sp.app.App):
     r"""Performs linear regression to fit input to output.
 
     Considers the linear model :math:`y_j = M x_j`, and the problem,
@@ -160,6 +160,8 @@ class LinearRegression(sp.app.LinearLeastSquares):
         \min_M \sum_j \frac{1}{2} \| y_j - M x_j \|_2^2
     where :math:`y_j` is the jth output, :math:`M` is the learned matrix,
     and :math:`x_j` is the jth input.
+
+    It uses the randomized block Kaczmarz method.
 
     Args:
         input (array): input data of shape (num_data, ...).
@@ -170,10 +172,14 @@ class LinearRegression(sp.app.LinearLeastSquares):
     Returns:
        array: matrix of shape input.shape[1:] + output.shape[1:].
 
+    References:
+        Needell, Deanna, Ran Zhao, and Anastasios Zouzias. 
+        Randomized block Kaczmarz method with projection for solving least squares.
+        Linear Algebra and its Applications 484 (2015): 322-343.
     """
 
     def __init__(self, input, output, batch_size, alpha,
-                 max_iter=100, device=sp.util.cpu_device, **kwargs):
+                 max_iter=100, max_inner_iter=100, device=sp.util.cpu_device, **kwargs):
         
         dtype = output.dtype
 
@@ -183,7 +189,7 @@ class LinearRegression(sp.app.LinearLeastSquares):
         self.input = input
         self.output = output
 
-        mat = sp.util.zeros(input.shape[1:] + output.shape[1:], dtype=dtype, device=device)
+        self.mat = sp.util.zeros(input.shape[1:] + output.shape[1:], dtype=dtype, device=device)
         
         self.j_idx = sp.index.ShuffledIndex(num_batches)
         self.input_j = sp.util.empty((batch_size, ) + input.shape[1:],
@@ -191,10 +197,16 @@ class LinearRegression(sp.app.LinearLeastSquares):
         self.output_j = sp.util.empty((batch_size, ) + output.shape[1:],
                                       dtype=dtype, device=device)
         
-        A = _get_lr_A(self.input_j, self.output_j, mat, batch_size)
-        
-        super().__init__(A, self.output_j, mat, alg_name='GradientMethod', accelerate=False,
-                         alpha=alpha, max_iter=max_iter)
+        A = _get_lr_A(self.input_j, self.output_j, self.mat, batch_size)
+
+        def proxf(alpha, x):
+            app = sp.app.LinearLeastSquares(A, self.output_j, x,
+                                            mu=1 / (alpha * num_batches), z=x,
+                                            max_iter=max_inner_iter)
+            return app.run()
+
+        alg = sp.alg.ProximalPointMethod(proxf, alpha, self.mat, max_iter=max_iter)
+        super().__init__(alg)
         
     def _pre_update(self):
         j = self.j_idx.next()
@@ -203,6 +215,9 @@ class LinearRegression(sp.app.LinearLeastSquares):
         
         sp.util.move_to(self.input_j, self.input[j_start:j_end])
         sp.util.move_to(self.output_j, self.output[j_start:j_end])
+
+    def _output(self):
+        return self.mat
 
         
 def _get_lr_A(input_j, output_j, mat, batch_size):
@@ -242,7 +257,6 @@ class ConvSparseCoefficients(object):
         dtype (Dtype): Data type.
 
     """
-
     def __init__(self, data, l,
                  lamda=0.001, multi_channel=False, mode='full',
                  max_iter=100, max_power_iter=10, device=sp.util.cpu_device):
