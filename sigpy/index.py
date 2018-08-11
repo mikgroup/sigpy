@@ -9,9 +9,9 @@ class ShuffledIndex(object):
     
     """
 
-    def __init__(self, n):
-        self.stream = np.arange(n)
-        self.next_stream = np.arange(n)
+    def __init__(self, *args):
+        self.stream = np.arange(*args)
+        self.next_stream = np.arange(*args)
         
         np.random.shuffle(self.stream)
         self.idx = -1
