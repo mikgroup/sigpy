@@ -610,7 +610,7 @@ def triang(shape, dtype=np.complex, device=cpu_device):
     return window
 
 
-def dot(input1, input2):
+def dot(input1, input2, axes=None, keepdims=False):
     """Compute dot product.
 
     Args:
@@ -623,12 +623,16 @@ def dot(input1, input2):
     
     device = get_device(input1)
     xp = device.xp
+    if input1.ndim != input2.ndim:
+        raise ValueError('Inputs must have the same number of dimensions.')
+
+    axes = _normalize_axes(axes, input1.ndim)
 
     with device:
-        return xp.real(xp.vdot(input1, input2))
+        return xp.real(xp.sum(xp.conj(input1) * input2, axis=axes, keepdims=keepdims))
 
 
-def norm2(input):
+def norm2(input, axes=None, keepdims=False):
     """Compute sum of squares.
 
     Args:
@@ -640,11 +644,13 @@ def norm2(input):
     
     device = get_device(input)
     xp = device.xp
+    axes = _normalize_axes(axes, input.ndim)
 
-    return dot(input, input)
+    with device:
+        return xp.sum(xp.abs(input)**2, axis=axes, keepdims=keepdims)
 
 
-def norm(input):
+def norm(input, axes=None, keepdims=False):
     """Compute L2 norm.
 
     Args:
@@ -653,12 +659,7 @@ def norm(input):
     Returns:
         float: L2 norm of input.
     """
-    
-    device = get_device(input)
-    xp = device.xp
-
-    with device:
-        return norm2(input)**0.5 
+    return norm2(input, axes=axes, keepdims=keepdims)**0.5 
 
 
 def monte_carlo_sure(f, y, sigma, eps=1e-10):

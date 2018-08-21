@@ -11,9 +11,37 @@ if __name__ == '__main__':
 class TestUtil(unittest.TestCase):
 
     def test_device(self):
-
         device = util.Device(-1)
         pickle.dumps(device)
+
+    def test_dot(self):
+        input1 = util.array([1, 2, 3])
+        input2 = util.array([2, 3, 4])
+        output = util.dot(input1, input2)
+        npt.assert_allclose(output, 20)
+        
+        input1 = util.array([[1, 2], [3, 4]])
+        input2 = util.array([[2, 3], [4, 5]])
+        output = util.dot(input1, input2, axes=[-1])
+        npt.assert_allclose(output, [8, 32])
+
+    def test_norm2(self):
+        input = util.array([1, 2, 3])
+        output = util.norm2(input)
+        npt.assert_allclose(output, 14)
+        
+        input = util.array([[1, 2], [3, 4]])
+        output = util.norm2(input, axes=[-1])
+        npt.assert_allclose(output, [5, 25])
+
+    def test_norm(self):
+        input = util.array([1, 2, 3])
+        output = util.norm(input)
+        npt.assert_allclose(output, 14**0.5)
+        
+        input = util.array([[1, 2], [3, 4]])
+        output = util.norm(input, axes=[-1])
+        npt.assert_allclose(output, [5**0.5, 5])
 
     def test_dirac(self):
         output = util.dirac([5])
@@ -95,7 +123,6 @@ class TestUtil(unittest.TestCase):
         npt.assert_allclose(y, [1, 0, 2, 0, 3])
 
     def test_circshift(self):
-
         input = np.array([0, 1, 2, 3])
         axes = [0]
         shift = [1]
