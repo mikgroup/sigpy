@@ -1,5 +1,5 @@
 import numpy as np
-import logging
+from tqdm import tqdm
 from sigpy import util, config
 
 if config.cupy_enabled:
@@ -15,7 +15,6 @@ class Alg(object):
     """
 
     def __init__(self, max_iter, device):
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.max_iter = max_iter
         self.device = util.Device(device)
 
@@ -25,17 +24,14 @@ class Alg(object):
     def _update(self):
         raise NotImplementedError
 
-    def _cleanup(self):
-        return
-
-    def _print(self):
-        self.logger.debug('Iteration={iter}/{max_iter}'.format(
-            iter=self.iter, max_iter=self.max_iter))
-
     def _done(self):
         return self.iter >= self.max_iter
 
+    def _cleanup(self):
+        return
+
     def init(self):
+        self.pbar = tqdm(total=self.max_iter, desc=self.__class__.__name__)
         self.iter = 0
         with self.device:
             self._init()
@@ -45,11 +41,15 @@ class Alg(object):
             self._update()
 
             self.iter += 1
-            self._print()
+            self.pbar.update()
 
     def done(self):
         with self.device:
             return self._done()
+
+    def cleanup(self):
+        self.pbar.close()
+        self._cleanup()
 
 
 class PowerMethod(Alg):
@@ -79,10 +79,7 @@ class PowerMethod(Alg):
         y = self.A(self.x)
         self.max_eig = util.norm(y)
         self.x[:] = y / self.max_eig
-
-    def _print(self):
-        self.logger.debug('Iteration={iter}/{max_iter}, Maximum Eigenvalue={max_eig}'.format(
-            iter=self.iter, max_iter=self.max_iter, max_eig=self.max_eig))
+        self.pbar.set_postfix(max_eig=self.max_eig)
 
 
 class ProximalPointMethod(Alg):
@@ -97,11 +94,7 @@ class ProximalPointMethod(Alg):
         super().__init__(max_iter, device=device)
 
     def _update(self):
-        util.move_to(self.x, self.proxf(self.alpha, self.x))  
-
-    def _print(self):
-        self.logger.debug('Iteration={iter}/{max_iter}'.format(
-            iter=self.iter, max_iter=self.max_iter))  
+        util.move_to(self.x, self.proxf(self.alpha, self.x))
 
 
 class GradientMethod(Alg):
@@ -120,7 +113,7 @@ class GradientMethod(Alg):
         alpha (float): step size.
         proxg (function or None): function to compute proximal mapping of g.
         accelerate (bool): toggle Nesterov acceleration.
-        P (function): function to precondition, assumes proxg has already incorporated P.
+        P (function or None): function to precondition, assumes proxg has already incorporated P.
         max_iter (int): maximum number of iterations.
 
     References:
@@ -135,7 +128,7 @@ class GradientMethod(Alg):
     """
 
     def __init__(self, gradf, x, alpha, proxg=None,
-                 accelerate=False, P=lambda x: x, max_iter=100):
+                 accelerate=False, P=None, max_iter=100):
         self.gradf = gradf
         self.alpha = alpha
         self.accelerate = accelerate
@@ -162,7 +155,10 @@ class GradientMethod(Alg):
         if self.accelerate:
             self.x[:] = self.z
 
-        gradf_x = self.P(self.gradf(self.x))
+        gradf_x = self.gradf(self.x)
+        if self.P is not None:
+            gradf_x = self.P(gradf_x)
+            
         util.axpy(self.x, -self.alpha, gradf_x)
 
         if self.proxg is not None:
@@ -177,10 +173,11 @@ class GradientMethod(Alg):
             self.residual = util.norm(self.x - self.x_old) / self.alpha
         else:
             self.residual = util.norm(gradf_x)
+            
+        self.pbar.set_postfix(resid=self.residual)
 
-    def _print(self):
-        self.logger.debug('Iteration={iter}/{max_iter}, Residual={residual}'.format(
-            iter=self.iter, max_iter=self.max_iter, residual=self.residual))
+    def _done(self):
+        return (self.iter >= self.max_iter) or self.residual == 0
 
     def _cleanup(self):
         if self.accelerate:
@@ -201,11 +198,11 @@ class ConjugateGradient(Alg):
         A (function): A hermitian linear function.
         b (array): Observation.
         x (array): Variable.
-        P (function): Preconditioner.
+        P (function or None): Preconditioner.
         max_iter (int): Maximum number of iterations.
     """
 
-    def __init__(self, A, b, x, P=lambda x: x, max_iter=100):
+    def __init__(self, A, b, x, P=None, max_iter=100):
         self.A = A
         self.P = P
         self.x = x
@@ -217,7 +214,11 @@ class ConjugateGradient(Alg):
     def _init(self):
         self.b -= self.A(self.x)
         self.r = self.b
-        z = self.P(self.r)
+        if self.P is None:
+            z = self.r
+        else:
+            z = self.P(self.r)
+            
         if self.max_iter > 1:
             self.p = z.copy()
         else:
@@ -242,7 +243,11 @@ class ConjugateGradient(Alg):
         if self.iter < self.max_iter - 1:
             util.axpy(self.r, -self.alpha, Ap)
 
-            z = self.P(self.r)
+            if self.P is not None:
+                z = self.P(self.r)
+            else:
+                z = self.r
+                
             rznew = util.dot(self.r, z)
             beta = rznew / self.rzold
 
@@ -251,13 +256,10 @@ class ConjugateGradient(Alg):
             self.rzold = rznew
 
         self.residual = util.move(self.rzold**0.5)
+        self.pbar.set_postfix(resid=self.residual)
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.zero_gradient or self.residual == 0
-
-    def _print(self):
-        self.logger.debug('Iteration={iter}/{max_iter}, Residual={residual}'.format(
-            iter=self.iter, max_iter=self.max_iter, residual=self.residual))
 
     def _cleanup(self):
         del self.r
@@ -307,14 +309,7 @@ class NewtonsMethod(Alg):
         d = s - self.x
 
         self.lamda = util.dot(d, hessfx(d))**0.5
-        if self.lamda >= self.sigma:
-            alpha = 1 / (1 + self.lamda)
-            self.logger.debug(u'Damped region: lamda={} > {}'.
-                              format(self.lamda, self.sigma))
-        else:
-            alpha = 1
-            self.logger.debug(u'Full-step region: lamda={} < {}'
-                              .format(self.lamda, self.sigma))
+        self.pbar.set_postfix(lamda=self.lamda)
 
         self.x += alpha * d
 
@@ -378,14 +373,23 @@ class PrimalDualHybridGradient(Alg):
         self.x_ext = self.x.copy()
         self.u_old = self.u.copy()
         self.x_old = self.x.copy()
+        super()._init()
 
     def _update(self):
         self.u_old[:] = self.u
         self.x_old[:] = self.x
 
-        self.u[:] = self.proxfc(self.sigma, self.u + self.sigma * self.D(self.A(self.x_ext)))
+        Ax_ext = self.A(self.x_ext)
+        if self.D is not None:
+            Ax_ext = self.D(Ax_ext)
+            
+        self.u[:] = self.proxfc(self.sigma, self.u + self.sigma * Ax_ext)
 
-        self.x[:] = self.proxg(self.tau, self.x - self.tau * self.P(self.AH(self.u)))
+        AHu = self.AH(self.u)
+        if self.P is not None:
+            AHu = self.P(AHu)
+            
+        self.x[:] = self.proxg(self.tau, self.x - self.tau * AHu)
 
         self.x_ext[:] = self.x + self.theta * (self.x - self.x_old)
 
