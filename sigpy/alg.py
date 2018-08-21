@@ -162,7 +162,7 @@ class GradientMethod(Alg):
         util.axpy(self.x, -self.alpha, gradf_x)
 
         if self.proxg is not None:
-            self.x[:] = self.proxg(self.alpha, self.x)
+            util.move_to(self.x, self.proxg(self.alpha, self.x))
 
         if self.accelerate:
             t_old = self.t
