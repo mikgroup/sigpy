@@ -135,11 +135,11 @@ def l2_proj(eps, input, axes=None):
     Returns:
         array: Result.
     """
+    axes = util._normalize_axes(axes, input.ndim)
 
     device = util.get_device(input)
     xp = device.xp
     with device:
-
         norm = xp.sum(xp.abs(input)**2, axis=axes, keepdims=True)**0.5
         mask = norm < eps
 
