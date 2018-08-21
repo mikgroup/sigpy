@@ -19,17 +19,22 @@ class Communicator(object):
     """
 
     def __init__(self):
-        self.mpi_comm = MPI.COMM_WORLD
-        self.size = self.mpi_comm.Get_size()
-        self.rank = self.mpi_comm.Get_rank()
+        if config.mpi4py_enabled:
+            self.mpi_comm = MPI.COMM_WORLD
+            self.size = self.mpi_comm.Get_size()
+            self.rank = self.mpi_comm.Get_rank()
+        else:
+            self.size = 1
+            self.rank = 0
 
     def allreduce(self, input):
         if self.size == 1:
             return
 
-        mpi_buffer = util.move(input)
-        self.mpi_comm.Allreduce(MPI.IN_PLACE, mpi_buffer)
-        util.move_to(input, mpi_buffer)
+        if config.mpi4py_enabled:
+            mpi_buffer = util.move(input)
+            self.mpi_comm.Allreduce(MPI.IN_PLACE, mpi_buffer)
+            util.move_to(input, mpi_buffer)
 
 
 class MultiGpuCommunicator(object):
