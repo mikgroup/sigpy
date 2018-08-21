@@ -48,7 +48,7 @@ class App(object):
             self._post_update()
             self._summarize()
 
-        self.alg._cleanup()
+        self.alg.cleanup()
         self._cleanup()
         return self._output()
 
@@ -122,12 +122,11 @@ class LinearLeastSquares(App):
     def __init__(self, A, y, x, proxg=None,
                  lamda=0, G=None, g=None, R=None, weights=1, mu=0, z=0,
                  alg_name=None, max_iter=100, save_objs=False,
-                 precond=1, dual_precond=1,
-                 alpha=None, max_power_iter=10, accelerate=True,
+                 P=None, D=None, alpha=None, max_power_iter=10, accelerate=True,
                  tau=None, sigma=None, theta=1):
         
         alg = _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
-                           proxg, G, weights, mu, z, precond, dual_precond,
+                           proxg, G, weights, mu, z, P, D,
                            alpha, accelerate, tau, sigma, theta)
 
         self.A = A
@@ -136,15 +135,13 @@ class LinearLeastSquares(App):
         self.mu = mu
         self.z = z
         self.weights = weights
-        self.precond = precond
         self.lamda = lamda
-        self.dual_precond = dual_precond
         self.device = util.get_device(x)
         
         if isinstance(alg, GradientMethod) and alpha is None or \
            isinstance(alg, PrimalDualHybridGradient) and (tau is None or sigma is None):
             self.max_eig_app = _get_LLS_max_eig_app(A, x, weights, lamda, R, mu,
-                                                    precond, dual_precond, max_power_iter)
+                                                    P, D, max_power_iter)
             self.get_max_eig = True
         else:
             self.get_max_eig = False
@@ -235,8 +232,8 @@ class L2ConstrainedMinimization(App):
             self.u = util.zeros(AG.oshape, dtype=x.dtype,
                                 device=util.get_device(x))
             alg = PrimalDualHybridGradient(proxfc, proxg, AG, AG.H, self.x, self.u,
-                                                tau * precond, sigma * dual_precond, theta,
-                                                max_iter=max_iter)
+                                           tau * precond, sigma * dual_precond, theta,
+                                           max_iter=max_iter)
             self.iter_var = []
 
         super().__init__(alg)
@@ -250,7 +247,7 @@ class L2ConstrainedMinimization(App):
 
     
 def _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
-                 proxg, G, weights, mu, z, precond, dual_precond,
+                 proxg, G, weights, mu, z, P, D,
                  alpha, accelerate, tau, sigma, theta):
     
     if alg_name is None:
@@ -265,19 +262,19 @@ def _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
         if proxg is not None:
             raise ValueError('ConjugateGradient cannot have proxg specified.')
         
-        alg = _get_LLS_ConjugateGradient(A, x, weights, R, lamda, mu, precond, max_iter)
+        alg = _get_LLS_ConjugateGradient(A, x, weights, R, lamda, mu, P, max_iter)
     elif alg_name == 'GradientMethod':
         if G is not None:
             raise ValueError('GradientMethod cannot have G specified.')
         
-        alg = _get_LLS_GradientMethod(A, y, x, weights, R, lamda, mu, z, precond,
+        alg = _get_LLS_GradientMethod(A, y, x, weights, R, lamda, mu, z, P,
                                       max_iter, alpha, proxg, accelerate)
     elif alg_name == 'PrimalDualHybridGradient':
         if lamda != 0 or mu != 0:
             raise ValueError('PrimalDualHybridGradient cannot have non-zero mu or lamda.')
         
         alg = _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
-                                                weights, precond, dual_precond,
+                                                weights, P, D,
                                                 max_iter, tau, sigma, theta)
     else:
         raise ValueError('Invalid alg_name: {alg_name}.'.format(alg_name=alg_name))
@@ -285,7 +282,7 @@ def _get_LLS_alg(alg_name, A, y, x, lamda, R, max_iter,
     return alg
 
 
-def _get_LLS_ConjugateGradient(A, x, weights, R, lamda, mu, precond, max_iter):
+def _get_LLS_ConjugateGradient(A, x, weights, R, lamda, mu, P, max_iter):
     device = util.get_device(x)
     I = linop.Identity(x.shape)
     W = linop.Multiply(A.oshape, weights)
@@ -300,13 +297,12 @@ def _get_LLS_ConjugateGradient(A, x, weights, R, lamda, mu, precond, max_iter):
     if mu != 0:
         AHA += mu * I
 
-    P = linop.Multiply(x.shape, precond)
     alg = ConjugateGradient(AHA, None, x, P=P, max_iter=max_iter)
 
     return alg
 
 
-def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, mu, z, precond,
+def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, mu, z, P,
                             max_iter, alpha, proxg, accelerate):
     device = util.get_device(x)
     
@@ -325,7 +321,6 @@ def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, mu, z, precond,
 
             return gradf_x
 
-    P = linop.Multiply(x.shape, precond)
     alg = GradientMethod(gradf, x, alpha, proxg=proxg,
                          max_iter=max_iter, accelerate=accelerate, P=P)
 
@@ -333,11 +328,10 @@ def _get_LLS_GradientMethod(A, y, x, weights, R, lamda, mu, z, precond,
 
 
 def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
-                                      weights, precond, dual_precond, max_iter,
+                                      weights, P, D, max_iter,
                                       tau, sigma, theta):
 
     device = util.get_device(x)
-    P = linop.Multiply(x.shape, precond)
     with device:
         weights_sqrt = weights**0.5
         w_y = weights_sqrt * y
@@ -362,10 +356,6 @@ def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
         proxf2 = proxg
         proxfc = prox.Stack([proxf1, prox.Conj(proxf2)])
         proxg = prox.NoOp(x.shape)
-        
-        D1 = linop.Multiply(y.shape, dual_precond)
-        D2 = linop.Identity(G.oshape)
-        D = linop.Diag([D1, D2])
 
         u = util.zeros(AG.oshape, dtype=x.dtype, device=device)
         alg = PrimalDualHybridGradient(proxfc, proxg, AG, AG.H, x, u,
@@ -374,15 +364,16 @@ def _get_LLS_PrimalDualHybridGradient(A, y, x, proxg, G,
     return alg
 
 
-def _get_LLS_max_eig_app(A, x, weights, lamda, R, mu,
-                         precond, dual_precond, max_power_iter):
+def _get_LLS_max_eig_app(A, x, weights, lamda, R, mu, P, D, max_power_iter):
     device = util.get_device(x)
 
     I = linop.Identity(x.shape)
     W = linop.Multiply(A.oshape, weights)
-    D = linop.Multiply(A.oshape, dual_precond)
+    if D is not None:
+        W = D * W
 
-    AHA = A.H * W * D * A
+    AHA = A.H * W * A
+
     if lamda != 0:
         if R is None:
             AHA += lamda * I
@@ -392,8 +383,8 @@ def _get_LLS_max_eig_app(A, x, weights, lamda, R, mu,
     if mu != 0:
         AHA += mu * I
 
-    P = linop.Multiply(A.ishape, precond)
-    AHA = P * AHA
+    if P is not None:
+        AHA = P * AHA
 
     app = MaxEig(AHA, dtype=x.dtype, device=device, max_iter=max_power_iter)
 
