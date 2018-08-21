@@ -14,8 +14,7 @@ class TestAlg(unittest.TestCase):
         A = np.random.random([n, n])
         x = np.random.random([n])
 
-        alg_method = alg.PowerMethod(
-            lambda x: np.matmul(A.T, np.matmul(A, x)), x)
+        alg_method = alg.PowerMethod(lambda x: np.matmul(A.T, np.matmul(A, x)), x)
 
         alg_method.init()
         while(not alg_method.done()):
@@ -97,7 +96,7 @@ class TestAlg(unittest.TestCase):
         x_truth = np.linalg.solve(np.matmul(A.T, A), np.matmul(A.T, y))
 
         # Gradient method
-        x = np.zeros([n], np.complex)
+        x = np.zeros([n])
         alg_method = alg.ConjugateGradient(lambda x: np.matmul(A.T, np.matmul(A, x)),
                                            np.matmul(A.T, y),
                                            x)
