@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
+import datetime
 
 from tkinter import filedialog
 from sigpy.util import prod, move
@@ -31,7 +32,7 @@ class Image(object):
     """
 
     def __init__(self, im, x=-1, y=-2, z=None, c=None, hide=False, mode='m', title='',
-                 interpolation='lanczos', fps=10):
+                 interpolation='lanczos', save_basename='Figure', fps=10):
         if im.ndim < 2:
             raise TypeError('Image dimension must at least be two, got {im_ndim}'.format(
                 im_ndim=im.ndim))
@@ -56,6 +57,7 @@ class Image(object):
         self.entering_slice = False
         self.vmin = None
         self.vmax = None
+        self.save_basename = save_basename
         self.fps = fps
 
         self.fig.canvas.mpl_disconnect(
@@ -177,35 +179,22 @@ class Image(object):
             self.fig.canvas.draw()
 
         elif event.key == 's':
-            file_path = filedialog.asksaveasfilename(filetypes=(("png files", "*.png"),
-                                                                ("pdf files",
-                                                                 "*.pdf"),
-                                                                ("eps files",
-                                                                 "*.eps"),
-                                                                ("svg files",
-                                                                 "*.svg"),
-                                                                ("jpeg files",
-                                                                 "*.jpg"),
-                                                                ("all files", "*.*")))
-
-            if not file_path:
-                return
-
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.png')
+            self.fig.savefig(filename, transparent=True, format='png',
+                             bbox_inches='tight', pad_inches=0)
+            
         elif event.key == 'v':
-            file_path = filedialog.asksaveasfilename(filetypes=(("mp4 files", "*.mp4"),
-                                                                ("all files", "*.*")))
-
-            if not file_path:
-                return
-
             try:
                 FFMpegWriter = ani.writers['ffmpeg']
             except:
                 raise ValueError('Does not have FFMPEG installed.')
 
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.png')
             writer = FFMpegWriter(fps=self.fps)
 
-            with writer.saving(self.fig, file_path, 100):
+            with writer.saving(self.fig, filename, self.fig.dpi):
                 for i in range(self.shape[self.d]):
                     self.slices[self.d] = i
 
@@ -234,7 +223,6 @@ class Image(object):
             self.fig.canvas.draw()
 
         elif event.key == 'enter' and self.entering_slice:
-
             self.entering_slice = False
             if self.entered_slice < self.shape[self.d]:
                 self.slices[self.d] = self.entered_slice
@@ -248,7 +236,6 @@ class Image(object):
             return
 
     def update_image(self):
-
         idx = []
         for i in range(self.ndim):
             if i in [self.x, self.y, self.z, self.c]:
@@ -298,7 +285,6 @@ class Image(object):
             self.axim.set_clim(self.vmin, self.vmax)
 
     def update_axes(self):
-
         if not self.hide:
             caption = '['
             for i in range(self.ndim):
