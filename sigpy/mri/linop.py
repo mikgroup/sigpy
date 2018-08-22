@@ -5,7 +5,7 @@ import sigpy as sp
 __all__ = ['Sense', 'SenseMultiply', 'SenseCombine', 'ConvImage', 'ConvSense']
 
 
-def Sense(mps, coord=None):
+def Sense(mps, coord=None, ishape=None):
     """Sense linear operator.
     
     Args:
@@ -13,13 +13,14 @@ def Sense(mps, coord=None):
         coord (None or array): coordinates.
     """
 
-    ndim = mps.ndim - 1
-    img_shape = mps.shape[1:]
+    img_ndim = mps.ndim - 1
+    if ishape is None:
+        ishape = mps.shape[1:]
 
-    S = sp.linop.Multiply(img_shape, mps)
+    S = sp.linop.Multiply(ishape, mps)
 
     if coord is None:
-        F = sp.linop.FFT(S.oshape, axes=range(-ndim, 0))
+        F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
     else:
         F = sp.linop.NUFFT(S.oshape, coord)
 
