@@ -381,31 +381,24 @@ class L2ConstrainedMinimization(App):
     """
 
     def __init__(self, A, y, x, proxg, eps, G=None, weights=1,
-                 max_iter=100, precond=1, dual_precond=1,
-                 tau=1, sigma=1, theta=1):
+                 max_iter=100, tau=None, sigma=None, theta=1):
 
         self.x = x
 
         W_sqrt = linop.Multiply(A.oshape, weights**0.5)
         A = W_sqrt * A
-        P = linop.Multiply(A.ishape, precond)
 
         if G is None:
-            D = linop.Multiply(A.oshape, dual_precond)
-            self.max_eig_app = MaxEig(P * A.H * D * A,
-                                      dtype=x.dtype, device=util.get_device(x))
+            self.max_eig_app = MaxEig(A.H * A, dtype=x.dtype, device=util.get_device(x))
 
             proxfc = prox.Conj(prox.L2Proj(A.oshape, eps, y=y))
-
             self.u = util.zeros_like(y)
-
             alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, self.u,
-                                                tau * precond, sigma * dual_precond, theta,
+                                                tau, sigma, theta,
                                                 max_iter=max_iter)
         else:
             AG = linop.Vstack([A, G])
-            D = linop.Multiply(AG.oshape, dual_precond)
-            self.max_eig_app = MaxEig(P * AG.H * D * AG,
+            self.max_eig_app = MaxEig(AG.H * AG,
                                       dtype=x.dtype, device=util.get_device(x))
 
             proxf1 = prox.L2Proj(A.oshape, eps, y=y)
@@ -413,18 +406,17 @@ class L2ConstrainedMinimization(App):
             proxfc = prox.Conj(prox.Stack([proxf1, proxf2]))
             proxg = prox.NoOp(A.ishape)
 
-            self.u = util.zeros(AG.oshape, dtype=x.dtype,
-                                device=util.get_device(x))
+            self.u = util.zeros(AG.oshape, dtype=x.dtype, device=util.get_device(x))
             alg = PrimalDualHybridGradient(proxfc, proxg, AG, AG.H, self.x, self.u,
-                                           tau * precond, sigma * dual_precond, theta,
-                                           max_iter=max_iter)
+                                           tau, sigma, theta, max_iter=max_iter)
             self.iter_var = []
 
         super().__init__(alg)
 
     def _init(self):
-        lipschitz = self.max_eig_app.run()
-        self.alg.sigma /= lipschitz
+        if self.alg.tau is None or self.alg.sigma is None:
+            self.alg.tau = 1
+            self.alg.sigma = 1 / self.max_eig_app.run()
 
     def _output(self):
         return self.x
