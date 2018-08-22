@@ -175,12 +175,12 @@ class LinearLeastSquares(App):
 
         elif isinstance(self.alg, GradientMethod):
             try:
-                self.alg.alpha = 1 / self.max_eig_app.run()
+                self.alg.alpha = 1 / util.move(self.max_eig_app.run())
             except AttributeError:
                 pass
         elif isinstance(self.alg, PrimalDualHybridGradient):
             try:
-                self.alg.sigma = 1 / self.max_eig_app.run()
+                self.alg.sigma = 1 / util.move(self.max_eig_app.run())
                 self.alg.tau = 1
             except AttributeError:
                 pass
