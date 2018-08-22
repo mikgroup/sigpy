@@ -1,8 +1,10 @@
+import os
+import uuid
+import subprocess
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as ani
 
-from tkinter import filedialog
 from sigpy.util import prod, move
 
 
@@ -22,7 +24,8 @@ class Scatter(object):
         <l>: log mode
     """
 
-    def __init__(self, coord, data=None, z=None, hide=False, mode='m', title=''):
+    def __init__(self, coord, data=None, z=None, hide=False, mode='m', title='',
+                 save_basename='Figure', fps=10):
 
         self.coord = coord
         assert coord.shape[-1] == 2
@@ -52,6 +55,8 @@ class Scatter(object):
         self.entering_slice = False
         self.vmin = None
         self.vmax = None
+        self.save_basename = save_basename
+        self.fps = fsp
 
         self.fig.canvas.mpl_disconnect(
             self.fig.canvas.manager.key_press_handler_id)
@@ -125,21 +130,68 @@ class Scatter(object):
             self.update_axes()
             self.update_data()
             self.fig.canvas.draw()
-
+            
         elif event.key == 's':
-            file_path = filedialog.asksaveasfilename(filetypes=(("png files", "*.png"),
-                                                                ("pdf files",
-                                                                 "*.pdf"),
-                                                                ("eps files",
-                                                                 "*.eps"),
-                                                                ("svg files",
-                                                                 "*.svg"),
-                                                                ("jpeg files",
-                                                                 "*.jpg"),
-                                                                ("all files", "*.*")))
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.png')
+            self.fig.savefig(filename, transparent=True, format='png',
+                             bbox_inches='tight', pad_inches=0)
+            
+        elif event.key == 'g':
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.gif')
+            temp_basename = uuid.uuid4()
 
-            if not file_path:
-                return
+            bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
+            for i in range(self.shape[self.d]):
+                self.slices[self.d] = i
+
+                self.update_axes()
+                self.update_data()
+                self.fig.canvas.draw()
+                self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
+                                 format='png', bbox_inches=bbox, pad_inches=0)
+                
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-i', '{} palette.png'.format(temp_basename),
+                            '-lavfi', 'paletteuse', filename])
+            
+            os.remove('{} palette.png'.format(temp_basename))
+            for i in range(self.shape[self.d]):
+                os.remove('{} {:05d}.png'.format(temp_basename, i))
+            
+        elif event.key == 'v':
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
+            temp_basename = uuid.uuid4()
+
+            bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
+            for i in range(self.shape[self.d]):
+                self.slices[self.d] = i
+
+                self.update_axes()
+                self.update_data()
+                self.fig.canvas.draw()
+                self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
+                                 format='png', bbox_inches=bbox, pad_inches=0)
+                
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                            '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
+            
+            for i in range(self.shape[self.d]):
+                os.remove('{} {:05d}.png'.format(temp_basename, i))
 
         elif (event.key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'backspace'] and
               self.d != self.z):

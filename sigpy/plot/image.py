@@ -39,6 +39,7 @@ class Image(object):
             raise TypeError('Image dimension must at least be two, got {im_ndim}'.format(
                 im_ndim=im.ndim))
 
+        self.axim = None
         self.im = im
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111)
@@ -55,7 +56,6 @@ class Image(object):
         self.title = title
         self.interpolation = interpolation
         self.mode = mode
-        self.axim = None
         self.entering_slice = False
         self.vmin = None
         self.vmax = None

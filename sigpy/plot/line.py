@@ -1,8 +1,10 @@
+import os
+import uuid
+import subprocess
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as ani
 
-from tkinter import filedialog
 from sigpy.util import prod
 
 
@@ -20,10 +22,15 @@ class Line(object):
         <r>: real mode
         <i>: imaginary mode
         <l>: log mode
+        <s>: save as png.
+        <g>: save as gif by traversing current dimension.
+        <v>: save as mp4 by traversing current dimension.
     """
 
-    def __init__(self, arr, x=-1, hide=False, mode='m', title=''):
+    def __init__(self, arr, x=-1, hide=False, mode='m', title='',
+                 save_basename='Figure', fps=10):
         self.arr = arr
+        self.axarr = None
 
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111)
@@ -36,32 +43,19 @@ class Line(object):
         self.hide = hide
         self.title = title
         self.mode = mode
-        self.axarr = None
-
-        slices = [0] * (self.ndim - 1) + [slice(None)]
-        if mode == 'm':
-            arrv = np.abs(self.arr[slices])
-        elif mode == 'p':
-            arrv = np.angle(self.arr[slices])
-        elif mode == 'r':
-            arrv = np.real(self.arr[slices])
-        elif mode == 'i':
-            arrv = np.imag(self.arr[slices])
-        elif self.mode == 'l':
-            eps = 1e-31
-            arrv = np.log(np.abs(self.arr[slices]) + eps)
+        self.save_basename = save_basename
+        self.fps = fps
 
         self.fig.canvas.mpl_disconnect(
             self.fig.canvas.manager.key_press_handler_id)
         self.fig.canvas.mpl_connect('key_press_event', self.key_press)
         self.update_axes()
         self.update_line()
+        self.fig.canvas.draw()
         plt.show()
 
     def key_press(self, event):
-
         if event.key == 'up':
-
             if self.d != self.x:
                 self.slices[self.d] = (
                     self.slices[self.d] + 1) % self.shape[self.d]
@@ -123,45 +117,68 @@ class Line(object):
             self.update_axes()
             self.update_line()
             self.fig.canvas.draw()
-
+            
         elif event.key == 's':
-            file_path = filedialog.asksaveasfilename(filetypes=(("png files", "*.png"),
-                                                                ("pdf files",
-                                                                 "*.pdf"),
-                                                                ("eps files",
-                                                                 "*.eps"),
-                                                                ("svg files",
-                                                                 "*.svg"),
-                                                                ("jpeg files",
-                                                                 "*.jpg"),
-                                                                ("all files", "*.*")))
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.png')
+            self.fig.savefig(filename, transparent=True, format='png',
+                             bbox_inches='tight', pad_inches=0)
+            
+        elif event.key == 'g':
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.gif')
+            temp_basename = uuid.uuid4()
 
-            if not file_path:
-                return
+            bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
+            for i in range(self.shape[self.d]):
+                self.slices[self.d] = i
 
+                self.update_axes()
+                self.update_line()
+                self.fig.canvas.draw()
+                self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
+                                 format='png', bbox_inches=bbox, pad_inches=0)
+                
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-i', '{} palette.png'.format(temp_basename),
+                            '-lavfi', 'paletteuse', filename])
+            
+            os.remove('{} palette.png'.format(temp_basename))
+            for i in range(self.shape[self.d]):
+                os.remove('{} {:05d}.png'.format(temp_basename, i))
+            
         elif event.key == 'v':
-            file_path = filedialog.asksaveasfilename(filetypes=(("mp4 files", "*.mp4"),
-                                                                ("all files", "*.*")))
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
+            temp_basename = uuid.uuid4()
 
-            if not file_path:
-                return
+            bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
+            for i in range(self.shape[self.d]):
+                self.slices[self.d] = i
 
-            try:
-                FFMpegWriter = ani.writers['ffmpeg']
-            except:
-                raise ValueError('Does not have FFMPEG installed.')
-
-            writer = FFMpegWriter(fps=10)
-
-            with writer.saving(self.fig, file_path, 100):
-                for i in range(self.shape[self.d]):
-                    self.slices[self.d] = i
-
-                    self.update_axes()
-                    self.update_image()
-                    self.fig.canvas.draw()
-                    writer.grab_frame()
-
+                self.update_axes()
+                self.update_line()
+                self.fig.canvas.draw()
+                self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
+                                 format='png', bbox_inches=bbox, pad_inches=0)
+                
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                            '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
+            
+            for i in range(self.shape[self.d]):
+                os.remove('{} {:05d}.png'.format(temp_basename, i))
         else:
             return
 
