@@ -30,22 +30,22 @@ class TestApp(unittest.TestCase):
 
         img_rec = app.SenseRecon(
             ksp, mps, lamda, alg_name='ConjugateGradient').run()
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
         img_rec = app.SenseRecon(
             ksp, mps, lamda, alg_name='GradientMethod').run()
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
         img_rec = app.SenseRecon(
             ksp, mps, lamda, alg_name='PrimalDualHybridGradient').run()
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_SenseConstrainedRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         std = 0
 
         img_rec = app.SenseConstrainedRecon(ksp, mps, std).run()
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_L1WaveletRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
@@ -53,32 +53,32 @@ class TestApp(unittest.TestCase):
 
         img_rec = app.L1WaveletRecon(
             ksp, mps, lamda, alg_name='GradientMethod').run()
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
         img_rec = app.L1WaveletRecon(ksp, mps, lamda, alg_name='PrimalDualHybridGradient',
                                      max_iter=100).run()
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_L1WaveletConstrainedRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         std = 0
 
-        img_rec = app.L1WaveletConstrainedRecon(ksp, mps, std).run()
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        img_rec = app.L1WaveletConstrainedRecon(ksp, mps, std, max_iter=1000).run()
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_TotalVariationRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         lamda = 0
         img_rec = app.TotalVariationRecon(ksp, mps, lamda).run()
 
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_TotalVariationConstrainedRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         std = 0
 
-        img_rec = app.TotalVariationConstrainedRecon(ksp, mps, std).run()
-        npt.assert_allclose(img, img_rec, atol=1e-1, rtol=1e-1)
+        img_rec = app.TotalVariationConstrainedRecon(ksp, mps, std, max_iter=2000).run()
+        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_ones_JsenseRecon(self):
         img_shape = [6, 6]
@@ -91,4 +91,4 @@ class TestApp(unittest.TestCase):
         _app = app.JsenseRecon(ksp, mps_ker_width=6, ksp_calib_width=6)
         mps_rec = _app.run()
 
-        npt.assert_allclose(mps, mps_rec, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(mps, mps_rec, atol=1e-3, rtol=1e-3)
