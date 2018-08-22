@@ -1,9 +1,10 @@
+import os
+import uuid
+import subprocess
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as ani
-import datetime
 
-from tkinter import filedialog
 from sigpy.util import prod, move
 
 
@@ -20,17 +21,18 @@ class Image(object):
         <up/down>: flip axis when current dimension is x or y.
             Otherwise increment/decrement slice at current dimension.
         <h>: toggle hide all labels, titles and axes.
-        <m>: magnitude mode.
-        <p>: phase mode.
-        <r>: real mode.
-        <i>: imaginary mode.
-        <l>: log mode.
-        <s>: save as image.
-        <v>: save as video by traversing current dimension.
+        <m>: magnitude mode. Renormalizes when pressed each time.
+        <p>: phase mode. Renormalizes when pressed each time.
+        <r>: real mode. Renormalizes when pressed each time.
+        <i>: imaginary mode. Renormalizes when pressed each time.
+        <l>: log mode. Renormalizes when pressed each time.
+        <s>: save as png.
+        <g>: save as gif by traversing current dimension.
+        <v>: save as mp4 by traversing current dimension.
         <0-9>: enter slice number.
         <enter>: Set current dimension as slice number.
-    """
 
+    """
     def __init__(self, im, x=-1, y=-2, z=None, c=None, hide=False, mode='m', title='',
                  interpolation='lanczos', save_basename='Figure', fps=10):
         if im.ndim < 2:
@@ -70,7 +72,6 @@ class Image(object):
 
     def key_press(self, event):
         if event.key == 'up':
-
             if self.d not in [self.x, self.y, self.z, self.c]:
                 self.slices[self.d] = (
                     self.slices[self.d] + 1) % self.shape[self.d]
@@ -82,7 +83,6 @@ class Image(object):
             self.fig.canvas.draw()
 
         elif event.key == 'down':
-
             if self.d not in [self.x, self.y, self.z, self.c]:
                 self.slices[self.d] = (
                     self.slices[self.d] - 1) % self.shape[self.d]
@@ -94,14 +94,12 @@ class Image(object):
             self.fig.canvas.draw()
 
         elif event.key == 'left':
-
             self.d = (self.d - 1) % self.ndim
 
             self.update_axes()
             self.fig.canvas.draw()
 
         elif event.key == 'right':
-
             self.d = (self.d + 1) % self.ndim
 
             self.update_axes()
@@ -184,24 +182,61 @@ class Image(object):
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
             
-        elif event.key == 'v':
-            try:
-                FFMpegWriter = ani.writers['ffmpeg']
-            except:
-                raise ValueError('Does not have FFMPEG installed.')
-
+        elif event.key == 'g':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.png')
-            writer = FFMpegWriter(fps=self.fps)
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.gif')
+            temp_basename = uuid.uuid4()
 
-            with writer.saving(self.fig, filename, self.fig.dpi):
-                for i in range(self.shape[self.d]):
-                    self.slices[self.d] = i
+            bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
+            for i in range(self.shape[self.d]):
+                self.slices[self.d] = i
 
-                    self.update_axes()
-                    self.update_image()
-                    self.fig.canvas.draw()
-                    writer.grab_frame()
+                self.update_axes()
+                self.update_image()
+                self.fig.canvas.draw()
+                self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
+                                 format='png', bbox_inches=bbox, pad_inches=0)
+                
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-i', '{} palette.png'.format(temp_basename),
+                            '-lavfi', 'paletteuse', filename])
+            
+            os.remove('{} palette.png'.format(temp_basename))
+            for i in range(self.shape[self.d]):
+                os.remove('{} {:05d}.png'.format(temp_basename, i))
+            
+        elif event.key == 'v':
+            filename = self.save_basename + \
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
+            temp_basename = uuid.uuid4()
+
+            bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
+            for i in range(self.shape[self.d]):
+                self.slices[self.d] = i
+
+                self.update_axes()
+                self.update_image()
+                self.fig.canvas.draw()
+                self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
+                                 format='png', bbox_inches=bbox, pad_inches=0)
+                
+            subprocess.run(['ffmpeg', '-f', 'image2',
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                            '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
+            
+            for i in range(self.shape[self.d]):
+                os.remove('{} {:05d}.png'.format(temp_basename, i))
 
         elif (event.key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'backspace'] and
               self.d not in [self.x, self.y, self.z, self.c]):
