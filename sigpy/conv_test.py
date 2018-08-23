@@ -13,90 +13,153 @@ if __name__ == '__main__':
 
 class TestConv(unittest.TestCase):
 
-    def test_convolve(self):
+    def test_convolve_valid(self):
+        mode = 'valid'
+        devices = [util.cpu_device]
+        if config.cupy_enabled:
+            devices.append(util.Device(0))
+            
+        for device in devices:
+            for dtype in [np.float32, np.float64, np.complex64, np.complex128]:
+                x = util.dirac([1, 3], device=device, dtype=dtype)
+                W = util.ones([1, 3], device=device, dtype=dtype)
+                y = util.move(conv.convolve(x, W, mode=mode))
+                npt.assert_allclose(y, [[1]], atol=1e-5)
+                
+                x = util.dirac([1, 3], device=device, dtype=dtype)
+                W = util.ones([1, 2], device=device, dtype=dtype)
+                y = util.move(conv.convolve(x, W, mode=mode))
+                npt.assert_allclose(y, [[1, 1]], atol=1e-5)
 
-        for mode in ['full', 'valid']:
-            x1 = np.array([0, 1, 0], np.complex)
-            x2 = np.array([1, 1, 1], np.complex)
-            y = conv.convolve(x1, x2, mode=mode)
-            npt.assert_allclose(y, convolve(x1, x2, mode=mode), atol=1e-10)
+                x = util.dirac([1, 3], device=device, dtype=dtype)
+                W = util.ones([2, 1, 3], device=device, dtype=dtype)
+                y = util.move(conv.convolve(x, W, mode=mode,
+                                            output_multi_channel=True))
+                npt.assert_allclose(y, [[[1]],
+                                        [[1]]], atol=1e-5)
 
-            x1 = np.array([[0, 1, 0]], np.complex)
-            x2 = np.array([[1, 1, 1]] * 2, np.complex)
-            y = conv.convolve(x1, x2, mode=mode)
-            npt.assert_allclose(y, np.tile(convolve(x1[0], x2[0], mode=mode), [2, 1]),
-                                atol=1e-10)
+    def test_convolve_full(self):
+        mode = 'full'
+        devices = [util.cpu_device]
+        if config.cupy_enabled:
+            devices.append(util.Device(0))
+            
+        for device in devices:
+            for dtype in [np.float32, np.float64, np.complex64, np.complex128]:
+                x = util.dirac([1, 3], device=device, dtype=dtype)
+                W = util.ones([1, 3], device=device, dtype=dtype)
+                y = util.move(conv.convolve(x, W, mode=mode))
+                npt.assert_allclose(y, [[0, 1, 1, 1, 0]], atol=1e-5)
+                
+                x = util.dirac([1, 3], device=device, dtype=dtype)
+                W = util.ones([1, 2], device=device, dtype=dtype)
+                y = util.move(conv.convolve(x, W, mode=mode))
+                npt.assert_allclose(y, [[0, 1, 1, 0]], atol=1e-5)
 
-            x1 = util.randn([3, 4, 5], dtype=np.float)
-            x2 = util.randn([2, 3, 4], dtype=np.float)
-            y = conv.convolve(x1, x2, mode=mode)
-            npt.assert_allclose(y, convolve(x1, x2, mode=mode), atol=1e-10)
+                x = util.dirac([1, 3], device=device, dtype=dtype)
+                W = util.ones([2, 1, 3], device=device, dtype=dtype)
+                y = util.move(conv.convolve(x, W, mode=mode,
+                                            output_multi_channel=True))
+                npt.assert_allclose(y, [[[0, 1, 1, 1, 0]],
+                                        [[0, 1, 1, 1, 0]]], atol=1e-5)
 
-            x1 = util.randn([3, 4, 5])
-            x2 = util.randn([2, 3, 4])
-            y = conv.convolve(x1, x2, mode=mode)
-            npt.assert_allclose(y, convolve(x1, x2, mode=mode), atol=1e-10)
+    def test_convolve_adjoint_input_valid(self):
+        mode = 'valid'
+        devices = [util.cpu_device]
+        if config.cupy_enabled:
+            devices.append(util.Device(0))
+            
+        for device in devices:
+            for dtype in [np.float32, np.float64, np.complex64, np.complex128]:
+                print(device)
+                y = util.ones([1, 1], device=device, dtype=dtype)
+                W = util.ones([1, 3], device=device, dtype=dtype)
+                x = util.move(conv.convolve_adjoint_input(W, y, mode=mode))
+                npt.assert_allclose(x, [[1, 1, 1]], atol=1e-5)
+                
+                y = util.ones([1, 2], device=device, dtype=dtype)
+                W = util.ones([1, 2], device=device, dtype=dtype)
+                x = util.move(conv.convolve_adjoint_input(W, y, mode=mode))
+                npt.assert_allclose(x, [[1, 2, 1]], atol=1e-5)
 
-    def test_correlate(self):
+                y = util.ones([2, 1, 1], device=device, dtype=dtype)
+                W = util.ones([2, 1, 3], device=device, dtype=dtype)
+                x = util.move(conv.convolve_adjoint_input(W, y, mode=mode,
+                                                         output_multi_channel=True))
+                npt.assert_allclose(x, [[2, 2, 2]], atol=1e-5)
 
-        for mode in ['full', 'valid']:
-            x1 = np.array([0, 1, 0], np.complex)
-            x2 = np.array([1, 1, 1], np.complex)
-            y = conv.correlate(x1, x2, mode=mode)
-            npt.assert_allclose(y, correlate(x1, x2, mode=mode), atol=1e-10)
+    def test_convolve_adjoint_input_full(self):
+        mode = 'full'
+        devices = [util.cpu_device]
+        if config.cupy_enabled:
+            devices.append(util.Device(0))
+            
+        for device in devices:
+            for dtype in [np.float32, np.float64, np.complex64, np.complex128]:
+                y = util.ones([1, 5], device=device, dtype=dtype)
+                W = util.ones([1, 3], device=device, dtype=dtype)
+                x = util.move(conv.convolve_adjoint_input(W, y, mode=mode))
+                npt.assert_allclose(x, [[3, 3, 3]], atol=1e-5)
+                
+                y = util.ones([1, 4], device=device, dtype=dtype)
+                W = util.ones([1, 2], device=device, dtype=dtype)
+                x = util.move(conv.convolve_adjoint_input(W, y, mode=mode))
+                npt.assert_allclose(x, [[2, 2, 2]], atol=1e-5)
 
-            x1 = util.randn([3, 4, 5], dtype=np.float)
-            x2 = util.randn([2, 3, 4], dtype=np.float)
-            y = conv.correlate(x1, x2, mode=mode)
-            npt.assert_allclose(y, correlate(x1, x2, mode=mode), atol=1e-10)
+                y = util.ones([2, 1, 5], device=device, dtype=dtype)
+                W = util.ones([2, 1, 3], device=device, dtype=dtype)
+                x = util.move(conv.convolve_adjoint_input(W, y, mode=mode,
+                                                         output_multi_channel=True))
+                npt.assert_allclose(x, [[6, 6, 6]], atol=1e-5)
 
-            x1 = util.randn([3, 4, 5])
-            x2 = util.randn([2, 3, 4])
-            y = conv.correlate(x1, x2, mode=mode)
-            npt.assert_allclose(y, correlate(x1, x2, mode=mode), atol=1e-10)
+    def test_convolve_adjoint_filter_valid(self):
+        mode = 'valid'
+        devices = [util.cpu_device]
+        if config.cupy_enabled:
+            devices.append(util.Device(0))
 
-    if config.cudnn_enabled:
+        ndim = 2
+        for device in devices:
+            for dtype in [np.float32, np.float64, np.complex64, np.complex128]:
+                x = util.ones([1, 3], device=device, dtype=dtype)
+                y = util.ones([1, 1], device=device, dtype=dtype)
+                W = util.move(conv.convolve_adjoint_filter(x, y, ndim, mode=mode))
+                npt.assert_allclose(W, [[1, 1, 1]], atol=1e-5)
+                
+                x = util.ones([1, 3], device=device, dtype=dtype)
+                y = util.ones([1, 2], device=device, dtype=dtype)
+                W = util.move(conv.convolve_adjoint_filter(x, y, ndim, mode=mode))
+                npt.assert_allclose(W, [[2, 2]], atol=1e-5)
 
-        def test_cudnn_convolve(self):
+                x = util.ones([1, 1, 3], device=device, dtype=dtype)
+                y = util.ones([2, 1, 1], device=device, dtype=dtype)
+                W = util.move(conv.convolve_adjoint_filter(x, y, ndim, mode=mode,
+                                                           output_multi_channel=True))
+                npt.assert_allclose(W, [[[1, 1, 1]],
+                                        [[1, 1, 1]]], atol=1e-5)
 
-            for dtype in [np.float, np.complex]:
-                for mode in ['valid', 'full']:
+    def test_convolve_adjoint_filter_full(self):
+        mode = 'full'
+        devices = [util.cpu_device]
+        if config.cupy_enabled:
+            devices.append(util.Device(0))
 
-                    x = util.randn([2, 1, 3, 4], dtype=dtype, device=0)
-                    W = util.randn([5, 1, 2, 3], dtype=dtype, device=0)
+        ndim = 2
+        for device in devices:
+            for dtype in [np.float32, np.float64, np.complex64, np.complex128]:
+                x = util.ones([1, 3], device=device, dtype=dtype)
+                y = util.ones([1, 5], device=device, dtype=dtype)
+                W = util.move(conv.convolve_adjoint_filter(x, y, ndim, mode=mode))
+                npt.assert_allclose(W, [[3, 3, 3]], atol=1e-5)
+                
+                x = util.ones([1, 3], device=device, dtype=dtype)
+                y = util.ones([1, 4], device=device, dtype=dtype)
+                W = util.move(conv.convolve_adjoint_filter(x, y, ndim, mode=mode))
+                npt.assert_allclose(W, [[3, 3]], atol=1e-5)
 
-                    y = conv.convolve(x, W.reshape([5, 2, 3]), mode=mode)
-                    cp.testing.assert_allclose(y, conv.cudnn_convolve(x, W, mode=mode),
-                                               atol=1e-5, rtol=1e-5)
-
-        def test_cudnn_convolve_backward_data(self):
-
-            for dtype in [np.float, np.complex]:
-                for mode in ['valid', 'full']:
-
-                    x_shape = [2, 1, 3, 4]
-                    W = util.randn([5, 1, 2, 3], dtype=dtype, device=0)
-                    if mode == 'full':
-                        y = util.randn([2, 5, 4, 6], dtype=dtype, device=0)
-                    else:
-                        y = util.randn([2, 5, 2, 2], dtype=dtype, device=0)
-
-                    x = conv.cudnn_convolve_backward_data(W, y, mode=mode)
-
-                    npt.assert_allclose(x_shape, x.shape)
-
-        def test_cudnn_convolve_backward_filter(self):
-
-            for dtype in [np.float, np.complex]:
-                for mode in ['valid', 'full']:
-
-                    x = util.randn([2, 1, 3, 4], dtype=dtype, device=0)
-                    W_shape = [5, 1, 2, 3]
-                    if mode == 'full':
-                        y = util.randn([2, 5, 4, 6], dtype=dtype, device=0)
-                    else:
-                        y = util.randn([2, 5, 2, 2], dtype=dtype, device=0)
-
-                    W = conv.cudnn_convolve_backward_filter(x, y, mode=mode)
-
-                    npt.assert_allclose(W_shape, W.shape)
+                x = util.ones([1, 1, 3], device=device, dtype=dtype)
+                y = util.ones([2, 1, 5], device=device, dtype=dtype)
+                W = util.move(conv.convolve_adjoint_filter(x, y, ndim, mode=mode,
+                                                           output_multi_channel=True))
+                npt.assert_allclose(W, [[[3, 3, 3]],
+                                        [[3, 3, 3]]], atol=1e-5)
