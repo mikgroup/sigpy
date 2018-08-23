@@ -40,8 +40,7 @@ def ConvSense(img_ker_shape, mps_ker, coord=None):
     """
     
     ndim = len(img_ker_shape)
-    A = sp.linop.Convolve(
-        img_ker_shape, mps_ker, axes=range(-ndim, 0), mode='valid')
+    A = sp.linop.ConvolveInput(img_ker_shape, mps_ker, mode='valid', output_multi_channel=True)
 
     if coord is not None:
         num_coils = mps_ker.shape[0]
@@ -63,8 +62,7 @@ def ConvImage(mps_ker_shape, img_ker, coord=None):
     """
     ndim = img_ker.ndim
 
-    A = sp.linop.Convolve(
-        mps_ker_shape, img_ker, axes=range(-ndim, 0), mode='valid')
+    A = sp.linop.ConvolveFilter(mps_ker_shape, img_ker, mode='valid', output_multi_channel=True)
 
     if coord is not None:
         num_coils = mps_ker_shape[0]
