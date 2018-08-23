@@ -118,7 +118,8 @@ class ConvSparseCoding(sp.app.App):
     def __init__(self, y, num_filters, filt_width, batch_size,
                  lamda=1, alpha=1, init_scale=1e-5,
                  max_l_iter=30, max_r_j_iter=50, max_power_iter=10, max_epoch=1,
-                 mode='full', multi_channel=False, device=sp.util.cpu_device):
+                 mode='full', multi_channel=False, device=sp.util.cpu_device,
+                 checkpoint_filepath=None):
         self.y = y
         self.num_filters = num_filters
         self.filt_width = filt_width
@@ -133,6 +134,7 @@ class ConvSparseCoding(sp.app.App):
         self.mode = mode
         self.multi_channel = multi_channel
         self.device = device
+        self.checkpoint_filepath = checkpoint_filepath
 
         self._get_params()
         self._get_batch_vars()
@@ -159,6 +161,11 @@ class ConvSparseCoding(sp.app.App):
 
         sp.util.move_to(self.y_j, self.y[j_start:j_end])
         sp.util.move_to(self.l_old, self.l)
+
+    def _summarize(self):
+        xp = self.device.xp
+        if self.checkpoint_filepath is not None:
+            xp.save(self.checkpoint_filepath, self.l)
 
     def _output(self):
         r = ConvSparseCoefficients(self.y, self.l, lamda=self.lamda,
@@ -238,7 +245,8 @@ class LinearRegression(sp.app.App):
 
     """
     def __init__(self, input, output, batch_size, alpha,
-                 max_epoch=1, max_inner_iter=100, device=sp.util.cpu_device, **kwargs):
+                 max_epoch=1, max_inner_iter=100, device=sp.util.cpu_device,
+                 checkpoint_filepath=None):
         dtype = output.dtype
 
         num_data = len(output)
@@ -246,6 +254,7 @@ class LinearRegression(sp.app.App):
         self.batch_size = batch_size
         self.input = input
         self.output = output
+        self.checkpoint_filepath = checkpoint_filepath
 
         self.mat = sp.util.zeros(input.shape[1:] + output.shape[1:], dtype=dtype, device=device)
         
@@ -273,6 +282,11 @@ class LinearRegression(sp.app.App):
         
         sp.util.move_to(self.input_j, self.input[j_start:j_end])
         sp.util.move_to(self.output_j, self.output[j_start:j_end])
+
+    def _summarize(self):
+        xp = self.device.xp
+        if self.checkpoint_filepath is not None:
+            xp.save(self.checkpoint_filepath, self.mat)
 
     def _output(self):
         return self.mat
