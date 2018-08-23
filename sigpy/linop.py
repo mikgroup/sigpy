@@ -1515,10 +1515,10 @@ class ConvolveAdjointFilter(Linop):
             W_shape = [m - p + 1 for m, p in zip(x.shape[-ndim:], y_shape[-ndim:])]
 
         if input_multi_channel:
-            W_shape = [x.shape[0]] + W_shape
+            W_shape = [x.shape[-ndim - 1]] + W_shape
             
         if output_multi_channel:
-            W_shape = [y_shape[0]] + W_shape
+            W_shape = [y_shape[-ndim - 1]] + W_shape
 
         super().__init__(W_shape, y_shape)
 
