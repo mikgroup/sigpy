@@ -12,8 +12,8 @@ class Alg(object):
     Args:
         max_iter (int): Maximum number of iterations.
         device (int or Device): Device.
-    """
 
+    """
     def __init__(self, max_iter, device):
         self.max_iter = max_iter
         self.device = util.Device(device)
@@ -64,7 +64,6 @@ class PowerMethod(Alg):
         float: Maximum eigenvalue of `A`.
 
     """
-
     def __init__(self, A, x, max_iter=30):
         self.A = A
         self.x = x
@@ -126,7 +125,6 @@ class GradientMethod(Alg):
         SIAM journal on imaging sciences, 2(1), 183-202.
 
     """
-
     def __init__(self, gradf, x, alpha, proxg=None,
                  accelerate=False, P=None, max_iter=100):
         self.gradf = gradf
@@ -200,8 +198,8 @@ class ConjugateGradient(Alg):
         x (array): Variable.
         P (function or None): Preconditioner.
         max_iter (int): Maximum number of iterations.
-    """
 
+    """
     def __init__(self, A, b, x, P=None, max_iter=100):
         self.A = A
         self.P = P
@@ -287,7 +285,6 @@ class NewtonsMethod(Alg):
         The Journal of Machine Learning Research, 16(1), 371-416.
 
     """
-
     def __init__(self, gradf, hessf, proxHg, x,
                  max_iter=10, sigma=(3 - 5**0.5) / 2):
 
@@ -345,7 +342,6 @@ class PrimalDualHybridGradient(Alg):
        applications to imaging. Journal of mathematical imaging and vision, 40(1), 120-145.
 
     """
-
     def __init__(
             self, proxfc, proxg, A, AH, x, u,
             tau, sigma, theta, P=lambda x: x, D=lambda x: x, max_iter=100

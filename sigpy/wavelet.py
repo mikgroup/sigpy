@@ -29,8 +29,7 @@ def fwt(input, wave_name='db4', axes=None, level=None):
     zshape = [((i + 1) // 2) * 2 for i in input.shape]
     zinput = util.resize(input, zshape)
 
-    coeffs = pywt.wavedecn(
-        zinput, wave_name, mode='zero', axes=axes, level=level)
+    coeffs = pywt.wavedecn(zinput, wave_name, mode='zero', axes=axes, level=level)
     output, _ = pywt.coeffs_to_array(coeffs, axes=axes)
 
     output = util.move(output, device)
