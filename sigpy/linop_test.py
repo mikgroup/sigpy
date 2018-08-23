@@ -413,7 +413,6 @@ class TestLinop(unittest.TestCase):
         npt.assert_allclose(A(x), np.transpose(x))
 
     def test_Sum(self):
-
         shape = [2, 3, 4, 2]
         axes = [1, 3]
         A = linop.Sum(shape, axes)
@@ -422,7 +421,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_ArrayToBlocks(self):
-
         ishape = [4]
         bshape = [2]
 
@@ -436,85 +434,64 @@ class TestLinop(unittest.TestCase):
         npt.assert_allclose(A(x), [[1, 2],
                                    [3, 4]])
 
-    def test_Convolve(self):
-        ishape = [3, 4]
-        filt = util.randn([2, 3])
-
-        A = linop.Convolve(ishape, filt, mode='full')
-        check_linop_linear(A)
-        check_linop_adjoint(A)
-        check_linop_pickleable(A)
-
-        A = linop.Convolve(ishape, filt, mode='valid')
-        check_linop_linear(A)
-        check_linop_adjoint(A)
-        check_linop_pickleable(A)
-
-        ishape = [2, 3]
-        filt = util.randn([3, 4])
-
-        A = linop.Convolve(ishape, filt, mode='full')
-        check_linop_linear(A)
-        check_linop_adjoint(A)
-        check_linop_pickleable(A)
-
-        A = linop.Convolve(ishape, filt, mode='valid')
-        check_linop_linear(A)
-        check_linop_adjoint(A)
-        check_linop_pickleable(A)
-
-    def test_Correlate(self):
-        ishape = [3, 4]
-        filt = util.randn([2, 3])
-
-        A = linop.Correlate(ishape, filt, mode='full')
-        check_linop_linear(A)
-        check_linop_adjoint(A)
-        check_linop_pickleable(A)
-
-        A = linop.Correlate(ishape, filt, mode='valid')
-        check_linop_linear(A)
-        check_linop_adjoint(A)
-        check_linop_pickleable(A)
-
-        ishape = [2, 3]
-        filt = util.randn([3, 4])
-
-        A = linop.Correlate(ishape, filt, mode='full')
-        check_linop_linear(A)
-        check_linop_adjoint(A)
-        check_linop_pickleable(A)
-
-        A = linop.Correlate(ishape, filt, mode='valid')
-        check_linop_linear(A)
-        check_linop_adjoint(A)
-        check_linop_pickleable(A)
-
-    if config.cudnn_enabled:
-        def test_CudnnConvolveData(self):
-            x_shape = [2, 1, 3, 4]
-            W = util.randn([5, 1, 2, 3], device=0)
-
-            A = linop.CudnnConvolveData(x_shape, W, mode='full')
-            check_linop_linear(A, device=0)
-            check_linop_adjoint(A, device=0)
+    def test_ConvolveInput(self):
+        for mode in ['full', 'valid']:
+            x_shape = [3, 4]
+            W = util.randn([2, 3])
+            A = linop.ConvolveInput(x_shape, W, mode=mode)
+            check_linop_linear(A)
+            check_linop_adjoint(A)
+            check_linop_pickleable(A)
+        
+            x_shape = [4, 3, 4]
+            W = util.randn([4, 2, 3])
+            A = linop.ConvolveInput(x_shape, W, mode=mode, input_multi_channel=True)
+            check_linop_linear(A)
+            check_linop_adjoint(A)
+            check_linop_pickleable(A)
+        
+            x_shape = [3, 4]
+            W = util.randn([4, 2, 3])
+            A = linop.ConvolveInput(x_shape, W, mode=mode, output_multi_channel=True)
+            check_linop_linear(A)
+            check_linop_adjoint(A)
+            check_linop_pickleable(A)
+        
+            x_shape = [2, 3, 4]
+            W = util.randn([4, 2, 2, 3])
+            A = linop.ConvolveInput(x_shape, W, mode=mode,
+                                    input_multi_channel=True, output_multi_channel=True)
+            check_linop_linear(A)
+            check_linop_adjoint(A)
             check_linop_pickleable(A)
 
-            A = linop.CudnnConvolveData(x_shape, W, mode='valid')
-            check_linop_linear(A, device=0)
-            check_linop_adjoint(A, device=0)
+    def test_ConvolveFilter(self):
+        for mode in ['full', 'valid']:
+            W_shape = [2, 3]
+            x = util.randn([3, 4])
+            A = linop.ConvolveFilter(W_shape, x, mode=mode)
+            check_linop_linear(A)
+            check_linop_adjoint(A)
             check_linop_pickleable(A)
 
-        def test_CudnnConvolveFilter(self):
-            x = util.randn([2, 1, 3, 4], device=0)
-            W_shape = [5, 1, 2, 3]
-
-            A = linop.CudnnConvolveFilter(W_shape, x, mode='full')
-            check_linop_linear(A, device=0)
-            check_linop_adjoint(A, device=0)
+            W_shape = [4, 2, 3]
+            x = util.randn([4, 3, 4])
+            A = linop.ConvolveFilter(W_shape, x, mode=mode, input_multi_channel=True)
+            check_linop_linear(A)
+            check_linop_adjoint(A)
             check_linop_pickleable(A)
 
-            A = linop.CudnnConvolveFilter(W_shape, x, mode='valid')
-            check_linop_linear(A, device=0)
-            check_linop_adjoint(A, device=0)
+            W_shape = [4, 2, 3]
+            x = util.randn([3, 4])
+            A = linop.ConvolveFilter(W_shape, x, mode=mode, output_multi_channel=True)
+            check_linop_linear(A)
+            check_linop_adjoint(A)
+            check_linop_pickleable(A)
+
+            W_shape = [4, 2, 2, 3]
+            x = util.randn([2, 3, 4])
+            A = linop.ConvolveFilter(W_shape, x, mode=mode,
+                                    input_multi_channel=True, output_multi_channel=True)
+            check_linop_linear(A)
+            check_linop_adjoint(A)
             check_linop_pickleable(A)

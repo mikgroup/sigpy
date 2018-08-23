@@ -1396,201 +1396,139 @@ class NUFFTAdjoint(Linop):
                             oversamp=self.oversamp, width=self.width, n=self.n)
 
 
-def _get_convolve_adjoint_mode(ishape, fshape, axes, mode):
+class ConvolveInput(Linop):
 
-    if mode == 'full':
-        return 'valid'
-    else:
-        ishape_exp, fshape_exp = util._expand_shapes(ishape, fshape)
-
-        i_greater_f = [ishape_exp[a] >= fshape_exp[a] for a in axes]
-        i_smaller_f = [ishape_exp[a] <= fshape_exp[a] for a in axes]
-        if all(i_greater_f):
-            return 'full'
-        elif all(i_smaller_f):
-            return 'valid'
-        else:
-            raise ValueError('ishape should be either all >=, or <= fshape,'
-                             'got {ishape}, and {fshape}.'.format(ishape=ishape, fshape=fshape))
-
-
-def _get_convolve_oshape(ishape, fshape, axes, mode):
-
-    ishape_exp, fshape_exp = util._expand_shapes(ishape, fshape)
-    max_ndim = max(len(ishape), len(fshape))
-    oshape = []
-    for i, f, d in zip(ishape_exp, fshape_exp, range(max_ndim)):
-
-        if d in axes:
-            if mode == 'full':
-                oshape.append(i + f - 1)
-            elif mode == 'valid':
-                oshape.append(max(i, f) - min(i, f) + 1)
-        else:
-            if not (i == f or i == 1 or f == 1):
-                raise ValueError('Invalid shapes: {ishape}, {fshape}.'.format(
-                    ishape=ishape, fshape=fshape))
-
-            oshape.append(max(i, f))
-
-    return oshape
-
-
-def _get_convolve_adjoint_sum_axes(oshape, ishape, fshape, axes):
-
-    ishape_exp, fshape_exp = util._expand_shapes(ishape, fshape)
-    max_ndim = max(len(ishape), len(fshape))
-    sum_axes = []
-    for i, f, o, d in zip(ishape_exp, fshape_exp, oshape, range(max_ndim)):
-        if d not in axes:
-            if (i == 1 and (f != 1 or o != 1)):
-                sum_axes.append(d)
-
-    return sum_axes
-
-
-class Convolve(Linop):
-    """Convolve linear operator.
-    
-    Args:
-        ishape (tuple of ints): Input shape.
-        filt (array): Filter.
-        axes (None or tuple of ints): Axes to perform convolution.
-        mode (str): {'full', 'valid'}
-    """
-
-    def __init__(self, ishape, filt, axes=None, mode='full'):
-        self.filt = filt
-
-        max_ndim = max(len(ishape), filt.ndim)
-        self.axes = util._normalize_axes(axes, max_ndim)
+    def __init__(self, x_shape, W, mode='full',
+                 input_multi_channel=False, output_multi_channel=False):
+        self.W = W
         self.mode = mode
+        self.input_multi_channel = input_multi_channel
+        self.output_multi_channel = output_multi_channel
 
-        self.fshape = list(filt.shape)
-        oshape = _get_convolve_oshape(ishape, self.fshape, self.axes, mode)
+        ndim = W.ndim - input_multi_channel - output_multi_channel
+        if mode == 'full':
+            y_shape = [m + n - 1 for m, n in zip(x_shape[-ndim:], W.shape[-ndim:])]
+        elif mode == 'valid':
+            y_shape = [m - n + 1 for m, n in zip(x_shape[-ndim:], W.shape[-ndim:])]
 
-        super().__init__(oshape, ishape)
+        if output_multi_channel:
+            y_shape = [W.shape[0]] + y_shape
+
+        batch_shape = list(x_shape[:-ndim - input_multi_channel])
+        y_shape = batch_shape + y_shape
+
+        super().__init__(y_shape, x_shape)
 
     def _apply(self, input):
-
-        return conv.convolve(input, self.filt, axes=self.axes, mode=self.mode)
+        return conv.convolve(input, self.W, mode=self.mode,
+                             input_multi_channel=self.input_multi_channel,
+                             output_multi_channel=self.output_multi_channel)
 
     def _adjoint_linop(self):
-
-        mode = _get_convolve_adjoint_mode(
-            self.ishape, self.fshape, self.axes, self.mode)
-        sum_axes = _get_convolve_adjoint_sum_axes(
-            self.oshape, self.ishape, self.fshape, self.axes)
-
-        C = Correlate(self.oshape, self.filt, axes=self.axes, mode=mode)
-        S = Sum(C.oshape, axes=sum_axes)
-        R = Reshape(self.ishape, S.oshape)
-
-        return R * S * C
+        return ConvolveAdjointInput(self.oshape, self.W, mode=self.mode,
+                                    input_multi_channel=self.input_multi_channel,
+                                    output_multi_channel=self.output_multi_channel)
 
 
-class Correlate(Linop):
-    """Correlate linear operator.
-    
-    Args:
-        ishape (tuple of ints): Input shape.
-        filt (array): Filter.
-        axes (None or tuple of ints): Axes to perform convolution.
-        mode (str): {'full', 'valid'}
-    """
+class ConvolveAdjointInput(Linop):
 
-    def __init__(self, ishape, filt, axes=None, mode='full'):
-        self.filt = filt
-
-        max_ndim = max(len(ishape), filt.ndim)
-        self.axes = util._normalize_axes(axes, max_ndim)
+    def __init__(self, y_shape, W, mode='full',
+                 input_multi_channel=False, output_multi_channel=False):
+        self.W = W
         self.mode = mode
+        self.input_multi_channel = input_multi_channel
+        self.output_multi_channel = output_multi_channel
 
-        self.fshape = list(filt.shape)
-        oshape = _get_convolve_oshape(ishape, self.fshape, self.axes, mode)
+        ndim = W.ndim - input_multi_channel - output_multi_channel
+        if mode == 'full':
+            x_shape = [p - n + 1 for p, n in zip(y_shape[-ndim:], W.shape[-ndim:])]
+        elif mode == 'valid':
+            x_shape = [p + n - 1 for p, n in zip(y_shape[-ndim:], W.shape[-ndim:])]
 
-        super().__init__(oshape, ishape)
+        if input_multi_channel:
+            x_shape = [W.shape[-ndim - 1]] + x_shape
+
+        batch_shape = list(y_shape[:-ndim - output_multi_channel])
+        x_shape = batch_shape + x_shape
+
+        super().__init__(x_shape, y_shape)
 
     def _apply(self, input):
-        return conv.correlate(input, self.filt, axes=self.axes, mode=self.mode)
+        return conv.convolve_adjoint_input(self.W, input, mode=self.mode,
+            input_multi_channel=self.input_multi_channel,
+            output_multi_channel=self.output_multi_channel)
 
     def _adjoint_linop(self):
-
-        mode = _get_convolve_adjoint_mode(
-            self.ishape, self.fshape, self.axes, self.mode)
-        sum_axes = _get_convolve_adjoint_sum_axes(
-            self.oshape, self.ishape, self.fshape, self.axes)
-
-        C = Convolve(self.oshape, self.filt, axes=self.axes, mode=mode)
-        S = Sum(C.oshape, axes=sum_axes)
-        R = Reshape(self.ishape, S.oshape)
-
-        return R * S * C
+        return ConvolveInput(self.oshape, self.W, mode=self.mode,
+            input_multi_channel=self.input_multi_channel,
+            output_multi_channel=self.output_multi_channel)
 
 
-if config.cudnn_enabled:
+class ConvolveFilter(Linop):
 
-    class CudnnConvolveData(Linop):
-        """
-        ishape - (b, c_I, m_1, m_2, ..., m_N)
-        filt - (c_O, c_I, n_1, n_2, ..., n_N)
-        """
+    def __init__(self, W_shape, x, mode='full',
+                 input_multi_channel=False, output_multi_channel=False):
+        self.x = x
+        self.mode = mode
+        self.input_multi_channel = input_multi_channel
+        self.output_multi_channel = output_multi_channel
 
-        def __init__(self, x_shape, W, mode='full'):
-            self.W = W
-            self.mode = mode
-            y_shape = conv._get_cudnn_convolve_y_shape(x_shape, W.shape, mode)
+        ndim = len(W_shape) - input_multi_channel - output_multi_channel
+        if mode == 'full':
+            y_shape = [m + n - 1 for m, n in zip(x.shape[-ndim:], W_shape[-ndim:])]
+        elif mode == 'valid':
+            y_shape = [m - n + 1 for m, n in zip(x.shape[-ndim:], W_shape[-ndim:])]
 
-            super().__init__(y_shape, x_shape)
+        if output_multi_channel:
+            y_shape = [W_shape[-ndim - input_multi_channel - 1]] + y_shape
 
-        def _apply(self, input):
-            return conv.cudnn_convolve(input, self.W, mode=self.mode)
+        batch_shape = list(x.shape[:-ndim - input_multi_channel])
+        y_shape = batch_shape + y_shape
 
-        def _adjoint_linop(self):
+        self.ndim = ndim
+        super().__init__(y_shape, W_shape)
 
-            return CudnnConvolveBackwardData(self.ishape, self.W, mode=self.mode)
+    def _apply(self, input):
+        return conv.convolve(self.x, input, mode=self.mode,
+                             input_multi_channel=self.input_multi_channel,
+                             output_multi_channel=self.output_multi_channel)
 
-    class CudnnConvolveBackwardData(Linop):
+    def _adjoint_linop(self):
+        return ConvolveAdjointFilter(self.oshape, self.x, self.ndim, mode=self.mode,
+                                     input_multi_channel=self.input_multi_channel,
+                                     output_multi_channel=self.output_multi_channel)
 
-        def __init__(self, x_shape, W, mode='full'):
-            self.W = W
-            self.mode = mode
-            y_shape = conv._get_cudnn_convolve_y_shape(x_shape, W.shape, mode)
 
-            super().__init__(x_shape, y_shape)
+class ConvolveAdjointFilter(Linop):
 
-        def _apply(self, input):
-            return conv.cudnn_convolve_backward_data(self.W, input, mode=self.mode)
+    def __init__(self, y_shape, x, ndim, mode='full',
+                 input_multi_channel=False, output_multi_channel=False):
+        self.x = x
+        self.mode = mode
+        self.input_multi_channel = input_multi_channel
+        self.output_multi_channel = output_multi_channel
+        self.ndim = ndim
+        
+        if mode == 'full':
+            W_shape = [p - m + 1 for m, p in zip(x.shape[-ndim:], y_shape[-ndim:])]
+        elif mode == 'valid':
+            W_shape = [m - p + 1 for m, p in zip(x.shape[-ndim:], y_shape[-ndim:])]
 
-        def _adjoint_linop(self):
-            return CudnnConvolveData(self.oshape, self.W, mode=self.mode)
+        if input_multi_channel:
+            W_shape = [x.shape[0]] + W_shape
+            
+        if output_multi_channel:
+            W_shape = [y_shape[0]] + W_shape
 
-    class CudnnConvolveFilter(Linop):
+        super().__init__(W_shape, y_shape)
 
-        def __init__(self, W_shape, x, mode='full'):
-            self.x = x
-            self.mode = mode
-            y_shape = conv._get_cudnn_convolve_y_shape(x.shape, W_shape, mode)
+    def _apply(self, input):
+        return conv.convolve_adjoint_filter(
+            self.x, input, self.ndim, mode=self.mode,
+            input_multi_channel=self.input_multi_channel,
+            output_multi_channel=self.output_multi_channel)
 
-            super().__init__(y_shape, W_shape)
-
-        def _apply(self, input):
-            return conv.cudnn_convolve(self.x, input, mode=self.mode)
-
-        def _adjoint_linop(self):
-            return CudnnConvolveBackwardFilter(self.ishape, self.x, mode=self.mode)
-
-    class CudnnConvolveBackwardFilter(Linop):
-
-        def __init__(self, W_shape, x, mode='full'):
-            self.x = x
-            self.mode = mode
-            y_shape = conv._get_cudnn_convolve_y_shape(x.shape, W_shape, mode)
-
-            super().__init__(W_shape, y_shape)
-
-        def _apply(self, input):
-            return conv.cudnn_convolve_backward_filter(self.x, input, mode=self.mode)
-
-        def _adjoint_linop(self):
-            return CudnnConvolveFilter(self.oshape, self.x, mode=self.mode)
+    def _adjoint_linop(self):
+        return ConvolveFilter(self.oshape, self.x, mode=self.mode,
+                              input_multi_channel=self.input_multi_channel,
+                              output_multi_channel=self.output_multi_channel)
