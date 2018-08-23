@@ -23,6 +23,7 @@ def soft_thresh(lamda, input):
     """
 
     device = util.get_device(input)
+    xp = device.xp
     if input.dtype == np.float32 or input.dtype == np.complex64:
         dtype = np.float32
     else:
@@ -30,12 +31,17 @@ def soft_thresh(lamda, input):
 
     lamda = util.array(lamda, dtype=dtype, device=device)
 
-    if device == util.cpu_device:
-        return _soft_thresh(lamda, input)
-    else:
-        with device:
-            return _soft_thresh_cuda(lamda, input)
+    with device:
+        if device == util.cpu_device:
+            output = _soft_thresh(lamda, input)
+        else:
+            output = _soft_thresh_cuda(lamda, input)
 
+        if np.issubdtype(input.dtype, np.floating):
+            output = xp.real(output)
+
+    return output
+    
 
 def hard_thresh(lamda, input):
     """Hard threshold.

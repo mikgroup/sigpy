@@ -13,9 +13,9 @@ class TestApp(unittest.TestCase):
         lamda = 1e-9
         l = np.array([[1 , 1],
                       [1, -1]], dtype=np.float) / 2**0.5
-        data = np.array([[1, 1]], dtype=np.float) / 2**0.5
+        y = np.array([[1, 1]], dtype=np.float) / 2**0.5
 
-        r_j = app.ConvSparseDecom(data, l, lamda=lamda).run()
+        r_j = app.ConvSparseDecom(y, l, lamda=lamda).run()
 
         npt.assert_allclose(r_j, [[[1], [0]]])
 
@@ -24,9 +24,9 @@ class TestApp(unittest.TestCase):
         lamda = 1e-10
         l = np.array([[1 , 1],
                       [1, -1]], dtype=np.float) / 2**0.5
-        data = np.array([[1, 1]], dtype=np.float) / 2**0.5
+        y = np.array([[1, 1]], dtype=np.float) / 2**0.5
 
-        r_j = app.ConvSparseCoefficients(data, l, lamda=lamda)
+        r_j = app.ConvSparseCoefficients(y, l, lamda=lamda)
         
         npt.assert_allclose(r_j[:], [[[1], [0]]])        
         npt.assert_allclose(r_j[0, :], [[1], [0]])
@@ -38,11 +38,11 @@ class TestApp(unittest.TestCase):
         num_atoms = 1
         filt_width = 2
         batch_size = 1
-        data = np.array([[1, 1]], dtype=np.float) / 2**0.5
+        y = np.array([[1, 1]], dtype=np.float) / 2**0.5
         lamda = 1e-3
         alpha = np.infty
 
-        l, r = app.ConvSparseCoding(data, num_atoms, filt_width, batch_size,
+        l, r = app.ConvSparseCoding(y, num_atoms, filt_width, batch_size,
                                     alpha=alpha, lamda=lamda, max_epoch=10).run()
 
         npt.assert_allclose(np.abs(l), [[1 / 2**0.5, 1 / 2**0.5]])

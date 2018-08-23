@@ -15,7 +15,7 @@ class TestApp(unittest.TestCase):
         A = linop.MatMul([n, 1], mat)
         s = np.linalg.svd(mat, compute_uv=False)
 
-        npt.assert_allclose(app.MaxEig(A.H * A).run(), s[0]**2, atol=1e-2)
+        npt.assert_allclose(app.MaxEig(A.H * A, max_iter=100).run(), s[0]**2, atol=1e-2)
 
     def test_LinearLeastSquares(self):
         n = 5
