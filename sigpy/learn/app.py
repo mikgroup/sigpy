@@ -63,23 +63,19 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         self.device = sp.util.Device(self.device)
         self.dtype = self.y_j.dtype
         self.batch_size = len(self.y_j)
-        if self.multi_channel:
-            self.num_filters = self.l.shape[1]
-            self.data_ndim = self.y_j.ndim - 2
-        else:
-            self.num_filters = self.l.shape[0]
-            self.data_ndim = self.y_j.ndim - 1
+        self.num_filters = self.l.shape[self.multi_channel]
+        self.data_ndim = self.y_j.ndim - self.multi_channel - 1
 
         if self.mode == 'full':
-            self.r_j_shape = tuple(
-                [self.batch_size, self.num_filters] +
-                [i - min(i, f) + 1 for i, f in zip(self.y_j.shape[-self.data_ndim:],
-                                                   self.l.shape[-self.data_ndim:])])
+            self.r_j_shape = ([self.batch_size, self.num_filters] +
+                              [i - min(i, f) + 1 for i, f in zip(self.y_j.shape[-self.data_ndim:],
+                                                                 self.l.shape[-self.data_ndim:])])
         else:
-            self.r_j_shape = tuple(
-                [self.batch_size, self.num_filters] +
-                [i + min(i, f) - 1 for i, f in zip(self.y_j.shape[-self.data_ndim:],
-                                                   self.l.shape[-self.data_ndim:])])
+            self.r_j_shape = ([self.batch_size, self.num_filters] +
+                              [i + min(i, f) - 1 for i, f in zip(self.y_j.shape[-self.data_ndim:],
+                                                                 self.l.shape[-self.data_ndim:])])
+
+        self.r_j_shape = tuple(self.r_j_shape)
 
 
 class ConvSparseCoding(sp.app.App):
@@ -149,18 +145,18 @@ class ConvSparseCoding(sp.app.App):
         xp = self.device.xp
         with self.device:
             if self.multi_channel:
-                l_norm = sp.util.norm(
-                    self.l, axes=[0] + list(range(-self.data_ndim, 0)), keepdims=True)
+                l_norm = sp.util.norm(self.l, axes=[0] + list(range(-self.data_ndim, 0)),
+                                      keepdims=True)
             else:
                 l_norm = sp.util.norm(self.l, axes=range(-self.data_ndim, 0), keepdims=True)
-                
+
             self.l /= l_norm
 
     def _pre_update(self):
         j = self.j_idx.next()
         j_start = j * self.batch_size
         j_end = (j + 1) * self.batch_size
-        
+
         sp.util.move_to(self.y_j, self.y[j_start:j_end])
         sp.util.move_to(self.l_old, self.l)
 
@@ -175,21 +171,15 @@ class ConvSparseCoding(sp.app.App):
         self.device = sp.util.Device(self.device)
         self.dtype = self.y.dtype
         self.num_batches = len(self.y) // self.batch_size
+        self.data_ndim = self.y.ndim - self.multi_channel - 1
 
+        self.l_shape = ([self.num_filters] +
+                        [min(d, self.filt_width) for d in self.y.shape[-self.data_ndim:]])
+        
         if self.multi_channel:
-            self.data_ndim = self.y.ndim - 2
-        else:
-            self.data_ndim = self.y.ndim - 1
+            self.l_shape = [self.y.shape[1]] + self.l_shape
 
-        if self.multi_channel:
-            num_channels = self.y.shape[1]
-            self.l_shape = tuple(
-                [num_channels, self.num_filters] +
-                [min(d, self.filt_width) for d in self.y.shape[-self.data_ndim:]])
-        else:
-            self.l_shape = tuple(
-                [self.num_filters] + [min(d, self.filt_width)
-                                      for d in self.y.shape[-self.data_ndim:]])
+        self.l_shape = tuple(self.l_shape)
 
     def _get_batch_vars(self):
         self.j_idx = sp.index.ShuffledIndex(self.num_batches)

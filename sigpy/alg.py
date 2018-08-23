@@ -78,7 +78,7 @@ class PowerMethod(Alg):
     def _update(self):
         y = self.A(self.x)
         self.max_eig = util.norm(y)
-        self.x[:] = y / self.max_eig
+        util.move_to(self.x, y / self.max_eig)
         self.pbar.set_postfix(max_eig=self.max_eig)
 
 
@@ -150,10 +150,10 @@ class GradientMethod(Alg):
 
     def _update(self):
         if self.accelerate or self.proxg is not None:
-            self.x_old[:] = self.x
+            util.move_to(self.x_old, self.x)
 
         if self.accelerate:
-            self.x[:] = self.z
+            util.move_to(self.x, self.z)
 
         gradf_x = self.gradf(self.x)
         if self.P is not None:
@@ -167,12 +167,12 @@ class GradientMethod(Alg):
         if self.accelerate:
             t_old = self.t
             self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
-            self.z[:] = self.x + (t_old - 1) / self.t * (self.x - self.x_old)
+            util.move_to(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
 
         if self.accelerate or self.proxg is not None:
-            self.residual = util.norm(self.x - self.x_old) / self.alpha
+            self.residual = util.move(util.norm(self.x - self.x_old) / self.alpha)
         else:
-            self.residual = util.norm(gradf_x)
+            self.residual = util.move(util.norm(gradf_x))
             
         self.pbar.set_postfix(resid=self.residual)
 
@@ -376,22 +376,22 @@ class PrimalDualHybridGradient(Alg):
         super()._init()
 
     def _update(self):
-        self.u_old[:] = self.u
-        self.x_old[:] = self.x
+        util.move_to(self.u_old, self.u)
+        util.move_to(self.x_old, self.x)
 
         Ax_ext = self.A(self.x_ext)
         if self.D is not None:
             Ax_ext = self.D(Ax_ext)
             
-        self.u[:] = self.proxfc(self.sigma, self.u + self.sigma * Ax_ext)
+        util.move_to(self.u, self.proxfc(self.sigma, self.u + self.sigma * Ax_ext))
 
         AHu = self.AH(self.u)
         if self.P is not None:
             AHu = self.P(AHu)
             
-        self.x[:] = self.proxg(self.tau, self.x - self.tau * AHu)
+        util.move_to(self.x, self.proxg(self.tau, self.x - self.tau * AHu))
 
-        self.x_ext[:] = self.x + self.theta * (self.x - self.x_old)
+        util.move_to(self.x_ext, self.x + self.theta * (self.x - self.x_old))
 
     def _cleanup(self):
         del self.x_ext

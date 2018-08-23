@@ -151,7 +151,6 @@ class L2Reg(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-
         with util.get_device(input):
             return (input + self.lamda * alpha * self.y) / (1 + self.lamda * alpha)
 
@@ -173,7 +172,6 @@ class L2Proj(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-
         with util.get_device(input):
             return thresh.l2_proj(self.epsilon, input - self.y, self.axes) + self.y
 
