@@ -276,12 +276,11 @@ def _fft_convolve_adjoint_input(W, y, mode='full'):
         W_pad = util.resize(W, (output_channel, input_channel) + pad_shape,
                             oshift=[0] * W.ndim)
 
-        if np.issubdtype(dtype, np.floating) and False:
+        if np.issubdtype(dtype, np.floating):
             y_fft = xp.fft.rfftn(y_pad, axes=range(-ndim, 0), norm='ortho')
             W_fft = xp.fft.rfftn(W_pad, axes=range(-ndim, 0), norm='ortho')
             x_fft = xp.sum(y_fft * W_fft, axis=-ndim - 2)
-            x = xp.fft.irfftn(y_fft, pad_shape,
-                              axes=range(-ndim, 0), norm='ortho').astype(dtype)
+            x = xp.fft.irfftn(x_fft, pad_shape, axes=range(-ndim, 0), norm='ortho').astype(dtype)
         else:
             y_fft = fft.fft(y_pad, axes=range(-ndim, 0), center=False)
             W_fft = fft.fft(W_pad, axes=range(-ndim, 0), center=False)
