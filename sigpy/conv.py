@@ -481,11 +481,11 @@ def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
     W = util.empty((output_channel, input_channel) + filter_shape, dtype=dtype,
                    device=device)
     with device:
-        x = util.flip(x, axes=range(-ndim, 0))
         cudnn.convolution_backward_filter(x, y, W,
                                           pads, strides, dilations, groups,
                                           deterministic=deterministic,
                                           auto_tune=auto_tune,
                                           tensor_core=tensor_core)
+        W = util.flip(W, axes=range(-ndim, 0))
 
     return W
