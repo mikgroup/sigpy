@@ -48,8 +48,8 @@ class SenseRecon(sp.app.LinearLeastSquares):
         **kwargs: Other optional arguments.
 
     References:
-        Pruessmann, K. P., Weiger, M., Scheidegger, M. B., & Boesiger, P. (1999). 
-        SENSE: sensitivity encoding for fast MRI. 
+        Pruessmann, K. P., Weiger, M., Scheidegger, M. B., & Boesiger, P. (1999).
+        SENSE: sensitivity encoding for fast MRI.
         Magnetic resonance in medicine, 42(5), 952-962.
 
         Pruessmann, K. P., Weiger, M., Bornert, P., & Boesiger, P. (2001).
@@ -92,8 +92,8 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
 
     See also:
        SenseRecon
-    """
 
+    """
     def __init__(self, ksp, mps, eps,
                  weights=1, coord=None,
                  device=sp.util.cpu_device, **kwargs):
@@ -129,12 +129,11 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         **kwargs: Other optional arguments.
 
     References:
-        Lustig, M., Donoho, D., & Pauly, J. M. (2007). 
-        Sparse MRI: The application of compressed sensing for rapid MR imaging. 
-        Magnetic Resonance in Medicine, 58(6), 1182-1195.
+        Lustig, M., Donoho, D., & Pauly, J. M. (2007).
+        Sparse MRI: The application of compressed sensing for rapid MR imaging.
+        Magnetic Resonance in Medicine, 58(6), 1082-1195.
 
     """
-
     def __init__(self, ksp, mps, lamda,
                  weights=1, coord=None,
                  wave_name='db4', device=sp.util.cpu_device, **kwargs):
@@ -219,10 +218,11 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         **kwargs: Other optional arguments.
 
     References:
-        Block, K. T., Uecker, M., & Frahm, J. (2007). 
-        Undersampled radial MRI with multiple coils. 
-        Iterative image reconstruction using a total variation constraint. 
+        Block, K. T., Uecker, M., & Frahm, J. (2007).
+        Undersampled radial MRI with multiple coils.
+        Iterative image reconstruction using a total variation constraint.
         Magnetic Resonance in Medicine, 57(6), 1086-1098.
+
     """
 
     def __init__(self, ksp, mps, lamda,
@@ -293,7 +293,7 @@ class JsenseRecon(sp.app.App):
     Considers the problem 
 
     .. math:: 
-        \min_{l, r} \frac{1}{2} \| l \ast r - y ||_2^2 + 
+        \min_{l, r} \frac{1}{2} \| l \ast r - y \|_2^2 + 
         \frac{\lambda}{2} (\| l \|_2^2 + \| r \|_2^2)
     where \ast is the convolution operator.
 
@@ -310,14 +310,14 @@ class JsenseRecon(sp.app.App):
         thresh (float): threshold parameter for output, from 0 to 1.
 
     References:
-        Ying, L., & Sheng, J. (2007). 
-        Joint image reconstruction and sensitivity estimation in SENSE (JSENSE). 
+        Ying, L., & Sheng, J. (2007).
+        Joint image reconstruction and sensitivity estimation in SENSE (JSENSE).
         Magnetic Resonance in Medicine, 57(6), 1196-1202.
 
-        Uecker, M., Hohage, T., Block, K. T., & Frahm, J. (2008). 
-        Image reconstruction by regularized nonlinear inversion—joint 
-        estimation of coil sensitivities and image content. 
-        Magnetic Resonance in Medicine, 60(3), 674-682.
+        Uecker, M., Hohage, T., Block, K. T., & Frahm, J. (2008).
+        Image reconstruction by regularized nonlinear inversion-
+        joint estimation of coil sensitivities and image content.
+        Magnetic Resonance in Medicine, 60(#), 674-682.
 
     """
 
@@ -326,7 +326,6 @@ class JsenseRecon(sp.app.App):
                  lamda=0, device=sp.util.cpu_device,
                  weights=1, coord=None, max_iter=5,
                  max_inner_iter=5, thresh=0):
-
         self.ksp = ksp
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
@@ -410,8 +409,7 @@ class JsenseRecon(sp.app.App):
             self.A_img_ker, self.ksp, self.img_ker, weights=self.weights,
             lamda=self.lamda, max_iter=self.max_inner_iter)
 
-        _alg = sp.alg.AltMin(
-            self.app_mps.run, self.app_img.run, max_iter=self.max_iter)
+        _alg = sp.alg.AltMin(self.app_mps.run, self.app_img.run, max_iter=self.max_iter)
 
         super().__init__(_alg)
 
