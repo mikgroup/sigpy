@@ -156,7 +156,6 @@ class Image(object):
             self.fig.canvas.draw()
 
         elif event.key == 'h':
-
             self.hide = not self.hide
 
             self.update_axes()
@@ -167,7 +166,6 @@ class Image(object):
 
         elif (event.key == 'm' or event.key == 'p' or
               event.key == 'r' or event.key == 'i' or event.key == 'l'):
-
             self.vmin = None
             self.vmax = None
             self.mode = event.key
@@ -198,12 +196,14 @@ class Image(object):
                                  format='png', bbox_inches=bbox, pad_inches=0)
                 
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
@@ -229,7 +229,8 @@ class Image(object):
                                  format='png', bbox_inches=bbox, pad_inches=0)
                 
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
@@ -271,6 +272,7 @@ class Image(object):
             return
 
     def update_image(self):
+        # Extract slice.
         idx = []
         for i in range(self.ndim):
             if i in [self.x, self.y, self.z, self.c]:
@@ -279,6 +281,8 @@ class Image(object):
                 idx.append(self.slices[i])
 
         imv = move(self.im[idx])
+
+        # Transpose to have [z, y, x, c].
         imv_dims = [self.y, self.x]
         if self.z is not None:
             imv_dims = [self.z] + imv_dims
@@ -286,7 +290,7 @@ class Image(object):
         if self.c is not None:
             imv_dims = imv_dims + [self.c]
 
-        imv = np.transpose(imv, np.argsort(imv_dims))
+        imv = np.transpose(imv, np.argsort(np.argsort(imv_dims)))
         imv = array_to_image(imv, color=self.c is not None)
 
         if self.mode == 'm':
@@ -298,8 +302,7 @@ class Image(object):
         elif self.mode == 'i':
             imv = np.imag(imv)
         elif self.mode == 'l':
-            eps = 1e-31
-            imv = np.log(np.abs(imv) + eps)
+            imv = np.log(np.abs(imv), out=np.ones_like(imv) * np.infty, where=imv != 0)
 
         if self.vmin is None:
             self.vmin = imv.min()
@@ -383,11 +386,11 @@ def mosaic_shape(batch):
 def array_to_image(arr, color=False):
     """
     Flattens all dimensions except the last two
-    """
 
+    """
     if color:
-        eps = 1e-31
-        arr = arr / (np.abs(arr).max() + eps)
+        arr = np.divide(arr, np.abs(arr).max(),
+                        out=np.zeros_like(arr), where=arr != 0)
 
     if arr.ndim == 2:
         return arr
