@@ -26,6 +26,10 @@ class Image(object):
         <r>: real mode. Renormalizes when pressed each time.
         <i>: imaginary mode. Renormalizes when pressed each time.
         <l>: log mode. Renormalizes when pressed each time.
+        <[>: decreases brightness. Shifts window level up by 10% of window width.
+        <]>: increases brightness. Shifts window level down by 10% of window width.
+        <{>: decreases contrast. Scale window width by 0.9.
+        <}>: increases contrast. Scale window width by 1.1.
         <s>: save as png.
         <g>: save as gif by traversing current dimension.
         <v>: save as mp4 by traversing current dimension.
@@ -164,8 +168,41 @@ class Image(object):
         elif event.key == 'f':
             self.fig.canvas.manager.full_screen_toggle()
 
-        elif (event.key == 'm' or event.key == 'p' or
-              event.key == 'r' or event.key == 'i' or event.key == 'l'):
+        elif event.key == ']':
+            width = self.vmax - self.vmin
+            self.vmin -= width * 0.1
+            self.vmax -= width * 0.1
+
+            self.update_image()
+            self.fig.canvas.draw()
+
+        elif event.key == '[':
+            width = self.vmax - self.vmin
+            self.vmin += width * 0.1
+            self.vmax += width * 0.1
+
+            self.update_image()
+            self.fig.canvas.draw()
+
+        elif event.key == '}':
+            width = self.vmax - self.vmin
+            center = (self.vmax + self.vmin) / 2
+            self.vmin = center - width * 1.1 / 2
+            self.vmax = center + width * 1.1 / 2
+
+            self.update_image()
+            self.fig.canvas.draw()
+
+        elif event.key == '{':
+            width = self.vmax - self.vmin
+            center = (self.vmax + self.vmin) / 2
+            self.vmin = center - width * 0.9 / 2
+            self.vmax = center + width * 0.9 / 2
+
+            self.update_image()
+            self.fig.canvas.draw()
+            
+        elif event.key in ['m', 'p', 'r', 'i', 'r']:
             self.vmin = None
             self.vmax = None
             self.mode = event.key
