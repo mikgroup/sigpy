@@ -14,9 +14,10 @@ class Alg(object):
         device (int or Device): Device.
 
     """
-    def __init__(self, max_iter, device):
+    def __init__(self, max_iter, device, progress_bar=True):
         self.max_iter = max_iter
         self.device = util.Device(device)
+        self.progress_bar = progress_bar
 
     def _init(self):
         return
@@ -31,7 +32,9 @@ class Alg(object):
         return
 
     def init(self):
-        self.pbar = tqdm(total=self.max_iter, desc=self.__class__.__name__)
+        if self.progress_bar:
+            self.pbar = tqdm(total=self.max_iter, desc=self.__class__.__name__)
+            
         self.iter = 0
         with self.device:
             self._init()
@@ -41,14 +44,17 @@ class Alg(object):
             self._update()
 
             self.iter += 1
-            self.pbar.update()
+            if self.progress_bar:
+                self.pbar.update()
 
     def done(self):
         with self.device:
             return self._done()
 
     def cleanup(self):
-        self.pbar.close()
+        if self.progress_bar:
+            self.pbar.close()
+            
         self._cleanup()
 
 
@@ -64,11 +70,11 @@ class PowerMethod(Alg):
         float: Maximum eigenvalue of `A`.
 
     """
-    def __init__(self, A, x, max_iter=30):
+    def __init__(self, A, x, max_iter=30, progress_bar=True):
         self.A = A
         self.x = x
 
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
 
     def _init(self):
         xp = util.get_xp(self.x)
@@ -85,12 +91,12 @@ class ProximalPointMethod(Alg):
     """Proximal point method.
 
     """
-    def __init__(self, proxf, alpha, x, max_iter=100, device=util.cpu_device):
+    def __init__(self, proxf, alpha, x, max_iter=100, device=util.cpu_device, progress_bar=True):
         self.proxf = proxf
         self.alpha = alpha
         self.x = x
         
-        super().__init__(max_iter, device=device)
+        super().__init__(max_iter, device=device, progress_bar=progress_bar)
 
     def _update(self):
         util.move_to(self.x, self.proxf(self.alpha, self.x))
@@ -126,7 +132,7 @@ class GradientMethod(Alg):
 
     """
     def __init__(self, gradf, x, alpha, proxg=None,
-                 accelerate=False, P=None, max_iter=100):
+                 accelerate=False, P=None, max_iter=100, progress_bar=True):
         self.gradf = gradf
         self.alpha = alpha
         self.accelerate = accelerate
@@ -134,7 +140,7 @@ class GradientMethod(Alg):
         self.P = P
         self.x = x
 
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
 
     def _init(self):
         if self.accelerate:
@@ -200,14 +206,14 @@ class ConjugateGradient(Alg):
         max_iter (int): Maximum number of iterations.
 
     """
-    def __init__(self, A, b, x, P=None, max_iter=100):
+    def __init__(self, A, b, x, P=None, max_iter=100, progress_bar=True):
         self.A = A
         self.P = P
         self.x = x
         self.b = b
         self.rzold = np.infty
 
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
 
     def _init(self):
         self.b -= self.A(self.x)
@@ -286,7 +292,7 @@ class NewtonsMethod(Alg):
 
     """
     def __init__(self, gradf, hessf, proxHg, x,
-                 max_iter=10, sigma=(3 - 5**0.5) / 2):
+                 max_iter=10, sigma=(3 - 5**0.5) / 2, progress_bar=True):
 
         self.gradf = gradf
         self.hessf = hessf
@@ -295,7 +301,7 @@ class NewtonsMethod(Alg):
         self.x = x
         self.lamda = np.infty
 
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
 
     def _update(self):
 
@@ -344,7 +350,7 @@ class PrimalDualHybridGradient(Alg):
     """
     def __init__(
             self, proxfc, proxg, A, AH, x, u,
-            tau, sigma, theta, P=lambda x: x, D=lambda x: x, max_iter=100
+            tau, sigma, theta, P=lambda x: x, D=lambda x: x, max_iter=100, progress_bar=True
     ):
 
         self.proxfc = proxfc
@@ -363,7 +369,7 @@ class PrimalDualHybridGradient(Alg):
         self.P = P
         self.D = D
 
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
 
     def _init(self):
         self.x_ext = self.x.copy()
@@ -405,11 +411,11 @@ class AltMin(Alg):
 
     """
 
-    def __init__(self, min1, min2, max_iter=30):
+    def __init__(self, min1, min2, max_iter=30, progress_bar=True):
         self.min1 = min1
         self.min2 = min2
 
-        super().__init__(max_iter, util.cpu_device)
+        super().__init__(max_iter, util.cpu_device, progress_bar=progress_bar)
 
     def _update(self):
 
