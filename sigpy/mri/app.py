@@ -203,7 +203,8 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
     r"""Total variation regularized reconstruction.
 
     Considers the problem:
-    .. math:: \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| G x \|_1
+    .. math::
+        \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| G x \|_1
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, G is the gradient operator,
     x is the image, and y is the k-space measurements.
