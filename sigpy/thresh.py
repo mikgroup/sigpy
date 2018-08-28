@@ -20,17 +20,12 @@ def soft_thresh(lamda, input):
 
     Returns:
         array: soft-thresholded result.
-    """
 
+    """
     device = util.get_device(input)
     xp = device.xp
-    if input.dtype == np.float32 or input.dtype == np.complex64:
-        dtype = np.float32
-    else:
-        dtype = np.float64
 
-    lamda = util.array(lamda, dtype=dtype, device=device)
-
+    lamda = xp.real(lamda)
     with device:
         if device == util.cpu_device:
             output = _soft_thresh(lamda, input)
@@ -56,8 +51,8 @@ def hard_thresh(lamda, input):
 
     Returns:
         array: hard-thresholded result.
-    """
 
+    """
     device = util.get_device(input)
 
     if device == util.cpu_device:
@@ -76,8 +71,8 @@ def l0_proj(k, input, axes=None):
 
     Returns:
         array: Result.
-    """
 
+    """
     device = util.get_device(input)
     xp = device.xp
     shape = input.shape
@@ -113,6 +108,7 @@ def l1_proj(eps, input):
     References:
         J. Duchi, S. Shalev-Shwartz, and Y. Singer, "Efficient projections onto
         the l1-ball for learning in high dimensions" 2008.
+
     """
     device = util.get_device(input)
     xp = device.xp
@@ -140,6 +136,7 @@ def l2_proj(eps, input, axes=None):
 
     Returns:
         array: Result.
+
     """
     axes = util._normalize_axes(axes, input.ndim)
 
@@ -189,11 +186,11 @@ if config.cupy_enabled:
         if (abs_input == 0)
             sign = 0;
         else
-            sign = input / abs_input;
+            sign = input / (T) abs_input;
         S mag = abs_input - lamda;
         mag = (abs(mag) + mag) / 2.;
 
-        output = mag * sign;
+        output = (T) mag * sign;
         """,
         name='soft_thresh')
 
