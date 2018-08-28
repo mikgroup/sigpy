@@ -150,7 +150,6 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         def g(input):
             device = sp.util.get_device(input)
             xp = device.xp
-
             with device:
                 return lamda * xp.sum(abs(W(input)))
 
@@ -238,11 +237,11 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, lamda)
 
-        def g(input):
+        def g(x):
+            device = sp.util.get_device(x)
             xp = device.xp
-
             with device:
-                return lamda * xp.sum(abs(G(input)))
+                return lamda * xp.sum(xp.abs(x))
 
         super().__init__(A, ksp, self.img, proxg=proxg, g=g, G=G, weights=weights, **kwargs)
 
