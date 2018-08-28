@@ -178,8 +178,10 @@ class LinearLeastSquares(App):
                 self.alg.sigma = self.sigma
             elif self.tau is None and self.sigma is None:
                 self.sigma = 1
+                self._get_tau()
+                
                 self.alg.sigma = self.sigma
-                self.alg.tau = self._get_tau()
+                self.alg.tau = self.tau
                 
         if self.save_objective_values:
             self.objective_values = []
@@ -236,7 +238,9 @@ class LinearLeastSquares(App):
         if self.mu != 0:
             AHA += self.mu * I
 
-        self.alg = ConjugateGradient(AHA, None, self.x, P=self.P, max_iter=self.max_iter, progress_bar=self.progress_bar)
+        self.alg = ConjugateGradient(AHA, None, self.x, P=self.P,
+                                     max_iter=self.max_iter,
+                                     progress_bar=self.progress_bar)
 
     def _get_GradientMethod(self):
         def gradf(x):
@@ -259,7 +263,8 @@ class LinearLeastSquares(App):
                 return gradf_x
 
         self.alg = GradientMethod(gradf, self.x, self.alpha, proxg=self.proxg,
-                                  max_iter=self.max_iter, accelerate=self.accelerate, P=self.P, progress_bar=self.progress_bar)
+                                  max_iter=self.max_iter, accelerate=self.accelerate,
+                                  progress_bar=self.progress_bar)
 
     def _get_PrimalDualHybridGradient(self):
         with util.get_device(self.y):
@@ -312,12 +317,15 @@ class LinearLeastSquares(App):
 
         with device:
             self.alpha = 1 / max_eig_app.run()
-            
-        return self.alpha
 
     def _get_tau(self):
-        W = linop.Multiply(self.A.oshape, self.sigma * self.weights)
-        AHA = self.A.H * W * self.A
+        if self.G is None:
+            A = self.A
+        else:
+            A = linop.Vstack([self.A, self.G])
+            
+        W = linop.Multiply(A.oshape, self.sigma * self.weights)
+        AHA = A.H * W * A
 
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
@@ -325,13 +333,16 @@ class LinearLeastSquares(App):
 
         with device:
             self.tau = 1 / max_eig_app.run()
-            
-        return self.tau
 
     def _get_sigma(self):
-        W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
-        T = linop.Multiply(self.A.oshape, self.tau)
-        AAH = W_half.H * self.A * T * self.A.H * W_half
+        if self.G is None:
+            A = self.A
+        else:
+            A = linop.Vstack([self.A, self.G])
+            
+        W_half = linop.Multiply(A.oshape, self.weights**0.5)
+        T = linop.Multiply(A.oshape, self.tau)
+        AAH = W_half.H * A * T * A.H * W_half
 
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AAH, dtype=self.x.dtype,
@@ -340,8 +351,6 @@ class LinearLeastSquares(App):
 
         with device:
             self.sigma = 1 / max_eig_app.run()
-            
-        return self.sigma
 
     def objective(self):
         device = util.get_device(self.y)

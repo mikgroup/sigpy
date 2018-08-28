@@ -133,12 +133,11 @@ class GradientMethod(Alg):
 
     """
     def __init__(self, gradf, x, alpha, proxg=None,
-                 accelerate=False, P=None, max_iter=100, progress_bar=True):
+                 accelerate=False, max_iter=100, progress_bar=True):
         self.gradf = gradf
         self.alpha = alpha
         self.accelerate = accelerate
         self.proxg = proxg
-        self.P = P
         self.x = x
 
         super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
@@ -161,8 +160,6 @@ class GradientMethod(Alg):
             util.move_to(self.x, self.z)
 
         gradf_x = self.gradf(self.x)
-        if self.P is not None:
-            gradf_x = self.P(gradf_x)
             
         util.axpy(self.x, -self.alpha, gradf_x)
 
