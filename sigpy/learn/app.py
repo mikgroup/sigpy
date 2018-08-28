@@ -116,17 +116,16 @@ class ConvSparseCoding(sp.app.App):
 
     """
     def __init__(self, y, num_filters, filt_width, batch_size,
-                 lamda=1, alpha=1, init_scale=1e-5,
+                 lamda=1, alpha=1,
                  max_l_iter=30, max_r_j_iter=50, max_power_iter=10, max_epoch=1,
                  mode='full', multi_channel=False, device=sp.util.cpu_device,
-                 checkpoint_filepath=None):
+                 checkpoint_path=None):
         self.y = y
         self.num_filters = num_filters
         self.filt_width = filt_width
         self.batch_size = batch_size
         self.lamda = lamda
         self.alpha = alpha
-        self.init_scale = init_scale
         self.max_l_iter = max_l_iter
         self.max_r_j_iter = max_r_j_iter
         self.max_power_iter = max_power_iter
@@ -134,7 +133,7 @@ class ConvSparseCoding(sp.app.App):
         self.mode = mode
         self.multi_channel = multi_channel
         self.device = device
-        self.checkpoint_filepath = checkpoint_filepath
+        self.checkpoint_path = checkpoint_path
 
         self._get_params()
         self._get_batch_vars()
@@ -147,8 +146,7 @@ class ConvSparseCoding(sp.app.App):
         xp = self.device.xp
         with self.device:
             if self.multi_channel:
-                l_norm = sp.util.norm(self.l, axes=[0] + list(range(-self.data_ndim, 0)),
-                                      keepdims=True)
+                l_norm = sp.util.norm(self.l, axes=[0] + list(range(-self.data_ndim, 0)), keepdims=True)
             else:
                 l_norm = sp.util.norm(self.l, axes=range(-self.data_ndim, 0), keepdims=True)
 
@@ -164,8 +162,8 @@ class ConvSparseCoding(sp.app.App):
 
     def _summarize(self):
         xp = self.device.xp
-        if self.checkpoint_filepath is not None:
-            xp.save(self.checkpoint_filepath, self.l)
+        if self.checkpoint_path is not None:
+            xp.save(self.checkpoint_path, self.l)
 
     def _output(self):
         r = ConvSparseCoefficients(self.y, self.l, lamda=self.lamda,
@@ -246,7 +244,7 @@ class LinearRegression(sp.app.App):
     """
     def __init__(self, input, output, batch_size, alpha,
                  max_epoch=1, max_inner_iter=100, device=sp.util.cpu_device,
-                 checkpoint_filepath=None):
+                 checkpoint_path=None):
         dtype = output.dtype
 
         num_data = len(output)
@@ -254,7 +252,7 @@ class LinearRegression(sp.app.App):
         self.batch_size = batch_size
         self.input = input
         self.output = output
-        self.checkpoint_filepath = checkpoint_filepath
+        self.checkpoint_path = checkpoint_path
 
         self.mat = sp.util.zeros(input.shape[1:] + output.shape[1:], dtype=dtype, device=device)
         
@@ -285,8 +283,8 @@ class LinearRegression(sp.app.App):
 
     def _summarize(self):
         xp = self.device.xp
-        if self.checkpoint_filepath is not None:
-            xp.save(self.checkpoint_filepath, self.mat)
+        if self.checkpoint_path is not None:
+            xp.save(self.checkpoint_path, self.mat)
 
     def _output(self):
         return self.mat
