@@ -645,7 +645,6 @@ def norm2(input, axes=None, keepdims=False):
     device = get_device(input)
     xp = device.xp
     axes = _normalize_axes(axes, input.ndim)
-
     with device:
         return xp.sum(xp.abs(input)**2, axis=axes, keepdims=keepdims)
 
