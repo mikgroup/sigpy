@@ -84,7 +84,8 @@ class PowerMethod(Alg):
         y = self.A(self.x)
         self.max_eig = util.norm(y)
         util.move_to(self.x, y / self.max_eig)
-        self.pbar.set_postfix(max_eig=self.max_eig)
+        if self.progress_bar:
+            self.pbar.set_postfix(max_eig=self.max_eig)
 
 
 class ProximalPointMethod(Alg):
@@ -178,7 +179,8 @@ class GradientMethod(Alg):
         else:
             self.residual = util.move(util.norm(gradf_x))
             
-        self.pbar.set_postfix(resid=self.residual)
+        if self.progress_bar:
+            self.pbar.set_postfix(resid=self.residual)
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.residual == 0
@@ -260,7 +262,9 @@ class ConjugateGradient(Alg):
             self.rzold = rznew
 
         self.residual = util.move(self.rzold**0.5)
-        self.pbar.set_postfix(resid=self.residual)
+        
+        if self.progress_bar:
+            self.pbar.set_postfix(resid=self.residual)
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.zero_gradient or self.residual == 0
@@ -312,7 +316,9 @@ class NewtonsMethod(Alg):
         d = s - self.x
 
         self.lamda = util.dot(d, hessfx(d))**0.5
-        self.pbar.set_postfix(lamda=self.lamda)
+        
+        if self.progress_bar:
+            self.pbar.set_postfix(lamda=self.lamda)
 
         self.x += alpha * d
 
