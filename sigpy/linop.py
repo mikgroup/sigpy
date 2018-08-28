@@ -1310,20 +1310,13 @@ def Gradient(ishape, axes=None):
 
     Args:
        ishape (tuple of ints): Input shape.
-    """
 
+    """
     I = Identity(ishape)
     axes = util._normalize_axes(axes, len(ishape))
-    shift_candidates = []
-    for i in range(len(ishape)):
-        if i in axes:
-            shift_candidates.append([0, 1])
-        else:
-            shift_candidates.append([0])
-            
-        shifts = list(product(*shift_candidates))
-
-    G = Vstack([I - Circshift(ishape, shift) for shift in shifts])
+    ndim = len(ishape)
+    G = Vstack([I - Circshift(ishape, [0] * i + [1] + [0] * (ndim - i - 1))
+                for i in range(ndim)])
     G.repr_str = 'Gradient'
 
     return G
