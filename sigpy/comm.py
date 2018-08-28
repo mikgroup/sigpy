@@ -46,7 +46,14 @@ class MultiGpuCommunicator(object):
     """
 
     def __init__(self):
-        super().__init__()
+        if config.mpi4py_enabled:
+            self.mpi_comm = MPI.COMM_WORLD
+            self.size = self.mpi_comm.Get_size()
+            self.rank = self.mpi_comm.Get_rank()
+        else:
+            self.size = 1
+            self.rank = 0
+            
         self.device = util.Device(self.rank % cp.cuda.runtime.getDeviceCount())
 
         if config.nccl_enabled:
