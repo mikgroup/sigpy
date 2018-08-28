@@ -111,9 +111,7 @@ class LinearLeastSquares(App):
         z (float or array): Bias for l2 regularization.
         alg_name (str): {`'ConjugateGradient'`, `'GradientMethod'`, `'PrimalDualHybridGradient'`}.
         max_iter (int): Maximum number of iterations.
-        P (Linop): Preconditioner. Assumes proxg incorporates it if specified.
-        D (Linop): Dual preconditioner. Only used for `PrimalDualHybridGradient`.
-        proxD (Prox): Only used when D is specified. Proximal operator computing:
+        P (Linop): Preconditioner for ConjugateGradient.
 
         .. math::
             \min_u \frac{1}{2} \|u - v\|_2^2 + \frac{\alpha}{2} \|D^{-1 / 2}(u - y)\|_2^2
@@ -125,17 +123,22 @@ class LinearLeastSquares(App):
             and for `PrimalDualHybridGradient` when `tau` or `sigma` is not specified.
         tau (float): Primal step-size for `PrimalDualHybridGradient`.
         sigma (float): Dual step-size for `PrimalDualHybridGradient`.
-        theta (float): Primal extrapolation parameter for `PrimalDualHybridGradient`.
         save_objective_values (bool): Toggle saving objective value.
 
     """
     def __init__(self, A, y, x, proxg=None,
                  lamda=0, G=None, g=None, R=None, weights=1, mu=0, z=0,
                  alg_name=None, max_iter=100,
+<<<<<<< 24c68e3f427682fb23ed7052871162ba81c65548
                  P=None, D=None, proxfc_D=None,
                  alpha=None, max_power_iter=10, accelerate=True,
                  tau=None, sigma=None, theta=1,
                  save_objective_values=False, progress_bar=True):
+=======
+                 P=None, alpha=None, max_power_iter=10, accelerate=True,
+                 tau=None, sigma=None,
+                 save_objective_values=False):
+>>>>>>> Merged preconditioning with step size for primal-dual and gradient method.
         self.A = A
         self.y = y
         self.x = x
@@ -150,19 +153,15 @@ class LinearLeastSquares(App):
         self.alg_name = alg_name
         self.max_iter = max_iter
         self.P = P
-        self.D = D
-        self.proxfc_D = proxfc_D
         self.alpha = alpha
         self.max_power_iter = max_power_iter
         self.accelerate = accelerate
         self.tau = tau
         self.sigma = sigma
-        self.theta = theta
         self.save_objective_values = save_objective_values
         self.progress_bar = progress_bar
         
         self._get_alg()
-        self._get_max_eig_app()
 
     def _init(self):
         if isinstance(self.alg, ConjugateGradient):
@@ -174,17 +173,21 @@ class LinearLeastSquares(App):
                 self.alg.b += self.mu * self.z
 
         elif isinstance(self.alg, GradientMethod):
-            try:
-                self.alg.alpha = 1 / util.move(self.max_eig_app.run())
-            except AttributeError:
-                pass
+            if self.alpha is None:
+                self._get_alpha()
+                self.alg.alpha = self.alpha
         elif isinstance(self.alg, PrimalDualHybridGradient):
-            try:
-                self.alg.sigma = 1 / util.move(self.max_eig_app.run())
-                self.alg.tau = 1
-            except AttributeError:
-                pass
-
+            if self.tau is None and self.sigma is not None:
+                self._get_tau()
+                self.alg.tau = self.tau
+            if self.tau is not None and self.sigma is None:
+                self._get_sigma()
+                self.alg.sigma = self.sigma
+            elif self.tau is None and self.sigma is None:
+                self.sigma = 1
+                self.alg.sigma = self.sigma
+                self.alg.tau = self._get_tau()
+                
         if self.save_objective_values:
             self.objective_values = []
 
@@ -277,63 +280,75 @@ class LinearLeastSquares(App):
             self.proxg = prox.NoOp(self.x.shape)
 
         if self.G is None:
-            if self.D is None:
-                proxfc = prox.L2Reg(self.y.shape, 1, y=-w_y)
-            else:
-                if self.proxfc_D is None:
-                    raise ValueError('proxfc_D must be specified when D is specified.')
-                
-                proxfc = self.proxfc_D
-                
+            proxfc = prox.L2Reg(self.y.shape, 1, y=-w_y)
             u = util.zeros_like(self.y)
             self.alg = PrimalDualHybridGradient(proxfc, self.proxg, w_A, w_A.H, self.x, u,
-                                                self.tau, self.sigma, self.theta,
-                                                P=self.P, D=self.D, max_iter=self.max_iter, progress_bar=self.progress_bar)
+                                                self.tau, self.sigma, gamma_dual=1,
+                                                max_iter=self.max_iter,
+                                                progress_bar=self.progress_bar)
         else:
             AG = linop.Vstack([w_A, self.G])
 
-            if self.D is None:
-                proxf1c = prox.L2Reg(self.y.shape, 1, y=-w_y)
-            else:
-                if self.proxfc_D is None:
-                    raise ValueError('proxfc_D must be specified when D is specified.')
-                
-                proxf1c = self.proxfc_D
-            
+            proxf1c = prox.L2Reg(self.y.shape, 1, y=-w_y)
             proxf2 = self.proxg
             proxfc = prox.Stack([proxf1c, prox.Conj(proxf2)])
             proxg = prox.NoOp(self.x.shape)
 
             u = util.zeros(AG.oshape, dtype=self.y.dtype, device=util.get_device(self.y))
             self.alg = PrimalDualHybridGradient(proxfc, proxg, AG, AG.H, self.x, u,
-                                                self.tau, self.sigma, self.theta,
-                                                P=self.P, D=self.D, max_iter=self.max_iter, progress_bar=self.progress_bar)
+                                                self.tau, self.sigma, max_iter=self.max_iter,
+                                                progress_bar=self.progress_bar)
 
-    def _get_max_eig_app(self):
-        if isinstance(self.alg, GradientMethod) and self.alpha is None or \
-           isinstance(self.alg, PrimalDualHybridGradient) and \
-           (self.tau is None or self.sigma is None):
-            I = linop.Identity(self.x.shape)
-            W = linop.Multiply(self.A.oshape, self.weights)
-            if self.D is not None:
-                W = self.D * W
+    def _get_alpha(self):
+        I = linop.Identity(self.x.shape)
+        W = linop.Multiply(self.A.oshape, self.weights)
+        AHA = self.A.H * W * self.A
 
-            AHA = self.A.H * W * self.A
+        if self.lamda != 0:
+            if self.R is None:
+                AHA += self.lamda * I
+            else:
+                AHA += self.lamda * self.R.H * self.R
 
-            if self.lamda != 0:
-                if self.R is None:
-                    AHA += self.lamda * I
-                else:
-                    AHA += self.lamda * self.R.H * self.R
+        if self.mu != 0:
+            AHA += self.mu * I
 
-            if self.mu != 0:
-                AHA += self.mu * I
+        device = util.get_device(self.x)
+        max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
+                             device=device, max_iter=self.max_power_iter)
 
-            if self.P is not None:
-                AHA = self.P * AHA
+        with device:
+            self.alpha = 1 / max_eig_app.run()
+            
+        return self.alpha
 
-            self.max_eig_app = MaxEig(AHA, dtype=self.x.dtype, device=util.get_device(self.x),
-                                      max_iter=self.max_power_iter, progress_bar=self.progress_bar)
+    def _get_tau(self):
+        W = linop.Multiply(self.A.oshape, self.sigma * self.weights)
+        AHA = self.A.H * W * self.A
+
+        device = util.get_device(self.x)
+        max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
+                             device=device, max_iter=self.max_power_iter)
+
+        with device:
+            self.tau = 1 / max_eig_app.run()
+            
+        return self.tau
+
+    def _get_sigma(self):
+        W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
+        T = linop.Multiply(self.A.oshape, self.tau)
+        AAH = W_half.H * self.A * T * self.A.H * W_half
+
+        device = util.get_device(self.x)
+        max_eig_app = MaxEig(AAH, dtype=self.x.dtype,
+                             device=device, max_iter=self.max_power_iter,
+                             progress_bar=self.progress_bar)
+
+        with device:
+            self.sigma = 1 / max_eig_app.run()
+            
+        return self.sigma
 
     def objective(self):
         device = util.get_device(self.y)
@@ -395,8 +410,7 @@ class L2ConstrainedMinimization(App):
             proxfc = prox.Conj(prox.L2Proj(A.oshape, eps, y=y))
             self.u = util.zeros_like(y)
             alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, self.u,
-                                                tau, sigma, theta,
-                                                max_iter=max_iter, progress_bar=progress_bar)
+                                           tau, sigma, max_iter=max_iter, progress_bar=progress_bar)
         else:
             AG = linop.Vstack([A, G])
             self.max_eig_app = MaxEig(AG.H * AG,
@@ -409,7 +423,7 @@ class L2ConstrainedMinimization(App):
 
             self.u = util.zeros(AG.oshape, dtype=x.dtype, device=util.get_device(x))
             alg = PrimalDualHybridGradient(proxfc, proxg, AG, AG.H, self.x, self.u,
-                                           tau, sigma, theta, max_iter=max_iter, progress_bar=progress_bar)
+                                           tau, sigma, max_iter=max_iter, progress_bar=progress_bar)
             self.iter_var = []
 
         super().__init__(alg)

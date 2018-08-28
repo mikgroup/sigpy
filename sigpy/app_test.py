@@ -23,7 +23,7 @@ class TestApp(unittest.TestCase):
         A = linop.MatMul([n, 1], mat)
         x = util.randn([n, 1])
         y = A(x)
-        x_lstsq = np.linalg.lstsq(mat, y, rcond=None)[0]
+        x_lstsq = np.linalg.lstsq(mat, y, rcond=-1)[0]
 
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(A, y, x_rec).run()
@@ -158,7 +158,7 @@ class TestApp(unittest.TestCase):
         x = util.randn([n, 1])
         y = A(x)
         weights = 1 / (np.sum(abs(mat)**2, axis=0).reshape([n, 1]) + 1e-11)
-        x_lstsq = np.linalg.lstsq(weights**0.5 * mat, weights**0.5 * y, rcond=None)[0]
+        x_lstsq = np.linalg.lstsq(weights**0.5 * mat, weights**0.5 * y, rcond=-1)[0]
 
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(A, y, x_rec, weights=weights).run()
@@ -180,22 +180,24 @@ class TestApp(unittest.TestCase):
         A = linop.MatMul([n, 1], mat)
         x = util.randn([n, 1])
         y = A(x)
-        x_lstsq = np.linalg.lstsq(mat, y, rcond=None)[0]
-        p = 1 / (np.sum(abs(mat)**2, axis=0).reshape([n, 1]) + 1e-11)
-        P = linop.Multiply([n, 1], p)
+        x_lstsq = np.linalg.lstsq(mat, y, rcond=-1)[0]
+        p = 1 / (np.sum(abs(mat)**2, axis=0).reshape([n, 1]))
 
+        P = linop.Multiply([n, 1], p)
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(A, y, x_rec).run()
         npt.assert_allclose(x_rec, x_lstsq)
 
         x_rec = util.zeros([n, 1])
+        alpha = p / app.MaxEig(P * A.H * A).run()
         app.LinearLeastSquares(A, y, x_rec, alg_name='GradientMethod',
-                               max_iter=1000, P=P).run()
+                               max_iter=1000, alpha=alpha).run()
         npt.assert_allclose(x_rec, x_lstsq)
 
         x_rec = util.zeros([n, 1])
+        tau = p
         app.LinearLeastSquares(A, y, x_rec, alg_name='PrimalDualHybridGradient',
-                               max_iter=1000, P=P).run()
+                               max_iter=1000, tau=tau).run()
         npt.assert_allclose(x_rec, x_lstsq)
 
     def test_dual_precond_LinearLeastSquares(self):
@@ -204,13 +206,10 @@ class TestApp(unittest.TestCase):
         A = linop.MatMul([n, 1], mat)
         x = util.randn([n, 1])
         y = A(x)
-        x_lstsq = np.linalg.lstsq(mat, y, rcond=None)[0]
+        x_lstsq = np.linalg.lstsq(mat, y, rcond=-1)[0]
 
-        d = 1 / np.sum(abs(mat)**2, axis=1).reshape([n, 1])
-        D = linop.Multiply([n, 1], d)
-        proxfc_D = lambda alpha, x: (x - alpha * d * y) / (1 + alpha * d)
-        
+        d = 1 / np.sum(abs(mat)**2, axis=1, keepdims=True).reshape([n, 1])        
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(A, y, x_rec, alg_name='PrimalDualHybridGradient',
-                               max_iter=1000, D=D, proxfc_D=proxfc_D).run()
+                               max_iter=1000, sigma=d).run()
         npt.assert_allclose(x_rec, x_lstsq)

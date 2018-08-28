@@ -175,7 +175,7 @@ class GradientMethod(Alg):
             util.move_to(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
 
         if self.accelerate or self.proxg is not None:
-            self.residual = util.move(util.norm(self.x - self.x_old) / self.alpha)
+            self.residual = util.move(util.norm((self.x - self.x_old) / self.alpha**0.5))
         else:
             self.residual = util.move(util.norm(gradf_x))
             
@@ -341,9 +341,9 @@ class PrimalDualHybridGradient(Alg):
         AH (function): Function to compute the adjoint linear mapping of `A`.
         x (array): Primal solution.
         u (array): Dual solution.
-        tau (float): Primal step-size.
-        sigma (float): Dual step-size.
-        theta (float): Primal extrapolation parameter.
+        tau (float or array): Primal step-size.
+        sigma (float or array): Dual step-size.
+        gamma (float): Strong convexity parameter of g, or f^*.
         P (function): Function to compute precondition primal variable.
         D (function): Function to compute precondition dual variable.
         max_iter (int): Maximum number of iterations.
@@ -356,7 +356,8 @@ class PrimalDualHybridGradient(Alg):
     """
     def __init__(
             self, proxfc, proxg, A, AH, x, u,
-            tau, sigma, theta, P=lambda x: x, D=lambda x: x, max_iter=100, progress_bar=True
+            tau, sigma, gamma_primal=0, gamma_dual=0,
+            P=lambda x: x, D=lambda x: x, max_iter=100, progress_bar=True
     ):
 
         self.proxfc = proxfc
@@ -370,10 +371,8 @@ class PrimalDualHybridGradient(Alg):
 
         self.tau = tau
         self.sigma = sigma
-        self.theta = theta
-
-        self.P = P
-        self.D = D
+        self.gamma_primal = gamma_primal
+        self.gamma_dual = gamma_dual
 
         super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
 
@@ -387,19 +386,22 @@ class PrimalDualHybridGradient(Alg):
         util.move_to(self.u_old, self.u)
         util.move_to(self.x_old, self.x)
 
-        Ax_ext = self.A(self.x_ext)
-        if self.D is not None:
-            Ax_ext = self.D(Ax_ext)
-            
-        util.move_to(self.u, self.proxfc(self.sigma, self.u + self.sigma * Ax_ext))
+        util.move_to(self.u, self.proxfc(self.sigma, self.u + self.sigma * self.A(self.x_ext)))
+        util.move_to(self.x, self.proxg(self.tau, self.x - self.tau * self.AH(self.u)))
 
-        AHu = self.AH(self.u)
-        if self.P is not None:
-            AHu = self.P(AHu)
-            
-        util.move_to(self.x, self.proxg(self.tau, self.x - self.tau * AHu))
+        xp = self.device.xp
+        if self.gamma_primal > 0 and self.gamma_dual == 0:
+            theta = 1 / (1 + 2 * self.gamma_primal * xp.amin(xp.abs(self.tau)))**0.5
+            self.tau *= theta
+            self.sigma /= theta
+        elif self.gamma_primal == 0 and self.gamma_dual > 0:
+            theta = 1 / (1 + 2 * self.gamma_dual * xp.amin(xp.abs(self.sigma)))**0.5
+            self.tau /= theta
+            self.sigma *= theta
+        else:
+            theta = 1
 
-        util.move_to(self.x_ext, self.x + self.theta * (self.x - self.x_old))
+        util.move_to(self.x_ext, self.x + theta * (self.x - self.x_old))
 
     def _cleanup(self):
         del self.x_ext
