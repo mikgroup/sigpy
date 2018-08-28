@@ -45,21 +45,3 @@ class TestThresh(unittest.TestCase):
             lamda = cp.array([1.0])
 
             cp.testing.assert_allclose(thresh.hard_thresh(lamda, x), y)
-
-        def test_elitist_thresh_cuda(self):
-            lamda = 1.0
-            x = np.array([-2, -1.5, -1, 0.5, 0, 0.5, 1, 1.5, 2])
-            y = thresh.elitist_thresh(lamda, x)
-
-            y_cuda = thresh.elitist_thresh(lamda, cp.array(x))
-
-            cp.testing.assert_allclose(y, y_cuda,
-                                       atol=1e-7, rtol=1e-7)
-
-            lamda = 100.0
-            y = thresh.elitist_thresh(lamda, x)
-
-            y_cuda = thresh.elitist_thresh(lamda, cp.array(x))
-
-            cp.testing.assert_allclose(y, y_cuda,
-                                       atol=1e-7, rtol=1e-7)

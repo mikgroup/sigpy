@@ -37,7 +37,7 @@ class TestApp(unittest.TestCase):
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
         img_rec = app.SenseRecon(
-            ksp, mps, lamda, alg_name='PrimalDualHybridGradient').run()
+            ksp, mps, lamda, alg_name='PrimalDualHybridGradient', max_iter=1000).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_SenseConstrainedRecon(self):
@@ -56,7 +56,7 @@ class TestApp(unittest.TestCase):
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
         img_rec = app.L1WaveletRecon(ksp, mps, lamda, alg_name='PrimalDualHybridGradient',
-                                     max_iter=100).run()
+                                     max_iter=1000).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_L1WaveletConstrainedRecon(self):
@@ -69,7 +69,7 @@ class TestApp(unittest.TestCase):
     def test_shepp_logan_TotalVariationRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         lamda = 0
-        img_rec = app.TotalVariationRecon(ksp, mps, lamda).run()
+        img_rec = app.TotalVariationRecon(ksp, mps, lamda, max_iter=1000).run()
 
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 

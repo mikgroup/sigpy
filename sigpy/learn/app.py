@@ -249,6 +249,7 @@ class LinearRegression(sp.app.App):
 
         num_data = len(output)
         num_batches = num_data // batch_size
+        self.device = device
         self.batch_size = batch_size
         self.input = input
         self.output = output

@@ -131,7 +131,7 @@ class TestAlg(unittest.TestCase):
             (1 + lamda * alpha),
             lambda x: np.matmul(A, x),
             lambda x: np.matmul(A.T, x),
-            x, u, tau, sigma, theta)
+            x, u, tau, sigma, theta, max_iter=1000)
 
         alg_method.init()
         while(not alg_method.done()):
