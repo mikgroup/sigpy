@@ -88,8 +88,8 @@ class Stack(Prox):
 
     Args:
        proxs (list of proxs): Prox of the same shape.
-    """
 
+    """
     def __init__(self, proxs):
         self.nops = len(proxs)
         assert(self.nops > 0)
@@ -101,10 +101,14 @@ class Stack(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
+        if np.isscalar(alpha):
+            alphas = [alpha] * self.nops
+        else:
+            alphas = util.split(alpha, self.shapes)
 
         inputs = util.split(input, self.shapes)
         outputs = [prox(alpha, input)
-                   for prox, input in zip(self.proxs, inputs)]
+                   for prox, input, alpha in zip(self.proxs, inputs, alphas)]
         output = util.vec(outputs)
 
         return output
@@ -230,24 +234,3 @@ class L1Proj(Prox):
     def _prox(self, alpha, input):
 
         return thresh.l1_proj(self.epsilon, input)
-
-
-class L1L2Reg(Prox):
-    """Proximal operator for lamda * sum_j ||x_j||_1^2
-
-    Args:
-        shape (tuple of ints): input shape.
-        lamda (float): regularization parameter.
-        axes (None or tuple of ints): Axes to perform operation.
-    """
-
-    def __init__(self, shape, lamda, axes=None):
-
-        self.lamda = lamda
-        self.axes = axes
-
-        super().__init__(shape)
-
-    def _prox(self, alpha, input):
-
-        return thresh.elitist_thresh(self.lamda * alpha, input, axes=self.axes)
