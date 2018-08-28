@@ -3,8 +3,8 @@ import logging
 import sigpy as sp
 
 
-def sense_kspace_precond(mps, weights=1, coord=None, lamda=0, device=sp.util.cpu_device):
-    """Compute L2 optimized Sense diagonal preconditioner in Fourier domain.
+def fourier_diag_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_device):
+    """Compute L2 optimized diagonal preconditioner in Fourier domain.
 
     Considers the optimization problem:
         p = argmin_p 1 / 2 || diag(p) W F S S^H F^H W^H - I ||_2^2
@@ -12,13 +12,13 @@ def sense_kspace_precond(mps, weights=1, coord=None, lamda=0, device=sp.util.cpu
     F is the Fourier operator, and S is the sensitivity operator.
 
     Args:
-        mps (array) - sensitivity maps of shape [num_coils] + image shape.
-        weights (array) - k-space weights.
-        coord (array) - k-space coordinates of shape [...] + [ndim].
-        lamda (float) - regularization.
+        mps (array): sensitivity maps of shape [num_coils] + image shape.
+        weights (array): k-space weights.
+        coord (array): k-space coordinates of shape [...] + [ndim].
+        lamda (float): regularization.
 
     Returns:
-        precond (array) - k-space preconditioner of same shape as k-space.
+        array: k-space preconditioner of same shape as k-space.
     """
     dtype = mps.dtype
     mps = sp.util.move(mps, device)
@@ -26,7 +26,9 @@ def sense_kspace_precond(mps, weights=1, coord=None, lamda=0, device=sp.util.cpu
     if coord is not None:
         coord = sp.util.move(coord, device)
 
-    if not np.isscalar(weights):
+    if weights is None:
+        weights = 1
+    else:
         weights = sp.util.move(weights, device)
 
     device = sp.util.Device(device)
@@ -42,7 +44,6 @@ def sense_kspace_precond(mps, weights=1, coord=None, lamda=0, device=sp.util.cpu
     scale = sp.util.prod(img2_shape)**1.5 / sp.util.prod(img_shape)
 
     with device:
-        logger.debug('Getting 2x over-sampled point spread function.')
         if coord is None:
             slc = [slice(None, None, 2)] * ndim
 
@@ -57,28 +58,25 @@ def sense_kspace_precond(mps, weights=1, coord=None, lamda=0, device=sp.util.cpu
 
             psf = sp.nufft.nufft_adjoint(ones, coord2, img2_shape)
 
-        logger.debug('Getting cross-correlation.')
-        density = []
+        p_inv = []
         for mps_i in mps:
             mps_i_norm2 = sp.util.norm2(mps_i)
             xcorr_fourier = 0
             for mps_j in mps:
-                xcorr_fourier += xp.abs(sp.fft.fft(mps_i *
-                                                   xp.conj(mps_j), img2_shape))**2
+                xcorr_fourier += xp.abs(sp.fft.fft(mps_i * xp.conj(mps_j), img2_shape))**2
 
             xcorr = sp.fft.ifft(xcorr_fourier)
-            del xcorr_fourier
             xcorr *= psf
             if coord is None:
-                density_i = sp.fft.fft(xcorr)[slc]
+                p_inv_i = sp.fft.fft(xcorr)[slc]
             else:
-                density_i = sp.nufft.nufft(xcorr, coord2)
+                p_inv_i = sp.nufft.nufft(xcorr, coord2)
 
-            density_i *= weights**0.5
-            density.append(density_i * scale / mps_i_norm2)
+            p_inv_i *= weights**0.5
+            p_inv.append(p_inv_i * scale / mps_i_norm2)
 
-        density = (xp.abs(xp.stack(density, axis=0)) + lamda) / (1 + lamda)
-        density[density == 0] = 1
-        precond = 1 / density
+        p_inv = (xp.abs(xp.stack(p_inv, axis=0)) + lamda) / (1 + lamda)
+        p_inv[p_inv == 0] = 1
+        p = 1 / p_inv
 
-        return precond.astype(dtype)
+        return p.astype(dtype)

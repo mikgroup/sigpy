@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
 class TestPrecond(unittest.TestCase):
 
-    def test_sense_kspace_precond(self):
+    def test_fourier_precond(self):
         nc = 4
         nx = 14
         shape = (nc, nx)
@@ -43,11 +43,11 @@ class TestPrecond(unittest.TestCase):
                         density[c, i] += abs(AAH[c, i, d, j])**2 / \
                             (abs(AAH[c, i, c, i]) + 1e-11)
 
-        pre = precond.sense_kspace_precond(mps, weights=weights)
+        pre = precond.fourier_precond(mps, weights=weights)
 
         npt.assert_allclose(1.0 / pre[pre != 1], density[density != 0])
 
-    def test_sense_kspace_precond_noncart(self):
+    def test_fourier_precond_noncart(self):
         n = 10
         shape = [1, n]
         mps = sp.util.ones(shape)
@@ -68,16 +68,16 @@ class TestPrecond(unittest.TestCase):
             for j in range(n):
                 density[i] += abs(AAH[i, j])**2 / (abs(AAH[i, i]) + 1e-11)
 
-        pre = precond.sense_kspace_precond(mps, coord=coord)[0]
+        pre = precond.fourier_precond(mps, coord=coord)[0]
         npt.assert_allclose(1.0 / pre, density, atol=1e-2, rtol=1e-2)
 
-    def test_sense_kspace_precond_simple(self):
+    def test_fourier_precond_simple(self):
         # Check identity
         mps_shape = [1, 1]
 
         mps = np.ones(mps_shape, dtype=np.complex)
 
-        pre = precond.sense_kspace_precond(mps)
+        pre = precond.fourier_precond(mps)
 
         npt.assert_allclose(pre, np.ones(mps_shape))
 
@@ -86,7 +86,7 @@ class TestPrecond(unittest.TestCase):
 
         mps = np.ones(mps_shape, dtype=np.complex)
 
-        pre = precond.sense_kspace_precond(mps)
+        pre = precond.fourier_precond(mps)
 
         npt.assert_allclose(pre, np.ones(mps_shape))
 
@@ -95,7 +95,7 @@ class TestPrecond(unittest.TestCase):
 
         mps = np.ones(mps_shape, dtype=np.complex)
 
-        pre = precond.sense_kspace_precond(mps)
+        pre = precond.fourier_precond(mps)
 
         npt.assert_allclose(pre, np.ones(mps_shape))
 
@@ -105,18 +105,18 @@ class TestPrecond(unittest.TestCase):
         mps = np.ones(mps_shape, dtype=np.complex)
         weights = np.array([1, 0, 1], dtype=np.complex)
 
-        pre = precond.sense_kspace_precond(mps, weights=weights)
+        pre = precond.fourier_precond(mps, weights=weights)
 
         npt.assert_allclose(pre, [[1, 1, 1]])
 
-    def test_sense_kspace_precond_simple_noncart(self):
+    def test_fourier_precond_simple_noncart(self):
         # Check identity
         mps_shape = [1, 1]
 
         mps = np.ones(mps_shape, dtype=np.complex)
         coord = np.array([[0.0]])
 
-        pre = precond.sense_kspace_precond(mps, coord=coord)
+        pre = precond.fourier_precond(mps, coord=coord)
 
         npt.assert_allclose(pre, [[1.0]], atol=1, rtol=1e-1)
 
@@ -125,6 +125,6 @@ class TestPrecond(unittest.TestCase):
         mps = np.ones(mps_shape, dtype=np.complex)
         coord = np.array([[0.0], [-1], [1]])
 
-        pre = precond.sense_kspace_precond(mps, coord=coord)
+        pre = precond.fourier_precond(mps, coord=coord)
 
         npt.assert_allclose(pre, [[1.0, 1.0, 1.0]], atol=1, rtol=1e-1)

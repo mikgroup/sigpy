@@ -129,16 +129,9 @@ class LinearLeastSquares(App):
     def __init__(self, A, y, x, proxg=None,
                  lamda=0, G=None, g=None, R=None, weights=1, mu=0, z=0,
                  alg_name=None, max_iter=100,
-<<<<<<< 24c68e3f427682fb23ed7052871162ba81c65548
-                 P=None, D=None, proxfc_D=None,
-                 alpha=None, max_power_iter=10, accelerate=True,
-                 tau=None, sigma=None, theta=1,
-                 save_objective_values=False, progress_bar=True):
-=======
                  P=None, alpha=None, max_power_iter=10, accelerate=True,
                  tau=None, sigma=None,
-                 save_objective_values=False):
->>>>>>> Merged preconditioning with step size for primal-dual and gradient method.
+                 save_objective_values=False, progress_bar=True):
         self.A = A
         self.y = y
         self.x = x
