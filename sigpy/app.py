@@ -286,12 +286,12 @@ class LinearLeastSquares(App):
             A = self.A
 
         if self.proxg is None:
-            self.proxg = prox.NoOp(self.x.shape)
+            proxg = prox.NoOp(self.x.shape)
 
         if self.G is None:
             proxfc = prox.L2Reg(self.y.shape, 1, y=-y)
             u = util.zeros_like(self.y)
-            self.alg = PrimalDualHybridGradient(proxfc, self.proxg, A, A.H, self.x, u,
+            self.alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, u,
                                                 self.tau, self.sigma, gamma_dual=1,
                                                 max_iter=self.max_iter,
                                                 progress_bar=self.progress_bar)
