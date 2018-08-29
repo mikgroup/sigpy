@@ -425,7 +425,7 @@ class L2ConstrainedMinimization(App):
 
         self.x = x
 
-        if weights:
+        if weights is None:
             with util.get_device(y):
                 weights_sqrt = weights**0.5
                 y = weights_sqrt * y
