@@ -340,7 +340,8 @@ class PrimalDualHybridGradient(Alg):
         u (array): Dual solution.
         tau (float or array): Primal step-size.
         sigma (float or array): Dual step-size.
-        gamma (float): Strong convexity parameter of g, or f^*.
+        gamma_primal (float): Strong convexity parameter of g.
+        gamma_dual (float): Strong convexity parameter of f^*.
         P (function): Function to compute precondition primal variable.
         D (function): Function to compute precondition dual variable.
         max_iter (int): Maximum number of iterations.
