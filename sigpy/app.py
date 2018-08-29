@@ -87,7 +87,7 @@ class LinearLeastSquares(App):
     Solves for the following problem, with optional weights and regularizations:
 
     .. math::
-        \min_x \frac{1}{2} \| W^{1/2} (A x - y) \|_2^2 + g(G x) + 
+        \min_x \frac{1}{2} \| A x - y \|_W^2 + g(G x) + 
         \frac{\lambda}{2} \| R x \|_2^2 + \frac{\mu}{2} \| x - z \|_2^2
 
     Three algorithms can be used: `ConjugateGradient`, `GradientMethod`,
@@ -319,13 +319,14 @@ class LinearLeastSquares(App):
             self.alpha = 1 / max_eig_app.run()
 
     def _get_tau(self):
-        if self.G is None:
-            A = self.A
-        else:
-            A = linop.Vstack([self.A, self.G])
+        W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
+        A = W_half * self.A
+        
+        if self.G is not None:
+            A = linop.Vstack([A, self.G])
             
-        W = linop.Multiply(A.oshape, self.sigma * self.weights)
-        AHA = A.H * W * A
+        S = linop.Multiply(A.oshape, self.sigma)
+        AHA = A.H * S * A
 
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
@@ -335,14 +336,14 @@ class LinearLeastSquares(App):
             self.tau = 1 / max_eig_app.run()
 
     def _get_sigma(self):
-        if self.G is None:
-            A = self.A
-        else:
-            A = linop.Vstack([self.A, self.G])
+        W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
+        A = W_half * self.A
+        
+        if self.G is not None:
+            A = linop.Vstack([A, self.G])
             
-        W_half = linop.Multiply(A.oshape, self.weights**0.5)
-        T = linop.Multiply(A.oshape, self.tau)
-        AAH = W_half.H * A * T * A.H * W_half
+        T = linop.Multiply(A.ishape, self.tau)
+        AAH = A * T * A.H
 
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AAH, dtype=self.x.dtype,
