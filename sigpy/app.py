@@ -127,7 +127,7 @@ class LinearLeastSquares(App):
 
     """
     def __init__(self, A, y, x, proxg=None,
-                 lamda=0, G=None, g=None, R=None, weights=1, mu=0, z=0,
+                 lamda=0, G=None, g=None, R=None, weights=None, mu=0, z=0,
                  alg_name=None, max_iter=100,
                  P=None, alpha=None, max_power_iter=10, accelerate=True,
                  tau=None, sigma=None,
@@ -158,11 +158,14 @@ class LinearLeastSquares(App):
 
     def _init(self):
         if isinstance(self.alg, ConjugateGradient):
-            with util.get_device(self.y):
-                w_y = self.weights * self.y
+            if self.weights:
+                with util.get_device(self.y):
+                    y = self.weights * self.y
+            else:
+                y = self.y
 
             with util.get_device(self.x):
-                self.alg.b = self.A.H(w_y)
+                self.alg.b = self.A.H(y)
                 self.alg.b += self.mu * self.z
 
         elif isinstance(self.alg, GradientMethod):
@@ -226,9 +229,12 @@ class LinearLeastSquares(App):
 
     def _get_ConjugateGradient(self):
         I = linop.Identity(self.x.shape)
-        W = linop.Multiply(self.A.oshape, self.weights)
-
-        AHA = self.A.H * W * self.A
+        if self.weights:
+            W = linop.Multiply(self.A.oshape, self.weights)
+            AHA = self.A.H * W * self.A
+        else:
+            AHA = self.A.H * self.A
+            
         if self.lamda != 0:
             if self.R is None:
                 AHA += self.lamda * I
@@ -246,7 +252,8 @@ class LinearLeastSquares(App):
         def gradf(x):
             with util.get_device(self.y):
                 r = self.A(x) - self.y
-                r *= self.weights
+                if self.weights:
+                    r *= self.weights
                 
             with util.get_device(self.x):
                 gradf_x = self.A.H(r)
@@ -267,27 +274,31 @@ class LinearLeastSquares(App):
                                   progress_bar=self.progress_bar)
 
     def _get_PrimalDualHybridGradient(self):
-        with util.get_device(self.y):
-            weights_sqrt = self.weights**0.5
-            w_y = weights_sqrt * self.y
+        if self.weights:
+            with util.get_device(self.y):
+                weights_sqrt = self.weights**0.5
+                y = weights_sqrt * self.y
 
-        W_sqrt = linop.Multiply(self.A.oshape, weights_sqrt)
-        w_A = W_sqrt * self.A
+            W_sqrt = linop.Multiply(self.A.oshape, weights_sqrt)
+            A = W_sqrt * self.A
+        else:
+            y = self.y
+            A = self.A
 
         if self.proxg is None:
             self.proxg = prox.NoOp(self.x.shape)
 
         if self.G is None:
-            proxfc = prox.L2Reg(self.y.shape, 1, y=-w_y)
+            proxfc = prox.L2Reg(self.y.shape, 1, y=-y)
             u = util.zeros_like(self.y)
-            self.alg = PrimalDualHybridGradient(proxfc, self.proxg, w_A, w_A.H, self.x, u,
+            self.alg = PrimalDualHybridGradient(proxfc, self.proxg, A, A.H, self.x, u,
                                                 self.tau, self.sigma, gamma_dual=1,
                                                 max_iter=self.max_iter,
                                                 progress_bar=self.progress_bar)
         else:
-            AG = linop.Vstack([w_A, self.G])
+            AG = linop.Vstack([A, self.G])
 
-            proxf1c = prox.L2Reg(self.y.shape, 1, y=-w_y)
+            proxf1c = prox.L2Reg(self.y.shape, 1, y=-y)
             proxf2 = self.proxg
             proxfc = prox.Stack([proxf1c, prox.Conj(proxf2)])
             proxg = prox.NoOp(self.x.shape)
@@ -299,8 +310,11 @@ class LinearLeastSquares(App):
 
     def _get_alpha(self):
         I = linop.Identity(self.x.shape)
-        W = linop.Multiply(self.A.oshape, self.weights)
-        AHA = self.A.H * W * self.A
+        if self.weights:
+            W = linop.Multiply(self.A.oshape, self.weights)
+            AHA = self.A.H * W * self.A
+        else:
+            AHA = self.A.H * self.A
 
         if self.lamda != 0:
             if self.R is None:
@@ -319,9 +333,12 @@ class LinearLeastSquares(App):
             self.alpha = 1 / max_eig_app.run()
 
     def _get_tau(self):
-        W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
-        A = W_half * self.A
-        
+        if self.weights:
+            W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
+            A = W_half * self.A
+        else:
+            A = self.A
+            
         if self.G is not None:
             A = linop.Vstack([A, self.G])
             
@@ -336,9 +353,12 @@ class LinearLeastSquares(App):
             self.tau = 1 / max_eig_app.run()
 
     def _get_sigma(self):
-        W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
-        A = W_half * self.A
-        
+        if self.weights:
+            W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
+            A = W_half * self.A
+        else:
+            A = self.A
+            
         if self.G is not None:
             A = linop.Vstack([A, self.G])
             
@@ -358,9 +378,10 @@ class LinearLeastSquares(App):
         xp = device.xp
         with device:
             r = self.A(self.x) - self.y
-            r *= self.weights**0.5
-            obj = 1 / 2 * xp.sum(xp.abs(r)**2)
+            if self.weights:
+                r *= self.weights**0.5
 
+            obj = 1 / 2 * xp.sum(xp.abs(r)**2)
             if self.lamda > 0:
                 if self.R is None:
                     obj += self.lamda / 2 * xp.sum(xp.abs(self.x)**2)
@@ -398,14 +419,19 @@ class L2ConstrainedMinimization(App):
 
     """
 
-    def __init__(self, A, y, x, proxg, eps, G=None, weights=1,
+    def __init__(self, A, y, x, proxg, eps, G=None, weights=None,
                  max_iter=100, tau=None, sigma=None, theta=1,
                  progress_bar=True):
 
         self.x = x
 
-        W_sqrt = linop.Multiply(A.oshape, weights**0.5)
-        A = W_sqrt * A
+        if weights:
+            with util.get_device(y):
+                weights_sqrt = weights**0.5
+                y = weights_sqrt * y
+
+            W_sqrt = linop.Multiply(A.oshape, weights_sqrt)
+            A = W_sqrt * A
 
         if G is None:
             self.max_eig_app = MaxEig(A.H * A, dtype=x.dtype, device=util.get_device(x))
