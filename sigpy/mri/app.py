@@ -13,6 +13,7 @@ def _estimate_weights(ksp, weights, coord):
     if np.isscalar(weights) and coord is None:
         with sp.util.get_device(ksp):
             weights = sp.util.rss(ksp, axes=(0, )) > 0
+
     return weights
 
 
