@@ -173,8 +173,10 @@ class AllReduce(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        self.comm.allreduce(input)
-        return input
+        with util.get_device(input):
+            output = input.copy()
+            self.comm.allreduce(output)
+            return output
 
     def _adjoint_linop(self):
         return AllReduceAdjoint(self.ishape, self.comm)
