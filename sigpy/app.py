@@ -182,7 +182,7 @@ class LinearLeastSquares(App):
             elif self.tau is None and self.sigma is None:
                 self.sigma = 1
                 self._get_tau()
-                
+
                 self.alg.sigma = self.sigma
                 self.alg.tau = self.tau
                 
@@ -381,15 +381,15 @@ class LinearLeastSquares(App):
             if self.weights:
                 r *= self.weights**0.5
 
-            obj = 1 / 2 * xp.sum(xp.abs(r)**2)
+            obj = 1 / 2 * util.norm2(r)
             if self.lamda > 0:
                 if self.R is None:
-                    obj += self.lamda / 2 * xp.sum(xp.abs(self.x)**2)
+                    obj += self.lamda / 2 * util.norm2(self.x)
                 else:
-                    obj += self.lamda / 2 * xp.sum(xp.abs(self.R(self.x))**2)
+                    obj += self.lamda / 2 * util.norm2(self.R(self.x))
 
             if self.mu != 0:
-                obj += self.mu / 2 * xp.sum(xp.abs(self.x - self.z)**2)
+                obj += self.mu / 2 * util.norm2(self.x - self.z)
 
             if self.proxg is not None:
                 if self.g is None:
