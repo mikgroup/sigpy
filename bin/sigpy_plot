@@ -22,18 +22,18 @@ if __name__ == "__main__":
     if args.command == 'image':
         import numpy as np
         import sigpy.plot as plt
-        input = np.load(args.filename, mmap_mode='r')
+        input = np.load(args.filename)
         plt.Image(input)
         
     elif args.command == 'line':
         import numpy as np
         import sigpy.plot as plt
-        input = np.load(args.filename, mmap_mode='r')
+        input = np.load(args.filename)
         plt.Line(input)
     elif args.command == 'scatter':
         import numpy as np
         import sigpy.plot as plt
-        input = np.load(args.filename, mmap_mode='r')
+        input = np.load(args.filename)
         plt.Scatter(input)
     else:
         parser.print_help()
