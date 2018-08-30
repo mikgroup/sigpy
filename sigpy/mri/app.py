@@ -225,7 +225,6 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         Magnetic Resonance in Medicine, 57(6), 1086-1098.
 
     """
-
     def __init__(self, ksp, mps, lamda,
                  weights=1, coord=None, device=sp.util.cpu_device, **kwargs):
         ksp, mps, weights, coord = _move_to_device(
@@ -272,7 +271,6 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
        :func:`sigpy.mri.app.TotalVariationRecon`
 
     """
-
     def __init__(
             self, ksp, mps, eps,
             weights=1, coord=None, device=sp.util.cpu_device, **kwargs):
@@ -321,7 +319,6 @@ class JsenseRecon(sp.app.App):
         Magnetic Resonance in Medicine, 60(#), 674-682.
 
     """
-
     def __init__(self, ksp,
                  mps_ker_width=12, ksp_calib_width=24,
                  lamda=0, device=sp.util.cpu_device,

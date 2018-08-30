@@ -228,24 +228,20 @@ class ConjugateGradient(Alg):
             self.p = z
 
         self.zero_gradient = False
-
         self.rzold = util.dot(self.r, z)
         self.residual = util.move(self.rzold**0.5)
 
     def _update(self):
         Ap = self.A(self.p)
         pAp = util.dot(self.p, Ap)
-
         if pAp == 0:
             self.zero_gradient = True
             return
 
         self.alpha = self.rzold / pAp
         util.axpy(self.x, self.alpha, self.p)
-
         if self.iter < self.max_iter - 1:
             util.axpy(self.r, -self.alpha, Ap)
-
             if self.P is not None:
                 z = self.P(self.r)
             else:
@@ -253,13 +249,10 @@ class ConjugateGradient(Alg):
                 
             rznew = util.dot(self.r, z)
             beta = rznew / self.rzold
-
             util.xpay(self.p, beta, z)
-
             self.rzold = rznew
 
         self.residual = util.move(self.rzold**0.5)
-        
         if self.progress_bar:
             self.pbar.set_postfix(resid=self.residual)
 
@@ -294,7 +287,6 @@ class NewtonsMethod(Alg):
     """
     def __init__(self, gradf, hessf, proxHg, x,
                  max_iter=10, sigma=(3 - 5**0.5) / 2, progress_bar=True):
-
         self.gradf = gradf
         self.hessf = hessf
         self.proxHg = proxHg
@@ -305,15 +297,10 @@ class NewtonsMethod(Alg):
         super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
 
     def _update(self):
-
         hessfx = self.hessf(self.x)
-
         s = self.proxHg(hessfx, hessfx(self.x) - self.gradf(self.x))
-
         d = s - self.x
-
         self.lamda = util.dot(d, hessfx(d))**0.5
-        
         if self.progress_bar:
             self.pbar.set_postfix(lamda=self.lamda)
 

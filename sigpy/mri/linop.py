@@ -2,7 +2,7 @@ import numpy as np
 import sigpy as sp
 
 
-__all__ = ['Sense', 'SenseMultiply', 'SenseCombine', 'ConvImage', 'ConvSense']
+__all__ = ['Sense', 'ConvImage', 'ConvSense']
 
 
 def Sense(mps, coord=None, ishape=None):
