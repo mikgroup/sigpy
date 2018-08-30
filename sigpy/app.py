@@ -287,6 +287,8 @@ class LinearLeastSquares(App):
 
         if self.proxg is None:
             proxg = prox.NoOp(self.x.shape)
+        else:
+            proxg = self.proxg
 
         if self.G is None:
             proxfc = prox.L2Reg(self.y.shape, 1, y=-y)
