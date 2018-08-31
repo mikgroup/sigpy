@@ -24,7 +24,7 @@ def interp(input, width, table, coord):
     ndim = coord.shape[-1]
 
     batch_shape = input.shape[:-ndim]
-    batch = util.prod(batch_shape)
+    batch_size = util.prod(batch_shape)
 
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
@@ -36,15 +36,15 @@ def interp(input, width, table, coord):
     table = util.move(table, device)
 
     with device:
-        input = input.reshape([batch] + list(input.shape[-ndim:]))
+        input = input.reshape([batch_size] + list(input.shape[-ndim:]))
         coord = coord.reshape([npts, ndim])
-        output = xp.zeros([batch, npts], dtype=input.dtype)
+        output = xp.zeros([batch_size, npts], dtype=input.dtype)
 
         _interp = _select_interp(ndim, npts, device, isreal)
         if device == util.cpu_device:
             _interp(output, input, width, table, coord)
         else:
-            _interp(output, input, width, table, coord, size=npts * batch)
+            _interp(output, input, width, table, coord, size=npts)
 
         return output.reshape(batch_shape + pts_shape)
 
@@ -66,7 +66,7 @@ def gridding(input, shape, width, table, coord):
     ndim = coord.shape[-1]
 
     batch_shape = shape[:-ndim]
-    batch = util.prod(batch_shape)
+    batch_size = util.prod(batch_shape)
 
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
@@ -76,15 +76,15 @@ def gridding(input, shape, width, table, coord):
     isreal = np.issubdtype(input.dtype, np.floating)
 
     with device:
-        input = input.reshape([batch, npts])
+        input = input.reshape([batch_size, npts])
         coord = coord.reshape([npts, ndim])
-        output = xp.zeros([batch] + list(shape[-ndim:]), dtype=input.dtype)
+        output = xp.zeros([batch_size] + list(shape[-ndim:]), dtype=input.dtype)
 
         _gridding = _select_gridding(ndim, npts, device, isreal)
         if device == util.cpu_device:
             _gridding(output, input, width, table, coord)
         else:
-            _gridding(output, input, width, table, coord, size=npts * batch)
+            _gridding(output, input, width, table, coord, size=npts)
 
         return output.reshape(shape)
 
@@ -164,21 +164,21 @@ def lin_interp(table, x):
 
 @nb.jit(nopython=True, cache=True)
 def _interp1(output, input, width, table, coord):
-    batch, nx = input.shape
+    batch_size, nx = input.shape
     npts = coord.shape[0]
 
     for i in range(npts):
 
-        posx = coord[i, -1]
+        kx = coord[i, -1]
 
-        startx = math.ceil(posx - width / 2)
-        endx = math.floor(posx + width / 2)
+        x0 = math.ceil(kx - width / 2)
+        x1 = math.floor(kx + width / 2)
 
-        for x in range(startx, endx + 1):
+        for x in range(x0, x1 + 1):
 
-            w = lin_interp(table, abs(x - posx) / (width / 2))
+            w = lin_interp(table, abs(x - kx) / (width / 2))
 
-            for b in range(batch):
+            for b in range(batch_size):
                 output[b, i] += w * input[b, x % nx]
 
     return output
@@ -186,21 +186,21 @@ def _interp1(output, input, width, table, coord):
 
 @nb.jit(nopython=True, cache=True)
 def _gridding1(output, input, width, table, coord):
-    batch, nx = output.shape
+    batch_size, nx = output.shape
     npts = coord.shape[0]
 
     for i in range(npts):
 
-        posx = coord[i, -1]
+        kx = coord[i, -1]
 
-        startx = math.ceil(posx - width / 2)
-        endx = math.floor(posx + width / 2)
+        x0 = math.ceil(kx - width / 2)
+        x1 = math.floor(kx + width / 2)
 
-        for x in range(startx, endx + 1):
+        for x in range(x0, x1 + 1):
 
-            w = lin_interp(table, abs(x - posx) / (width / 2))
+            w = lin_interp(table, abs(x - kx) / (width / 2))
 
-            for b in range(batch):
+            for b in range(batch_size):
                 output[b, x % nx] += w * input[b, i]
 
     return output
@@ -209,26 +209,26 @@ def _gridding1(output, input, width, table, coord):
 @nb.jit(nopython=True, cache=True)
 def _interp2(output, input, width, table, coord):
 
-    batch, ny, nx = input.shape
+    batch_size, ny, nx = input.shape
     npts = coord.shape[0]
 
     for i in range(npts):
 
-        posx, posy = coord[i, -1], coord[i, -2]
+        kx, ky = coord[i, -1], coord[i, -2]
 
-        startx, starty = (math.ceil(posx - width / 2),
-                          math.ceil(posy - width / 2))
+        x0, y0 = (math.ceil(kx - width / 2),
+                  math.ceil(ky - width / 2))
 
-        endx, endy = (math.floor(posx + width / 2),
-                      math.floor(posy + width / 2))
+        x1, y1 = (math.floor(kx + width / 2),
+                  math.floor(ky + width / 2))
 
-        for y in range(starty, endy + 1):
-            wy = lin_interp(table, abs(y - posy) / (width / 2))
+        for y in range(y0, y1 + 1):
+            wy = lin_interp(table, abs(y - ky) / (width / 2))
 
-            for x in range(startx, endx + 1):
-                w = wy * lin_interp(table, abs(x - posx) / (width / 2))
+            for x in range(x0, x1 + 1):
+                w = wy * lin_interp(table, abs(x - kx) / (width / 2))
 
-                for b in range(batch):
+                for b in range(batch_size):
                     output[b, i] += w * input[b, y % ny, x % nx]
 
     return output
@@ -236,26 +236,26 @@ def _interp2(output, input, width, table, coord):
 
 @nb.jit(nopython=True, cache=True)
 def _gridding2(output, input, width, table, coord):
-    batch, ny, nx = output.shape
+    batch_size, ny, nx = output.shape
     npts = coord.shape[0]
 
     for i in range(npts):
 
-        posx, posy = coord[i, -1], coord[i, -2]
+        kx, ky = coord[i, -1], coord[i, -2]
 
-        startx, starty = (math.ceil(posx - width / 2),
-                          math.ceil(posy - width / 2))
+        x0, y0 = (math.ceil(kx - width / 2),
+                  math.ceil(ky - width / 2))
 
-        endx, endy = (math.floor(posx + width / 2),
-                      math.floor(posy + width / 2))
+        x1, y1 = (math.floor(kx + width / 2),
+                  math.floor(ky + width / 2))
 
-        for y in range(starty, endy + 1):
-            wy = lin_interp(table, abs(y - posy) / (width / 2))
+        for y in range(y0, y1 + 1):
+            wy = lin_interp(table, abs(y - ky) / (width / 2))
 
-            for x in range(startx, endx + 1):
-                w = wy * lin_interp(table, abs(x - posx) / (width / 2))
+            for x in range(x0, x1 + 1):
+                w = wy * lin_interp(table, abs(x - kx) / (width / 2))
 
-                for b in range(batch):
+                for b in range(batch_size):
                     output[b, y % ny, x % nx] += w * input[b, i]
 
     return output
@@ -263,31 +263,31 @@ def _gridding2(output, input, width, table, coord):
 
 @nb.jit(nopython=True, cache=True)
 def _interp3(output, input, width, table, coord):
-    batch, nz, ny, nx = input.shape
+    batch_size, nz, ny, nx = input.shape
     npts = coord.shape[0]
 
     for i in range(npts):
 
-        posx, posy, posz = coord[i, -1], coord[i, -2], coord[i, -3]
+        kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
 
-        startx, starty, startz = (math.ceil(posx - width / 2),
-                                  math.ceil(posy - width / 2),
-                                  math.ceil(posz - width / 2))
+        x0, y0, z0 = (math.ceil(kx - width / 2),
+                      math.ceil(ky - width / 2),
+                      math.ceil(kz - width / 2))
 
-        endx, endy, endz = (math.floor(posx + width / 2),
-                            math.floor(posy + width / 2),
-                            math.floor(posz + width / 2))
+        x1, y1, z1 = (math.floor(kx + width / 2),
+                      math.floor(ky + width / 2),
+                      math.floor(kz + width / 2))
 
-        for z in range(startz, endz + 1):
-            wz = lin_interp(table, abs(z - posz) / (width / 2))
+        for z in range(z0, z1 + 1):
+            wz = lin_interp(table, abs(z - kz) / (width / 2))
 
-            for y in range(starty, endy + 1):
-                wy = wz * lin_interp(table, abs(y - posy) / (width / 2))
+            for y in range(y0, y1 + 1):
+                wy = wz * lin_interp(table, abs(y - ky) / (width / 2))
 
-                for x in range(startx, endx + 1):
-                    w = wy * lin_interp(table, abs(x - posx) / (width / 2))
+                for x in range(x0, x1 + 1):
+                    w = wy * lin_interp(table, abs(x - kx) / (width / 2))
 
-                    for b in range(batch):
+                    for b in range(batch_size):
                         output[b, i] += w * input[b, z % nz, y % ny, x % nx]
 
     return output
@@ -295,31 +295,31 @@ def _interp3(output, input, width, table, coord):
 
 @nb.jit(nopython=True, cache=True)
 def _gridding3(output, input, width, table, coord):
-    batch, nz, ny, nx = output.shape
+    batch_size, nz, ny, nx = output.shape
     npts = coord.shape[0]
 
     for i in range(npts):
 
-        posx, posy, posz = coord[i, -1], coord[i, -2], coord[i, -3]
+        kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
 
-        startx, starty, startz = (math.ceil(posx - width / 2),
-                                  math.ceil(posy - width / 2),
-                                  math.ceil(posz - width / 2))
+        x0, y0, z0 = (math.ceil(kx - width / 2),
+                      math.ceil(ky - width / 2),
+                      math.ceil(kz - width / 2))
 
-        endx, endy, endz = (math.floor(posx + width / 2),
-                            math.floor(posy + width / 2),
-                            math.floor(posz + width / 2))
+        x1, y1, z1 = (math.floor(kx + width / 2),
+                      math.floor(ky + width / 2),
+                      math.floor(kz + width / 2))
 
-        for z in range(startz, endz + 1):
-            wz = lin_interp(table, abs(z - posz) / (width / 2))
+        for z in range(z0, z1 + 1):
+            wz = lin_interp(table, abs(z - kz) / (width / 2))
 
-            for y in range(starty, endy + 1):
-                wy = wz * lin_interp(table, abs(y - posy) / (width / 2))
+            for y in range(y0, y1 + 1):
+                wy = wz * lin_interp(table, abs(y - ky) / (width / 2))
 
-                for x in range(startx, endx + 1):
-                    w = wy * lin_interp(table, abs(x - posx) / (width / 2))
+                for x in range(x0, x1 + 1):
+                    w = wy * lin_interp(table, abs(x - kx) / (width / 2))
 
-                    for b in range(batch):
+                    for b in range(batch_size):
                         output[b, z % nz, y % ny, x % nx] += w * input[b, i]
 
     return output
@@ -342,8 +342,8 @@ if config.cupy_enabled:
         return (1 - frac) * left + frac * right;
     }
     """
-    pos_mod_cuda = """
-    __device__ inline int pos_mod(int x, int n) {
+    mod_cuda = """
+    __device__ inline int mod(int x, int n) {
         return (x % n + n) % n;
     }
     """
@@ -352,215 +352,102 @@ if config.cupy_enabled:
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
-        const int batch = input.shape()[0];
+        const int batch_size = input.shape()[0];
         const int nx = input.shape()[1];
-        const int b = i % batch;
-        i /= batch;
 
         const int coord_idx[] = {i, 0};
-        const S posx = coord[coord_idx];
-        const int startx = ceil(posx - width / 2.0);
-        const int endx = floor(posx + width / 2.0);
+        const S kx = coord[coord_idx];
+        const int x0 = ceil(kx - width / 2.0);
+        const int x1 = floor(kx + width / 2.0);
 
-        for (int x = startx; x < endx + 1; x++) {
-            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
-            const int input_idx[] = {b, pos_mod(x, nx)};
-            const T v = (T) w * input[input_idx];
-            const int output_idx[] = {b, i};
-            output[output_idx] += v;
-        }
-        """,
-        name='interp1', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
-
-    _gridding1_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S table, raw S coord',
-        '',
-        """
-        const int batch = output.shape()[0];
-        const int nx = output.shape()[1];
-        const int b = i % batch;
-        i /= batch;
-
-        const int coord_idx[] = {i, 0};
-        const S posx = coord[coord_idx];
-        const int startx = ceil(posx - width / 2.0);
-        const int endx = floor(posx + width / 2.0);
-
-        for (int x = startx; x < endx + 1; x++) {
-            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
-            const int input_idx[] = {b, i};
-            const T v = (T) w * input[input_idx];
-            const int output_idx[] = {b, pos_mod(x, nx)};
-            atomicAdd(&output[output_idx], v);
-        }
-        """,
-        name='gridding1', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
-
-    _gridding1_cuda_complex = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S table, raw S coord',
-        '',
-        """
-        const int batch = output.shape()[0];
-        const int nx = output.shape()[1];
-        const int b = i % batch;
-        i /= batch;
-
-        const int coord_idx[] = {i, 0};
-        const S posx = coord[coord_idx];
-        const int startx = ceil(posx - width / 2.0);
-        const int endx = floor(posx + width / 2.0);
-
-        for (int x = startx; x < endx + 1; x++) {
-            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
-            const int input_idx[] = {b, i};
-            const T v = (T) w * input[input_idx];
-            const int output_idx[] = {b, pos_mod(x, nx)};
-            atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
-            atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
-        }
-        """,
-        name='gridding1_complex',
-        preamble=lin_interp_cuda + pos_mod_cuda,
-        reduce_dims=False)
-
-    _interp2_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S table, raw S coord',
-        '',
-        """
-        const int batch = input.shape()[0];
-        const int ny = input.shape()[1];
-        const int nx = input.shape()[2];
-        const int b = i % batch;
-        i /= batch;
-
-        const int coordx_idx[] = {i, 1};
-        const S posx = coord[coordx_idx];
-        const int coordy_idx[] = {i, 0};
-        const S posy = coord[coordy_idx];
-
-        const int startx = ceil(posx - width / 2.0);
-        const int starty = ceil(posy - width / 2.0);
-
-        const int endx = floor(posx + width / 2.0);
-        const int endy = floor(posy + width / 2.0);
-
-        for (int y = starty; y < endy + 1; y++) {
-            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - posy) / (width / 2.0));
-            for (int x = startx; x < endx + 1; x++) {
-                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
-                const int input_idx[] = {b, pos_mod(y, ny), pos_mod(x, nx)};
+        for (int x = x0; x < x1 + 1; x++) {
+            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+            for (int b = 0; b < batch_size; b++) {
+                const int input_idx[] = {b, mod(x, nx)};
                 const T v = (T) w * input[input_idx];
                 const int output_idx[] = {b, i};
                 output[output_idx] += v;
             }
         }
         """,
-        name='interp2', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
+        name='interp1', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
 
-    _gridding2_cuda = cp.ElementwiseKernel(
+    _gridding1_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
-        const int batch = output.shape()[0];
-        const int ny = output.shape()[1];
-        const int nx = output.shape()[2];
-        const int b = i % batch;
-        i /= batch;
+        const int batch_size = output.shape()[0];
+        const int nx = output.shape()[1];
 
-        const int coordx_idx[] = {i, 1};
-        const S posx = coord[coordx_idx];
-        const int coordy_idx[] = {i, 0};
-        const S posy = coord[coordy_idx];
+        const int coord_idx[] = {i, 0};
+        const S kx = coord[coord_idx];
+        const int x0 = ceil(kx - width / 2.0);
+        const int x1 = floor(kx + width / 2.0);
 
-        const int startx = ceil(posx - width / 2.0);
-        const int starty = ceil(posy - width / 2.0);
-
-        const int endx = floor(posx + width / 2.0);
-        const int endy = floor(posy + width / 2.0);
-
-        for (int y = starty; y < endy + 1; y++) {
-            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - posy) / (width / 2.0));
-            for (int x = startx; x < endx + 1; x++) {
-                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
+        for (int x = x0; x < x1 + 1; x++) {
+            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+            for (int b = 0; b < batch_size; b++) {
                 const int input_idx[] = {b, i};
                 const T v = (T) w * input[input_idx];
-                const int output_idx[] = {b, pos_mod(y, ny), pos_mod(x, nx)};
+                const int output_idx[] = {b, mod(x, nx)};
                 atomicAdd(&output[output_idx], v);
             }
         }
         """,
-        name='gridding2', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
+        name='gridding1', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
 
-    _gridding2_cuda_complex = cp.ElementwiseKernel(
+    _gridding1_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
-        const int batch = output.shape()[0];
-        const int ny = output.shape()[1];
-        const int nx = output.shape()[2];
-        const int b = i % batch;
-        i /= batch;
+        const int batch_size = output.shape()[0];
+        const int nx = output.shape()[1];
 
-        const int coordx_idx[] = {i, 1};
-        const S posx = coord[coordx_idx];
-        const int coordy_idx[] = {i, 0};
-        const S posy = coord[coordy_idx];
+        const int coord_idx[] = {i, 0};
+        const S kx = coord[coord_idx];
+        const int x0 = ceil(kx - width / 2.0);
+        const int x1 = floor(kx + width / 2.0);
 
-        const int startx = ceil(posx - width / 2.0);
-        const int starty = ceil(posy - width / 2.0);
-
-        const int endx = floor(posx + width / 2.0);
-        const int endy = floor(posy + width / 2.0);
-
-        for (int y = starty; y < endy + 1; y++) {
-            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - posy) / (width / 2.0));
-            for (int x = startx; x < endx + 1; x++) {
-                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
+        for (int x = x0; x < x1 + 1; x++) {
+            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+            for (int b = 0; b < batch_size; b++) {
                 const int input_idx[] = {b, i};
                 const T v = (T) w * input[input_idx];
-                const int output_idx[] = {b, pos_mod(y, ny), pos_mod(x, nx)};
+                const int output_idx[] = {b, mod(x, nx)};
                 atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
                 atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
             }
         }
         """,
-        name='gridding2_complex',
-        preamble=lin_interp_cuda + pos_mod_cuda,
+        name='gridding1_complex',
+        preamble=lin_interp_cuda + mod_cuda,
         reduce_dims=False)
 
-    _interp3_cuda = cp.ElementwiseKernel(
+    _interp2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
-        const int batch = input.shape()[0];
-        const int nz = input.shape()[1];
-        const int ny = input.shape()[2];
-        const int nx = input.shape()[3];
-        const int b = i % batch;
-        i /= batch;
+        const int batch_size = input.shape()[0];
+        const int ny = input.shape()[1];
+        const int nx = input.shape()[2];
 
-        const int coordz_idx[] = {i, 0};
-        const S posz = coord[coordz_idx];
-        const int coordy_idx[] = {i, 1};
-        const S posy = coord[coordy_idx];
-        const int coordx_idx[] = {i, 2};
-        const S posx = coord[coordx_idx];
+        const int coordx_idx[] = {i, 1};
+        const S kx = coord[coordx_idx];
+        const int coordy_idx[] = {i, 0};
+        const S ky = coord[coordy_idx];
 
-        const int startx = ceil(posx - width / 2.0);
-        const int starty = ceil(posy - width / 2.0);
-        const int startz = ceil(posz - width / 2.0);
+        const int x0 = ceil(kx - width / 2.0);
+        const int y0 = ceil(ky - width / 2.0);
 
-        const int endx = floor(posx + width / 2.0);
-        const int endy = floor(posy + width / 2.0);
-        const int endz = floor(posz + width / 2.0);
+        const int x1 = floor(kx + width / 2.0);
+        const int y1 = floor(ky + width / 2.0);
 
-        for (int z = startz; z < endz + 1; z++) {
-            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - posz) / (width / 2.0));
-            for (int y = starty; y < endy + 1; y++) {
-                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - posy) / (width / 2.0));
-                for (int x = startx; x < endx + 1; x++) {
-                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
-                    const int input_idx[] = {b, pos_mod(z, nz), pos_mod(y, ny), pos_mod(x, nx)};
+        for (int y = y0; y < y1 + 1; y++) {
+            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+            for (int x = x0; x < x1 + 1; x++) {
+                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                for (int b = 0; b < batch_size; b++) {
+                    const int input_idx[] = {b, mod(y, ny), mod(x, nx)};
                     const T v = (T) w * input[input_idx];
                     const int output_idx[] = {b, i};
                     output[output_idx] += v;
@@ -568,91 +455,204 @@ if config.cupy_enabled:
             }
         }
         """,
-        name='interp3', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
+        name='interp2', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
 
-    _gridding3_cuda = cp.ElementwiseKernel(
+    _gridding2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
-        const int batch = output.shape()[0];
-        const int nz = output.shape()[1];
-        const int ny = output.shape()[2];
-        const int nx = output.shape()[3];
-        const int b = i % batch;
-        i /= batch;
+        const int batch_size = output.shape()[0];
+        const int ny = output.shape()[1];
+        const int nx = output.shape()[2];
 
-        const int coordz_idx[] = {i, 0};
-        const S posz = coord[coordz_idx];
-        const int coordy_idx[] = {i, 1};
-        const S posy = coord[coordy_idx];
-        const int coordx_idx[] = {i, 2};
-        const S posx = coord[coordx_idx];
+        const int coordx_idx[] = {i, 1};
+        const S kx = coord[coordx_idx];
+        const int coordy_idx[] = {i, 0};
+        const S ky = coord[coordy_idx];
 
-        const int startx = ceil(posx - width / 2.0);
-        const int starty = ceil(posy - width / 2.0);
-        const int startz = ceil(posz - width / 2.0);
+        const int x0 = ceil(kx - width / 2.0);
+        const int y0 = ceil(ky - width / 2.0);
 
-        const int endx = floor(posx + width / 2.0);
-        const int endy = floor(posy + width / 2.0);
-        const int endz = floor(posz + width / 2.0);
+        const int x1 = floor(kx + width / 2.0);
+        const int y1 = floor(ky + width / 2.0);
 
-        for (int z = startz; z < endz + 1; z++) {
-            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - posz) / (width / 2.0));
-            for (int y = starty; y < endy + 1; y++) {
-                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - posy) / (width / 2.0));
-                for (int x = startx; x < endx + 1; x++) {
-                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
+        for (int y = y0; y < y1 + 1; y++) {
+            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+            for (int x = x0; x < x1 + 1; x++) {
+                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
-                    const int output_idx[] = {b, pos_mod(z, nz), pos_mod(y, ny), pos_mod(x, nx)};
+                    const int output_idx[] = {b, mod(y, ny), mod(x, nx)};
                     atomicAdd(&output[output_idx], v);
                 }
             }
         }
         """,
-        name='gridding3', preamble=lin_interp_cuda + pos_mod_cuda, reduce_dims=False)
+        name='gridding2', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
 
-    _gridding3_cuda_complex = cp.ElementwiseKernel(
+    _gridding2_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
-        const int batch = output.shape()[0];
-        const int nz = output.shape()[1];
-        const int ny = output.shape()[2];
-        const int nx = output.shape()[3];
-        const int b = i % batch;
-        i /= batch;
+        const int batch_size = output.shape()[0];
+        const int ny = output.shape()[1];
+        const int nx = output.shape()[2];
 
-        const int coordz_idx[] = {i, 0};
-        const S posz = coord[coordz_idx];
-        const int coordy_idx[] = {i, 1};
-        const S posy = coord[coordy_idx];
-        const int coordx_idx[] = {i, 2};
-        const S posx = coord[coordx_idx];
+        const int coordx_idx[] = {i, 1};
+        const S kx = coord[coordx_idx];
+        const int coordy_idx[] = {i, 0};
+        const S ky = coord[coordy_idx];
 
-        const int startx = ceil(posx - width / 2.0);
-        const int starty = ceil(posy - width / 2.0);
-        const int startz = ceil(posz - width / 2.0);
+        const int x0 = ceil(kx - width / 2.0);
+        const int y0 = ceil(ky - width / 2.0);
 
-        const int endx = floor(posx + width / 2.0);
-        const int endy = floor(posy + width / 2.0);
-        const int endz = floor(posz + width / 2.0);
+        const int x1 = floor(kx + width / 2.0);
+        const int y1 = floor(ky + width / 2.0);
 
-        for (int z = startz; z < endz + 1; z++) {
-            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - posz) / (width / 2.0));
-            for (int y = starty; y < endy + 1; y++) {
-                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - posy) / (width / 2.0));
-                for (int x = startx; x < endx + 1; x++) {
-                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - posx) / (width / 2.0));
+        for (int y = y0; y < y1 + 1; y++) {
+            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+            for (int x = x0; x < x1 + 1; x++) {
+                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
-                    const int output_idx[] = {b, pos_mod(z, nz), pos_mod(y, ny), pos_mod(x, nx)};
+                    const int output_idx[] = {b, mod(y, ny), mod(x, nx)};
                     atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
                     atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
                 }
             }
         }
         """,
+        name='gridding2_complex',
+        preamble=lin_interp_cuda + mod_cuda,
+        reduce_dims=False)
+
+    _interp3_cuda = cp.ElementwiseKernel(
+        'raw T output, raw T input, raw S width, raw S table, raw S coord',
+        '',
+        """
+        const int batch_size = input.shape()[0];
+        const int nz = input.shape()[1];
+        const int ny = input.shape()[2];
+        const int nx = input.shape()[3];
+
+        const int coordz_idx[] = {i, 0};
+        const S kz = coord[coordz_idx];
+        const int coordy_idx[] = {i, 1};
+        const S ky = coord[coordy_idx];
+        const int coordx_idx[] = {i, 2};
+        const S kx = coord[coordx_idx];
+
+        const int x0 = ceil(kx - width / 2.0);
+        const int y0 = ceil(ky - width / 2.0);
+        const int z0 = ceil(kz - width / 2.0);
+
+        const int x1 = floor(kx + width / 2.0);
+        const int y1 = floor(ky + width / 2.0);
+        const int z1 = floor(kz + width / 2.0);
+
+        for (int z = z0; z < z1 + 1; z++) {
+            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
+            for (int y = y0; y < y1 + 1; y++) {
+                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+                for (int x = x0; x < x1 + 1; x++) {
+                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                    for (int b = 0; b < batch_size; b++) {
+                        const int input_idx[] = {b, mod(z, nz), mod(y, ny), mod(x, nx)};
+                        const T v = (T) w * input[input_idx];
+                        const int output_idx[] = {b, i};
+                        output[output_idx] += v;
+                    }
+                }
+            }
+        }
+        """,
+        name='interp3', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
+
+    _gridding3_cuda = cp.ElementwiseKernel(
+        'raw T output, raw T input, raw S width, raw S table, raw S coord',
+        '',
+        """
+        const int batch_size = output.shape()[0];
+        const int nz = output.shape()[1];
+        const int ny = output.shape()[2];
+        const int nx = output.shape()[3];
+
+        const int coordz_idx[] = {i, 0};
+        const S kz = coord[coordz_idx];
+        const int coordy_idx[] = {i, 1};
+        const S ky = coord[coordy_idx];
+        const int coordx_idx[] = {i, 2};
+        const S kx = coord[coordx_idx];
+
+        const int x0 = ceil(kx - width / 2.0);
+        const int y0 = ceil(ky - width / 2.0);
+        const int z0 = ceil(kz - width / 2.0);
+
+        const int x1 = floor(kx + width / 2.0);
+        const int y1 = floor(ky + width / 2.0);
+        const int z1 = floor(kz + width / 2.0);
+
+        for (int z = z0; z < z1 + 1; z++) {
+            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
+            for (int y = y0; y < y1 + 1; y++) {
+                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+                for (int x = x0; x < x1 + 1; x++) {
+                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                    for (int b = 0; b < batch_size; b++) {
+                        const int input_idx[] = {b, i};
+                        const T v = (T) w * input[input_idx];
+                        const int output_idx[] = {b, mod(z, nz), mod(y, ny), mod(x, nx)};
+                        atomicAdd(&output[output_idx], v);
+                    }
+                }
+            }
+        }
+        """,
+        name='gridding3', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
+
+    _gridding3_cuda_complex = cp.ElementwiseKernel(
+        'raw T output, raw T input, raw S width, raw S table, raw S coord',
+        '',
+        """
+        const int batch_size = output.shape()[0];
+        const int nz = output.shape()[1];
+        const int ny = output.shape()[2];
+        const int nx = output.shape()[3];
+
+        const int coordz_idx[] = {i, 0};
+        const S kz = coord[coordz_idx];
+        const int coordy_idx[] = {i, 1};
+        const S ky = coord[coordy_idx];
+        const int coordx_idx[] = {i, 2};
+        const S kx = coord[coordx_idx];
+
+        const int x0 = ceil(kx - width / 2.0);
+        const int y0 = ceil(ky - width / 2.0);
+        const int z0 = ceil(kz - width / 2.0);
+
+        const int x1 = floor(kx + width / 2.0);
+        const int y1 = floor(ky + width / 2.0);
+        const int z1 = floor(kz + width / 2.0);
+
+        for (int z = z0; z < z1 + 1; z++) {
+            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
+            for (int y = y0; y < y1 + 1; y++) {
+                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+                for (int x = x0; x < x1 + 1; x++) {
+                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                    for (int b = 0; b < batch_size; b++) {
+                        const int input_idx[] = {b, i};
+                        const T v = (T) w * input[input_idx];
+                        const int output_idx[] = {b, mod(z, nz), mod(y, ny), mod(x, nx)};
+                        atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
+                        atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
+                    }
+                }
+            }
+        }
+        """,
         name='gridding3_complex',
-        preamble=lin_interp_cuda + pos_mod_cuda,
+        preamble=lin_interp_cuda + mod_cuda,
         reduce_dims=False)
