@@ -322,7 +322,7 @@ class JsenseRecon(sp.app.App):
     def __init__(self, ksp,
                  mps_ker_width=12, ksp_calib_width=24,
                  lamda=0, device=sp.util.cpu_device,
-                 weights=1, coord=None, max_iter=5,
+                 weights=None, coord=None, max_iter=5,
                  max_inner_iter=5, thresh=0):
         self.ksp = ksp
         self.mps_ker_width = mps_ker_width
@@ -338,12 +338,11 @@ class JsenseRecon(sp.app.App):
         self.dtype = ksp.dtype
         self.num_coils = len(ksp)
 
-        self._init_data()
-        self._init_vars()
-        self._init_model()
-        self._init_alg()
+        self._get_data()
+        self._get_vars()
+        self._get_alg()
 
-    def _init_data(self):
+    def _get_data(self):
         if self.coord is None:
             self.img_shape = self.ksp.shape[1:]
             ndim = len(self.img_shape)
@@ -351,37 +350,35 @@ class JsenseRecon(sp.app.App):
             self.ksp = sp.util.resize(
                 self.ksp, [self.num_coils] + ndim * [self.ksp_calib_width])
 
-            if not np.isscalar(self.weights):
+            if self.weights is not None:
                 self.weights = sp.util.resize(
                     self.weights, ndim * [self.ksp_calib_width])
 
         else:
             self.img_shape = sp.nufft.estimate_shape(self.coord)
-            calib_idx = np.amax(np.abs(self.coord), axis=-
-                                1) < self.ksp_calib_width / 2
+            calib_idx = np.amax(np.abs(self.coord), axis=-1) < self.ksp_calib_width / 2
 
             self.coord = self.coord[calib_idx]
             self.ksp = self.ksp[:, calib_idx]
 
-            if not np.isscalar(self.weights):
+            if self.weights is not None:
                 self.weights = self.weights[calib_idx]
 
         self.ksp = self.ksp / np.abs(self.ksp).max()
         self.ksp = sp.util.move(self.ksp, self.device)
         if self.coord is not None:
             self.coord = sp.util.move(self.coord, self.device)
-        if not np.isscalar(self.weights):
+        if self.weights is not None:
             self.weights = sp.util.move(self.weights, self.device)
 
         self.weights = _estimate_weights(self.ksp, self.weights, self.coord)
 
-    def _init_vars(self):
+    def _get_vars(self):
         ndim = len(self.img_shape)
 
         mps_ker_shape = [self.num_coils] + [self.mps_ker_width] * ndim
         if self.coord is None:
-            img_ker_shape = [i + self.mps_ker_width -
-                             1 for i in self.ksp.shape[1:]]
+            img_ker_shape = [i + self.mps_ker_width - 1 for i in self.ksp.shape[1:]]
         else:
             grd_shape = sp.nufft.estimate_shape(self.coord)
             img_ker_shape = [i + self.mps_ker_width - 1 for i in grd_shape]
@@ -391,14 +388,13 @@ class JsenseRecon(sp.app.App):
         self.mps_ker = sp.util.zeros(
             mps_ker_shape, dtype=self.dtype, device=self.device)
 
-    def _init_model(self):
+    def _get_alg(self):
         self.A_img_ker = linop.ConvSense(
             self.img_ker.shape, self.mps_ker, coord=self.coord)
 
         self.A_mps_ker = linop.ConvImage(
             self.mps_ker.shape, self.img_ker, coord=self.coord)
 
-    def _init_alg(self):
         self.app_mps = sp.app.LinearLeastSquares(
             self.A_mps_ker, self.ksp, self.mps_ker, weights=self.weights,
             lamda=self.lamda, max_iter=self.max_inner_iter)
@@ -407,9 +403,8 @@ class JsenseRecon(sp.app.App):
             self.A_img_ker, self.ksp, self.img_ker, weights=self.weights,
             lamda=self.lamda, max_iter=self.max_inner_iter)
 
-        _alg = sp.alg.AltMin(self.app_mps.run, self.app_img.run, max_iter=self.max_iter)
-
-        super().__init__(_alg)
+        self.alg = sp.alg.AltMin(self.app_mps.run, self.app_img.run,
+                                 max_iter=self.max_iter)
 
     def _output(self):
         xp = self.device.xp
