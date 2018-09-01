@@ -171,20 +171,14 @@ class LinearLeastSquares(App):
         elif isinstance(self.alg, GradientMethod):
             if self.alpha is None:
                 self._get_alpha()
-                self.alg.alpha = self.alpha
         elif isinstance(self.alg, PrimalDualHybridGradient):
             if self.tau is None and self.sigma is not None:
                 self._get_tau()
-                self.alg.tau = self.tau
             if self.tau is not None and self.sigma is None:
                 self._get_sigma()
-                self.alg.sigma = self.sigma
             elif self.tau is None and self.sigma is None:
-                self.sigma = 1
+                self.alg.sigma = 1
                 self._get_tau()
-
-                self.alg.sigma = self.sigma
-                self.alg.tau = self.tau
                 
         if self.save_objective_values:
             self.objective_values = []
@@ -332,7 +326,7 @@ class LinearLeastSquares(App):
                              device=device, max_iter=self.max_power_iter)
 
         with device:
-            self.alpha = 1 / max_eig_app.run()
+            self.alg.alpha = 1 / max_eig_app.run()
 
     def _get_tau(self):
         if self.weights is not None:
@@ -352,7 +346,7 @@ class LinearLeastSquares(App):
                              device=device, max_iter=self.max_power_iter)
 
         with device:
-            self.tau = 1 / max_eig_app.run()
+            self.alg.tau = 1 / max_eig_app.run()
 
     def _get_sigma(self):
         if self.weights is not None:
@@ -373,7 +367,7 @@ class LinearLeastSquares(App):
                              progress_bar=self.progress_bar)
 
         with device:
-            self.sigma = 1 / max_eig_app.run()
+            self.alg.sigma = 1 / max_eig_app.run()
 
     def objective(self):
         device = util.get_device(self.y)
