@@ -35,7 +35,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         :func:`sigpy.app.LinearLeastSquares`
 
     """
-    def __init__(self, y_j, l, lamda=1,
+    def __init__(self, y_j, l, lamda=0.001,
                  mode='full', multi_channel=False, device=sp.util.cpu_device, **kwargs):
         self.y_j = y_j
         self.l = l
@@ -116,7 +116,7 @@ class ConvSparseCoding(sp.app.App):
 
     """
     def __init__(self, y, num_filters, filt_width, batch_size,
-                 lamda=1, alpha=1,
+                 lamda=0.001, alpha=1,
                  max_l_iter=30, max_r_j_iter=50, max_power_iter=10, max_epoch=1,
                  mode='full', multi_channel=False, device=sp.util.cpu_device,
                  checkpoint_path=None):
@@ -162,8 +162,9 @@ class ConvSparseCoding(sp.app.App):
 
     def _summarize(self):
         xp = self.device.xp
-        if self.checkpoint_path is not None:
-            xp.save(self.checkpoint_path, self.l)
+        with self.device:
+            if self.checkpoint_path is not None:
+                xp.save(self.checkpoint_path, self.l)
 
     def _output(self):
         r = ConvSparseCoefficients(self.y, self.l, lamda=self.lamda,
@@ -206,10 +207,11 @@ class ConvSparseCoding(sp.app.App):
         else:
             proxg_l = sp.prox.L2Proj(self.l_shape, 1, axes=range(-self.data_ndim, 0))
             
-        min_l_app = sp.app.LinearLeastSquares(self.A_l, self.y_j, self.l,
-                                              mu=1 / (self.alpha * self.num_batches), z=self.l_old,
-                                              max_power_iter=self.max_power_iter,
-                                              max_iter=self.max_l_iter, proxg=proxg_l)
+        min_l_app = sp.app.LinearLeastSquares(
+            self.A_l, self.y_j, self.l,
+            mu=(1 - self.alpha) / (self.alpha * self.num_batches), z=self.l_old,
+            max_power_iter=self.max_power_iter,
+            max_iter=self.max_l_iter, proxg=proxg_l)
 
         max_iter = self.max_epoch * self.num_batches
         self.alg = sp.alg.AltMin(min_r_j_app.run, min_l_app.run, max_iter=max_iter)
