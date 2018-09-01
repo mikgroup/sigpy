@@ -85,7 +85,7 @@ class PowerMethod(Alg):
         self.max_eig = util.norm(y)
         util.move_to(self.x, y / self.max_eig)
         if self.progress_bar:
-            self.pbar.set_postfix(max_eig=self.max_eig)
+            self.pbar.set_postfix(max_eig=util.move(self.max_eig))
 
 
 class ProximalPointMethod(Alg):
