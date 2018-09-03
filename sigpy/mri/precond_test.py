@@ -11,120 +11,153 @@ if __name__ == '__main__':
 
 class TestPrecond(unittest.TestCase):
 
-    def test_fourier_diag_precond(self):
+    def test_kspace_precond_cart(self):
         nc = 4
-        nx = 14
-        shape = (nc, nx)
+        n = 10
+        shape = (nc, n)
         mps = sp.util.randn(shape)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
-        weights = sp.util.randn([nx]) >= 0
+        weights = sp.util.randn([n]) >= 0
 
         A = sp.linop.Multiply(shape, weights**0.5) * linop.Sense(mps)
 
-        AAH = np.zeros((nc, nx, nc, nx), np.complex)
+        AAH = np.zeros((nc, n, nc, n), np.complex)
         for d in range(nc):
-            for j in range(nx):
-                x = np.zeros((nc, nx), np.complex)
+            for j in range(n):
+                x = np.zeros((nc, n), np.complex)
                 x[d, j] = 1.0
                 AAHx = A(A.H(x))
 
                 for c in range(nc):
-                    for i in range(nx):
+                    for i in range(n):
                         AAH[c, i, d, j] = AAHx[c, i]
 
-        npt.assert_allclose(AAH, AAH.transpose(
-            [2, 3, 0, 1]).conjugate(), atol=1e-7)
-
-        density = np.zeros((nc, nx), np.complex)
+        p_expected = np.ones((nc, n), np.complex)
         for c in range(nc):
-            for i in range(nx):
-                for d in range(nc):
-                    for j in range(nx):
-                        density[c, i] += abs(AAH[c, i, d, j])**2 / \
-                            (abs(AAH[c, i, c, i]) + 1e-11)
+            for i in range(n):
+                if weights[i]:
+                    p_expected_inv_ic = 0
+                    for d in range(nc):
+                        for j in range(n):
+                            p_expected_inv_ic += abs(AAH[c, i, d, j])**2 / abs(AAH[c, i, c, i])
 
-        pre = precond.fourier_diag_precond(mps, weights=weights)
+                    p_expected[c, i] = 1 / p_expected_inv_ic
 
-        npt.assert_allclose(1.0 / pre[pre != 1], density[density != 0])
+        p = precond.kspace_precond(mps, weights=weights)
+        npt.assert_allclose(p[:, weights==1], p_expected[:, weights==1])
 
-    def test_fourier_diag_precond_noncart(self):
+    def test_kspace_precond_noncart(self):
         n = 10
-        shape = [1, n]
-        mps = sp.util.ones(shape)
+        nc = 3
+        shape = [nc, n]
+        mps = sp.util.randn(shape)
+        mps /= np.linalg.norm(mps, axis=0, keepdims=True)
         coord = sp.util.randn([n, 1], dtype=np.float)
 
         A = linop.Sense(mps, coord=coord)
 
-        AAH = np.zeros((n, n), np.complex)
-        for j in range(n):
-            x = np.zeros(shape, np.complex)
-            x[0, j] = 1.0
-            AAHx = A(A.H(x))
-            for i in range(n):
-                AAH[i, j] = AAHx[0, i]
-
-        density = np.zeros([n], np.complex)
-        for i in range(n):
+        AAH = np.zeros((nc, n, nc, n), np.complex)
+        for d in range(nc):
             for j in range(n):
-                density[i] += abs(AAH[i, j])**2 / (abs(AAH[i, i]) + 1e-11)
+                x = np.zeros(shape, np.complex)
+                x[d, j] = 1.0
+                AAHx = A(A.H(x))
+                for c in range(nc):
+                    for i in range(n):
+                        AAH[c, i, d, j] = AAHx[c, i]
 
-        pre = precond.fourier_diag_precond(mps, coord=coord)[0]
-        npt.assert_allclose(1.0 / pre, density, atol=1e-2, rtol=1e-2)
+        p_expected = np.zeros([nc, n], np.complex)
+        for c in range(nc):
+            for i in range(n):
+                p_expected_inv_ic = 0
+                for d in range(nc):
+                    for j in range(n):
+                        p_expected_inv_ic += abs(AAH[c, i, d, j])**2 / abs(AAH[c, i, c, i])
 
-    def test_fourier_diag_precond_simple(self):
+                p_expected[c, i] = 1 / p_expected_inv_ic
+
+        p = precond.kspace_precond(mps, coord=coord)
+        npt.assert_allclose(p, p_expected, atol=1e-2, rtol=1e-2)
+
+    def test_kspace_precond_simple_cart(self):
         # Check identity
         mps_shape = [1, 1]
-
         mps = np.ones(mps_shape, dtype=np.complex)
-
-        pre = precond.fourier_diag_precond(mps)
-
-        npt.assert_allclose(pre, np.ones(mps_shape))
+        p = precond.kspace_precond(mps)
+        npt.assert_allclose(p, np.ones(mps_shape))
 
         # Check scaling
         mps_shape = [1, 3]
-
         mps = np.ones(mps_shape, dtype=np.complex)
-
-        pre = precond.fourier_diag_precond(mps)
-
-        npt.assert_allclose(pre, np.ones(mps_shape))
+        p = precond.kspace_precond(mps)
+        npt.assert_allclose(p, np.ones(mps_shape))
 
         # Check 2d
         mps_shape = [1, 3, 3]
-
         mps = np.ones(mps_shape, dtype=np.complex)
-
-        pre = precond.fourier_diag_precond(mps)
-
-        npt.assert_allclose(pre, np.ones(mps_shape))
+        p = precond.kspace_precond(mps)
+        npt.assert_allclose(p, np.ones(mps_shape))
 
         # Check weights
         mps_shape = [1, 3]
-
         mps = np.ones(mps_shape, dtype=np.complex)
         weights = np.array([1, 0, 1], dtype=np.complex)
+        p = precond.kspace_precond(mps, weights=weights)
+        npt.assert_allclose(p, [[1, 1, 1]])
 
-        pre = precond.fourier_diag_precond(mps, weights=weights)
-
-        npt.assert_allclose(pre, [[1, 1, 1]])
-
-    def test_fourier_diag_precond_simple_noncart(self):
+    def test_kspace_precond_simple_noncart(self):
         # Check identity
         mps_shape = [1, 1]
 
         mps = np.ones(mps_shape, dtype=np.complex)
         coord = np.array([[0.0]])
-
-        pre = precond.fourier_diag_precond(mps, coord=coord)
-
-        npt.assert_allclose(pre, [[1.0]], atol=1, rtol=1e-1)
+        p = precond.kspace_precond(mps, coord=coord)
+        npt.assert_allclose(p, [[1.0]], atol=1, rtol=1e-1)
 
         mps_shape = [1, 3]
 
         mps = np.ones(mps_shape, dtype=np.complex)
         coord = np.array([[0.0], [-1], [1]])
+        p = precond.kspace_precond(mps, coord=coord)
+        npt.assert_allclose(p, [[1.0, 1.0, 1.0]], atol=1, rtol=1e-1)
 
-        pre = precond.fourier_diag_precond(mps, coord=coord)
+    def test_circulant_precond_cart(self):
+        nc = 4
+        n = 10
+        shape = (nc, n)
+        mps = sp.util.randn(shape)
+        mps /= np.linalg.norm(mps, axis=0, keepdims=True)
+        weights = sp.util.randn([n]) >= 0
 
-        npt.assert_allclose(pre, [[1.0, 1.0, 1.0]], atol=1, rtol=1e-1)
+        A = sp.linop.Multiply(shape, weights**0.5) * linop.Sense(mps)
+        F = sp.linop.FFT([n])
+
+        p_expected = np.zeros(n, np.complex)
+        for i in range(n):
+            if weights[i]:
+                x = np.zeros(n, np.complex)
+                x[i] = 1.0
+                p_expected[i] = 1 / F(A.H(A(F.H(x))))[i]
+
+        p = precond.circulant_precond(mps, weights=weights)
+        npt.assert_allclose(p[weights == 1], p_expected[weights == 1])
+
+    def test_circulant_precond_noncart(self):
+        nc = 4
+        n = 10
+        shape = [nc, n]
+        mps = sp.util.ones(shape)
+        mps /= np.linalg.norm(mps, axis=0, keepdims=True)
+        coord = sp.util.randn([n, 1], dtype=np.float)
+
+        A = linop.Sense(mps, coord=coord)
+        F = sp.linop.FFT([n])
+
+        p_expected = np.zeros(n, np.complex)
+        for i in range(n):
+            x = np.zeros(n, np.complex)
+            x[i] = 1.0
+            p_expected[i] = 1 / F(A.H(A(F.H(x))))[i]
+
+        p = precond.circulant_precond(mps, coord=coord)
+        npt.assert_allclose(p, p_expected, atol=1e-1, rtol=1e-1)
