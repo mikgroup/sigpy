@@ -408,7 +408,7 @@ class Hstack(Linop):
                 if self.axis is None:
                     output += linop(input[start:end].reshape(linop.ishape))
                 else:
-                    ndim = len(linop.oshape)
+                    ndim = len(linop.ishape)
                     axis = self.axis % ndim
 
                     slc = ([slice(None)] * axis + [slice(start, end)] +
