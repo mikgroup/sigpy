@@ -202,7 +202,7 @@ class Image(object):
             self.update_image()
             self.fig.canvas.draw()
             
-        elif event.key in ['m', 'p', 'r', 'i', 'r']:
+        elif event.key in ['m', 'p', 'r', 'i', 'l']:
             self.vmin = None
             self.vmax = None
             self.mode = event.key
@@ -213,13 +213,13 @@ class Image(object):
 
         elif event.key == 's':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.png')
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
             
         elif event.key == 'g':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.gif')
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -252,7 +252,7 @@ class Image(object):
             
         elif event.key == 'v':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -339,7 +339,8 @@ class Image(object):
         elif self.mode == 'i':
             imv = np.imag(imv)
         elif self.mode == 'l':
-            imv = np.log(np.abs(imv), out=np.ones_like(imv) * np.infty, where=imv != 0)
+            imv = np.abs(imv)
+            imv = np.log(imv, out=np.ones_like(imv) * -31, where=imv != 0)
 
         if self.vmin is None:
             self.vmin = imv.min()
