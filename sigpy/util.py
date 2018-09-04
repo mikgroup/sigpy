@@ -184,6 +184,7 @@ def move_to(output, input):
     Args:
         input (array): Input.
         output (array): Output.
+
     """
     if get_device(input) == get_device(output):
         with get_device(input):
@@ -202,6 +203,19 @@ def move_to(output, input):
             output[:] = cp.array(input)
 
 
+def asscalar(input):
+    """Returns input array as scalar.
+
+    Args:
+        input (array): Input array
+
+    Returns:
+        scalar.
+
+    """
+    return np.asscalar(move(input))
+
+
 def prod(shape):
     """Computes product of shape.
 
@@ -210,6 +224,7 @@ def prod(shape):
 
     Returns:
         Product.
+
     """
     return np.prod(shape, dtype=np.long)
 
