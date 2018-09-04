@@ -77,18 +77,18 @@ class PowerMethod(Alg):
 
     def _init(self):
         xp = util.get_xp(self.x)
-        self.max_eig = xp.array(np.infty)
+        self.max_eig = np.infty
 
     def _update(self):
         max_eig_old = self.max_eig
         
         y = self.A(self.x)
-        self.max_eig = util.norm(y)
+        self.max_eig = util.asscalar(util.norm(y))
         util.move_to(self.x, y / self.max_eig)
 
-        diff = util.move(self.max_eig - max_eig_old)
+        Δ = self.max_eig - max_eig_old
         if self.progress_bar:
-            self.pbar.set_postfix(diff='{0:.3g}'.format(diff))
+            self.pbar.set_postfix(Δ='{0:.3g}'.format(Δ))
 
 
 class ProximalPointMethod(Alg):
@@ -153,7 +153,7 @@ class GradientMethod(Alg):
         if self.accelerate or self.proxg is not None:
             self.x_old = self.x.copy()
 
-        self.diff = np.infty
+        self.Δ = np.infty
 
     def _update(self):
         if self.accelerate or self.proxg is not None:
@@ -175,15 +175,15 @@ class GradientMethod(Alg):
             util.move_to(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
 
         if self.accelerate or self.proxg is not None:
-            self.diff = util.move(util.norm((self.x - self.x_old) / self.alpha**0.5))
+            self.Δ = util.asscalar(util.norm((self.x - self.x_old) / self.alpha**0.5))
         else:
-            self.diff = util.move(util.norm(gradf_x))
+            self.Δ = util.asscalar(util.norm(gradf_x))
             
         if self.progress_bar:
-            self.pbar.set_postfix(diff='{0:.3g}'.format(self.diff))
+            self.pbar.set_postfix(Δ='{0:.3g}'.format(self.Δ))
 
     def _done(self):
-        return (self.iter >= self.max_iter) or self.diff == 0
+        return (self.iter >= self.max_iter) or self.Δ == 0
 
     def _cleanup(self):
         if self.accelerate:
@@ -232,7 +232,7 @@ class ConjugateGradient(Alg):
 
         self.zero_gradient = False
         self.rzold = util.dot(self.r, z)
-        self.diff = util.move(self.rzold**0.5)
+        self.Δ = util.asscalar(self.rzold**0.5)
 
     def _update(self):
         Ap = self.A(self.p)
@@ -255,12 +255,12 @@ class ConjugateGradient(Alg):
             util.xpay(self.p, beta, z)
             self.rzold = rznew
 
-        self.diff = util.move(self.rzold**0.5)
+        self.Δ = util.asscalar(self.rzold**0.5)
         if self.progress_bar:
-            self.pbar.set_postfix(diff='{0:.3g}'.format(self.diff))
+            self.pbar.set_postfix(Δ='{0:.3g}'.format(self.Δ))
 
     def _done(self):
-        return (self.iter >= self.max_iter) or self.zero_gradient or self.diff == 0
+        return (self.iter >= self.max_iter) or self.zero_gradient or self.Δ == 0
 
     def _cleanup(self):
         del self.r
@@ -407,10 +407,10 @@ class PrimalDualHybridGradient(Alg):
         util.move_to(self.x_ext, self.x + theta * x_diff)
 
         u_diff = self.u - self.u_old
-        diff = (util.norm2(x_diff / self.tau**0.5) + util.norm2(u_diff / self.sigma**0.5))**0.5
-        diff = util.move(diff)
+        Δ = util.asscalar(util.norm2(x_diff / self.tau**0.5) +
+                             util.norm2(u_diff / self.sigma**0.5))**0.5
         if self.progress_bar:
-            self.pbar.set_postfix(diff='{0:.3g}'.format(diff))
+            self.pbar.set_postfix(Δ='{0:.3g}'.format(Δ))
 
     def _cleanup(self):
         del self.x_ext
