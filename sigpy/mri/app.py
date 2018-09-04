@@ -134,8 +134,9 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         weights = _estimate_weights(ksp, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
-        self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
-        W = sp.linop.Wavelet(A.ishape, wave_name=wave_name)
+        img_shape = mps.shape[1:]
+        self.img = sp.util.zeros(img_shape, dtype=ksp.dtype, device=device)
+        W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
 
         def g(input):
@@ -184,8 +185,9 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
         weights = _estimate_weights(ksp, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
-        self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
-        W = sp.linop.Wavelet(A.ishape, wave_name=wave_name)
+        img_shape = mps.shape[1:]
+        self.img = sp.util.zeros(img_shape, dtype=ksp.dtype, device=device)
+        W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, 1), W)
 
         super().__init__(A, ksp, self.img, proxg, eps, weights=weights, **kwargs)
