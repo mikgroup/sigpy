@@ -220,8 +220,9 @@ class LinearLeastSquares(App):
 
             self._get_GradientMethod()
         elif self.alg_name == 'PrimalDualHybridGradient':
-            if self.lamda != 0 or self.mu != 0:
-                raise ValueError('PrimalDualHybridGradient cannot have non-zero mu or lamda.')
+            if self.R is not None:
+                raise ValueError('PrimalDualHybridGradient cannot have R specified.'
+                                 'Please consider stacking R with A.')
 
             self._get_PrimalDualHybridGradient()
         else:
@@ -290,24 +291,50 @@ class LinearLeastSquares(App):
         else:
             proxg = self.proxg
 
+        if self.lamda > 0 or self.mu > 0:
+            def gradh(x):
+                gradh_x = 0
+                if self.lamda > 0:
+                    if self.R is None:
+                        gradh_x += self.lamda * x
+                    else:
+                        gradh_x += self.lamda * self.R.H(self.R(x))
+
+                if self.mu > 0:
+                    gradh_x += self.mu * (x - self.z)
+
+                return gradh_x
+            
+            if self.R is None:
+                gamma_primal = self.lamda + self.mu
+            else:
+                gamma_primal = self.mu
+
+        else:
+            gradh = None
+            gamma_primal = 0
+            
+
         if self.G is None:
             proxfc = prox.L2Reg(self.y.shape, 1, y=-y)
             u = util.zeros_like(self.y)
+                
             self.alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, u,
-                                                self.tau, self.sigma, gamma_dual=1,
+                                                self.tau, self.sigma, gradh=gradh,
+                                                gamma_primal=gamma_primal, gamma_dual=1,
                                                 max_iter=self.max_iter,
                                                 progress_bar=self.progress_bar)
         else:
-            AG = linop.Vstack([A, self.G])
-
+            A = linop.Vstack([A, self.G])
             proxf1c = prox.L2Reg(self.y.shape, 1, y=-y)
-            proxf2 = self.proxg
-            proxfc = prox.Stack([proxf1c, prox.Conj(proxf2)])
+            proxf2c = prox.Conj(self.proxg)
+            proxfc = prox.Stack([proxf1c, proxf2c])
             proxg = prox.NoOp(self.x.shape)
 
-            u = util.zeros(AG.oshape, dtype=self.y.dtype, device=util.get_device(self.y))
-            self.alg = PrimalDualHybridGradient(proxfc, proxg, AG, AG.H, self.x, u,
-                                                self.tau, self.sigma, max_iter=self.max_iter,
+            u = util.zeros(A.oshape, dtype=self.y.dtype, device=util.get_device(self.y))
+            self.alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, u,
+                                                self.tau, self.sigma, gamma_primal=gamma_primal,
+                                                gradh=gradh, max_iter=self.max_iter,
                                                 progress_bar=self.progress_bar)
 
     def _get_alpha(self):
@@ -329,7 +356,8 @@ class LinearLeastSquares(App):
 
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
-                             device=device, max_iter=self.max_power_iter)
+                             device=device, max_iter=self.max_power_iter,
+                             progress_bar=self.progress_bar)
 
         with device:
             self.alg.alpha = 1 / max_eig_app.run()
@@ -344,15 +372,16 @@ class LinearLeastSquares(App):
         if self.G is not None:
             A = linop.Vstack([A, self.G])
             
-        S = linop.Multiply(A.oshape, self.sigma)
+        S = linop.Multiply(A.oshape, self.alg.sigma)
         AHA = A.H * S * A
 
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
-                             device=device, max_iter=self.max_power_iter)
+                             device=device, max_iter=self.max_power_iter,
+                             progress_bar=self.progress_bar)
 
         with device:
-            self.alg.tau = 1 / max_eig_app.run()
+            self.alg.tau = 1 / (max_eig_app.run() + self.lamda + self.mu)
 
     def _get_sigma(self):
         if self.weights is not None:
@@ -364,7 +393,7 @@ class LinearLeastSquares(App):
         if self.G is not None:
             A = linop.Vstack([A, self.G])
             
-        T = linop.Multiply(A.ishape, self.tau)
+        T = linop.Multiply(A.ishape, self.alg.tau)
         AAH = A * T * A.H
 
         device = util.get_device(self.x)

@@ -50,12 +50,18 @@ class TestApp(unittest.TestCase):
                                   np.matmul(mat.conjugate().T, y))
 
         x_rec = util.zeros([n, 1])
-        app.LinearLeastSquares(A, y, x_rec, lamda=lamda).run()
+        app.LinearLeastSquares(A, y, x_rec, lamda=lamda, progress_bar=False).run()
         npt.assert_allclose(x_rec, x_lstsq)
 
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(
-            A, y, x_rec, alg_name='GradientMethod', max_iter=1000, lamda=lamda).run()
+            A, y, x_rec, alg_name='GradientMethod', max_iter=1000, lamda=lamda,
+            progress_bar=False).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(A, y, x_rec, max_iter=1000, lamda=lamda,
+                               alg_name='PrimalDualHybridGradient', progress_bar=False).run()
         npt.assert_allclose(x_rec, x_lstsq)
         
     def test_l2reg_bias_LinearLeastSquares(self):
@@ -77,6 +83,11 @@ class TestApp(unittest.TestCase):
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(
             A, y, x_rec, alg_name='GradientMethod', max_iter=1000, lamda=lamda, mu=mu, z=z).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(A, y, x_rec, max_iter=1000, lamda=lamda, mu=mu, z=z,
+                               alg_name='PrimalDualHybridGradient', progress_bar=False).run()
         npt.assert_allclose(x_rec, x_lstsq)
         
     def test_proxg_LinearLeastSquares(self):
@@ -111,9 +122,16 @@ class TestApp(unittest.TestCase):
                                   np.matmul(mat.conjugate().T, y))
 
         proxg = prox.L2Reg([n, 1], lamda)
+        
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(
             A, y, x_rec, alg_name='GradientMethod', max_iter=1000, lamda=lamda, proxg=proxg).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(
+            A, y, x_rec, alg_name='PrimalDualHybridGradient', max_iter=1000,
+            lamda=lamda, proxg=proxg).run()
         npt.assert_allclose(x_rec, x_lstsq)
         
     def test_l2reg_bias_proxg_LinearLeastSquares(self):
@@ -132,6 +150,13 @@ class TestApp(unittest.TestCase):
         x_rec = util.zeros([n, 1])
         app.LinearLeastSquares(
             A, y, x_rec, alg_name='GradientMethod', max_iter=1000, lamda=lamda, mu=mu, z=z,
+            proxg=proxg).run()
+        npt.assert_allclose(x_rec, x_lstsq)
+        
+        x_rec = util.zeros([n, 1])
+        app.LinearLeastSquares(
+            A, y, x_rec, alg_name='PrimalDualHybridGradient', max_iter=1000,
+            lamda=lamda, mu=mu, z=z,
             proxg=proxg).run()
         npt.assert_allclose(x_rec, x_lstsq)
 
