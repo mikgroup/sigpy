@@ -719,8 +719,8 @@ def axpy(y, a, x):
         y (array): Output array.
         a (scalar): Input scalar.
         x (array): Input array.
-    """
 
+    """
     device = get_device(x)
     x = move(x, device)
     a = move(a, device)

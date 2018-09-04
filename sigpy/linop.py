@@ -389,7 +389,6 @@ class Hstack(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-
         device = util.get_device(input)
         xp = device.xp
         output = 0
@@ -848,8 +847,8 @@ class Multiply(Linop):
     Args:
         ishape (tuple of ints): Input shape.
         mult (array): Array to multiply.
-    """
 
+    """
     def __init__(self, ishape, mult, conj=False):
         self.mult = mult
         self.conj = conj
