@@ -86,7 +86,7 @@ class PowerMethod(Alg):
         self.max_eig = util.asscalar(util.norm(y))
         util.move_to(self.x, y / self.max_eig)
 
-        Δ = self.max_eig - max_eig_old
+        Δ = abs(self.max_eig - max_eig_old)
         if self.progress_bar:
             self.pbar.set_postfix(Δ='{0:.3g}'.format(Δ))
 
