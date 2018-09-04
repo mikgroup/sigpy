@@ -42,7 +42,6 @@ class Alg(object):
     def update(self):
         with self.device:
             self._update()
-
             self.iter += 1
             if self.progress_bar:
                 self.pbar.update()
@@ -81,11 +80,15 @@ class PowerMethod(Alg):
         self.max_eig = xp.array(np.infty)
 
     def _update(self):
+        max_eig_old = self.max_eig
+        
         y = self.A(self.x)
         self.max_eig = util.norm(y)
         util.move_to(self.x, y / self.max_eig)
+
+        diff = util.move(self.max_eig - max_eig_old)
         if self.progress_bar:
-            self.pbar.set_postfix(max_eig=util.move(self.max_eig))
+            self.pbar.set_postfix(diff='{0:.3g}'.format(diff))
 
 
 class ProximalPointMethod(Alg):
@@ -150,7 +153,7 @@ class GradientMethod(Alg):
         if self.accelerate or self.proxg is not None:
             self.x_old = self.x.copy()
 
-        self.residual = np.infty
+        self.diff = np.infty
 
     def _update(self):
         if self.accelerate or self.proxg is not None:
@@ -172,15 +175,15 @@ class GradientMethod(Alg):
             util.move_to(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
 
         if self.accelerate or self.proxg is not None:
-            self.residual = util.move(util.norm((self.x - self.x_old) / self.alpha**0.5))
+            self.diff = util.move(util.norm((self.x - self.x_old) / self.alpha**0.5))
         else:
-            self.residual = util.move(util.norm(gradf_x))
+            self.diff = util.move(util.norm(gradf_x))
             
         if self.progress_bar:
-            self.pbar.set_postfix(resid=self.residual)
+            self.pbar.set_postfix(diff='{0:.3g}'.format(self.diff))
 
     def _done(self):
-        return (self.iter >= self.max_iter) or self.residual == 0
+        return (self.iter >= self.max_iter) or self.diff == 0
 
     def _cleanup(self):
         if self.accelerate:
@@ -229,7 +232,7 @@ class ConjugateGradient(Alg):
 
         self.zero_gradient = False
         self.rzold = util.dot(self.r, z)
-        self.residual = util.move(self.rzold**0.5)
+        self.diff = util.move(self.rzold**0.5)
 
     def _update(self):
         Ap = self.A(self.p)
@@ -252,12 +255,12 @@ class ConjugateGradient(Alg):
             util.xpay(self.p, beta, z)
             self.rzold = rznew
 
-        self.residual = util.move(self.rzold**0.5)
+        self.diff = util.move(self.rzold**0.5)
         if self.progress_bar:
-            self.pbar.set_postfix(resid=self.residual)
+            self.pbar.set_postfix(diff='{0:.3g}'.format(self.diff))
 
     def _done(self):
-        return (self.iter >= self.max_iter) or self.zero_gradient or self.residual == 0
+        return (self.iter >= self.max_iter) or self.zero_gradient or self.diff == 0
 
     def _cleanup(self):
         del self.r
@@ -302,7 +305,7 @@ class NewtonsMethod(Alg):
         d = s - self.x
         self.lamda = util.dot(d, hessfx(d))**0.5
         if self.progress_bar:
-            self.pbar.set_postfix(lamda=self.lamda)
+            self.pbar.set_postfix(lamda='{0:.3g}'.format(self.lamda))
 
         self.x += alpha * d
 
