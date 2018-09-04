@@ -312,11 +312,13 @@ class PrimalDualHybridGradient(Alg):
 
     Considers the problem:
 
-    .. math:: \min_x \max_y g(x) - f^*(u) + <Ax, u>
+    .. math:: \min_x \max_u - f^*(u) + g(x) + h(x) + <Ax, u>
 
     Or equivalently:
 
-    .. math:: \min_x f(A x) + g(x)
+    .. math:: \min_x f(A x) + g(x) + h(x)
+
+    where f, and g are simple, and h is Lipschitz continuous.
 
     Args:
         proxfc (function): Function to compute proximal operator of f^*.
@@ -329,8 +331,6 @@ class PrimalDualHybridGradient(Alg):
         sigma (float or array): Dual step-size.
         gamma_primal (float): Strong convexity parameter of g.
         gamma_dual (float): Strong convexity parameter of f^*.
-        P (function): Function to compute precondition primal variable.
-        D (function): Function to compute precondition dual variable.
         max_iter (int): Maximum number of iterations.
 
     References:
@@ -341,12 +341,13 @@ class PrimalDualHybridGradient(Alg):
     """
     def __init__(
             self, proxfc, proxg, A, AH, x, u,
-            tau, sigma, gamma_primal=0, gamma_dual=0,
-            P=lambda x: x, D=lambda x: x, max_iter=100, progress_bar=True
+            tau, sigma, theta=1, gradh=None, gamma_primal=0, gamma_dual=0,
+            max_iter=100, progress_bar=True
     ):
 
         self.proxfc = proxfc
         self.proxg = proxg
+        self.gradh = gradh
 
         self.A = A
         self.AH = AH
@@ -356,6 +357,7 @@ class PrimalDualHybridGradient(Alg):
 
         self.tau = tau
         self.sigma = sigma
+        self.theta = theta
         self.gamma_primal = gamma_primal
         self.gamma_dual = gamma_dual
 
@@ -371,9 +373,20 @@ class PrimalDualHybridGradient(Alg):
         util.move_to(self.u_old, self.u)
         util.move_to(self.x_old, self.x)
 
-        util.move_to(self.u, self.proxfc(self.sigma, self.u + self.sigma * self.A(self.x_ext)))
-        util.move_to(self.x, self.proxg(self.tau, self.x - self.tau * self.AH(self.u)))
+        # Update dual.
+        delta_u = self.A(self.x_ext)
+        util.axpy(self.u, self.sigma, delta_u)
+        util.move_to(self.u, self.proxfc(self.sigma, self.u))
 
+        # Update primal.
+        delta_x = self.AH(self.u)
+        if self.gradh is not None:
+            delta_x += self.gradh(self.x)
+            
+        util.axpy(self.x, -self.tau, delta_x)
+        util.move_to(self.x, self.proxg(self.tau, self.x))
+
+        # Update step-size if neccessary.
         xp = self.device.xp
         if self.gamma_primal > 0 and self.gamma_dual == 0:
             theta = 1 / (1 + 2 * self.gamma_primal * xp.amin(xp.abs(self.tau)))**0.5
@@ -384,9 +397,17 @@ class PrimalDualHybridGradient(Alg):
             self.tau /= theta
             self.sigma *= theta
         else:
-            theta = 1
+            theta = self.theta
 
-        util.move_to(self.x_ext, self.x + theta * (self.x - self.x_old))
+        # Extrapolate primal.
+        x_diff = self.x - self.x_old
+        util.move_to(self.x_ext, self.x + theta * x_diff)
+
+        u_diff = self.u - self.u_old
+        diff = (util.norm2(x_diff / self.tau**0.5) + util.norm2(u_diff / self.sigma**0.5))**0.5
+        diff = util.move(diff)
+        if self.progress_bar:
+            self.pbar.set_postfix(diff='{0:.3g}'.format(diff))
 
     def _cleanup(self):
         del self.x_ext

@@ -95,7 +95,6 @@ class TestAlg(unittest.TestCase):
         y = np.matmul(A, x_orig)
         x_truth = np.linalg.solve(np.matmul(A.T, A), np.matmul(A.T, y))
 
-        # Gradient method
         x = np.zeros([n])
         alg_method = alg.ConjugateGradient(lambda x: np.matmul(A.T, np.matmul(A, x)),
                                            np.matmul(A.T, y),
@@ -120,18 +119,15 @@ class TestAlg(unittest.TestCase):
         lipschitz = np.linalg.svd(np.matmul(A.T, A), compute_uv=False)[0]
         tau = 1.0 / lipschitz
         sigma = 1.0
-        theta = 1.0
 
-        # Gradient method
         x = np.zeros([n])
         u = np.zeros([n])
         alg_method = alg.PrimalDualHybridGradient(
             lambda alpha, u: (u - alpha * y) / (1 + alpha),
-            lambda alpha, x: x /
-            (1 + lamda * alpha),
+            lambda alpha, x: x / (1 + lamda * alpha),
             lambda x: np.matmul(A, x),
             lambda x: np.matmul(A.T, x),
-            x, u, tau, sigma, theta, max_iter=1000)
+            x, u, tau, sigma, max_iter=1000)
 
         alg_method.init()
         while(not alg_method.done()):
