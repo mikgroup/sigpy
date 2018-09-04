@@ -1,3 +1,4 @@
+import time
 import numpy as np
 
 from sigpy import linop, prox, util, config
@@ -15,10 +16,12 @@ class App(object):
 
     Attributes:
         alg (Alg)
+        runtime (float)
     """
 
     def __init__(self, alg):
         self.alg = alg
+        self.runtime = -1
 
     def _init(self):
         return
@@ -39,6 +42,7 @@ class App(object):
         return
 
     def run(self):
+        start_time = time.time()
         self._init()
         self.alg.init()
 
@@ -50,7 +54,9 @@ class App(object):
 
         self.alg.cleanup()
         self._cleanup()
-        return self._output()
+        output = self._output()
+        self.runtime = time.time() - start_time
+        return output
 
 
 class MaxEig(App):
