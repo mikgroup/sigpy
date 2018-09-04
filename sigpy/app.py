@@ -278,12 +278,12 @@ class LinearLeastSquares(App):
         if self.weights is not None:
             with util.get_device(self.y):
                 weights_sqrt = self.weights**0.5
-                y = weights_sqrt * self.y
+                y = -weights_sqrt * self.y
 
             W_sqrt = linop.Multiply(self.A.oshape, weights_sqrt)
             A = W_sqrt * self.A
         else:
-            y = self.y
+            y = -self.y
             A = self.A
 
         if self.proxg is None:
@@ -313,11 +313,10 @@ class LinearLeastSquares(App):
         else:
             gradh = None
             gamma_primal = 0
-            
 
         if self.G is None:
-            proxfc = prox.L2Reg(self.y.shape, 1, y=-y)
-            u = util.zeros_like(self.y)
+            proxfc = prox.L2Reg(y.shape, 1, y=y)
+            u = util.zeros_like(y)
                 
             self.alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, u,
                                                 self.tau, self.sigma, gradh=gradh,
@@ -326,7 +325,7 @@ class LinearLeastSquares(App):
                                                 progress_bar=self.progress_bar)
         else:
             A = linop.Vstack([A, self.G])
-            proxf1c = prox.L2Reg(self.y.shape, 1, y=-y)
+            proxf1c = prox.L2Reg(self.y.shape, 1, y=y)
             proxf2c = prox.Conj(self.proxg)
             proxfc = prox.Stack([proxf1c, proxf2c])
             proxg = prox.NoOp(self.x.shape)
@@ -364,7 +363,10 @@ class LinearLeastSquares(App):
 
     def _get_tau(self):
         if self.weights is not None:
-            W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
+            with util.get_device(self.y):
+                weights_sqrt = self.weights**0.5
+
+            W_half = linop.Multiply(self.A.oshape, weights_sqrt)
             A = W_half * self.A
         else:
             A = self.A
@@ -385,7 +387,10 @@ class LinearLeastSquares(App):
 
     def _get_sigma(self):
         if self.weights is not None:
-            W_half = linop.Multiply(self.A.oshape, self.weights**0.5)
+            with util.get_device(self.y):
+                weights_sqrt = self.weights**0.5
+
+            W_half = linop.Multiply(self.A.oshape, weights_sqrt)
             A = W_half * self.A
         else:
             A = self.A
