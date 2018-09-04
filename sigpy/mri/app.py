@@ -152,7 +152,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             device = sp.util.get_device(input)
             xp = device.xp
             with device:
-                return lamda * xp.sum(abs(W(input)))
+                return lamda * xp.sum(xp.abs(W(input)))
 
         super().__init__(A, ksp, self.img, proxg=proxg, g=g, weights=weights, **kwargs)
 
@@ -306,7 +306,6 @@ class JsenseRecon(sp.app.App):
         coord (None or array): coordinates.
         max_iter (int): Maximum number of iterations.
         max_inner_iter (int): Maximum number of inner iterations.
-        thresh (float): threshold parameter for output, from 0 to 1.
 
     References:
         Ying, L., & Sheng, J. (2007).
@@ -323,7 +322,7 @@ class JsenseRecon(sp.app.App):
                  mps_ker_width=12, ksp_calib_width=24,
                  lamda=0, device=sp.util.cpu_device,
                  weights=None, coord=None, max_iter=5,
-                 max_inner_iter=5, thresh=0):
+                 max_inner_iter=5):
         self.ksp = ksp
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
@@ -332,7 +331,6 @@ class JsenseRecon(sp.app.App):
         self.coord = coord
         self.max_iter = max_iter
         self.max_inner_iter = max_inner_iter
-        self.thresh = thresh
 
         self.device = sp.util.Device(device)
         self.dtype = ksp.dtype
