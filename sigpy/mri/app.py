@@ -135,17 +135,21 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
 
         A = linop.Sense(mps, coord=coord)
         img_shape = mps.shape[1:]
-        self.img = sp.util.zeros(img_shape, dtype=ksp.dtype, device=device)
-        W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
-        proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
+        self.W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
+        self.coe = sp.util.zeros(self.W.oshape, dtype=ksp.dtype, device=device)
+        proxg = sp.prox.L1Reg(self.W.oshape, lamda)
 
         def g(input):
             device = sp.util.get_device(input)
             xp = device.xp
             with device:
-                return lamda * xp.sum(xp.abs(W(input)))
+                return lamda * xp.sum(xp.abs(input))
 
-        super().__init__(A, ksp, self.img, proxg=proxg, g=g, weights=weights, **kwargs)
+        super().__init__(A * self.W.H, ksp, self.coe, proxg=proxg, g=g, weights=weights, **kwargs)
+
+    def _output(self):
+        self.img = self.W.H(self.coe)
+        return self.W.H(self.coe)
 
 
 class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -317,10 +321,10 @@ class JsenseRecon(sp.app.App):
 
     """
     def __init__(self, ksp,
-                 mps_ker_width=12, ksp_calib_width=24,
+                 mps_ker_width=16, ksp_calib_width=24,
                  lamda=0, device=sp.util.cpu_device,
-                 weights=None, coord=None, max_iter=5,
-                 max_inner_iter=5):
+                 weights=None, coord=None, max_iter=10,
+                 max_inner_iter=10):
         self.ksp = ksp
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
@@ -347,8 +351,7 @@ class JsenseRecon(sp.app.App):
                 self.ksp, [self.num_coils] + ndim * [self.ksp_calib_width])
 
             if self.weights is not None:
-                self.weights = sp.util.resize(
-                    self.weights, ndim * [self.ksp_calib_width])
+                self.weights = sp.util.resize(self.weights, ndim * [self.ksp_calib_width])
 
         else:
             self.img_shape = sp.nufft.estimate_shape(self.coord)
