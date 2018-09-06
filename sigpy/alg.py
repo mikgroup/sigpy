@@ -77,18 +77,14 @@ class PowerMethod(Alg):
 
     def _init(self):
         xp = util.get_xp(self.x)
-        self.max_eig = np.infty
 
     def _update(self):
-        max_eig_old = self.max_eig
-        
         y = self.A(self.x)
         self.max_eig = util.asscalar(util.norm(y))
         util.move_to(self.x, y / self.max_eig)
 
-        Δ = abs(self.max_eig - max_eig_old)
         if self.progress_bar:
-            self.pbar.set_postfix(Δ='{0:.3g}'.format(Δ))
+            self.pbar.set_postfix(λ='{0:.3g}'.format(self.max_eig))
 
 
 class ProximalPointMethod(Alg):
@@ -408,7 +404,7 @@ class PrimalDualHybridGradient(Alg):
 
         u_diff = self.u - self.u_old
         Δ = util.asscalar(util.norm2(x_diff / self.tau**0.5) +
-                             util.norm2(u_diff / self.sigma**0.5))**0.5
+                          util.norm2(u_diff / self.sigma**0.5))**0.5
         if self.progress_bar:
             self.pbar.set_postfix(Δ='{0:.3g}'.format(Δ))
 
