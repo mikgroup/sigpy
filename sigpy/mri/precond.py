@@ -20,7 +20,6 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_de
         array: k-space preconditioner of same shape as k-space.
     """
     dtype = mps.dtype
-    mps = sp.util.move(mps, device)
 
     if weights is not None:
         weights = sp.util.move(weights, device)
@@ -56,9 +55,11 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_de
 
         p_inv = []
         for mps_i in mps:
+            mps_i = sp.util.move(mps_i, device)
             mps_i_norm2 = sp.util.norm2(mps_i)
             xcorr_fourier = 0
             for mps_j in mps:
+                mps_j = sp.util.move(mps_j, device)
                 xcorr_fourier += xp.abs(sp.fft.fft(mps_i * xp.conj(mps_j), img2_shape))**2
 
             xcorr = sp.fft.ifft(xcorr_fourier)
