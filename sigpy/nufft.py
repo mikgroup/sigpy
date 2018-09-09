@@ -36,7 +36,6 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         os_shape = list(input.shape)
 
         for a in range(-ndim, 0):
-
             i = input.shape[a]
             os_i = _get_ugly_number(oversamp * i)
             os_shape[a] = os_i
@@ -63,7 +62,7 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
             output = output.swapaxes(a, -1)
             os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
 
-        coord = _scale_coord(util.move(coord, device), input.shape, oversamp)
+        coord = util.move(_scale_coord(coord, input.shape, oversamp), device)
         table = util.move(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
 
@@ -119,7 +118,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
 
     with device:
 
-        coord = _scale_coord(util.move(coord, device), oshape, oversamp)
+        coord = util.move(_scale_coord(coord, oshape, oversamp), device)
         table = util.move(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
         os_shape = oshape[:-ndim] + [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
@@ -161,7 +160,6 @@ def _kb(x, width, beta, dtype=np.complex):
 
 
 def _scale_coord(coord, shape, oversamp):
-
     ndim = coord.shape[-1]
     device = util.get_device(coord)
     scale = util.move([_get_ugly_number(oversamp * i) / i for i in shape[-ndim:]], device)
