@@ -275,16 +275,15 @@ class LinearLeastSquares(App):
                                   progress_bar=self.progress_bar)
 
     def _get_PrimalDualHybridGradient(self):
-        if self.weights is not None:
-            with util.get_device(self.y):
+        with util.get_device(self.y):
+            if self.weights is not None:
                 weights_sqrt = self.weights**0.5
                 y = -weights_sqrt * self.y
-
-            W_sqrt = linop.Multiply(self.A.oshape, weights_sqrt)
-            A = W_sqrt * self.A
-        else:
-            y = -self.y
-            A = self.A
+                W_sqrt = linop.Multiply(self.A.oshape, weights_sqrt)
+                A = W_sqrt * self.A
+            else:
+                y = -self.y
+                A = self.A
 
         if self.proxg is None:
             proxg = prox.NoOp(self.x.shape)
@@ -293,17 +292,18 @@ class LinearLeastSquares(App):
 
         if self.lamda > 0 or self.mu > 0:
             def gradh(x):
-                gradh_x = 0
-                if self.lamda > 0:
-                    if self.R is None:
-                        gradh_x += self.lamda * x
-                    else:
-                        gradh_x += self.lamda * self.R.H(self.R(x))
+                with util.get_device(self.x):
+                    gradh_x = 0
+                    if self.lamda > 0:
+                        if self.R is None:
+                            gradh_x += self.lamda * x
+                        else:
+                            gradh_x += self.lamda * self.R.H(self.R(x))
 
-                if self.mu > 0:
-                    gradh_x += self.mu * (x - self.z)
+                    if self.mu > 0:
+                        gradh_x += self.mu * (x - self.z)
 
-                return gradh_x
+                    return gradh_x
             
             if self.R is None:
                 gamma_primal = self.lamda + self.mu
