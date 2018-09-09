@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""Convolution functions.
+
+This module contains convolution functions that support multi-dimension, and multi-channel.
+
+"""
 import numpy as np
 from sigpy import fft, util, config
 

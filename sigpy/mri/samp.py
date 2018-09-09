@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
+"""MRI sampling functions.
+"""
 import numpy as np
 import numba as nb
-import math
-
-__all__ = ['poisson', 'radial']
 
 
 def poisson(img_shape, accel, K=30, calib=[0, 0], dtype=np.complex,
@@ -27,7 +27,6 @@ def poisson(img_shape, accel, K=30, calib=[0, 0], dtype=np.complex,
         SIGGRAPH sketches. 2007.
 
     """
-
     y, x = np.mgrid[:img_shape[-2], :img_shape[-1]]
     x = np.maximum(abs(x - img_shape[-1] / 2) - calib[-1] / 2, 0)
     x /= x.max()
@@ -137,10 +136,10 @@ def _poisson(nx, ny, K, R, calib, seed):
         while not done and k < K:
 
             # Generate point randomly from R and 2R
-            rd = rad * math.sqrt(np.random.random() * 3 + 1)
-            t = 2 * math.pi * np.random.random()
-            qx = px + rd * math.cos(t)
-            qy = py + rd * f * math.sin(t)
+            rd = rad * (np.random.random() * 3 + 1)**0.5
+            t = 2 * np.pi * np.random.random()
+            qx = px + rd * np.cos(t)
+            qy = py + rd * f * np.sin(t)
 
             # Reject if outside grid or close to other points
             if qx >= 0 and qx < nx and qy >= 0 and qy < ny:

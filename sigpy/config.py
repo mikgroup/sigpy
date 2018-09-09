@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""Configuration.
+
+This module contains flags to turn on and off optional modules.
+
+"""
 try:
     import cupy
     cupy_enabled = True

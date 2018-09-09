@@ -1,4 +1,6 @@
-import pickle
+# -*- coding: utf-8 -*-
+"""MRI applications.
+"""
 import numpy as np
 import sigpy as sp
 

@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Image plot.
+"""
 import os
 import uuid
 import subprocess

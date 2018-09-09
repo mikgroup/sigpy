@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Linear operators.
+"""
 import numpy as np
 
 from itertools import product

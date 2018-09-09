@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Applications.
+"""
 import time
 import numpy as np
 

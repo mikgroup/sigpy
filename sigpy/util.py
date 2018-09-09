@@ -1,9 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Utility functions.
 """
-Convenient utilities.
-"""
-import math
-import time
-import logging
 import numpy as np
 import numba as nb
 

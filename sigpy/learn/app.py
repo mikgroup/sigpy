@@ -1,7 +1,7 @@
-"""Machine Learning Apps.
+# -*- coding: utf-8 -*-
+"""Machine learning applications.
 """
 import pickle
-import logging
 import sigpy as sp
         
 

@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""MRI preconditioners.
+"""
+
 import numpy as np
 import sigpy as sp
 

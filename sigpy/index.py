@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""Index functions.
+
+This module contains functions to generate indices.
+
+"""
 import numpy as np
 
             

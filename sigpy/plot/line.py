@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Line plot.
+"""
 import os
 import uuid
 import subprocess
@@ -120,13 +123,13 @@ class Line(object):
             
         elif event.key == 's':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.png')
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
             
         elif event.key == 'g':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.gif')
+                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())

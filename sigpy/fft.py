@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""FFT functions.
+
+This module contains FFT functions that support centered operation.
+
+"""
 import numpy as np
 
 from sigpy import config, util

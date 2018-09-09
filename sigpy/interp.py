@@ -1,4 +1,6 @@
-import math
+# -*- coding: utf-8 -*-
+"""Interpolation functions.
+"""
 import numpy as np
 import numba as nb
 
@@ -171,8 +173,8 @@ def _interp1(output, input, width, table, coord):
 
         kx = coord[i, -1]
 
-        x0 = math.ceil(kx - width / 2)
-        x1 = math.floor(kx + width / 2)
+        x0 = np.ceil(kx - width / 2)
+        x1 = np.floor(kx + width / 2)
 
         for x in range(x0, x1 + 1):
 
@@ -193,8 +195,8 @@ def _gridding1(output, input, width, table, coord):
 
         kx = coord[i, -1]
 
-        x0 = math.ceil(kx - width / 2)
-        x1 = math.floor(kx + width / 2)
+        x0 = np.ceil(kx - width / 2)
+        x1 = np.floor(kx + width / 2)
 
         for x in range(x0, x1 + 1):
 
@@ -216,11 +218,11 @@ def _interp2(output, input, width, table, coord):
 
         kx, ky = coord[i, -1], coord[i, -2]
 
-        x0, y0 = (math.ceil(kx - width / 2),
-                  math.ceil(ky - width / 2))
+        x0, y0 = (np.ceil(kx - width / 2),
+                  np.ceil(ky - width / 2))
 
-        x1, y1 = (math.floor(kx + width / 2),
-                  math.floor(ky + width / 2))
+        x1, y1 = (np.floor(kx + width / 2),
+                  np.floor(ky + width / 2))
 
         for y in range(y0, y1 + 1):
             wy = lin_interp(table, abs(y - ky) / (width / 2))
@@ -243,11 +245,11 @@ def _gridding2(output, input, width, table, coord):
 
         kx, ky = coord[i, -1], coord[i, -2]
 
-        x0, y0 = (math.ceil(kx - width / 2),
-                  math.ceil(ky - width / 2))
+        x0, y0 = (np.ceil(kx - width / 2),
+                  np.ceil(ky - width / 2))
 
-        x1, y1 = (math.floor(kx + width / 2),
-                  math.floor(ky + width / 2))
+        x1, y1 = (np.floor(kx + width / 2),
+                  np.floor(ky + width / 2))
 
         for y in range(y0, y1 + 1):
             wy = lin_interp(table, abs(y - ky) / (width / 2))
@@ -270,13 +272,13 @@ def _interp3(output, input, width, table, coord):
 
         kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
 
-        x0, y0, z0 = (math.ceil(kx - width / 2),
-                      math.ceil(ky - width / 2),
-                      math.ceil(kz - width / 2))
+        x0, y0, z0 = (np.ceil(kx - width / 2),
+                      np.ceil(ky - width / 2),
+                      np.ceil(kz - width / 2))
 
-        x1, y1, z1 = (math.floor(kx + width / 2),
-                      math.floor(ky + width / 2),
-                      math.floor(kz + width / 2))
+        x1, y1, z1 = (np.floor(kx + width / 2),
+                      np.floor(ky + width / 2),
+                      np.floor(kz + width / 2))
 
         for z in range(z0, z1 + 1):
             wz = lin_interp(table, abs(z - kz) / (width / 2))
@@ -302,13 +304,13 @@ def _gridding3(output, input, width, table, coord):
 
         kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
 
-        x0, y0, z0 = (math.ceil(kx - width / 2),
-                      math.ceil(ky - width / 2),
-                      math.ceil(kz - width / 2))
+        x0, y0, z0 = (np.ceil(kx - width / 2),
+                      np.ceil(ky - width / 2),
+                      np.ceil(kz - width / 2))
 
-        x1, y1, z1 = (math.floor(kx + width / 2),
-                      math.floor(ky + width / 2),
-                      math.floor(kz + width / 2))
+        x1, y1, z1 = (np.floor(kx + width / 2),
+                      np.floor(ky + width / 2),
+                      np.floor(kz + width / 2))
 
         for z in range(z0, z1 + 1):
             wz = lin_interp(table, abs(z - kz) / (width / 2))

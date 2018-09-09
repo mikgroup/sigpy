@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Wavelet transform functions.
+"""
 import numpy as np
 import pywt
 from sigpy import util

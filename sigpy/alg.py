@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Algorithms.
+"""
 import numpy as np
 from tqdm import tqdm
 from sigpy import util, config

@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
+"""MRI simulation functions.
+"""
 import numpy as np
-
-__all__ = ['birdcage_maps', 'shepp_logan']
 
 
 def shepp_logan(shape, dtype=np.complex):
@@ -12,6 +13,7 @@ def shepp_logan(shape, dtype=np.complex):
 
     Returns:
         array.
+
     """
     return phantom(shape, sl_amps, sl_scales, sl_offsets, sl_angles, dtype)
 

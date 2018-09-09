@@ -1,8 +1,7 @@
-import numpy as np
+# -*- coding: utf-8 -*-
+"""MRI linear operators.
+"""
 import sigpy as sp
-
-
-__all__ = ['Sense', 'ConvImage', 'ConvSense']
 
 
 def Sense(mps, coord=None, ishape=None):

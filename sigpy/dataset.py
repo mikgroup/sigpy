@@ -1,4 +1,9 @@
-import glob
+# -*- coding: utf-8 -*-
+"""Dataset.
+
+This module contains custom classes to provide numpy array like interfaces.
+
+"""
 import numpy as np
 import pickle
 from sigpy import util

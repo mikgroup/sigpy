@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Machine learning utilities.
+"""
 import numpy as np
 import sigpy as sp
 

@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""Communicators.
+
+This module contains communicators to transfer arrays between devices.
+
+"""
 import numpy as np
 from sigpy import config, util
 if config.cupy_enabled:

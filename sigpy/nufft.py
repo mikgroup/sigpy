@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""NUFFT functions.
+"""
 import numpy as np
 from sigpy import fft, util, interp
 

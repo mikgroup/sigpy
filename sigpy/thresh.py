@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Thresholding functions.
+"""
 import numpy as np
 import numba as nb
 

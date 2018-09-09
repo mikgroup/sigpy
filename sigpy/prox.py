@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Proximal operators.
+"""
 import numpy as np
 from sigpy import config, util, thresh
 
