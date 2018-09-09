@@ -2,7 +2,6 @@
 """Algorithms.
 """
 import numpy as np
-from tqdm import tqdm
 from sigpy import util, config
 
 if config.cupy_enabled:
@@ -17,10 +16,9 @@ class Alg(object):
         device (int or Device): Device.
 
     """
-    def __init__(self, max_iter, device, progress_bar=True):
+    def __init__(self, max_iter, device):
         self.max_iter = max_iter
         self.device = util.Device(device)
-        self.progress_bar = progress_bar
 
     def _init(self):
         return
@@ -34,10 +32,7 @@ class Alg(object):
     def _cleanup(self):
         return
 
-    def init(self):
-        if self.progress_bar:
-            self.pbar = tqdm(total=self.max_iter, desc=self.__class__.__name__)
-            
+    def init(self):            
         self.iter = 0
         with self.device:
             self._init()
@@ -46,17 +41,12 @@ class Alg(object):
         with self.device:
             self._update()
             self.iter += 1
-            if self.progress_bar:
-                self.pbar.update()
 
     def done(self):
         with self.device:
             return self._done()
 
-    def cleanup(self):
-        if self.progress_bar:
-            self.pbar.close()
-            
+    def cleanup(self):            
         self._cleanup()
 
 
@@ -72,11 +62,11 @@ class PowerMethod(Alg):
         float: Maximum eigenvalue of `A`.
 
     """
-    def __init__(self, A, x, max_iter=30, progress_bar=True):
+    def __init__(self, A, x, max_iter=30):
         self.A = A
         self.x = x
 
-        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
+        super().__init__(max_iter, util.get_device(x))
 
     def _init(self):
         xp = util.get_xp(self.x)
@@ -86,20 +76,17 @@ class PowerMethod(Alg):
         self.max_eig = util.asscalar(util.norm(y))
         util.move_to(self.x, y / self.max_eig)
 
-        if self.progress_bar:
-            self.pbar.set_postfix(λ='{0:.3g}'.format(self.max_eig))
-
 
 class ProximalPointMethod(Alg):
     """Proximal point method.
 
     """
-    def __init__(self, proxf, alpha, x, max_iter=100, device=util.cpu_device, progress_bar=True):
+    def __init__(self, proxf, alpha, x, max_iter=100, device=util.cpu_device):
         self.proxf = proxf
         self.alpha = alpha
         self.x = x
         
-        super().__init__(max_iter, device=device, progress_bar=progress_bar)
+        super().__init__(max_iter, device=device)
 
     def _update(self):
         util.move_to(self.x, self.proxf(self.alpha, self.x))
@@ -135,14 +122,14 @@ class GradientMethod(Alg):
 
     """
     def __init__(self, gradf, x, alpha, proxg=None,
-                 accelerate=False, max_iter=100, progress_bar=True):
+                 accelerate=False, max_iter=100):
         self.gradf = gradf
         self.alpha = alpha
         self.accelerate = accelerate
         self.proxg = proxg
         self.x = x
 
-        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
+        super().__init__(max_iter, util.get_device(x))
 
     def _init(self):
         if self.accelerate:
@@ -152,7 +139,7 @@ class GradientMethod(Alg):
         if self.accelerate or self.proxg is not None:
             self.x_old = self.x.copy()
 
-        self.Δ = np.infty
+        self.resid = np.infty
 
     def _update(self):
         if self.accelerate or self.proxg is not None:
@@ -174,15 +161,12 @@ class GradientMethod(Alg):
             util.move_to(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
 
         if self.accelerate or self.proxg is not None:
-            self.Δ = util.asscalar(util.norm((self.x - self.x_old) / self.alpha**0.5))
+            self.resid = util.asscalar(util.norm((self.x - self.x_old) / self.alpha**0.5))
         else:
-            self.Δ = util.asscalar(util.norm(gradf_x))
-            
-        if self.progress_bar:
-            self.pbar.set_postfix(Δ='{0:.3g}'.format(self.Δ))
+            self.resid = util.asscalar(util.norm(gradf_x))
 
     def _done(self):
-        return (self.iter >= self.max_iter) or self.Δ == 0
+        return (self.iter >= self.max_iter) or self.resid == 0
 
     def _cleanup(self):
         if self.accelerate:
@@ -207,14 +191,14 @@ class ConjugateGradient(Alg):
         max_iter (int): Maximum number of iterations.
 
     """
-    def __init__(self, A, b, x, P=None, max_iter=100, progress_bar=True):
+    def __init__(self, A, b, x, P=None, max_iter=100):
         self.A = A
         self.P = P
         self.x = x
         self.b = b
         self.rzold = np.infty
 
-        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
+        super().__init__(max_iter, util.get_device(x))
 
     def _init(self):
         self.b -= self.A(self.x)
@@ -231,7 +215,7 @@ class ConjugateGradient(Alg):
 
         self.zero_gradient = False
         self.rzold = util.dot(self.r, z)
-        self.Δ = util.asscalar(self.rzold**0.5)
+        self.resid = util.asscalar(self.rzold**0.5)
 
     def _update(self):
         Ap = self.A(self.p)
@@ -254,12 +238,10 @@ class ConjugateGradient(Alg):
             util.xpay(self.p, beta, z)
             self.rzold = rznew
 
-        self.Δ = util.asscalar(self.rzold**0.5)
-        if self.progress_bar:
-            self.pbar.set_postfix(Δ='{0:.3g}'.format(self.Δ))
+        self.resid = util.asscalar(self.rzold**0.5)
 
     def _done(self):
-        return (self.iter >= self.max_iter) or self.zero_gradient or self.Δ == 0
+        return (self.iter >= self.max_iter) or self.zero_gradient or self.resid == 0
 
     def _cleanup(self):
         del self.r
@@ -288,7 +270,7 @@ class NewtonsMethod(Alg):
 
     """
     def __init__(self, gradf, hessf, proxHg, x,
-                 max_iter=10, sigma=(3 - 5**0.5) / 2, progress_bar=True):
+                 max_iter=10, sigma=(3 - 5**0.5) / 2):
         self.gradf = gradf
         self.hessf = hessf
         self.proxHg = proxHg
@@ -296,16 +278,13 @@ class NewtonsMethod(Alg):
         self.x = x
         self.lamda = np.infty
 
-        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
+        super().__init__(max_iter, util.get_device(x))
 
     def _update(self):
         hessfx = self.hessf(self.x)
         s = self.proxHg(hessfx, hessfx(self.x) - self.gradf(self.x))
         d = s - self.x
         self.lamda = util.dot(d, hessfx(d))**0.5
-        if self.progress_bar:
-            self.pbar.set_postfix(lamda='{0:.3g}'.format(self.lamda))
-
         self.x += alpha * d
 
 
@@ -344,7 +323,7 @@ class PrimalDualHybridGradient(Alg):
     def __init__(
             self, proxfc, proxg, A, AH, x, u,
             tau, sigma, theta=1, gradh=None, gamma_primal=0, gamma_dual=0,
-            max_iter=100, progress_bar=True
+            max_iter=100
     ):
 
         self.proxfc = proxfc
@@ -363,7 +342,7 @@ class PrimalDualHybridGradient(Alg):
         self.gamma_primal = gamma_primal
         self.gamma_dual = gamma_dual
 
-        super().__init__(max_iter, util.get_device(x), progress_bar=progress_bar)
+        super().__init__(max_iter, util.get_device(x))
 
     def _init(self):
         self.x_ext = self.x.copy()
@@ -406,10 +385,8 @@ class PrimalDualHybridGradient(Alg):
         util.move_to(self.x_ext, self.x + theta * x_diff)
 
         u_diff = self.u - self.u_old
-        Δ = util.asscalar(util.norm2(x_diff / self.tau**0.5) +
-                          util.norm2(u_diff / self.sigma**0.5))**0.5
-        if self.progress_bar:
-            self.pbar.set_postfix(Δ='{0:.3g}'.format(Δ))
+        self.resid = util.asscalar(util.norm2(x_diff / self.tau**0.5) +
+                                   util.norm2(u_diff / self.sigma**0.5))**0.5
 
     def _cleanup(self):
         del self.x_ext
@@ -427,11 +404,11 @@ class AltMin(Alg):
 
     """
 
-    def __init__(self, min1, min2, max_iter=30, progress_bar=True):
+    def __init__(self, min1, min2, max_iter=30):
         self.min1 = min1
         self.min2 = min2
 
-        super().__init__(max_iter, util.cpu_device, progress_bar=progress_bar)
+        super().__init__(max_iter, util.cpu_device)
 
     def _update(self):
 

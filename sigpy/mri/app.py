@@ -147,7 +147,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             with device:
                 return lamda * xp.sum(xp.abs(W(input)))
 
-        super().__init__(A, ksp, self.coe, proxg=proxg, g=g, weights=weights, **kwargs)
+        super().__init__(A, ksp, self.img, proxg=proxg, g=g, weights=weights, **kwargs)
 
 
 class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -322,7 +322,7 @@ class JsenseRecon(sp.app.App):
                  mps_ker_width=16, ksp_calib_width=24,
                  lamda=0, device=sp.util.cpu_device,
                  weights=None, coord=None, max_iter=10,
-                 max_inner_iter=10):
+                 max_inner_iter=10, show_pbar=True):
         self.ksp = ksp
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
@@ -339,6 +339,7 @@ class JsenseRecon(sp.app.App):
         self._get_data()
         self._get_vars()
         self._get_alg()
+        super().__init__(self.alg, show_pbar=show_pbar)
 
     def _get_data(self):
         if self.coord is None:

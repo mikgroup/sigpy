@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """Applications.
 """
-import time
 import numpy as np
 
+from tqdm import tqdm
 from sigpy import linop, prox, util, config
-from sigpy.alg import PowerMethod, GradientMethod, ConjugateGradient, PrimalDualHybridGradient
+from sigpy.alg import PowerMethod, GradientMethod, \
+    ConjugateGradient, PrimalDualHybridGradient
 
 if config.cupy_enabled:
     import cupy as cp
@@ -15,16 +16,17 @@ class App(object):
     """Iterative algorithm application. Each App has its own Alg.
 
     Args:
-        alg (Alg)
+        alg (Alg): Alg object.
+        show_pbar (bool): toggle whether show progress bar.
 
     Attributes:
         alg (Alg)
-        runtime (float)
-    """
+        show_pbar (bool)
 
-    def __init__(self, alg):
+    """
+    def __init__(self, alg, show_pbar=True):
         self.alg = alg
-        self.runtime = -1
+        self.show_pbar = show_pbar
 
     def _init(self):
         return
@@ -45,21 +47,26 @@ class App(object):
         return
 
     def run(self):
-        start_time = time.time()
         self._init()
         self.alg.init()
+        if self.show_pbar:
+            self.pbar = tqdm(total=self.alg.max_iter,
+                             desc=self.__class__.__name__)
 
         while(not self.alg.done()):
             self._pre_update()
             self.alg.update()
             self._post_update()
             self._summarize()
+            if self.show_pbar:
+                self.pbar.update()
 
         self.alg.cleanup()
         self._cleanup()
-        output = self._output()
-        self.runtime = time.time() - start_time
-        return output
+        if self.show_pbar:
+            self.pbar.close()
+
+        return self._output()
 
 
 class MaxEig(App):
@@ -75,16 +82,20 @@ class MaxEig(App):
 
     Output:
         max_eig (int): Largest eigenvalue of A.
-    """
 
+    """
     def __init__(self, A, dtype=np.complex, device=util.cpu_device,
-                 max_iter=30, progress_bar=True):
+                 max_iter=30, show_pbar=True):
         self.x = util.empty(A.ishape, dtype=dtype, device=device)
-        alg = PowerMethod(A, self.x, max_iter=max_iter, progress_bar=progress_bar)
-        super().__init__(alg)
+        alg = PowerMethod(A, self.x, max_iter=max_iter)
+        super().__init__(alg, show_pbar=show_pbar)
 
     def _init(self):
         util.move_to(self.x, util.randn_like(self.x))
+
+    def _summarize(self):
+        if self.show_pbar:
+            self.pbar.set_postfix(max_eig='{0:.3g}'.format(self.alg.max_eig))
 
     def _output(self):
         return self.alg.max_eig
@@ -140,7 +151,7 @@ class LinearLeastSquares(App):
                  alg_name=None, max_iter=100,
                  P=None, alpha=None, max_power_iter=10, accelerate=True,
                  tau=None, sigma=None,
-                 save_objective_values=False, progress_bar=True):
+                 save_objective_values=False, show_pbar=True):
         self.A = A
         self.y = y
         self.x = x
@@ -161,7 +172,7 @@ class LinearLeastSquares(App):
         self.tau = tau
         self.sigma = sigma
         self.save_objective_values = save_objective_values
-        self.progress_bar = progress_bar
+        self.show_pbar = show_pbar
         
         self._get_alg()
 
@@ -195,6 +206,12 @@ class LinearLeastSquares(App):
     def _summarize(self):
         if self.save_objective_values:
             self.objective_values.append(self.objective())
+
+        if self.show_pbar:
+            if self.save_objective_values:
+                self.pbar.set_postfix(obj='{0:.3g}'.format(self.objective_values[-1]))
+            else:
+                self.pbar.set_postfix(resid='{0:.3g}'.format(self.alg.resid))
 
     def _output(self):
         return self.x
@@ -249,8 +266,7 @@ class LinearLeastSquares(App):
             AHA += self.mu * I
 
         self.alg = ConjugateGradient(AHA, None, self.x, P=self.P,
-                                     max_iter=self.max_iter,
-                                     progress_bar=self.progress_bar)
+                                     max_iter=self.max_iter)
 
     def _get_GradientMethod(self):
         def gradf(x):
@@ -274,8 +290,7 @@ class LinearLeastSquares(App):
                 return gradf_x
 
         self.alg = GradientMethod(gradf, self.x, self.alpha, proxg=self.proxg,
-                                  max_iter=self.max_iter, accelerate=self.accelerate,
-                                  progress_bar=self.progress_bar)
+                                  max_iter=self.max_iter, accelerate=self.accelerate)
 
     def _get_PrimalDualHybridGradient(self):
         with util.get_device(self.y):
@@ -324,8 +339,7 @@ class LinearLeastSquares(App):
             self.alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, u,
                                                 self.tau, self.sigma, gradh=gradh,
                                                 gamma_primal=gamma_primal, gamma_dual=1,
-                                                max_iter=self.max_iter,
-                                                progress_bar=self.progress_bar)
+                                                max_iter=self.max_iter)
         else:
             A = linop.Vstack([A, self.G])
             proxf1c = prox.L2Reg(self.y.shape, 1, y=y)
@@ -335,9 +349,9 @@ class LinearLeastSquares(App):
 
             u = util.zeros(A.oshape, dtype=self.y.dtype, device=util.get_device(self.y))
             self.alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, u,
-                                                self.tau, self.sigma, gamma_primal=gamma_primal,
-                                                gradh=gradh, max_iter=self.max_iter,
-                                                progress_bar=self.progress_bar)
+                                                self.tau, self.sigma,
+                                                gamma_primal=gamma_primal,
+                                                gradh=gradh, max_iter=self.max_iter)
 
     def _get_alpha(self):
         I = linop.Identity(self.x.shape)
@@ -359,7 +373,7 @@ class LinearLeastSquares(App):
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
                              device=device, max_iter=self.max_power_iter,
-                             progress_bar=self.progress_bar)
+                             show_pbar=self.show_pbar)
 
         with device:
             self.alg.alpha = 1 / max_eig_app.run()
@@ -383,7 +397,7 @@ class LinearLeastSquares(App):
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
                              device=device, max_iter=self.max_power_iter,
-                             progress_bar=self.progress_bar)
+                             show_pbar=self.show_pbar)
 
         with device:
             self.alg.tau = 1 / (max_eig_app.run() + self.lamda + self.mu)
@@ -407,7 +421,7 @@ class LinearLeastSquares(App):
         device = util.get_device(self.x)
         max_eig_app = MaxEig(AAH, dtype=self.x.dtype,
                              device=device, max_iter=self.max_power_iter,
-                             progress_bar=self.progress_bar)
+                             show_pbar=self.show_pbar)
 
         with device:
             self.alg.sigma = 1 / max_eig_app.run()
@@ -440,6 +454,7 @@ class LinearLeastSquares(App):
                 else:
                     obj += self.g(self.G(self.x))
 
+            obj = util.asscalar(obj)
             return obj
 
 
@@ -457,10 +472,9 @@ class L2ConstrainedMinimization(App):
         eps (float): Residual.
 
     """
-
     def __init__(self, A, y, x, proxg, eps, G=None, weights=None,
                  max_iter=100, tau=None, sigma=None, theta=1,
-                 progress_bar=True):
+                 show_pbar=True):
 
         self.x = x
 
@@ -478,7 +492,7 @@ class L2ConstrainedMinimization(App):
             proxfc = prox.Conj(prox.L2Proj(A.oshape, eps, y=y))
             self.u = util.zeros_like(y)
             alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, self.u,
-                                           tau, sigma, max_iter=max_iter, progress_bar=progress_bar)
+                                           tau, sigma, max_iter=max_iter)
         else:
             AG = linop.Vstack([A, G])
             self.max_eig_app = MaxEig(AG.H * AG,
@@ -491,15 +505,18 @@ class L2ConstrainedMinimization(App):
 
             self.u = util.zeros(AG.oshape, dtype=x.dtype, device=util.get_device(x))
             alg = PrimalDualHybridGradient(proxfc, proxg, AG, AG.H, self.x, self.u,
-                                           tau, sigma, max_iter=max_iter, progress_bar=progress_bar)
-            self.iter_var = []
+                                           tau, sigma, max_iter=max_iter)
 
-        super().__init__(alg)
+        super().__init__(alg, show_pbar=show_pbar)
 
     def _init(self):
         if self.alg.tau is None or self.alg.sigma is None:
             self.alg.tau = 1
             self.alg.sigma = 1 / self.max_eig_app.run()
+
+    def _summarize(self):
+        if self.show_pbar:
+            self.pbar.set_postfix(resid='{0:.3g}'.format(self.alg.resid))
 
     def _output(self):
         return self.x

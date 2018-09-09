@@ -12,7 +12,8 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
     with :math:`l` fixed, and the problem,
 
     .. math:: 
-        \min_{r_{ij}} \sum_j \frac{1}{2}\|y_j - \sum_i l_i * r_{ij}\|_2^2 + \lambda \|r_{ij}\|_1^2
+        \min_{r_{ij}} \sum_j \frac{1}{2}\|y_j - \sum_i l_i * r_{ij}\|_2^2 + 
+        \lambda \|r_{ij}\|_1^2
     where :math:`y_j` is the jth data, :math:`l_i` is the ith filter, 
     :math:`r_{ij}` is the ith coefficient for jth data.
 
@@ -119,7 +120,7 @@ class ConvSparseCoding(sp.app.App):
                  lamda=0.001, alpha=1,
                  max_l_iter=30, max_r_j_iter=50, max_power_iter=10, max_epoch=1,
                  mode='full', multi_channel=False, device=sp.util.cpu_device,
-                 checkpoint_path=None):
+                 checkpoint_path=None, show_pbar=True):
         self.y = y
         self.num_filters = num_filters
         self.filt_width = filt_width
@@ -140,6 +141,7 @@ class ConvSparseCoding(sp.app.App):
         self.l = sp.util.empty(self.l_shape, dtype=self.dtype, device=self.device)
         self.l_old = sp.util.empty(self.l_shape, dtype=self.dtype, device=self.device)
         self._get_alg()
+        super().__init__(self.alg, show_pbar=show_pbar)
 
     def _init(self):
         sp.util.move_to(self.l, sp.util.randn_like(self.l))
