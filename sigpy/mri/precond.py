@@ -1,6 +1,5 @@
 import numpy as np
 import sigpy as sp
-import sigpy.plot as plt
 
 
 def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_device):
