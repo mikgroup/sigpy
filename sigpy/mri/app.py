@@ -11,10 +11,10 @@ if sp.config.mpi4py_enabled:
     from mpi4py import MPI
 
 
-def _estimate_weights(ksp, weights, coord):
+def _estimate_weights(y, weights, coord):
     if weights is None and coord is None:
-        with sp.util.get_device(ksp):
-            weights = (sp.util.rss(ksp, axes=(0, )) > 0).astype(ksp.dtype)
+        with sp.util.get_device(y):
+            weights = (sp.util.rss(y, axes=(0, )) > 0).astype(y.dtype)
 
     return weights
 
@@ -29,7 +29,7 @@ class SenseRecon(sp.app.LinearLeastSquares):
     S is the SENSE operator, x is the image, and y is the k-space measurements.
 
     Args:
-        ksp (array): k-space measurements.
+        y (array): k-space measurements.
         mps (array): sensitivity maps.
         lamda (float): regularization parameter.
         weights (float or array): weights for data consistency.
@@ -47,17 +47,17 @@ class SenseRecon(sp.app.LinearLeastSquares):
         Magnetic resonance in medicine, 46(4), 638-651.
        
     """
-    def __init__(self, ksp, mps, lamda=0, weights=None,
+    def __init__(self, y, mps, lamda=0, weights=None,
                  coord=None, device=sp.util.cpu_device, **kwargs):
-        ksp = sp.util.move(ksp, device=device)
+        y = sp.util.move(y, device=device)
         if weights is not None:
             weights = sp.util.move(weights, device=device)
 
-        weights = _estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(y, weights, coord)
         A = linop.Sense(mps, coord=coord)
-        self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
+        x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
-        super().__init__(A, ksp, self.img, lamda=lamda, weights=weights, **kwargs)
+        super().__init__(A, y, x, lamda=lamda, weights=weights, **kwargs)
 
 
 class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -72,7 +72,7 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
     S is the SENSE operator, x is the image, and y is the k-space measurements.
 
     Args:
-        ksp (array): k-space measurements.
+        y (array): k-space measurements.
         mps (array): sensitivity maps.
         eps (float): constraint parameter.
         weights (float or array): weights for data consistency.
@@ -84,20 +84,20 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
        SenseRecon
 
     """
-    def __init__(self, ksp, mps, eps,
+    def __init__(self, y, mps, eps,
                  weights=None, coord=None,
                  device=sp.util.cpu_device, **kwargs):
-        ksp = sp.util.move(ksp, device=device)
+        y = sp.util.move(y, device=device)
         if weights is not None:
             weights = sp.util.move(weights, device=device)
 
-        weights = _estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(y, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
         proxg = sp.prox.L2Reg(A.ishape, 1)
-        self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
+        x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
-        super().__init__(A, ksp, self.img, proxg, eps, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg, eps, weights=weights, **kwargs)
 
 
 class L1WaveletRecon(sp.app.LinearLeastSquares):
@@ -111,7 +111,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
     x is the image, and y is the k-space measurements.
 
     Args:
-        ksp (array): k-space measurements.
+        y (array): k-space measurements.
         mps (array): sensitivity maps.
         lamda (float): regularization parameter.
         weights (float or array): weights for data consistency.
@@ -126,18 +126,18 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         Magnetic Resonance in Medicine, 58(6), 1082-1195.
 
     """
-    def __init__(self, ksp, mps, lamda,
+    def __init__(self, y, mps, lamda,
                  weights=None, coord=None,
                  wave_name='db4', device=sp.util.cpu_device, **kwargs):
-        ksp = sp.util.move(ksp, device=device)
+        y = sp.util.move(y, device=device)
         if weights is not None:
             weights = sp.util.move(weights, device=device)
 
-        weights = _estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(y, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
         img_shape = mps.shape[1:]
-        self.img = sp.util.zeros(img_shape, dtype=ksp.dtype, device=device)
+        x = sp.util.zeros(img_shape, dtype=y.dtype, device=device)
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
 
@@ -147,7 +147,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             with device:
                 return lamda * xp.sum(xp.abs(W(input)))
 
-        super().__init__(A, ksp, self.img, proxg=proxg, g=g, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg=proxg, g=g, weights=weights, **kwargs)
 
 
 class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -163,7 +163,7 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
     x is the image, and y is the k-space measurements.
 
     Args:
-        ksp (array): k-space measurements.
+        y (array): k-space measurements.
         mps (array): sensitivity maps.
         eps (float): constraint parameter.
         wave_name (str): wavelet name.
@@ -178,21 +178,21 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
 
     def __init__(
-            self, ksp, mps, eps,
+            self, y, mps, eps,
             wave_name='db4', weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
-        ksp = sp.util.move(ksp, device=device)
+        y = sp.util.move(y, device=device)
         if weights is not None:
             weights = sp.util.move(weights, device=device)
 
-        weights = _estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(y, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
         img_shape = mps.shape[1:]
-        self.img = sp.util.zeros(img_shape, dtype=ksp.dtype, device=device)
+        x = sp.util.zeros(img_shape, dtype=y.dtype, device=device)
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, 1), W)
 
-        super().__init__(A, ksp, self.img, proxg, eps, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg, eps, weights=weights, **kwargs)
 
 
 class TotalVariationRecon(sp.app.LinearLeastSquares):
@@ -206,7 +206,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
     x is the image, and y is the k-space measurements.
 
     Args:
-        ksp (array): k-space measurements.
+        y (array): k-space measurements.
         mps (array): sensitivity maps.
         lamda (float): regularization parameter.
         weights (float or array): weights for data consistency.
@@ -221,16 +221,16 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         Magnetic Resonance in Medicine, 57(6), 1086-1098.
 
     """
-    def __init__(self, ksp, mps, lamda,
+    def __init__(self, y, mps, lamda,
                  weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
-        ksp = sp.util.move(ksp, device=device)
+        y = sp.util.move(y, device=device)
         if weights is not None:
             weights = sp.util.move(weights, device=device)
 
-        weights = _estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(y, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
-        self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
+        x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, lamda)
@@ -241,7 +241,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
             with device:
                 return lamda * xp.sum(xp.abs(x))
 
-        super().__init__(A, ksp, self.img, proxg=proxg, g=g, G=G, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg=proxg, g=g, G=G, weights=weights, **kwargs)
 
 
 class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -257,7 +257,7 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
     x is the image, and y is the k-space measurements.
 
     Args:
-        ksp (array): k-space measurements.
+        y (array): k-space measurements.
         mps (array): sensitivity maps.
         eps (float): constraint parameter.
         weights (float or array): weights for data consistency.
@@ -270,20 +270,20 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
 
     """
     def __init__(
-            self, ksp, mps, eps,
+            self, y, mps, eps,
             weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
-        ksp = sp.util.move(ksp, device=device)
+        y = sp.util.move(y, device=device)
         if weights is not None:
             weights = sp.util.move(weights, device=device)
 
-        weights = _estimate_weights(ksp, weights, coord)
+        weights = _estimate_weights(y, weights, coord)
 
         A = linop.Sense(mps, coord=coord)
-        self.img = sp.util.zeros(mps.shape[1:], dtype=ksp.dtype, device=device)
+        x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, 1)
 
-        super().__init__(A, ksp, self.img, proxg, eps, G=G, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg, eps, G=G, weights=weights, **kwargs)
 
 
 class JsenseRecon(sp.app.App):
@@ -297,7 +297,7 @@ class JsenseRecon(sp.app.App):
     where \ast is the convolution operator.
 
     Args:
-        ksp (array): k-space measurements.
+        y (array): k-space measurements.
         mps_ker_width (int): sensitivity maps kernel width.
         ksp_calib_width (int): k-space calibration width.
         lamda (float): regularization parameter.
@@ -318,12 +318,12 @@ class JsenseRecon(sp.app.App):
         Magnetic Resonance in Medicine, 60(#), 674-682.
 
     """
-    def __init__(self, ksp,
+    def __init__(self, y,
                  mps_ker_width=16, ksp_calib_width=24,
                  lamda=0, device=sp.util.cpu_device,
                  weights=None, coord=None, max_iter=10,
                  max_inner_iter=10, show_pbar=True):
-        self.ksp = ksp
+        self.y = y
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
         self.lamda = lamda
@@ -333,8 +333,8 @@ class JsenseRecon(sp.app.App):
         self.max_inner_iter = max_inner_iter
 
         self.device = sp.util.Device(device)
-        self.dtype = ksp.dtype
-        self.num_coils = len(ksp)
+        self.dtype = y.dtype
+        self.num_coils = len(y)
 
         self._get_data()
         self._get_vars()
@@ -343,11 +343,11 @@ class JsenseRecon(sp.app.App):
 
     def _get_data(self):
         if self.coord is None:
-            self.img_shape = self.ksp.shape[1:]
+            self.img_shape = self.y.shape[1:]
             ndim = len(self.img_shape)
 
-            self.ksp = sp.util.resize(
-                self.ksp, [self.num_coils] + ndim * [self.ksp_calib_width])
+            self.y = sp.util.resize(
+                self.y, [self.num_coils] + ndim * [self.ksp_calib_width])
 
             if self.weights is not None:
                 self.weights = sp.util.resize(self.weights, ndim * [self.ksp_calib_width])
@@ -357,26 +357,26 @@ class JsenseRecon(sp.app.App):
             calib_idx = np.amax(np.abs(self.coord), axis=-1) < self.ksp_calib_width / 2
 
             self.coord = self.coord[calib_idx]
-            self.ksp = self.ksp[:, calib_idx]
+            self.y = self.y[:, calib_idx]
 
             if self.weights is not None:
                 self.weights = self.weights[calib_idx]
 
-        self.ksp = self.ksp / np.abs(self.ksp).max()
-        self.ksp = sp.util.move(self.ksp, self.device)
+        self.y = self.y / np.abs(self.y).max()
+        self.y = sp.util.move(self.y, self.device)
         if self.coord is not None:
             self.coord = sp.util.move(self.coord, self.device)
         if self.weights is not None:
             self.weights = sp.util.move(self.weights, self.device)
 
-        self.weights = _estimate_weights(self.ksp, self.weights, self.coord)
+        self.weights = _estimate_weights(self.y, self.weights, self.coord)
 
     def _get_vars(self):
         ndim = len(self.img_shape)
 
         mps_ker_shape = [self.num_coils] + [self.mps_ker_width] * ndim
         if self.coord is None:
-            img_ker_shape = [i + self.mps_ker_width - 1 for i in self.ksp.shape[1:]]
+            img_ker_shape = [i + self.mps_ker_width - 1 for i in self.y.shape[1:]]
         else:
             grd_shape = sp.nufft.estimate_shape(self.coord)
             img_ker_shape = [i + self.mps_ker_width - 1 for i in grd_shape]
@@ -394,11 +394,11 @@ class JsenseRecon(sp.app.App):
             self.mps_ker.shape, self.img_ker, coord=self.coord)
 
         self.app_mps = sp.app.LinearLeastSquares(
-            self.A_mps_ker, self.ksp, self.mps_ker, weights=self.weights,
+            self.A_mps_ker, self.y, self.mps_ker, weights=self.weights,
             lamda=self.lamda, max_iter=self.max_inner_iter)
 
         self.app_img = sp.app.LinearLeastSquares(
-            self.A_img_ker, self.ksp, self.img_ker, weights=self.weights,
+            self.A_img_ker, self.y, self.img_ker, weights=self.weights,
             lamda=self.lamda, max_iter=self.max_inner_iter)
 
         self.alg = sp.alg.AltMin(self.app_mps.run, self.app_img.run,
