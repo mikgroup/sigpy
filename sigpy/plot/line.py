@@ -14,20 +14,20 @@ from sigpy.util import prod
 class Line(object):
     """Plot array as lines.
 
-    Key options:
-        <x>: select current dimension as x
-        <left/right>: increment/decrement current dimension
-        <up/down>: flip axis when current dimension is x or y
+    Keyword Args:
+        x: select current dimension as x
+        left/right: increment/decrement current dimension
+        up/down: flip axis when current dimension is x or y
             otherwise increment/decrement slice at current dimension
-        <h>: toggle hide all labels, titles and axes
-        <m>: magnitude mode
-        <p>: phase mode
-        <r>: real mode
-        <i>: imaginary mode
-        <l>: log mode
-        <s>: save as png.
-        <g>: save as gif by traversing current dimension.
-        <v>: save as mp4 by traversing current dimension.
+        h: toggle hide all labels, titles and axes
+        m: magnitude mode
+        p: phase mode
+        r: real mode
+        i: imaginary mode
+        l: log mode
+        s: save as png.
+        g: save as gif by traversing current dimension.
+        v: save as mp4 by traversing current dimension.
     """
 
     def __init__(self, arr, x=-1, hide=False, mode='m', title='',

@@ -14,30 +14,29 @@ from sigpy.util import prod, move
 class Image(object):
     """Plot array as image.
 
-    Key press options:
-        <x/y>: select current dimension as x and y dimension.
-        <t>: swap between x and y axis.
-        <z>: toggle current dimension as z dimension.
-        <c>: toggle current dimension as color channel. 
-            Only works if current dimension is of length 3.
-        <left/right>: increment/decrement current dimension
-        <up/down>: flip axis when current dimension is x or y.
+    Keyword Args:
+        x/y: select current dimension as x and y dimension.
+        t: swap between x and y axis.
+        z: toggle current dimension as z dimension.
+        c: toggle current dimension as color channel. Only works if current dimension is of length 3.
+        left/right: increment/decrement current dimension
+        up/down: flip axis when current dimension is x or y.
             Otherwise increment/decrement slice at current dimension.
-        <h>: toggle hide all labels, titles and axes.
-        <m>: magnitude mode. Renormalizes when pressed each time.
-        <p>: phase mode. Renormalizes when pressed each time.
-        <r>: real mode. Renormalizes when pressed each time.
-        <i>: imaginary mode. Renormalizes when pressed each time.
-        <l>: log mode. Renormalizes when pressed each time.
-        <[>: decreases brightness. Shifts window level up by 10% of window width.
-        <]>: increases brightness. Shifts window level down by 10% of window width.
-        <{>: decreases contrast. Scale window width by 0.9.
-        <}>: increases contrast. Scale window width by 1.1.
-        <s>: save as png.
-        <g>: save as gif by traversing current dimension.
-        <v>: save as mp4 by traversing current dimension.
-        <0-9>: enter slice number.
-        <enter>: Set current dimension as slice number.
+        h: toggle hide all labels, titles and axes.
+        m: magnitude mode. Renormalizes when pressed each time.
+        p: phase mode. Renormalizes when pressed each time.
+        r: real mode. Renormalizes when pressed each time.
+        i: imaginary mode. Renormalizes when pressed each time.
+        l: log mode. Renormalizes when pressed each time.
+        [: decreases brightness. Shifts window level up by 10% of window width.
+        ]: increases brightness. Shifts window level down by 10% of window width.
+        {: decreases contrast. Scale window width by 0.9.
+        }: increases contrast. Scale window width by 1.1.
+        s: save as png.
+        g: save as gif by traversing current dimension.
+        v: save as mp4 by traversing current dimension.
+        0-9: enter slice number.
+        enter: Set current dimension as slice number.
 
     """
     def __init__(self, im, x=-1, y=-2, z=None, c=None, hide=False, mode='m', title='',

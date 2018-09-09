@@ -12,19 +12,19 @@ from sigpy.util import prod, move
 
 
 class Scatter(object):
-    """Plot array as image.
+    """Plot array as scatter.
 
-    Key press options:
-        <z>: toggle current dimension as z dimension
-        <left/right>: increment/decrement current dimension
-        <up/down>: flip axis when current dimension is x or y
+    Keyword Args:
+        z: toggle current dimension as z dimension
+        left/right: increment/decrement current dimension
+        up/down: flip axis when current dimension is x or y
             otherwise increment/decrement slice at current dimension
-        <h>: toggle hide all labels, titles and axes
-        <m>: magnitude mode
-        <p>: phase mode
-        <r>: real mode
-        <i>: imaginary mode
-        <l>: log mode
+        h: toggle hide all labels, titles and axes
+        m: magnitude mode
+        p: phase mode
+        r: real mode
+        i: imaginary mode
+        l: log mode
     """
 
     def __init__(self, coord, data=None, z=None, hide=False, mode='m', title='',

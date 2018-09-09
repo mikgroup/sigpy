@@ -1,5 +1,5 @@
 Scatter Plot
-==========
+============
 
 .. _plot_scatter:
 

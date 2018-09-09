@@ -8,3 +8,4 @@ Welcome to sigpy's documentation!
    core
    mri
    learn
+   plot
