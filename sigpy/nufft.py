@@ -65,7 +65,7 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
             output = output.swapaxes(a, -1)
             os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
 
-        coord = util.move(_scale_coord(coord, input.shape, oversamp), device)
+        coord = _scale_coord(util.move(coord, device), input.shape, oversamp)
         table = util.move(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
 
@@ -121,7 +121,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
 
     with device:
 
-        coord = util.move(_scale_coord(coord, oshape, oversamp), device)
+        coord = _scale_coord(util.move(coord, device), oshape, oversamp)
         table = util.move(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
         os_shape = oshape[:-ndim] + [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
