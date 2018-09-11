@@ -177,7 +177,7 @@ class AllReduce(Linop):
 
     def _apply(self, input):
         with util.get_device(input):
-            output = input.copy()
+            output = input
             self.comm.allreduce(output)
             return output
 
