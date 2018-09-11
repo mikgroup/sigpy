@@ -40,7 +40,7 @@ class Image(object):
 
     """
     def __init__(self, im, x=-1, y=-2, z=None, c=None, hide=False, mode='m', title='',
-                 interpolation='nearest', save_basename='Figure', fps=10):
+                 interpolation='lanczos', save_basename='Figure', fps=10):
         if im.ndim < 2:
             raise TypeError('Image dimension must at least be two, got {im_ndim}'.format(
                 im_ndim=im.ndim))
