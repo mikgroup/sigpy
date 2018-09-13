@@ -259,12 +259,13 @@ class Add(Linop):
                          repr_str=' + '.join([linop.repr_str for linop in linops]))
 
     def _apply(self, input):
-
-        output = 0
-        for linop in self.linops:
-            outputi = linop._apply(input)
-            with util.get_device(outputi):
-                output += outputi
+        output = self.linops[0]._apply(input)
+        with util.get_device(output):
+            for linop in self.linops[1:]:
+                if isinstance(linop, Multiply) and np.isscalar(linop.mult):
+                    util.axpy(output, linop.mult, input)
+                else:
+                    output += linop._apply(input)
 
         return output
 
@@ -281,10 +282,11 @@ def _check_compose_linops(linops):
 
 
 def _combine_compose_linops(linops):
-
     combined_linops = []
     for linop in linops:
-        if isinstance(linop, Compose):
+        if isinstance(linop, Identity):
+            continue
+        elif isinstance(linop, Compose):
             combined_linops += linop.linops
         else:
             combined_linops.append(linop)
