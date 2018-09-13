@@ -186,7 +186,8 @@ class LinearLeastSquares(App):
 
             with util.get_device(self.x):
                 self.alg.b = self.A.H(y)
-                self.alg.b += self.mu * self.z
+                if self.mu != 0:
+                    util.axpy(self.alg.b, self.mu, self.z)
 
         elif isinstance(self.alg, GradientMethod):
             if self.alpha is None:
@@ -271,7 +272,8 @@ class LinearLeastSquares(App):
     def _get_GradientMethod(self):
         def gradf(x):
             with util.get_device(self.y):
-                r = self.A(x) - self.y
+                r = self.A(x)
+                r -= self.y
                 if self.weights is not None:
                     r *= self.weights
                 
