@@ -120,7 +120,6 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         oshape = list(oshape)
 
     with device:
-
         coord = _scale_coord(util.move(coord, device), oshape, oversamp)
         table = util.move(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)

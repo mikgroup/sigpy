@@ -21,8 +21,8 @@ def interp(input, width, table, coord):
 
     Returns:
         output (array): Output array of coord.shape[:-1]
-    """
 
+    """
     ndim = coord.shape[-1]
 
     batch_shape = input.shape[:-ndim]
@@ -63,8 +63,8 @@ def gridding(input, shape, width, table, coord):
 
     Returns:
         output (array): Output array.
-    """
 
+    """
     ndim = coord.shape[-1]
 
     batch_shape = shape[:-ndim]
@@ -92,7 +92,6 @@ def gridding(input, shape, width, table, coord):
 
 
 def _select_interp(ndim, npts, device, isreal):
-
     if ndim == 1:
         if device == util.cpu_device:
             _interp = _interp1
@@ -116,7 +115,6 @@ def _select_interp(ndim, npts, device, isreal):
 
 
 def _select_gridding(ndim, npts, device, isreal):
-
     if ndim == 1:
         if device == util.cpu_device:
             _gridding = _gridding1

@@ -320,12 +320,10 @@ class PrimalDualHybridGradient(Alg):
        applications to imaging. Journal of mathematical imaging and vision, 40(1), 120-145.
 
     """
-    def __init__(
-            self, proxfc, proxg, A, AH, x, u,
-            tau, sigma, theta=1, gradh=None, gamma_primal=0, gamma_dual=0,
-            max_iter=100
-    ):
-
+    def __init__(self, proxfc, proxg, A, AH, x, u,
+                 tau, sigma, theta=1, gradh=None,
+                 gamma_primal=0, gamma_dual=0,
+                 max_iter=100):
         self.proxfc = proxfc
         self.proxg = proxg
         self.gradh = gradh
