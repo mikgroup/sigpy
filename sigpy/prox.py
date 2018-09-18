@@ -21,8 +21,8 @@ class Prox(object):
 
     Attributes:
         shape: Input/output shape.
-    """
 
+    """
     def __init__(self, shape, repr_str=None):
         self.shape = list(shape)
 
@@ -59,8 +59,8 @@ class Conj(Prox):
 
     The convex conjugate of a proximal operator P is defined as:
     a, x -> x - a * P(1 / a, x / a)
-    """
 
+    """
     def __init__(self, prox):
 
         self.prox = prox
@@ -77,8 +77,8 @@ class NoOp(Prox):
 
     Args:
        shape (tuple of ints): Input shape
-    """
 
+    """
     def __init__(self, shape):
         super().__init__(shape)
 
@@ -127,6 +127,7 @@ class UnitaryTransform(Prox):
     Args:
         prox (Prox): Proximal operator.
         A (Linop): Unitary linear operator.
+
     """
     def __init__(self, prox, A):
         self.prox = prox
@@ -149,8 +150,8 @@ class L2Reg(Prox):
         shape (tuple of ints): Input shape.
         lamda (float): Regularization parameter.
         y (scalar or array): Bias term.
-    """
 
+    """
     def __init__(self, shape, lamda, y=0):
         self.lamda = lamda
         self.y = y
@@ -169,8 +170,8 @@ class L2Proj(Prox):
         shape (tuple of ints): Input shape.
         epsilon (float): Regularization parameter.
         y (scalar or array): Bias term.
-    """
 
+    """
     def __init__(self, shape, epsilon, y=0, axes=None):
         self.epsilon = epsilon
         self.y = y
@@ -189,8 +190,8 @@ class L1Reg(Prox):
     Args:
         shape (tuple of ints): input shape
         lamda (float): regularization parameter
-    """
 
+    """
     def __init__(self, shape, lamda):
         self.lamda = lamda
 
@@ -206,8 +207,8 @@ class L1Proj(Prox):
     Args:
         shape (tuple of ints): input shape.
         epsilon (float): regularization parameter.
-    """
 
+    """
     def __init__(self, shape, epsilon):
 
         self.epsilon = epsilon
@@ -217,3 +218,23 @@ class L1Proj(Prox):
     def _prox(self, alpha, input):
 
         return thresh.l1_proj(self.epsilon, input)
+
+
+class L1L2Reg(Prox):
+    """
+    Proximal operator for lamda * sum_j ||x_j||_1^2
+
+    Args:
+        shape (tuple of ints): input shape.
+        lamda (float): regularization parameter.
+        axes (None or tuple of ints): axes over which l1 norm is applied.
+
+    """
+    def __init__(self, shape, lamda, axes=None):
+        self.lamda = lamda
+        self.axes = axes
+
+        super().__init__(shape)
+    
+    def _prox(self, alpha, input):
+        return thresh.elitist_thresh(self.lamda * alpha, input, axes=self.axes)
