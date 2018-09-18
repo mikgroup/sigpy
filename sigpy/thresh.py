@@ -163,7 +163,6 @@ def find_elitist_thresh(lamda, input):
 
     batch = len(input)
     thresh = util.empty([batch, 1], dtype=sorted_input.dtype, device=device)
-    lamda = util.move(lamda, device=device)
     if device == util.cpu_device:
         _find_elitist_thresh(thresh, lamda, sorted_input)
     else:
@@ -243,15 +242,15 @@ if config.cupy_enabled:
         name='hard_thresh')
 
     _find_elitist_thresh_cuda = cp.ElementwiseKernel(
-        'raw T thresh, T lamda, raw T input',
+        'raw S thresh, S lamda, raw T input',
         '',
         """
         const int length = input.shape()[1];
-        T l1 = 0;
+        S l1 = 0;
         for (int j = 0; j < length; j++) {
             const int idx[] = {i, j};
             l1 += input[idx];
-            T t = l1 * lamda / ((T) 1. + lamda * (T) (j + 1.));
+            S t = l1 * lamda / ((S) 1. + lamda * (S) (j + 1.));
             
             const int thresh_idx[] = {i, 0};
             if (j == length - 1) {

@@ -37,20 +37,26 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
 
     """
     def __init__(self, y_j, l, lamda=0.001,
-                 mode='full', multi_channel=False, device=sp.util.cpu_device, **kwargs):
+                 mode='full', multi_channel=False, device=sp.util.cpu_device,
+                 elitist=False, **kwargs):
         self.y_j = y_j
         self.l = l
         self.lamda = lamda
         self.mode = mode
         self.multi_channel = multi_channel
         self.device = device
+        self.elitist = elitist
 
         self._get_params()
         self.r_j = sp.util.empty(self.r_j_shape, dtype=self.dtype, device=device)
         self.A_r_j = sp.linop.ConvolveInput(self.r_j.shape, self.l, mode=self.mode,
                                             input_multi_channel=True,
                                             output_multi_channel=self.multi_channel)
-        proxg_r_j = sp.prox.L1Reg(self.A_r_j.ishape, lamda)
+
+        if elitist:
+            proxg_r_j = sp.prox.L1L2Reg(self.A_r_j.ishape, lamda, axes=range(-self.data_ndim, 0))
+        else:
+            proxg_r_j = sp.prox.L1Reg(self.A_r_j.ishape, lamda)
         
         super().__init__(self.A_r_j, self.y_j, self.r_j, proxg=proxg_r_j, **kwargs)
 
@@ -118,8 +124,13 @@ class ConvSparseCoding(sp.app.App):
     """
     def __init__(self, y, num_filters, filt_width, batch_size,
                  lamda=0.001, alpha=1,
-                 max_l_iter=30, max_r_j_iter=50, max_power_iter=10, max_epoch=1,
-                 mode='full', multi_channel=False, device=sp.util.cpu_device,
+                 max_l_iter=30,
+                 max_r_j_iter=50,
+                 max_power_iter=10,
+                 max_epoch=1,
+                 mode='full', multi_channel=False,
+                 elitist=False, init_scale=1e-3,
+                 device=sp.util.cpu_device,
                  checkpoint_path=None, show_pbar=True):
         self.y = y
         self.num_filters = num_filters
@@ -133,6 +144,8 @@ class ConvSparseCoding(sp.app.App):
         self.max_epoch = max_epoch
         self.mode = mode
         self.multi_channel = multi_channel
+        self.elitist = elitist
+        self.init_scale = init_scale
         self.device = device
         self.checkpoint_path = checkpoint_path
 
@@ -148,11 +161,15 @@ class ConvSparseCoding(sp.app.App):
         xp = self.device.xp
         with self.device:
             if self.multi_channel:
-                l_norm = sp.util.norm(self.l, axes=[0] + list(range(-self.data_ndim, 0)), keepdims=True)
+                l_norm = sp.util.norm(self.l, axes=[0] + list(range(-self.data_ndim, 0)),
+                                      keepdims=True)
             else:
                 l_norm = sp.util.norm(self.l, axes=range(-self.data_ndim, 0), keepdims=True)
 
             self.l /= l_norm
+
+            if self.elitist:
+                self.l *= self.init_scale
 
     def _pre_update(self):
         j = self.j_idx.next()
@@ -166,12 +183,30 @@ class ConvSparseCoding(sp.app.App):
         xp = self.device.xp
         with self.device:
             if self.checkpoint_path is not None:
-                xp.save(self.checkpoint_path, self.l)
+                if self.elitist:
+                    l_norm2 = sp.util.norm2(self.l, axes=range(-self.data_ndim, 0))
+                    idx = xp.argsort(l_norm2)
+                    if self.multi_channel:
+                        xp.save(self.checkpoint_path, self.l[:, idx])
+                    else:
+                        xp.save(self.checkpoint_path, self.l[idx])
+                else:
+                    xp.save(self.checkpoint_path, self.l)
 
     def _output(self):
+        xp = self.device.xp
+        with self.device:
+            l_norm2 = sp.util.norm2(self.l, axes=range(-self.data_ndim, 0))
+            idx = xp.argsort(l_norm2)
+            if self.multi_channel:
+                sp.util.move_to(self.l, self.l[:, idx])
+            else:
+                sp.util.move_to(self.l, self.l[idx])
+
         r = ConvSparseCoefficients(self.y, self.l, lamda=self.lamda,
                                    multi_channel=self.multi_channel,
                                    mode=self.mode, max_iter=self.max_r_j_iter,
+                                   elitist=self.elitist,
                                    max_power_iter=self.max_power_iter)
         return self.l, r
 
@@ -198,22 +233,33 @@ class ConvSparseCoding(sp.app.App):
         min_r_j_app = ConvSparseDecom(self.y_j, self.l, lamda=self.lamda,
                                       mode=self.mode, multi_channel=self.multi_channel,
                                       max_power_iter=self.max_power_iter,
+                                      elitist=self.elitist,
                                       max_iter=self.max_r_j_iter, device=self.device)
         self.r_j = min_r_j_app.r_j
 
         self.A_l = sp.linop.ConvolveFilter(self.l_shape, self.r_j, mode=self.mode,
                                            input_multi_channel=True,
                                            output_multi_channel=self.multi_channel)
-        if self.multi_channel:
-            proxg_l = sp.prox.L2Proj(self.l_shape, 1, axes=[0] + list(range(-self.data_ndim, 0)))
+
+        if self.elitist:
+            min_l_app = sp.app.LinearLeastSquares(
+                self.A_l, self.y_j, self.l,
+                mu=(1 - self.alpha) / (self.alpha * self.num_batches), z=self.l_old,
+                lamda=self.lamda / self.num_batches,
+                max_power_iter=self.max_power_iter,
+                max_iter=self.max_l_iter)
         else:
-            proxg_l = sp.prox.L2Proj(self.l_shape, 1, axes=range(-self.data_ndim, 0))
-            
-        min_l_app = sp.app.LinearLeastSquares(
-            self.A_l, self.y_j, self.l,
-            mu=(1 - self.alpha) / (self.alpha * self.num_batches), z=self.l_old,
-            max_power_iter=self.max_power_iter,
-            max_iter=self.max_l_iter, proxg=proxg_l)
+            if self.multi_channel:
+                proxg_l = sp.prox.L2Proj(self.l_shape, 1,
+                                         axes=[0] + list(range(-self.data_ndim, 0)))
+            else:
+                proxg_l = sp.prox.L2Proj(self.l_shape, 1, axes=range(-self.data_ndim, 0))
+
+            min_l_app = sp.app.LinearLeastSquares(
+                self.A_l, self.y_j, self.l,
+                mu=(1 - self.alpha) / (self.alpha * self.num_batches), z=self.l_old,
+                max_power_iter=self.max_power_iter,
+                max_iter=self.max_l_iter, proxg=proxg_l)
 
         max_iter = self.max_epoch * self.num_batches
         self.alg = sp.alg.AltMin(min_r_j_app.run, min_l_app.run, max_iter=max_iter)
@@ -331,7 +377,8 @@ class ConvSparseCoefficients(object):
     """
     def __init__(self, y, l,
                  lamda=1, multi_channel=False, mode='full',
-                 max_iter=100, max_power_iter=10, device=sp.util.cpu_device):
+                 max_iter=100, max_power_iter=10, elitist=False,
+                 device=sp.util.cpu_device):
         
         self.y = y
         self.l = l
@@ -340,6 +387,7 @@ class ConvSparseCoefficients(object):
         self.mode = mode
         self.max_iter = max_iter
         self.max_power_iter = max_power_iter
+        self.elitist = elitist
         
         self._get_params()
         self.ndim = len(self.shape)
@@ -369,7 +417,7 @@ class ConvSparseCoefficients(object):
         app_j = ConvSparseDecom(y_j, l, lamda=self.lamda,
                                 multi_channel=self.multi_channel, mode=self.mode,
                                 max_iter=self.max_iter, max_power_iter=self.max_power_iter,
-                                device=self.device)
+                                elitist=self.elitist, device=self.device)
         r_j = app_j.run()
 
         with self.device:
