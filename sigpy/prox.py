@@ -200,26 +200,6 @@ class L1Reg(Prox):
         return thresh.soft_thresh(self.lamda * alpha, input)
 
 
-class L0Proj(Prox):
-    """Proximal operator for 1{ ||x||_0 < k}.
-
-    Args:
-        shape (tuple of ints): input shape.
-        k (int): Sparsity.
-    """
-
-    def __init__(self, shape, k, axes=None):
-
-        self.k = k
-        self.axes = axes
-
-        super().__init__(shape)
-
-    def _prox(self, alpha, input):
-
-        return thresh.l0_proj(self.k, input, axes=self.axes)
-
-
 class L1Proj(Prox):
     """Proximal operator for 1{ ||x||_1 < epsilon}.
 

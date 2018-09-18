@@ -65,39 +65,6 @@ def hard_thresh(lamda, input):
             return _hard_thresh_cuda(lamda, input)
 
 
-def l0_proj(k, input, axes=None):
-    """Projection onto L0 ball.
-
-    Args:
-        k (float, or array): Sparsity.
-        input (array)
-
-    Returns:
-        array: Result.
-
-    """
-    device = util.get_device(input)
-    xp = device.xp
-    shape = input.shape
-    axes = util._normalize_axes(axes, input.ndim)
-    remain_axes = tuple(set(range(input.ndim)) - set(axes))
-    length = util.prod([shape[a] for a in axes])
-    batch = input.size // length
-
-    with device:
-        input = input.transpose(remain_axes + axes)
-        input = input.reshape([batch, length])
-
-        idx = xp.argpartition(xp.abs(input), -k, axis=-1)
-        output = input.copy()
-        output[xp.arange(batch), idx[:, :-k]] = 0
-
-        output = output.reshape([shape[a] for a in remain_axes + axes])
-        output = output.transpose(np.argsort(remain_axes + axes))
-
-    return output
-
-
 def l1_proj(eps, input):
     """Projection onto L1 ball.
 

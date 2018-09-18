@@ -24,13 +24,6 @@ class TestThresh(unittest.TestCase):
 
         npt.assert_allclose(thresh.hard_thresh(1, x), y)
 
-    def test_l0_proj(self):
-        x = np.array([-2, -1.5, -1, 0.5, 0, 0.5, 1, 1.5, 2])
-        y = np.array([-2, -1.5, 0, 0, 0, 0, 0, 1.5, 2])
-
-        npt.assert_allclose(thresh.l0_proj(4, x), y)
-        
-
     def test_elitist_thresh(self):
         x = np.array([-2, -1.5, -1, 0.5, 0, 0.5, 1, 1.5, 2])
 
