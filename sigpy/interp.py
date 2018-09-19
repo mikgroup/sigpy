@@ -417,8 +417,8 @@ if config.cupy_enabled:
                 const int input_idx[] = {b, i};
                 const T v = (T) w * input[input_idx];
                 const int output_idx[] = {b, mod(x, nx)};
-                atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])), v.real());
-                atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
+                atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
+                atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
             }
         }
         """,
@@ -521,8 +521,8 @@ if config.cupy_enabled:
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
                     const int output_idx[] = {b, mod(y, ny), mod(x, nx)};
-                    atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])), v.real());
-                    atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
+                    atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
+                    atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
                 }
             }
         }
@@ -649,8 +649,8 @@ if config.cupy_enabled:
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
                         const int output_idx[] = {b, mod(z, nz), mod(y, ny), mod(x, nx)};
-                        atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])), v.real());
-                        atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
+                        atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
+                        atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
                     }
                 }
             }
