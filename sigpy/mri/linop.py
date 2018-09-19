@@ -4,7 +4,7 @@
 import sigpy as sp
 
 
-def Sense(mps, coord=None, ishape=None):
+def Sense(mps, coord=None, ishape=None, coil_batch_size=None):
     """Sense linear operator.
     
     Args:
@@ -16,8 +16,16 @@ def Sense(mps, coord=None, ishape=None):
     if ishape is None:
         ishape = mps.shape[1:]
 
-    S = sp.linop.Multiply(ishape, mps)
+    num_coils = len(mps)
+    if coil_batch_size is None:
+        coil_batch_size = num_coils
 
+    if coil_batch_size < len(mps):
+        num_coil_batches = (num_coils + coil_batch_size - 1) // coil_batch_size
+        return sp.linop.Vstack([Sense(mps[c::num_coil_batches], coord=coord, ishape=ishape)
+                                for c in range(num_coil_batches)], axis=0)
+
+    S = sp.linop.Multiply(ishape, mps)
     if coord is None:
         F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
     else:
