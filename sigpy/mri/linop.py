@@ -19,13 +19,16 @@ def Sense(mps, coord=None, weights=None, ishape=None, coil_batch_size=None):
     else:
         img_ndim = len(ishape)
 
-    if coil_batch_size is not None and coil_batch_size < num_coils:
-        return sp.linop.Vstack(Sense(mps[c::coil_batch_size],
-                                     coord=coord, weights=weights, ishape=ishape),
-                               axes=[-(img_ndim + 1)])
-        
-    S = sp.linop.Multiply(ishape, mps)
+    num_coils = len(mps)
+    if coil_batch_size is None:
+        coil_batch_size = num_coils
 
+    if coil_batch_size < len(mps):
+        num_coil_batches = (num_coils + coil_batch_size - 1) // coil_batch_size
+        return sp.linop.Vstack([Sense(mps[c::num_coil_batches], coord=coord, ishape=ishape)
+                                for c in range(num_coil_batches)], axis=-(img_ndim + 1))
+
+    S = sp.linop.Multiply(ishape, mps)
     if coord is None:
         F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
     else:
