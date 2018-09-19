@@ -35,7 +35,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
     xp = device.xp
 
     mps_shape = list(mps.shape)
-    img_shape = list(mps_shape[1:])
+    img_shape = mps_shape[1:]
     img2_shape = [i * 2 for i in img_shape]
     ndim = len(img_shape)
     num_coils = mps.shape[0]
@@ -60,24 +60,28 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
 
             psf = sp.nufft_adjoint(ones, coord2, img2_shape)
 
-        mps = sp.to_device(mps, device)
-        mps_ij = mps * xp.conj(mps.reshape([num_coils, 1] + img_shape))
-        xcorr_fourier = xp.sum(xp.abs(sp.fft(mps_ij, [num_coils, num_coils] + img2_shape, axes=range(-ndim, 0)))**2, axis=0)
-        xcorr = sp.ifft(xcorr_fourier, axes=range(-ndim, 0))
-        xcorr *= psf
-        
-        if coord is None:
-            p_inv = sp.fft(xcorr, axes=range(-ndim, 0))[[slice(None)] + idx]
-        else:
-            p_inv = sp.nufft(xcorr, coord2)
+        p_inv = []
+        for mps_i in mps:
+            mps_i = sp.to_device(mps_i, device)
+            mps_i_norm2 = sp.norm2(mps_i)
+            xcorr_fourier = 0
+            for mps_j in mps:
+                mps_j = sp.to_device(mps_j, device)
+                xcorr_fourier += xp.abs(sp.fft(mps_i * xp.conj(mps_j), img2_shape))**2
 
-        if weights is not None:
-            p_inv *= weights**0.5
+            xcorr = sp.ifft(xcorr_fourier)
+            xcorr *= psf
+            if coord is None:
+                p_inv_i = sp.fft(xcorr)[idx]
+            else:
+                p_inv_i = sp.nufft(xcorr, coord2)
 
-        mps_norm2 = sp.norm2(mps, axes=range(-ndim, 0)).reshape([num_coils] + [1] * (p_inv.ndim - 1))
-        p_inv *= scale / mps_norm2
-        p_inv += lamda
-        p_inv /= 1 + lamda
+            if weights is not None:
+                p_inv_i *= weights**0.5
+
+            p_inv.append(p_inv_i * scale / mps_i_norm2)
+
+        p_inv = (xp.abs(xp.stack(p_inv, axis=0)) + lamda) / (1 + lamda)
         p_inv[p_inv == 0] = 1
         p = 1 / p_inv
 
@@ -139,17 +143,20 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_devi
 
             psf = sp.nufft_adjoint(ones, coord2, img2_shape)
 
-        mps = sp.to_device(mps, device)
-        xcorr_fourier = xp.abs(sp.fft(xp.conj(mps), [num_coils] + img2_shape, axes=range(-ndim, 0)))**2
-        xcorr = sp.ifft(xcorr_fourier, axes=range(-ndim, 0))
-        xcorr *= psf
-        p_inv = sp.fft(xcorr, axes=range(-ndim, 0))
-        p_inv = p_inv[[slice(None)] + idx]
-        p_inv *= scale
-        if weights is not None:
-            p_inv *= weights**0.5
+        p_inv = 0
+        for mps_i in mps:
+            mps_i = sp.to_device(mps_i, device)
+            xcorr_fourier = xp.abs(sp.fft(xp.conj(mps_i), img2_shape))**2
+            xcorr = sp.ifft(xcorr_fourier)
+            xcorr *= psf
+            p_inv_i = sp.fft(xcorr)
+            p_inv_i = p_inv_i[idx]
+            p_inv_i *= scale
+            if weights is not None:
+                p_inv_i *= weights**0.5
 
-        p_inv = xp.sum(p_inv, axis=0)
+            p_inv += p_inv_i
+
         p_inv += lamda
         p_inv[p_inv == 0] = 1
         p = 1 / p_inv
