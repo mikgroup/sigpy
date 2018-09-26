@@ -76,7 +76,10 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
 
     if ndim == 2:
         if golden:
-            phi = 0.618
+            # 111.25 degrees in radians
+            # from: Winkelmann, S. An Optimal Radial Profile Order Based on
+            # the Golden Ratio for Time-Resolved MRI, IEEE TMI, 2007
+            phi = 1.94167879
         else:
             phi = 1.0 / ntr
 
