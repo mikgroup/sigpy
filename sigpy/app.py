@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Applications.
+"""This module contains an abstract class App for iterative signal reconstruction applications,
+and provides a few general Apps, including a linear least squares App,
+and a maximum eigenvalue estimation App.
 """
 import numpy as np
 
@@ -13,7 +15,23 @@ if config.cupy_enabled:
 
 
 class App(object):
-    """Iterative algorithm application. Each App has its own Alg.
+    """Abstraction for iterative signal reconstruction applications.
+
+    An App is the final deliverable for each signal reconstruction application.
+    The standard way to run an App object, say app, is as follows:
+
+        >>> app.run()
+
+    Each App should have a core Alg object. The run() function runs the Alg object,
+    with additional convenient features, such as a progress bar, which
+    can be toggled with the show_pbar option. 
+
+    When creating a new App class, the user should supply an Alg object.
+    The user can also optionally define a _pre_update and a _post_update
+    function to performs tasks before and after the Alg.update in each iteration.
+
+    Similar to Alg, an App object is meant to be run once. Different from Alg,
+    App is higher level can should use Linop and Prox whenever possible.
 
     Args:
         alg (Alg): Alg object.
