@@ -58,9 +58,6 @@ class App(object):
     def _summarize(self):
         return
 
-    def _cleanup(self):
-        return
-
     def _output(self):
         return
 
@@ -78,7 +75,6 @@ class App(object):
             if self.show_pbar:
                 self.pbar.update()
 
-        self._cleanup()
         if self.show_pbar:
             self.pbar.close()
 
