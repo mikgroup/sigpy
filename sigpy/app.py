@@ -425,7 +425,7 @@ class L2ConstrainedMinimization(App):
             proxg = prox.NoOp(A.ishape)
             A = linop.Vstack([A, G])
             
-        if tau is None or self.sigma is None:
+        if tau is None or sigma is None:
             max_eig = MaxEig(A.H * A, dtype=x.dtype, device=self.x_device).run()
             tau = 1
             sigma = 1 / max_eig
