@@ -46,9 +46,14 @@ class Alg(object):
         raise NotImplementedError
 
     def _done(self):
-        return self.iter >= self.max_iter 
+        return self.iter >= self.max_iter
 
     def update(self):
+        if self.done():
+            raise RuntimeError('Alg is already done. One reason for this error '
+                               'is that you are running the Alg object twice.'
+                               'Please consider creating a new Alg for that.')
+            
         with self.device:
             self._update()
             self.iter += 1
@@ -73,13 +78,19 @@ class PowerMethod(Alg):
     def __init__(self, A, x, max_iter=30):
         self.A = A
         self.x = x
-        self.max_eig = -1
+        self.max_eig = np.infty
         super().__init__(max_iter, util.get_device(x))
 
     def _update(self):
         y = self.A(self.x)
         self.max_eig = util.asscalar(util.norm(y))
-        util.move_to(self.x, y / self.max_eig)
+        if self.max_eig == 0:
+            self.x.fill(0)
+        else:
+            util.move_to(self.x, y / self.max_eig)
+
+    def _done(self):
+        return self.iter >= self.max_iter or self.max_eig == 0
 
 
 class ProximalPointMethod(Alg):
