@@ -5,8 +5,6 @@ import numpy as np
 import sigpy as sp
 
 from sigpy.mri import linop
-
-
 if sp.config.mpi4py_enabled:
     from mpi4py import MPI
 
@@ -49,12 +47,13 @@ class SenseRecon(sp.app.LinearLeastSquares):
     """
     def __init__(self, y, mps, lamda=0, weights=None,
                  coord=None, device=sp.util.cpu_device, **kwargs):
-        y = sp.util.move(y, device=device)
-        if weights is not None:
-            weights = sp.util.move(weights, device=device)
-
         weights = _estimate_weights(y, weights, coord)
-        A = linop.Sense(mps, coord=coord)
+        if weights is not None:
+            y = sp.util.move(y * weights**0.5, device=device)
+        else:
+            y = sp.util.move(y, device=device)
+
+        A = linop.Sense(mps, coord=coord, weights=weights)
         x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
         super().__init__(A, y, x, lamda=lamda, weights=weights, **kwargs)
@@ -87,13 +86,13 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
     def __init__(self, y, mps, eps,
                  weights=None, coord=None,
                  device=sp.util.cpu_device, **kwargs):
-        y = sp.util.move(y, device=device)
-        if weights is not None:
-            weights = sp.util.move(weights, device=device)
-
         weights = _estimate_weights(y, weights, coord)
+        if weights is not None:
+            y = sp.util.move(y * weights**0.5, device=device)
+        else:
+            y = sp.util.move(y, device=device)
 
-        A = linop.Sense(mps, coord=coord)
+        A = linop.Sense(mps, coord=coord, weights=weights)
         proxg = sp.prox.L2Reg(A.ishape, 1)
         x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
@@ -129,13 +128,13 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None,
                  wave_name='db4', device=sp.util.cpu_device, **kwargs):
-        y = sp.util.move(y, device=device)
-        if weights is not None:
-            weights = sp.util.move(weights, device=device)
-
         weights = _estimate_weights(y, weights, coord)
+        if weights is not None:
+            y = sp.util.move(y * weights**0.5, device=device)
+        else:
+            y = sp.util.move(y, device=device)
 
-        A = linop.Sense(mps, coord=coord)
+        A = linop.Sense(mps, coord=coord, weights=weights)
         img_shape = mps.shape[1:]
         x = sp.util.zeros(img_shape, dtype=y.dtype, device=device)
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
@@ -180,13 +179,13 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
     def __init__(
             self, y, mps, eps,
             wave_name='db4', weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
-        y = sp.util.move(y, device=device)
-        if weights is not None:
-            weights = sp.util.move(weights, device=device)
-
         weights = _estimate_weights(y, weights, coord)
+        if weights is not None:
+            y = sp.util.move(y * weights**0.5, device=device)
+        else:
+            y = sp.util.move(y, device=device)
 
-        A = linop.Sense(mps, coord=coord)
+        A = linop.Sense(mps, coord=coord, weights=weights)
         img_shape = mps.shape[1:]
         x = sp.util.zeros(img_shape, dtype=y.dtype, device=device)
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
@@ -223,13 +222,13 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
     """
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
-        y = sp.util.move(y, device=device)
-        if weights is not None:
-            weights = sp.util.move(weights, device=device)
-
         weights = _estimate_weights(y, weights, coord)
+        if weights is not None:
+            y = sp.util.move(y * weights**0.5, device=device)
+        else:
+            y = sp.util.move(y, device=device)
 
-        A = linop.Sense(mps, coord=coord)
+        A = linop.Sense(mps, coord=coord, weights=weights)
         x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
         G = sp.linop.Gradient(A.ishape)
@@ -272,13 +271,13 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
     def __init__(
             self, y, mps, eps,
             weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
-        y = sp.util.move(y, device=device)
-        if weights is not None:
-            weights = sp.util.move(weights, device=device)
-
         weights = _estimate_weights(y, weights, coord)
+        if weights is not None:
+            y = sp.util.move(y * weights**0.5, device=device)
+        else:
+            y = sp.util.move(y, device=device)
 
-        A = linop.Sense(mps, coord=coord)
+        A = linop.Sense(mps, coord=coord, weights=weights)
         x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, 1)

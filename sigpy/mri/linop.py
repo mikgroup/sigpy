@@ -4,17 +4,19 @@
 import sigpy as sp
 
 
-def Sense(mps, coord=None, ishape=None, coil_batch_size=None):
+def Sense(mps, coord=None, weights=None, ishape=None, coil_batch_size=None):
     """Sense linear operator.
     
     Args:
         mps (array): sensitivity maps of length = number of channels.
         coord (None or array): coordinates.
-    """
 
-    img_ndim = mps.ndim - 1
+    """
     if ishape is None:
         ishape = mps.shape[1:]
+        img_ndim = mps.ndim - 1
+    else:
+        img_ndim = len(ishape)
 
     num_coils = len(mps)
     if coil_batch_size is None:
@@ -31,9 +33,13 @@ def Sense(mps, coord=None, ishape=None, coil_batch_size=None):
     else:
         F = sp.linop.NUFFT(S.oshape, coord)
 
-    A = F * S
+    if weights is None:
+        A = F * S
+    else:
+        P = sp.linop.Multiply(F.oshape, weights**0.5)
+        A = P * F * S
+        
     A.repr_str = 'Sense'
-
     return A
 
 
