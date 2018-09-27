@@ -152,7 +152,7 @@ class LinearLeastSquares(App):
         save_objective_values (bool): Toggle saving objective value.
 
     """
-    def __init__(self, A, y, x, proxg=None,
+    def __init__(self, A, y, x=None, proxg=None,
                  lamda=0, G=None, g=None, R=None, mu=0, z=0,
                  alg_name=None, max_iter=100,
                  P=None, alpha=None, max_power_iter=10, accelerate=True,
@@ -179,9 +179,11 @@ class LinearLeastSquares(App):
         self.save_objective_values = save_objective_values
         self.show_pbar = show_pbar
 
-        self.x_device = util.get_device(x)
         self.y_device = util.get_device(y)
-        
+        if self.x is None:
+            self.x = util.zeros(A.ishape, device=self.y_device)
+
+        self.x_device = util.get_device(x)
         self._get_alg()
         if self.save_objective_values:
             self.objective_values = []
@@ -403,21 +405,20 @@ class L2ConstrainedMinimization(App):
         eps (float): Residual.
 
     """
-    def __init__(self, A, y, x, proxg, eps, G=None,
+    def __init__(self, A, y, proxg, eps, x=None, G=None,
                  max_iter=100, tau=None, sigma=None,
                  show_pbar=True):
-
+        self.y = y
         self.x = x
-        self.x_device = util.get_device(x)
         self.y_device = util.get_device(y)
-
+        if self.x is None:
+            self.x = util.zeros(A.ishape, device=self.y_device)
+            
+        self.x_device = util.get_device(self.x)
         if G is None:
-            self.max_eig_app = MaxEig(A.H * A, dtype=x.dtype, device=self.x_device)
+            self.max_eig_app = MaxEig(A.H * A, dtype=self.x.dtype, device=self.x_device)
 
             proxfc = prox.Conj(prox.L2Proj(A.oshape, eps, y=y))
-            self.u = util.zeros_like(y)
-        
-
         else:
             proxf1 = prox.L2Proj(A.oshape, eps, y=y)
             proxf2 = proxg
@@ -426,11 +427,11 @@ class L2ConstrainedMinimization(App):
             A = linop.Vstack([A, G])
             
         if tau is None or sigma is None:
-            max_eig = MaxEig(A.H * A, dtype=x.dtype, device=self.x_device).run()
+            max_eig = MaxEig(A.H * A, dtype=self.x.dtype, device=self.x_device).run()
             tau = 1
             sigma = 1 / max_eig
 
-        self.u = util.zeros(A.oshape, dtype=x.dtype, device=self.x_device)
+        self.u = util.zeros(A.oshape, dtype=self.y.dtype, device=self.y_device)
         alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, self.u,
                                        tau, sigma, max_iter=max_iter)
 

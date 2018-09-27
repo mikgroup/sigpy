@@ -54,9 +54,8 @@ class SenseRecon(sp.app.LinearLeastSquares):
             y = sp.util.move(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
-        x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
-        super().__init__(A, y, x, lamda=lamda, **kwargs)
+        super().__init__(A, y, lamda=lamda, **kwargs)
 
 
 class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -94,9 +93,8 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
 
         A = linop.Sense(mps, coord=coord, weights=weights)
         proxg = sp.prox.L2Reg(A.ishape, 1)
-        x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
-        super().__init__(A, y, x, proxg, eps, **kwargs)
+        super().__init__(A, y, proxg, eps, **kwargs)
 
 
 class L1WaveletRecon(sp.app.LinearLeastSquares):
@@ -136,7 +134,6 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
 
         A = linop.Sense(mps, coord=coord, weights=weights)
         img_shape = mps.shape[1:]
-        x = sp.util.zeros(img_shape, dtype=y.dtype, device=device)
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
 
@@ -146,7 +143,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             with device:
                 return lamda * xp.sum(xp.abs(W(input)))
 
-        super().__init__(A, y, x, proxg=proxg, g=g, **kwargs)
+        super().__init__(A, y, proxg=proxg, g=g, **kwargs)
 
 
 class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -186,11 +183,10 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
 
         A = linop.Sense(mps, coord=coord, weights=weights)
         img_shape = mps.shape[1:]
-        x = sp.util.zeros(img_shape, dtype=y.dtype, device=device)
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, 1), W)
 
-        super().__init__(A, y, x, proxg, eps, **kwargs)
+        super().__init__(A, y, proxg, eps, **kwargs)
 
 
 class TotalVariationRecon(sp.app.LinearLeastSquares):
@@ -228,7 +224,6 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
             y = sp.util.move(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
-        x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, lamda)
@@ -239,7 +234,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
             with device:
                 return lamda * xp.sum(xp.abs(x))
 
-        super().__init__(A, y, x, proxg=proxg, g=g, G=G, **kwargs)
+        super().__init__(A, y, proxg=proxg, g=g, G=G, **kwargs)
 
 
 class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -277,11 +272,10 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
             y = sp.util.move(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
-        x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, 1)
 
-        super().__init__(A, y, x, proxg, eps, G=G, **kwargs)
+        super().__init__(A, y, proxg, eps, G=G, **kwargs)
 
 
 class JsenseRecon(sp.app.App):
