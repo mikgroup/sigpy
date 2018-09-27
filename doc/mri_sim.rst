@@ -1,7 +1,5 @@
-MRI Simulation Functions
-========================
-
-.. _mri_sim:
+Simulation Functions
+====================
 
 .. automodule:: sigpy.mri.sim
    :members:

@@ -1,7 +1,5 @@
-MRI Utilities
-=============
-
-.. _mri_util:
+Utilities
+=========
 
 .. automodule:: sigpy.mri.util
    :members:

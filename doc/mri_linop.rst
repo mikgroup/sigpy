@@ -1,7 +1,5 @@
-MRI Linear Operators
-====================
-
-.. _mri_linop:
+Linear Operators
+================
 
 .. automodule:: sigpy.mri.linop
    :members:

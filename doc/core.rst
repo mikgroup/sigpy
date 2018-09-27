@@ -1,6 +1,8 @@
 Core Module
 ===========
 
+.. automodule:: sigpy
+		
 .. toctree::
    :maxdepth: 2
 

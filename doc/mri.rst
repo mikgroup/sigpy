@@ -1,6 +1,8 @@
 MRI
 ===
 
+.. automodule:: sigpy.mri
+		
 .. toctree::
    :maxdepth: 2
 	 

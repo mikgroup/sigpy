@@ -1,7 +1,5 @@
-MRI Sampling Functions
-======================
-
-.. _mri_samp:
+Sampling Functions
+==================
 
 .. automodule:: sigpy.mri.samp
    :members:

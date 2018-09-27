@@ -1,26 +1,6 @@
 # -*- coding: utf-8 -*-
 """This module provides an abstract class Alg for iterative algorithms,
 and implements commonly used methods.
-
-The standard way of using an Alg object, say alg, is as follows:
->>> while not alg.done():
->>>     alg.update()
-The user is free to do anything in the while loop.
-
-An Alg object is meant to run once. Once done, the object should not be run again.
-
-When creating a new Alg class, the user should supply an _update() function
-to perform the iterative update, and optionally a _done() function
-to determine when to terminate the iteration. The default _done() function
-simply checks whether the number of iterations has reached the maximum.
-
-The interface for each Alg class should not depend on Linop or Prox explicitly.
-For example, if the user wants to design an Alg class to accept a Linop, say A,
-as an argument, then it should also accept any function that can be called
-to compute x -> A(x). Similarly, to accept a Prox, say proxg, as an argument,
-the Alg class should accept any function that can be called to compute
-alpha, x -> proxg(x).
-
 """
 import numpy as np
 from sigpy import util, config
@@ -30,7 +10,28 @@ if config.cupy_enabled:
 
 
 class Alg(object):
-    """Abstraction for iterative algorithm.
+    """Abstraction for iterative algorithms.
+
+    The standard way of using an Alg object, say alg, is as follows:
+
+    >>> while not alg.done():
+    >>>     alg.update()
+
+    The user is free to run other things in the while loop.
+
+    An Alg object is meant to run once. Once done, the object should not be run again.
+
+    When creating a new Alg class, the user should supply an _update() function
+    to perform the iterative update, and optionally a _done() function
+    to determine when to terminate the iteration. The default _done() function
+    simply checks whether the number of iterations has reached the maximum.
+
+    The interface for each Alg class should not depend on Linop or Prox explicitly.
+    For example, if the user wants to design an Alg class to accept a Linop, say A,
+    as an argument, then it should also accept any function that can be called
+    to compute x -> A(x). Similarly, to accept a Prox, say proxg, as an argument,
+    the Alg class should accept any function that can be called to compute
+    alpha, x -> proxg(x).
 
     Args:
         max_iter (int): Maximum number of iterations.

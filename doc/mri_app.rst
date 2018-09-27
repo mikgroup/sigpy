@@ -1,7 +1,5 @@
-MRI Applications
-================
-
-.. _mri_app:
+Applications
+============
 
 .. automodule:: sigpy.mri.app
    :members:
