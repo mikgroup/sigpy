@@ -211,7 +211,6 @@ class AllReduceAdjoint(Linop):
         return AllReduce(self.ishape, self.comm)
 
 
-
 class Conj(Linop):
     """Returns complex conjugate of linear operator.
 
@@ -220,7 +219,6 @@ class Conj(Linop):
 
     """
     def __init__(self, A):
-
         self.A = A
 
         super().__init__(A.oshape, A.ishape, repr_str=A.repr_str)
