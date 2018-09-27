@@ -39,7 +39,7 @@ class TestApp(unittest.TestCase):
         filt_width = 2
         batch_size = 1
         y = np.array([[1, 1]], dtype=np.float) / 2**0.5
-        lamda = 1e-3
+        lamda = 1e-5
         alpha = 1
 
         l, r = app.ConvSparseCoding(y, num_atoms, filt_width, batch_size,

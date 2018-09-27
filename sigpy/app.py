@@ -358,12 +358,15 @@ class LinearLeastSquares(App):
             AHA += self.mu * I
 
         device = util.get_device(self.x)
-        max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
-                             device=device, max_iter=self.max_power_iter,
-                             show_pbar=self.show_pbar)
+        max_eig = MaxEig(AHA, dtype=self.x.dtype,
+                         device=device, max_iter=self.max_power_iter,
+                         show_pbar=self.show_pbar).run()
 
         with device:
-            self.alg.alpha = 1 / max_eig_app.run()
+            if max_eig == 0:
+                self.alg.alpha = 1
+            else:
+                self.alg.alpha = 1 / max_eig
 
     def _get_tau(self):
         if self.weights is not None:
