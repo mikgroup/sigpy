@@ -59,7 +59,7 @@ class Scatter(object):
         self.vmin = None
         self.vmax = None
         self.save_basename = save_basename
-        self.fps = fsp
+        self.fps = fps
 
         self.fig.canvas.mpl_disconnect(
             self.fig.canvas.manager.key_press_handler_id)
