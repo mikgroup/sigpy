@@ -52,7 +52,8 @@ class Alg(object):
         if self.done():
             raise RuntimeError('Alg is already done. One reason for this error '
                                'is that you are running the Alg object twice.'
-                               'Please consider creating a new Alg for that.')
+                               'Each Alg object is only meant to be run once.'
+                               'Please consider creating a new Alg.')
             
         with self.device:
             self._update()
