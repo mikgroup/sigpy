@@ -258,9 +258,9 @@ class Add(Linop):
                          repr_str=' + '.join([linop.repr_str for linop in linops]))
 
     def _apply(self, input):
-        output = self.linops[0]._apply(input)
+        output = input.copy()
         with util.get_device(output):
-            for linop in self.linops[1:]:
+            for linop in self.linops:
                 if isinstance(linop, Multiply) and np.isscalar(linop.mult):
                     util.axpy(output, linop.mult, input)
                 else:
