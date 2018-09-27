@@ -381,28 +381,24 @@ class JsenseRecon(sp.app.App):
             grd_shape = sp.nufft.estimate_shape(self.coord)
             img_ker_shape = [i + self.mps_ker_width - 1 for i in grd_shape]
 
-        self.img_ker = sp.util.dirac(
-            img_ker_shape, dtype=self.dtype, device=self.device)
-        self.mps_ker = sp.util.zeros(
-            mps_ker_shape, dtype=self.dtype, device=self.device)
+        self.img_ker = sp.util.dirac(img_ker_shape, dtype=self.dtype, device=self.device)
+        self.mps_ker = sp.util.zeros(mps_ker_shape, dtype=self.dtype, device=self.device)
 
     def _get_alg(self):
-        self.A_img_ker = linop.ConvSense(
-            self.img_ker.shape, self.mps_ker, coord=self.coord)
 
-        self.A_mps_ker = linop.ConvImage(
-            self.mps_ker.shape, self.img_ker, coord=self.coord)
+        def min_mps_ker():
+            self.A_mps_ker = linop.ConvImage(self.mps_ker.shape, self.img_ker, coord=self.coord)
+            sp.app.LinearLeastSquares(
+                self.A_mps_ker, self.y, self.mps_ker, weights=self.weights,
+                lamda=self.lamda, max_iter=self.max_inner_iter).run()
 
-        self.app_mps = sp.app.LinearLeastSquares(
-            self.A_mps_ker, self.y, self.mps_ker, weights=self.weights,
-            lamda=self.lamda, max_iter=self.max_inner_iter)
+        def min_img_ker():
+            self.A_img_ker = linop.ConvSense(self.img_ker.shape, self.mps_ker, coord=self.coord)
+            sp.app.LinearLeastSquares(
+                self.A_img_ker, self.y, self.img_ker, weights=self.weights,
+                lamda=self.lamda, max_iter=self.max_inner_iter).run()
 
-        self.app_img = sp.app.LinearLeastSquares(
-            self.A_img_ker, self.y, self.img_ker, weights=self.weights,
-            lamda=self.lamda, max_iter=self.max_inner_iter)
-
-        self.alg = sp.alg.AltMin(self.app_mps.run, self.app_img.run,
-                                 max_iter=self.max_iter)
+        self.alg = sp.alg.AltMin(min_mps_ker, min_img_ker, max_iter=self.max_iter)        
 
     def _output(self):
         xp = self.device.xp
