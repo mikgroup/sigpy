@@ -15,8 +15,6 @@ class TestAlg(unittest.TestCase):
         x = np.random.random([n])
 
         alg_method = alg.PowerMethod(lambda x: np.matmul(A.T, np.matmul(A, x)), x)
-
-        alg_method.init()
         while(not alg_method.done()):
             alg_method.update()
 
@@ -43,8 +41,6 @@ class TestAlg(unittest.TestCase):
         alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, (np.matmul(A, x) - y)) +
                                         lamda * x, x,
                                         alpha, accelerate=False)
-
-        alg_method.init()
         while(not alg_method.done()):
             alg_method.update()
 
@@ -55,8 +51,6 @@ class TestAlg(unittest.TestCase):
         alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, np.matmul(A, x) - y) +
                                         lamda * x, x,
                                         alpha, accelerate=True)
-
-        alg_method.init()
         while(not alg_method.done()):
             alg_method.update()
 
@@ -67,8 +61,6 @@ class TestAlg(unittest.TestCase):
         alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, np.matmul(A, x) - y), x,
                                         alpha, accelerate=False,
                                         proxg=lambda alpha, x: x / (1 + lamda * alpha))
-
-        alg_method.init()
         while(not alg_method.done()):
             alg_method.update()
 
@@ -81,8 +73,6 @@ class TestAlg(unittest.TestCase):
                                         proxg=lambda alpha, x: x /
                                         (1 + lamda * alpha),
                                         accelerate=True)
-
-        alg_method.init()
         while(not alg_method.done()):
             alg_method.update()
 
@@ -99,8 +89,6 @@ class TestAlg(unittest.TestCase):
         alg_method = alg.ConjugateGradient(lambda x: np.matmul(A.T, np.matmul(A, x)),
                                            np.matmul(A.T, y),
                                            x)
-
-        alg_method.init()
         while(not alg_method.done()):
             alg_method.update()
 
@@ -128,8 +116,6 @@ class TestAlg(unittest.TestCase):
             lambda x: np.matmul(A, x),
             lambda x: np.matmul(A.T, x),
             x, u, tau, sigma, max_iter=1000)
-
-        alg_method.init()
         while(not alg_method.done()):
             alg_method.update()
 

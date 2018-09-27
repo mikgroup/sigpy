@@ -48,7 +48,6 @@ class App(object):
 
     def run(self):
         self._init()
-        self.alg.init()
         if self.show_pbar:
             self.pbar = tqdm(total=self.alg.max_iter,
                              desc=self.__class__.__name__)
@@ -61,7 +60,6 @@ class App(object):
             if self.show_pbar:
                 self.pbar.update()
 
-        self.alg.cleanup()
         self._cleanup()
         if self.show_pbar:
             self.pbar.close()
@@ -177,19 +175,7 @@ class LinearLeastSquares(App):
         self._get_alg()
 
     def _init(self):
-        if isinstance(self.alg, ConjugateGradient):
-            if self.weights is not None:
-                with util.get_device(self.y):
-                    y = self.weights * self.y
-            else:
-                y = self.y
-
-            with util.get_device(self.x):
-                self.alg.b = self.A.H(y)
-                if self.mu != 0:
-                    util.axpy(self.alg.b, self.mu, self.z)
-
-        elif isinstance(self.alg, GradientMethod):
+        if isinstance(self.alg, GradientMethod):
             if self.alpha is None:
                 self._get_alpha()
         elif isinstance(self.alg, PrimalDualHybridGradient):
@@ -216,10 +202,6 @@ class LinearLeastSquares(App):
 
     def _output(self):
         return self.x
-
-    def _cleanup(self):
-        if isinstance(self.alg, ConjugateGradient):
-            del self.alg.b
             
     def _get_alg(self):
         if self.alg_name is None:
@@ -254,9 +236,12 @@ class LinearLeastSquares(App):
         if self.weights is not None:
             W = linop.Multiply(self.A.oshape, self.weights)
             AHA = self.A.H * W * self.A
+            with util.get_device(self.y):
+                AHy = self.A.H(self.weights * self.y)
         else:
             AHA = self.A.H * self.A
-            
+            AHy = self.A.H(self.y)
+
         if self.lamda != 0:
             if self.R is None:
                 AHA += self.lamda * I
@@ -265,8 +250,9 @@ class LinearLeastSquares(App):
 
         if self.mu != 0:
             AHA += self.mu * I
+            util.axpy(AHy, self.mu, self.z)
 
-        self.alg = ConjugateGradient(AHA, None, self.x, P=self.P,
+        self.alg = ConjugateGradient(AHA, AHy, self.x, P=self.P,
                                      max_iter=self.max_iter)
 
     def _get_GradientMethod(self):
@@ -475,7 +461,7 @@ class L2ConstrainedMinimization(App):
 
     """
     def __init__(self, A, y, x, proxg, eps, G=None, weights=None,
-                 max_iter=100, tau=None, sigma=None, theta=1,
+                 max_iter=100, tau=None, sigma=None,
                  show_pbar=True):
 
         self.x = x
