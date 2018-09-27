@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Linear operators.
+"""This module contains an abstract class Linop for linear operators,
+and provides commonly used linear operators, including signal transforms
+such as FFT, NUFFT, and wavelet, and array manipulation operators, 
+such as reshape, transpose, and resize.
 """
 import numpy as np
 
-from itertools import product
 from sigpy import config, fft, nufft, util, interp, conv, wavelet
 
 if config.cupy_enabled:
@@ -20,9 +22,20 @@ def _check_shape_positive(shape):
 class Linop(object):
     """Abstraction for linear operator.
 
-    Linop can be called on or multiply to an array to perform a linear operation.
+    Linop can be called or multiply to an array to perform a linear operation.
+    Given a Linop A, and an appropriately shaped input x, the following are
+    both valid operations to compute A(x):
+    
+       >>> y = A * x
+       >>> y = A(x)
+
     Its adjoint linear operator can be obtained using the .H attribute.
     Linops can be scaled, added, subtracted, stacked and composed.
+    Here are some example of valid operations on Linop A, Linop B, and a scalar a:
+    
+       >>> A.H
+       >>> a * A + B
+       >>> a * A * B
 
     Args:
         oshape: Output shape.
@@ -34,7 +47,6 @@ class Linop(object):
         ishape: input shape.
         H: adjoint linear operator.
     """
-
     def __init__(self, oshape, ishape, repr_str=None):
         self.oshape = list(oshape)
         self.ishape = list(ishape)
@@ -48,14 +60,12 @@ class Linop(object):
             self.repr_str = repr_str
 
     def _check_domain(self, input):
-
         for i1, i2 in zip(input.shape, self.ishape):
             if i2 != -1 and i1 != i2:
                 raise ValueError('input shape mismatch for {s}, got {input_shape}'.format(
                     s=self, input_shape=input.shape))
 
     def _check_codomain(self, output):
-
         for o1, o2 in zip(output.shape, self.oshape):
             if o2 != -1 and o1 != o2:
                 raise ValueError('output shape mismatch for {s}, got {output_shape}'.format(
@@ -112,11 +122,9 @@ class Linop(object):
         return -1 * self
 
     def __sub__(self, input):
-
         return self.__add__(-input)
 
     def __repr__(self):
-
         return '<{oshape}x{ishape}> {repr_str} Linop>'.format(
             oshape=self.oshape, ishape=self.ishape, repr_str=self.repr_str)
 
