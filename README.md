@@ -3,13 +3,15 @@ Overview
 
 Introduction
 ------------
-``sigpy`` is a Python package for signal reconstruction, with GPU support using ``cupy``.
+SigPy is a package for developing iterative signal reconstruction methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU. This allows users to easily use Sigpy in conjunction with other packages. It also supports distributed computing using mpi4py. 
 
-``sigpy`` provides commonly used signal processing functions, including convolution, FFT, NUFFT, wavelet transform, and thresholding functions. All operations, except wavelet transform, can run on GPU. These operations are wrapped in a linear operator class (``Linop``) or a proximal operator class (``Prox``) for easy usage in iterative algorithms. ``sigpy`` also implements commonly used iterative algorithms, such as conjugate gradient, (accelerated/proximal) gradient method, and primal dual hybrid gradient.
+SigPy provides simple interfaces to commonly used signal processing functions, including convolution, FFT, NUFFT, wavelet transform, and thresholding functions. All functions, except wavelet transform, can run on both CPU and GPU.
 
-``sigpy`` provides a submodule ``sigpy.mri`` that uses the core module to implement common MRI iterative reconstruction methods, including SENSE reconstruction, l1-wavelet reconstruction, total-variation reconstruction, and JSENSE reconstruction. In addition, it provides convenient simulation and sampling functions, such as poisson-disc sampling function.
+These functions are wrapped in two higher level classes to better interface with iterative methods: Linop, which abstracts linear operator, and Prox, which abstracts proximal operator. SigPy provides an abstraction class Alg, and implements commonly used iterative algorithms, including conjugate gradient, (accelerated/proximal) gradient method, and primal dual hybrid gradient.
 
-``sigpy`` also provides a preliminary submodule ``sigpy.learn`` that implements convolutional sparse coding, and linear regression.
+SigPy also provides a submodule sigpy.mri that uses the core module to implement common MRI iterative reconstruction methods, including SENSE reconstruction, l1-wavelet reconstruction, total-variation reconstruction, and JSENSE reconstruction. In addition, it provides convenient simulation and sampling functions, such as poisson-disc sampling function, and shepp-logan phantom generation function.
+
+SigPy provides a preliminary submodule sigpy.learn that implements convolutional sparse coding, and linear regression, using the core module.
 
 Installation
 ------------
@@ -17,9 +19,9 @@ The package is on PyPI, and can be installed via pip:
 
 	pip install sigpy
 
-For optional gpu support, the package requires ``cupy``.
+To enable GPU support, the package requires CuPy.
 
-For optional distributed programming support, the package requires ``mpi4py``.
+To enable distributed programming support, the package requires mpi4py.
 	
 Alternatively, the package can be installed from source with the following requirements:
 
