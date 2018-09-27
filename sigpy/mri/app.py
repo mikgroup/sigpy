@@ -56,7 +56,7 @@ class SenseRecon(sp.app.LinearLeastSquares):
         A = linop.Sense(mps, coord=coord, weights=weights)
         x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
-        super().__init__(A, y, x, lamda=lamda, weights=weights, **kwargs)
+        super().__init__(A, y, x, lamda=lamda, **kwargs)
 
 
 class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -96,7 +96,7 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
         proxg = sp.prox.L2Reg(A.ishape, 1)
         x = sp.util.zeros(mps.shape[1:], dtype=y.dtype, device=device)
 
-        super().__init__(A, y, x, proxg, eps, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg, eps, **kwargs)
 
 
 class L1WaveletRecon(sp.app.LinearLeastSquares):
@@ -146,7 +146,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             with device:
                 return lamda * xp.sum(xp.abs(W(input)))
 
-        super().__init__(A, y, x, proxg=proxg, g=g, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg=proxg, g=g, **kwargs)
 
 
 class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -175,7 +175,6 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
        :func:`sigpy.mri.app.WaveletRecon`
 
     """
-
     def __init__(
             self, y, mps, eps,
             wave_name='db4', weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
@@ -191,7 +190,7 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, 1), W)
 
-        super().__init__(A, y, x, proxg, eps, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg, eps, **kwargs)
 
 
 class TotalVariationRecon(sp.app.LinearLeastSquares):
@@ -240,7 +239,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
             with device:
                 return lamda * xp.sum(xp.abs(x))
 
-        super().__init__(A, y, x, proxg=proxg, g=g, G=G, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg=proxg, g=g, G=G, **kwargs)
 
 
 class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -282,7 +281,7 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, 1)
 
-        super().__init__(A, y, x, proxg, eps, G=G, weights=weights, **kwargs)
+        super().__init__(A, y, x, proxg, eps, G=G, **kwargs)
 
 
 class JsenseRecon(sp.app.App):
@@ -361,8 +360,11 @@ class JsenseRecon(sp.app.App):
             if self.weights is not None:
                 self.weights = self.weights[calib_idx]
 
-        self.y = self.y / np.abs(self.y).max()
-        self.y = sp.util.move(self.y, self.device)
+        if self.weights is None:
+            self.y = sp.util.move(self.y / np.abs(self.y).max(), self.device)
+        else:
+            self.y = sp.util.move(self.weights * self.y / np.abs(self.y).max(), self.device)
+
         if self.coord is not None:
             self.coord = sp.util.move(self.coord, self.device)
         if self.weights is not None:
@@ -384,18 +386,17 @@ class JsenseRecon(sp.app.App):
         self.mps_ker = sp.util.zeros(mps_ker_shape, dtype=self.dtype, device=self.device)
 
     def _get_alg(self):
-
         def min_mps_ker():
-            self.A_mps_ker = linop.ConvImage(self.mps_ker.shape, self.img_ker, coord=self.coord)
-            sp.app.LinearLeastSquares(
-                self.A_mps_ker, self.y, self.mps_ker, weights=self.weights,
-                lamda=self.lamda, max_iter=self.max_inner_iter).run()
+            self.A_mps_ker = linop.ConvImage(self.mps_ker.shape, self.img_ker,
+                                             coord=self.coord, weights=self.weights)
+            sp.app.LinearLeastSquares(self.A_mps_ker, self.y, self.mps_ker,
+                                      lamda=self.lamda, max_iter=self.max_inner_iter).run()
 
         def min_img_ker():
-            self.A_img_ker = linop.ConvSense(self.img_ker.shape, self.mps_ker, coord=self.coord)
-            sp.app.LinearLeastSquares(
-                self.A_img_ker, self.y, self.img_ker, weights=self.weights,
-                lamda=self.lamda, max_iter=self.max_inner_iter).run()
+            self.A_img_ker = linop.ConvSense(self.img_ker.shape, self.mps_ker,
+                                             coord=self.coord, weights=self.weights)
+            sp.app.LinearLeastSquares(self.A_img_ker, self.y, self.img_ker,
+                                      lamda=self.lamda, max_iter=self.max_inner_iter).run()
 
         self.alg = sp.alg.AltMin(min_mps_ker, min_img_ker, max_iter=self.max_iter)        
 

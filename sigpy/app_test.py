@@ -175,29 +175,6 @@ class TestApp(unittest.TestCase):
         app.L2ConstrainedMinimization(A, y, x_rec, proxg, eps).run()
         npt.assert_allclose(x_rec, x)
 
-    def test_weighted_LinearLeastSquares(self):
-        n = 5
-        mat = np.eye(n) + 0.1 * util.randn([n, n])
-        A = linop.MatMul([n, 1], mat)
-        x = util.randn([n, 1])
-        y = A(x)
-        weights = 1 / (np.sum(abs(mat)**2, axis=0).reshape([n, 1]) + 1e-11)
-        x_lstsq = np.linalg.lstsq(weights**0.5 * mat, weights**0.5 * y, rcond=-1)[0]
-
-        x_rec = util.zeros([n, 1])
-        app.LinearLeastSquares(A, y, x_rec, weights=weights).run()
-        npt.assert_allclose(x_rec, x_lstsq)
-
-        x_rec = util.zeros([n, 1])
-        app.LinearLeastSquares(A, y, x_rec, alg_name='GradientMethod',
-                               max_iter=1000, weights=weights).run()
-        npt.assert_allclose(x_rec, x_lstsq)
-
-        x_rec = util.zeros([n, 1])
-        app.LinearLeastSquares(A, y, x_rec, alg_name='PrimalDualHybridGradient',
-                               max_iter=1000, weights=weights).run()
-        npt.assert_allclose(x_rec, x_lstsq)
-
     def test_precond_LinearLeastSquares(self):
         n = 5
         mat = np.eye(n) + 0.1 * util.randn([n, n])
