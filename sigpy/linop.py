@@ -1158,14 +1158,12 @@ class Sum(Linop):
     """
 
     def __init__(self, ishape, axes):
-
         self.axes = tuple(i % len(ishape) for i in axes)
         oshape = [ishape[i] for i in range(len(ishape)) if i not in self.axes]
 
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-
         device = util.get_device(input)
         xp = device.xp
         with device:
