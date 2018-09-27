@@ -237,7 +237,11 @@ class Scatter(object):
             else:
                 idx.append(self.slices[i])
 
-        datav = move(self.data[idx])
+        if idx:
+            datav = move(self.data[idx])
+        else:
+            datav = move(self.data)
+
         # if self.z is not None:
         #     datav_dims = [self.z] + datav_dims
         coordv = move(self.coord)
