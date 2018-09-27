@@ -377,54 +377,6 @@ class LinearLeastSquares(App):
                                             gamma_dual=gamma_dual,
                                             gradh=gradh, max_iter=self.max_iter)
 
-    def _get_tau(self):
-        if self.weights is not None:
-            with self.y_device:
-                weights_sqrt = self.weights**0.5
-
-            W_half = linop.Multiply(self.A.oshape, weights_sqrt)
-            A = W_half * self.A
-        else:
-            A = self.A
-            
-        if self.G is not None:
-            A = linop.Vstack([A, self.G])
-            
-        S = linop.Multiply(A.oshape, self.alg.sigma)
-        AHA = A.H * S * A
-
-        device = util.get_device(self.x)
-        max_eig_app = MaxEig(AHA, dtype=self.x.dtype,
-                             device=device, max_iter=self.max_power_iter,
-                             show_pbar=self.show_pbar)
-
-        with device:
-            self.alg.tau = 1 / (max_eig_app.run() + self.lamda + self.mu)
-
-    def _get_sigma(self):
-        if self.weights is not None:
-            with self.y_device:
-                weights_sqrt = self.weights**0.5
-
-            W_half = linop.Multiply(self.A.oshape, weights_sqrt)
-            A = W_half * self.A
-        else:
-            A = self.A
-            
-        if self.G is not None:
-            A = linop.Vstack([A, self.G])
-            
-        T = linop.Multiply(A.ishape, self.alg.tau)
-        AAH = A * T * A.H
-
-        device = util.get_device(self.x)
-        max_eig_app = MaxEig(AAH, dtype=self.x.dtype,
-                             device=device, max_iter=self.max_power_iter,
-                             show_pbar=self.show_pbar)
-
-        with device:
-            self.alg.sigma = 1 / max_eig_app.run()
-
     def objective(self):
         device = self.y_device
         xp = self.y_device.xp
