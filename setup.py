@@ -1,7 +1,7 @@
 import sys
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 0):
+if sys.version_info < (3, 5):
     sys.exit('Sorry, Python < 3.0 is not supported')
 
 REQUIRED_PACKAGES = ['numpy', 'pywavelets', 'numba', 'tqdm']
