@@ -4,7 +4,7 @@
 import numpy as np
 
 from itertools import product
-from sigpy import config, comm, fft, nufft, util, interp, conv, wavelet
+from sigpy import config, fft, nufft, util, interp, conv, wavelet
 
 if config.cupy_enabled:
     import cupy as cp
@@ -129,11 +129,10 @@ class Identity(Linop):
 
     """
     def __init__(self, shape):
-
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        return input
+        return input.copy()
 
     def _adjoint_linop(self):
         return self
@@ -149,7 +148,6 @@ class Move(Linop):
     """
 
     def __init__(self, shape, odevice, idevice):
-
         self.odevice = odevice
         self.idevice = idevice
 
@@ -258,13 +256,10 @@ class Add(Linop):
                          repr_str=' + '.join([linop.repr_str for linop in linops]))
 
     def _apply(self, input):
-        output = input.copy()
+        output = 0
         with util.get_device(output):
             for linop in self.linops:
-                if isinstance(linop, Multiply) and np.isscalar(linop.mult):
-                    util.axpy(output, linop.mult, input)
-                else:
-                    output += linop._apply(input)
+                output += linop._apply(input)
 
         return output
 
@@ -282,9 +277,7 @@ def _check_compose_linops(linops):
 def _combine_compose_linops(linops):
     combined_linops = []
     for linop in linops:
-        if isinstance(linop, Identity):
-            continue
-        elif isinstance(linop, Compose):
+        if isinstance(linop, Compose):
             combined_linops += linop.linops
         else:
             combined_linops.append(linop)
@@ -511,8 +504,8 @@ class Diag(Linop):
     Args:
         linops (list of Linops): list of linops with the same input and output shape.
         axis (int or None): If None, inputs/outputs are vectorized and concatenated.
-    """
 
+    """
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
 
@@ -636,7 +629,6 @@ class FFT(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-
         return fft.fft(input, axes=self.axes, center=self.center)
 
     def _adjoint_linop(self):
@@ -660,7 +652,6 @@ class IFFT(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-
         return fft.ifft(input, axes=self.axes, center=self.center)
 
     def _adjoint_linop(self):
@@ -674,7 +665,7 @@ def _get_matmul_oshape(ishape, mshape, adjoint):
 
     max_ndim = max(len(ishape), len(mshape))
     oshape = []
-    for i, m, d in zip(ishape_exp[:-2], mshape_exp[:-2], range(max_ndim - 2)):
+    for i, m in zip(ishape_exp[:-2], mshape_exp[:-2]):
         if not (i == m or i == 1 or m == 1):
             raise ValueError('Invalid shapes: {ishape}, {mshape}.'.format(
                 ishape=ishape, mshape=mshape))
@@ -740,7 +731,6 @@ class MatMul(Linop):
 
 
 def _get_right_matmul_oshape(ishape, mshape, adjoint):
-
     ishape_exp, mshape_exp = util._expand_shapes(ishape, mshape)
     if adjoint:
         mshape_exp[-1], mshape_exp[-2] = mshape_exp[-2], mshape_exp[-1]
@@ -782,7 +772,6 @@ class RightMatMul(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-
         device = util.get_device(input)
         xp = device.xp
         mat = util.move(self.mat, device)
@@ -793,7 +782,6 @@ class RightMatMul(Linop):
             return xp.matmul(input, mat)
 
     def _adjoint_linop(self):
-
         sum_axes = _get_matmul_adjoint_sum_axes(
             self.oshape, self.ishape, self.mat.shape)
 
@@ -859,10 +847,10 @@ class Multiply(Linop):
         else:
             mult = util.move(self.mult, device)
 
-        if mult.dtype != input.dtype:
-            mult = mult.astype(input.dtype)
-
         with device:
+            if mult.dtype != input.dtype:
+                mult = mult.astype(input.dtype)
+
             if self.conj:
                 mult = xp.conj(mult)
 
@@ -889,8 +877,8 @@ class Interp(Linop):
         table (array): Look-up table of kernel K, from K[0] to K[width].
         scale (float): Scaling of coordinates.
         shift (float): Shifting of coordinates.
-    """
 
+    """
     def __init__(self, ishape, coord, width, table, scale=1, shift=0):
 
         ndim = coord.shape[-1]
@@ -934,8 +922,8 @@ class Gridding(Linop):
         table (array): Llook-up table of kernel K, from K[0] to K[width]
             scale (float): Scaling of coordinates.
             shift (float): Shifting of coordinates.
-    """
 
+    """
     def __init__(self, oshape, coord, width, table, scale=1, shift=0):
 
         ndim = coord.shape[-1]
@@ -975,7 +963,6 @@ class Resize(Linop):
     """
 
     def __init__(self, oshape, ishape, ishift=None, oshift=None):
-
         self.ishift = ishift
         self.oshift = oshift
 
@@ -1180,8 +1167,8 @@ class Tile(Linop):
     Args:
         oshape (tuple of ints): Output shape.
         axes (tuple of ints): Axes to tile.
-    """
 
+    """
     def __init__(self, oshape, axes):
 
         self.axes = tuple(a % len(oshape) for a in axes)
@@ -1216,8 +1203,8 @@ class ArrayToBlocks(Linop):
     Args:
         ishape (tuple of ints): Input shape.
         blk_shape (tuple of ints): Block shape.
-    """
 
+    """
     def __init__(self, ishape, blk_shape):
 
         if not all([i % b == 0 for i, b in zip(ishape, blk_shape)]):
@@ -1247,7 +1234,6 @@ class ArrayToBlocks(Linop):
             return input.reshape(self.ireshape).transpose(self.perm).reshape(self.oshape)
 
     def _adjoint_linop(self):
-
         return BlocksToArray(self.ishape, self.blk_shape)
 
 

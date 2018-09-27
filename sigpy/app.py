@@ -252,8 +252,7 @@ class LinearLeastSquares(App):
             AHA += self.mu * I
             util.axpy(AHy, self.mu, self.z)
 
-        self.alg = ConjugateGradient(AHA, AHy, self.x, P=self.P,
-                                     max_iter=self.max_iter)
+        self.alg = ConjugateGradient(AHA, AHy, self.x, P=self.P, max_iter=self.max_iter)
 
     def _get_GradientMethod(self):
         def gradf(x):

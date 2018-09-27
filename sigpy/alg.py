@@ -18,7 +18,6 @@ class Alg(object):
     >>>     alg.update()
 
     The user is free to run other things in the while loop.
-
     An Alg object is meant to run once. Once done, the object should not be run again.
 
     When creating a new Alg class, the user should supply an _update() function
@@ -191,21 +190,24 @@ class ConjugateGradient(Alg):
         self.A = A
         self.P = P
         self.x = x
-        self.r = b - self.A(self.x)
-        if self.P is None:
-            z = self.r
-        else:
-            z = self.P(self.r)
-            
-        if max_iter > 1:
-            self.p = z.copy()
-        else:
-            self.p = z
+        device = util.get_device(x)
+        with device:
+            self.r = b - self.A(self.x)
+
+            if self.P is None:
+                z = self.r
+            else:
+                z = self.P(self.r)
+
+            if max_iter > 1:
+                self.p = z.copy()
+            else:
+                self.p = z
 
         self.zero_gradient = False
         self.rzold = util.dot(self.r, z)
         self.resid = util.asscalar(self.rzold**0.5)
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, device)
 
     def _update(self):
         Ap = self.A(self.p)
