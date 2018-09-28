@@ -179,12 +179,12 @@ class LinearLeastSquares(App):
         self.save_objective_values = save_objective_values
         self.show_pbar = show_pbar
 
-        self.y_device = util.get_device(y)
+        self.y_device = util.get_device_from_array(y)
         if self.x is None:
             with self.y_device:
                 self.x = self.y_device.xp.zeros(A.ishape, dtype=y.dtype)
 
-        self.x_device = util.get_device(x)
+        self.x_device = util.get_device_from_array(x)
         self._get_alg()
         if self.save_objective_values:
             self.objective_values = []
@@ -249,7 +249,7 @@ class LinearLeastSquares(App):
                 r = self.A(x)
                 r -= self.y
                 
-            with util.get_device(self.x):
+            with util.get_device_from_array(self.x):
                 gradf_x = self.A.H(r)
 
                 if self.lamda != 0:
@@ -299,7 +299,7 @@ class LinearLeastSquares(App):
 
         if self.lamda > 0 or self.mu > 0:
             def gradh(x):
-                with util.get_device(self.x):
+                with util.get_device_from_array(self.x):
                     gradh_x = 0
                     if self.lamda > 0:
                         if self.R is None:
@@ -413,12 +413,12 @@ class L2ConstrainedMinimization(App):
                  show_pbar=True):
         self.y = y
         self.x = x
-        self.y_device = util.get_device(y)
+        self.y_device = util.get_device_from_array(y)
         if self.x is None:
             with self.y_device:
                 self.x = self.y_device.xp.zeros(A.ishape, dtype=self.y.dtype)
             
-        self.x_device = util.get_device(self.x)
+        self.x_device = util.get_device_from_array(self.x)
         if G is None:
             self.max_eig_app = MaxEig(A.H * A, dtype=self.x.dtype, device=self.x_device)
 

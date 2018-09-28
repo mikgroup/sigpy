@@ -76,7 +76,7 @@ class Linop(object):
 
     def apply(self, input):
         self._check_domain(input)
-        with util.get_device(input):
+        with util.get_device_from_array(input):
             output = self._apply(input)
         self._check_codomain(output)
 
@@ -182,7 +182,7 @@ class AllReduce(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        with util.get_device(input):
+        with util.get_device_from_array(input):
             output = input
             self.comm.allreduce(output)
             return output
@@ -224,13 +224,13 @@ class Conj(Linop):
         super().__init__(A.oshape, A.ishape, repr_str=A.repr_str)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         with device:
             input = device.xp.conj(input)
 
         output = self.A._apply(input)
 
-        device = util.get_device(output)
+        device = util.get_device_from_array(output)
         with device:
             return device.xp.conj(output)
 
@@ -263,7 +263,7 @@ class Add(Linop):
 
     def _apply(self, input):
         output = 0
-        with util.get_device(output):
+        with util.get_device_from_array(output):
             for linop in self.linops:
                 output += linop._apply(input)
 
@@ -386,7 +386,7 @@ class Hstack(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         xp = device.xp
         output = 0
         with device:
@@ -470,7 +470,7 @@ class Vstack(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         xp = device.xp
         with device:
             output = xp.empty(self.oshape, dtype=input.dtype)
@@ -525,7 +525,7 @@ class Diag(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         xp = device.xp
         with device:
             output = xp.empty(self.oshape, dtype=input.dtype)
@@ -717,7 +717,7 @@ class MatMul(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         xp = device.xp
         mat = util.to_device(self.mat, device)
         with device:
@@ -778,7 +778,7 @@ class RightMatMul(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         xp = device.xp
         mat = util.to_device(self.mat, device)
         with device:
@@ -842,7 +842,7 @@ class Multiply(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         xp = device.xp
 
         with device:
@@ -900,7 +900,7 @@ class Interp(Linop):
 
     def _apply(self, input):
 
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         coord = util.to_device(self.coord, device)
         table = util.to_device(self.table, device)
         shift = util.to_device(self.shift, device)
@@ -944,7 +944,7 @@ class Gridding(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         coord = util.to_device(self.coord, device)
         table = util.to_device(self.table, device)
         shift = util.to_device(self.shift, device)
@@ -1156,7 +1156,7 @@ class Sum(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         xp = device.xp
         with device:
             return xp.sum(input, axis=self.axes)
@@ -1192,7 +1192,7 @@ class Tile(Linop):
 
     def _apply(self, input):
 
-        device = util.get_device(input)
+        device = util.get_device_from_array(input)
         xp = device.xp
         with device:
             return xp.tile(input.reshape(self.expanded_ishape), self.reps)
@@ -1235,7 +1235,7 @@ class ArrayToBlocks(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        with util.get_device(input):
+        with util.get_device_from_array(input):
             return input.reshape(self.ireshape).transpose(self.perm).reshape(self.oshape)
 
     def _adjoint_linop(self):
@@ -1272,7 +1272,7 @@ class BlocksToArray(Linop):
 
     def _apply(self, input):
 
-        with util.get_device(input):
+        with util.get_device_from_array(input):
             return input.transpose(self.perm).reshape(self.oshape)
 
     def _adjoint_linop(self):

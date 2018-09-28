@@ -27,7 +27,7 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
         :func:`numpy.fft.fftn`
 
     """
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
 
     with device:
@@ -61,7 +61,7 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
         :func:`numpy.fft.ifftn`
 
     """
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
 
     with device:
@@ -83,7 +83,7 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
 
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
 
     if oshape is None:
@@ -117,7 +117,7 @@ def _ifftc(input, oshape=None, axes=None, norm='ortho'):
 
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
 
     if oshape is None:

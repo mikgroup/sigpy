@@ -132,7 +132,7 @@ def get_xp(input):
         return np
 
 
-def get_device(input):
+def get_device_from_array(input):
     """Get Device from input array.
 
     Args:
@@ -159,11 +159,11 @@ def to_device(input, device):
     """
     device = Device(device)
 
-    if get_device(input) == device:
+    if get_device_from_array(input) == device:
         output = input
 
     elif device == cpu_device:
-        with get_device(input):
+        with get_device_from_array(input):
             output = input.get()
     else:
         with device:
@@ -180,20 +180,20 @@ def move_to(output, input):
         output (array): Output.
 
     """
-    if get_device(input) == get_device(output):
-        with get_device(input):
+    if get_device_from_array(input) == get_device_from_array(output):
+        with get_device_from_array(input):
             output[:] = input
 
-    elif get_device(output) == cpu_device:
-        with get_device(input):
+    elif get_device_from_array(output) == cpu_device:
+        with get_device_from_array(input):
             output[:] = input.get()
 
-    elif get_device(input) == cpu_device:
-        with get_device(output):
+    elif get_device_from_array(input) == cpu_device:
+        with get_device_from_array(output):
             output.set(input)
 
     else:
-        with get_device(output):
+        with get_device_from_array(output):
             output[:] = cp.array(input)
 
 
@@ -232,7 +232,7 @@ def vec(inputs):
     Returns:
         array: Vectorized result.
     """
-    device = get_device(inputs[0])
+    device = get_device_from_array(inputs[0])
     xp = device.xp
 
     with device:
@@ -248,7 +248,7 @@ def split(vec, oshapes):
     Returns:
         list of arrays: Splitted outputs.
     """
-    device = get_device(vec)
+    device = get_device_from_array(vec)
     with device:
         outputs = []
         for oshape in oshapes:
@@ -270,7 +270,7 @@ def rss(input, axes=(0, )):
         array: Result.
     """
 
-    device = get_device(input)
+    device = get_device_from_array(input)
     xp = device.xp
 
     with device:
@@ -308,7 +308,7 @@ def resize(input, oshape, ishift=None, oshift=None):
     islice = tuple([slice(si, si + c) for si, c in zip(ishift, copy_shape)])
     oslice = tuple([slice(so, so + c) for so, c in zip(oshift, copy_shape)])
 
-    device = get_device(input)
+    device = get_device_from_array(input)
     xp = device.xp
     with device:
         output = xp.zeros(oshape_exp, dtype=input.dtype)
@@ -342,7 +342,7 @@ def flip(input, axes=None):
             slc.append(slice(None))
 
     slc = tuple(slc)
-    device = get_device(input)
+    device = get_device_from_array(input)
     with device:
         output = input[slc]
 
@@ -365,7 +365,7 @@ def circshift(input, shifts, axes=None):
         axes = range(input.ndim)
 
     assert(len(axes) == len(shifts))
-    device = get_device(input)
+    device = get_device_from_array(input)
     xp = device.xp
 
     with device:
@@ -392,7 +392,7 @@ def downsample(input, factors, shift=None):
 
     slc = [slice(s, None, f) for s, f in zip(shift, factors)]
 
-    device = get_device(input)
+    device = get_device_from_array(input)
     with device:
         return input[slc]
 
@@ -414,7 +414,7 @@ def upsample(input, oshape, factors, shift=None):
 
     slc = [slice(s, None, f) for s, f in zip(shift, factors)]
 
-    device = get_device(input)
+    device = get_device_from_array(input)
     xp = device.xp
     with device:
         output = xp.zeros(oshape, dtype=input.dtype)
@@ -503,7 +503,7 @@ def dot(input1, input2, axes=None, keepdims=False):
         float: Dot product between input1 and input2.
 
     """
-    device = get_device(input1)
+    device = get_device_from_array(input1)
     xp = device.xp
     if input1.ndim != input2.ndim:
         raise ValueError('Inputs must have the same number of dimensions.')
@@ -524,7 +524,7 @@ def norm2(input, axes=None, keepdims=False):
         float: Sum of squares of input.
 
     """
-    device = get_device(input)
+    device = get_device_from_array(input)
     xp = device.xp
     axes = _normalize_axes(axes, input.ndim)
     with device:
@@ -566,7 +566,7 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
         for General Denoising Algorithms. IEEE Transactions on Image Processing.
         17, 9 (2008), 1540-1554.
     """
-    device = get_device(y)
+    device = get_device_from_array(y)
     xp = device.xp
 
     n = y.size
@@ -589,7 +589,7 @@ def axpy(y, a, x):
         x (array): Input array.
 
     """
-    device = get_device(x)
+    device = get_device_from_array(x)
     x = to_device(x, device)
     a = to_device(a, device)
 
@@ -609,7 +609,7 @@ def xpay(y, a, x):
         x (array): Input array.
     """
 
-    device = get_device(y)
+    device = get_device_from_array(y)
     x = to_device(x, device)
     a = to_device(a, device)
 

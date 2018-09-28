@@ -29,7 +29,7 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         IEEE transactions on medical imaging, 24(6), 799-808.
 
     """
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
@@ -84,7 +84,7 @@ def estimate_shape(coord):
         coord (array): Coordinates.
     """
     ndim = coord.shape[-1]
-    with util.get_device(coord):
+    with util.get_device_from_array(coord):
         shape = [int(coord[..., i].max() - coord[..., i].min())
                  for i in range(ndim)]
 
@@ -110,7 +110,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         :func:`sigpy.nufft.nufft`
 
     """
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
@@ -163,7 +163,7 @@ def _kb(x, width, beta, dtype=np.complex):
 
 def _scale_coord(coord, shape, oversamp):
     ndim = coord.shape[-1]
-    device = util.get_device(coord)
+    device = util.get_device_from_array(coord)
     scale = util.to_device([_get_ugly_number(oversamp * i) / i for i in shape[-ndim:]], device)
     shift = util.to_device([_get_ugly_number(oversamp * i) // 2 for i in shape[-ndim:]], device)
 

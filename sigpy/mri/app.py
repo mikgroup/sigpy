@@ -11,7 +11,7 @@ if sp.config.mpi4py_enabled:
 
 def _estimate_weights(y, weights, coord):
     if weights is None and coord is None:
-        with sp.util.get_device(y):
+        with sp.util.get_device_from_array(y):
             weights = (sp.util.rss(y, axes=(0, )) > 0).astype(y.dtype)
 
     return weights
@@ -138,7 +138,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
 
         def g(input):
-            device = sp.util.get_device(input)
+            device = sp.util.get_device_from_array(input)
             xp = device.xp
             with device:
                 return lamda * xp.sum(xp.abs(W(input)))
@@ -229,7 +229,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         proxg = sp.prox.L1Reg(G.oshape, lamda)
 
         def g(x):
-            device = sp.util.get_device(x)
+            device = sp.util.get_device_from_array(x)
             xp = device.xp
             with device:
                 return lamda * xp.sum(xp.abs(x))

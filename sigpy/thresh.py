@@ -25,7 +25,7 @@ def soft_thresh(lamda, input):
         array: soft-thresholded result.
 
     """
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
 
     lamda = xp.real(lamda)
@@ -56,7 +56,7 @@ def hard_thresh(lamda, input):
         array: hard-thresholded result.
 
     """
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
 
     if device == util.cpu_device:
         return _hard_thresh(lamda, input)
@@ -80,7 +80,7 @@ def l1_proj(eps, input):
         the l1-ball for learning in high dimensions" 2008.
 
     """
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
 
     with device:
@@ -110,7 +110,7 @@ def l2_proj(eps, input, axes=None):
     """
     axes = util._normalize_axes(axes, input.ndim)
 
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
     with device:
         norm = xp.sum(xp.abs(input)**2, axis=axes, keepdims=True)**0.5
@@ -155,7 +155,7 @@ def elitist_thresh(lamda, input, axes=None):
 
 
 def find_elitist_thresh(lamda, input):
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
     batch = len(input)
     with device:

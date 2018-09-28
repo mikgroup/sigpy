@@ -31,7 +31,7 @@ def interp(input, width, table, coord):
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
 
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
     isreal = np.issubdtype(input.dtype, np.floating)
     coord = util.to_device(coord, device)
@@ -73,7 +73,7 @@ def gridding(input, shape, width, table, coord):
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
 
-    device = util.get_device(input)
+    device = util.get_device_from_array(input)
     xp = device.xp
     isreal = np.issubdtype(input.dtype, np.floating)
 

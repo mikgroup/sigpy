@@ -75,7 +75,7 @@ class MultiGpuCommunicator(Communicator):
                     self.size, nccl_comm_id, self.rank)
 
     def allreduce(self, input):
-        if self.device != util.get_device(input):
+        if self.device != util.get_device_from_array(input):
             raise ValueError('Input device is different from communicator device.')
 
         if self.size == 1:

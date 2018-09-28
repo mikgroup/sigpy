@@ -38,7 +38,7 @@ def convolve(x, W, input_multi_channel=False, output_multi_channel=False, mode='
         input_channel, output_channel = _get_convolve_params(
         x, W, input_multi_channel, output_multi_channel)
 
-    device = util.get_device(x)
+    device = util.get_device_from_array(x)
     with device:
         x = x.reshape((batch_size, input_channel) + input_shape)
         W = W.reshape((output_channel, input_channel) + filter_shape)            
@@ -84,7 +84,7 @@ def convolve_adjoint_input(W, y, input_multi_channel=False,
         input_channel, output_channel = _get_convolve_adjoint_input_params(
             W, y, input_multi_channel, output_multi_channel)
 
-    device = util.get_device(y)
+    device = util.get_device_from_array(y)
     with device:
         y = y.reshape((batch_size, output_channel) + output_shape)
         W = W.reshape((output_channel, input_channel) + filter_shape)            
@@ -128,7 +128,7 @@ def convolve_adjoint_filter(x, y, ndim, input_multi_channel=False,
         input_channel, output_channel = _get_convolve_adjoint_filter_params(
             x, y, ndim, input_multi_channel, output_multi_channel)
 
-    device = util.get_device(x)
+    device = util.get_device_from_array(x)
     with device:
         x = x.reshape((batch_size, input_channel) + input_shape)
         y = y.reshape((batch_size, output_channel) + output_shape)          
@@ -226,7 +226,7 @@ def _fft_convolve(x, W, mode='full'):
         pad_shape = input_shape
 
     dtype = x.dtype
-    device = util.get_device(x)
+    device = util.get_device_from_array(x)
     xp = device.xp
     with device:
         x = x.reshape((batch_size, 1, input_channel) + input_shape)
@@ -271,7 +271,7 @@ def _fft_convolve_adjoint_input(W, y, mode='full'):
         pad_shape = input_shape
 
     dtype = y.dtype
-    device = util.get_device(y)
+    device = util.get_device_from_array(y)
     xp = device.xp
     with device:
         y = y.reshape((batch_size, output_channel, 1) + output_shape)
@@ -318,7 +318,7 @@ def _fft_convolve_adjoint_filter(x, y, mode='full'):
         pad_shape = input_shape
 
     dtype = x.dtype
-    device = util.get_device(x)
+    device = util.get_device_from_array(x)
     xp = device.xp
     with device:
         x = xp.conj(util.flip(x, axes=range(-ndim, 0)))
@@ -354,7 +354,7 @@ def _fft_convolve_adjoint_filter(x, y, mode='full'):
 
 def _cudnn_convolve(x, W, mode='full'):
     dtype = x.dtype
-    device = util.get_device(x)
+    device = util.get_device_from_array(x)
     xp = device.xp
     if np.issubdtype(dtype, np.complexfloating):
         with device:
@@ -400,7 +400,7 @@ def _cudnn_convolve(x, W, mode='full'):
 
 def _cudnn_convolve_adjoint_input(W, y, mode='full'):
     dtype = y.dtype
-    device = util.get_device(y)
+    device = util.get_device_from_array(y)
     xp = device.xp
     if np.issubdtype(dtype, np.complexfloating):
         with device:
@@ -449,7 +449,7 @@ def _cudnn_convolve_adjoint_input(W, y, mode='full'):
 
 def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
     dtype = y.dtype
-    device = util.get_device(y)
+    device = util.get_device_from_array(y)
     xp = device.xp
     if np.issubdtype(dtype, np.complexfloating):
         with device:

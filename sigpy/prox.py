@@ -68,7 +68,7 @@ class Conj(Prox):
 
     def _prox(self, alpha, input):
 
-        with util.get_device(input):
+        with util.get_device_from_array(input):
             return input - alpha * self.prox(1 / alpha, input / alpha)
 
 
@@ -159,7 +159,7 @@ class L2Reg(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        with util.get_device(input):
+        with util.get_device_from_array(input):
             return (input + self.lamda * alpha * self.y) / (1 + self.lamda * alpha)
 
 
@@ -180,7 +180,7 @@ class L2Proj(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        with util.get_device(input):
+        with util.get_device_from_array(input):
             return thresh.l2_proj(self.epsilon, input - self.y, self.axes) + self.y
 
 

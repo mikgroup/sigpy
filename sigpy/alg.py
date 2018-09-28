@@ -80,7 +80,7 @@ class PowerMethod(Alg):
         self.A = A
         self.x = x
         self.max_eig = np.infty
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, util.get_device_from_array(x))
 
     def _update(self):
         y = self.A(self.x)
@@ -154,7 +154,7 @@ class GradientMethod(Alg):
             self.x_old = self.x.copy()
 
         self.resid = np.infty
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, util.get_device_from_array(x))
 
     def _update(self):
         if self.accelerate or self.proxg is not None:
@@ -202,7 +202,7 @@ class ConjugateGradient(Alg):
         self.A = A
         self.P = P
         self.x = x
-        device = util.get_device(x)
+        device = util.get_device_from_array(x)
         with device:
             self.r = b - self.A(self.x)
 
@@ -305,7 +305,7 @@ class PrimalDualHybridGradient(Alg):
         self.x_old = self.x.copy()
         self.resid = np.infty
 
-        super().__init__(max_iter, util.get_device(x))
+        super().__init__(max_iter, util.get_device_from_array(x))
 
     def _update(self):
         util.move_to(self.u_old, self.u)
