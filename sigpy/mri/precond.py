@@ -2,7 +2,6 @@
 """MRI preconditioners.
 """
 
-import numpy as np
 import sigpy as sp
 
 
@@ -41,7 +40,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_de
         if coord is None:
             idx = [slice(None, None, 2)] * ndim
 
-            ones = sp.util.zeros(img2_shape, dtype=dtype, device=device)
+            ones = xp.zeros(img2_shape, dtype=dtype)
             if weights is None:
                 ones[idx] = 1
             else:
@@ -50,7 +49,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_de
             psf = sp.fft.ifft(ones)
         else:
             coord2 = coord * 2
-            ones = sp.util.ones(coord.shape[:-1], dtype=dtype, device=device)
+            ones = xp.ones(coord.shape[:-1], dtype=dtype)
             if weights is not None:
                 ones *= weights**0.5
 
@@ -117,7 +116,7 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu
     with device:
         idx = [slice(None, None, 2)] * ndim
         if coord is None:
-            ones = sp.util.zeros(img2_shape, dtype=dtype, device=device)
+            ones = xp.zeros(img2_shape, dtype=dtype)
             if weights is None:
                 ones[idx] = 1
             else:
@@ -126,7 +125,7 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu
             psf = sp.fft.ifft(ones)
         else:
             coord2 = coord * 2
-            ones = sp.util.ones(coord.shape[:-1], dtype=dtype, device=device)
+            ones = xp.ones(coord.shape[:-1], dtype=dtype)
             if weights is not None:
                 ones *= weights**0.5
 

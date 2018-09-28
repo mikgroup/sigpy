@@ -377,7 +377,8 @@ class JsenseRecon(sp.app.App):
             img_ker_shape = [i + self.mps_ker_width - 1 for i in grd_shape]
 
         self.img_ker = sp.util.dirac(img_ker_shape, dtype=self.dtype, device=self.device)
-        self.mps_ker = sp.util.zeros(mps_ker_shape, dtype=self.dtype, device=self.device)
+        with self.device:
+            self.mps_ker = self.device.xp.zeros(mps_ker_shape, dtype=self.dtype)
 
     def _get_alg(self):
         def min_mps_ker():

@@ -146,7 +146,7 @@ class TestPrecond(unittest.TestCase):
         nc = 4
         n = 10
         shape = [nc, n]
-        mps = sp.util.ones(shape)
+        mps = np.ones(shape)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
         coord = sp.util.randn([n, 1], dtype=np.float)
 

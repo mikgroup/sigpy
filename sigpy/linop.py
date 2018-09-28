@@ -472,8 +472,8 @@ class Vstack(Linop):
     def _apply(self, input):
         device = util.get_device(input)
         xp = device.xp
-        output = util.empty(self.oshape, dtype=input.dtype, device=device)
         with device:
+            output = xp.empty(self.oshape, dtype=input.dtype)
             for n, linop in enumerate(self.linops):
                 if n == 0:
                     start = 0
@@ -527,8 +527,8 @@ class Diag(Linop):
     def _apply(self, input):
         device = util.get_device(input)
         xp = device.xp
-        output = util.empty(self.oshape, dtype=input.dtype, device=device)
         with device:
+            output = xp.empty(self.oshape, dtype=input.dtype)
             for n, linop in enumerate(self.linops):
                 if n == 0:
                     istart = 0
@@ -845,17 +845,16 @@ class Multiply(Linop):
         device = util.get_device(input)
         xp = device.xp
 
-        if np.isscalar(self.mult):
-            if self.mult == 1:
-                return input
-
-            mult = util.array(self.mult, dtype=input.dtype, device=device)
-        else:
-            mult = util.move(self.mult, device)
-
         with device:
-            if mult.dtype != input.dtype:
-                mult = mult.astype(input.dtype)
+            if np.isscalar(self.mult):
+                if self.mult == 1:
+                    return input
+
+                mult = self.mult
+            else:
+                mult = util.move(self.mult, device)
+                if mult.dtype != input.dtype:
+                    mult = mult.astype(input.dtype)
 
             if self.conj:
                 mult = xp.conj(mult)

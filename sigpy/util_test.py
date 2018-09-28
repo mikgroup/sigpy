@@ -15,31 +15,31 @@ class TestUtil(unittest.TestCase):
         pickle.dumps(device)
 
     def test_dot(self):
-        input1 = util.array([1, 2, 3])
-        input2 = util.array([2, 3, 4])
+        input1 = np.array([1, 2, 3])
+        input2 = np.array([2, 3, 4])
         output = util.dot(input1, input2)
         npt.assert_allclose(output, 20)
         
-        input1 = util.array([[1, 2], [3, 4]])
-        input2 = util.array([[2, 3], [4, 5]])
+        input1 = np.array([[1, 2], [3, 4]])
+        input2 = np.array([[2, 3], [4, 5]])
         output = util.dot(input1, input2, axes=[-1])
         npt.assert_allclose(output, [8, 32])
 
     def test_norm2(self):
-        input = util.array([1, 2, 3])
+        input = np.array([1, 2, 3])
         output = util.norm2(input)
         npt.assert_allclose(output, 14)
         
-        input = util.array([[1, 2], [3, 4]])
+        input = np.array([[1, 2], [3, 4]])
         output = util.norm2(input, axes=[-1])
         npt.assert_allclose(output, [5, 25])
 
     def test_norm(self):
-        input = util.array([1, 2, 3])
+        input = np.array([1, 2, 3])
         output = util.norm(input)
         npt.assert_allclose(output, 14**0.5)
         
-        input = util.array([[1, 2], [3, 4]])
+        input = np.array([[1, 2], [3, 4]])
         output = util.norm(input, axes=[-1])
         npt.assert_allclose(output, [5**0.5, 5])
 
@@ -57,7 +57,6 @@ class TestUtil(unittest.TestCase):
         npt.assert_allclose(util.triang([4]), [0.25, 0.75, 0.75, 0.25])
 
     def test_resize(self):
-
         # Zero-pad
         x = np.array([1, 2, 3])
         oshape = [5]
@@ -146,7 +145,6 @@ class TestUtil(unittest.TestCase):
                              [0, 1, 2]])
 
     def test_monte_carlo_sure(self):
-
         x = np.ones([100000], dtype=np.float)
         sigma = 0.1
         noise = 0.1 * util.randn([100000], dtype=np.float)

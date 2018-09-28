@@ -157,12 +157,11 @@ def elitist_thresh(lamda, input, axes=None):
 def find_elitist_thresh(lamda, input):
     device = util.get_device(input)
     xp = device.xp
-
+    batch = len(input)
     with device:
         sorted_input = xp.sort(xp.abs(input), axis=-1)[:, ::-1]
+        thresh = xp.empty([batch, 1], dtype=sorted_input.dtype)
 
-    batch = len(input)
-    thresh = util.empty([batch, 1], dtype=sorted_input.dtype, device=device)
     if device == util.cpu_device:
         _find_elitist_thresh(thresh, lamda, sorted_input)
     else:

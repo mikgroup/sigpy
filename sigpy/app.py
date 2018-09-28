@@ -181,7 +181,8 @@ class LinearLeastSquares(App):
 
         self.y_device = util.get_device(y)
         if self.x is None:
-            self.x = util.zeros(A.ishape, device=self.y_device)
+            with self.y_device:
+                self.x = self.y_device.xp.zeros(A.ishape, dtype=y.dtype)
 
         self.x_device = util.get_device(x)
         self._get_alg()
@@ -351,8 +352,10 @@ class LinearLeastSquares(App):
                              show_pbar=self.show_pbar).run()
             
             self.sigma = 1 / max_eig
-    
-        u = util.zeros(A.oshape, dtype=self.y.dtype, device=self.y_device)
+
+        with self.y_device:
+            u = self.y_device.xp.zeros(A.oshape, dtype=self.y.dtype)
+
         self.alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, u,
                                             self.tau, self.sigma,
                                             gamma_primal=gamma_primal,
@@ -412,7 +415,8 @@ class L2ConstrainedMinimization(App):
         self.x = x
         self.y_device = util.get_device(y)
         if self.x is None:
-            self.x = util.zeros(A.ishape, device=self.y_device)
+            with self.y_device:
+                self.x = self.y_device.xp.zeros(A.ishape, dtype=self.y.dtype)
             
         self.x_device = util.get_device(self.x)
         if G is None:
@@ -431,7 +435,9 @@ class L2ConstrainedMinimization(App):
             tau = 1
             sigma = 1 / max_eig
 
-        self.u = util.zeros(A.oshape, dtype=self.y.dtype, device=self.y_device)
+        with self.y_device:
+            self.u = self.y_device.xp.zeros(A.oshape, dtype=self.y.dtype)
+
         alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, self.u,
                                        tau, sigma, max_iter=max_iter)
 

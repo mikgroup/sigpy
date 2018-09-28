@@ -11,9 +11,6 @@ if config.cupy_enabled:
 if config.mpi4py_enabled:
     from mpi4py import MPI
 
-    if config.nccl_enabled:
-        from cupy.cuda import nccl
-
 
 class Device(object):
     """Device class.
@@ -312,8 +309,9 @@ def resize(input, oshape, ishift=None, oshift=None):
     oslice = tuple([slice(so, so + c) for so, c in zip(oshift, copy_shape)])
 
     device = get_device(input)
-    output = zeros(oshape_exp, dtype=input.dtype, device=device)
+    xp = device.xp
     with device:
+        output = xp.zeros(oshape_exp, dtype=input.dtype)
         input = input.reshape(ishape_exp)
         output[oslice] = input[islice]
 
@@ -417,8 +415,9 @@ def upsample(input, oshape, factors, shift=None):
     slc = [slice(s, None, f) for s, f in zip(shift, factors)]
 
     device = get_device(input)
-    output = zeros(oshape, dtype=input.dtype, device=device)
+    xp = device.xp
     with device:
+        output = xp.zeros(oshape, dtype=input.dtype)
         output[slc] = input
 
     return output
@@ -469,135 +468,6 @@ def randn(shape, scale=1, dtype=np.complex, device=cpu_device):
             return xp.random.normal(size=shape, scale=scale).astype(dtype)
 
 
-def randn_like(input, scale=1):
-    """Create random Gaussian array with shape and dtype as input.
-
-    Args:
-        input (array): Input array as reference.
-        scale (float): Standard deviation.
-
-    Returns:
-        array: Random Gaussian array.
-    """
-
-    return randn(input.shape, scale=scale, dtype=input.dtype, device=get_device(input))
-
-
-def array(arr, dtype=np.complex, device=cpu_device):
-    """Creates array on device.
-
-    Args:
-        arr (array): Input array.
-        dtype (Dtype): Output data-type.
-        device (Device): Output device.
-
-    Returns:
-        array: Array on device with dtype.
-    """
-
-    device = Device(device)
-    xp = device.xp
-
-    with device:
-        return xp.array(arr, dtype=dtype)
-
-
-def empty(shape, dtype=np.complex, device=cpu_device):
-    """Create empty array.
-
-    Args:
-        shape (tuple of ints): Output shape.
-        dtype (Dtype): Output data-type.
-        device (Device): Output device.
-
-    Returns:
-        array: Empty array.
-    """
-
-    device = Device(device)
-    xp = device.xp
-
-    with device:
-        return xp.empty(shape, dtype=dtype)
-
-
-def empty_like(input):
-    """Create empty array with shape and dtype as input.
-
-    Args:
-        input (array): Input array as reference.
-
-    Returns:
-        array: Empty array.
-    """
-
-    return empty(input.shape, dtype=input.dtype, device=get_device(input))
-
-
-def zeros(shape, dtype=np.complex, device=cpu_device):
-    """Create all-zeros array.
-
-    Args:
-        shape (tuple of ints): Output shape.
-        dtype (Dtype): Output data-type.
-        device (Device): Output device.
-
-    Returns:
-        array: All-zeros array.
-    """
-
-    device = Device(device)
-    xp = device.xp
-
-    with device:
-        return xp.zeros(shape, dtype=dtype)
-
-
-def zeros_like(input):
-    """Create all-zeros array with shape and dtype as input.
-
-    Args:
-        input (array): Input array as reference.
-
-    Returns:
-        array: All-zeros array.
-    """
-
-    return zeros(input.shape, dtype=input.dtype, device=get_device(input))
-
-
-def ones(shape, dtype=np.complex, device=cpu_device):
-    """Create all-ones array.
-
-    Args:
-        shape (tuple of ints): Output shape.
-        dtype (Dtype): Output data-type.
-        device (Device): Output device.
-
-    Returns:
-        array: All-ones array.
-    """
-
-    device = Device(device)
-    xp = device.xp
-
-    with device:
-        return xp.ones(shape, dtype=dtype)
-
-
-def ones_like(input):
-    """Create all-ones array with shape and dtype as input.
-
-    Args:
-        input (array): Input array as reference.
-
-    Returns:
-        array: All-ones array.
-    """
-
-    return ones(input.shape, dtype=input.dtype, device=get_device(input))
-
-
 def triang(shape, dtype=np.complex, device=cpu_device):
     """Create multi-dimensional triangular window.
 
@@ -614,7 +484,7 @@ def triang(shape, dtype=np.complex, device=cpu_device):
     xp = device.xp
 
     with device:
-        window = ones(shape, dtype=dtype, device=device)
+        window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
             w = 1 - xp.abs(xp.arange(i, dtype=dtype) - i // 2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
             window *= w.reshape([i] + [1] * n)
@@ -631,8 +501,8 @@ def dot(input1, input2, axes=None, keepdims=False):
 
     Returns:
         float: Dot product between input1 and input2.
+
     """
-    
     device = get_device(input1)
     xp = device.xp
     if input1.ndim != input2.ndim:
@@ -652,8 +522,8 @@ def norm2(input, axes=None, keepdims=False):
 
     Returns:
         float: Sum of squares of input.
+
     """
-    
     device = get_device(input)
     xp = device.xp
     axes = _normalize_axes(axes, input.ndim)
@@ -669,6 +539,7 @@ def norm(input, axes=None, keepdims=False):
 
     Returns:
         float: L2 norm of input.
+
     """
     return norm2(input, axes=axes, keepdims=keepdims)**0.5 
 
