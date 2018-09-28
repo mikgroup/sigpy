@@ -117,34 +117,52 @@ def _check_same_dtype(*arrays):
                 a_dtype=a.dtype, dtype=dtype))
 
 
-def get_xp(input):
-    """Get numpy or cupy module from input array.
+def get_array_module(array):
+    """Gets an appropriate module from :mod:`numpy` or :mod:`cupy`.
+
+    This is almost equivalent to :func:`cupy.get_array_module`. The differences
+    are that this function can be used even if cupy is not available.
 
     Args:
-        input (array): Input.
-    
+        array: Input array.
+
     Returns:
-        module: numpy or cupy module.
+        module: :mod:`cupy` or :mod:`numpy` is returned based on input.
     """
     if config.cupy_enabled:
-        return cp.get_array_module(input)
+        return cp.get_array_module(array)
     else:
         return np
 
 
-def get_device_from_array(input):
+def get_device_from_array(array):
     """Get Device from input array.
 
     Args:
-        input (array): Input.
+        array (array): Array.
     
     Returns:
         Device.
+
     """
-    if get_xp(input) == np:
+    if get_array_module(array) == np:
         return cpu_device
     else:
-        return Device(input.device)
+        return Device(array.device)
+
+
+def get_device_from_id(device_id):
+    """Gets the device from an ID integer.
+
+    Args:
+        device_id (int or None): The ID of the device which this function
+            returns.
+
+    Returns:
+        Device.
+
+    """
+    return Device(device_id)
 
 
 def to_device(input, device):

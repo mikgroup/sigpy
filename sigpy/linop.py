@@ -98,7 +98,7 @@ class Linop(object):
         elif np.isscalar(input):
             M = Multiply(self.ishape, input)
             return Compose([self, M])
-        elif isinstance(input, util.get_xp(input).ndarray):
+        elif isinstance(input, util.get_array_module(input).ndarray):
             return self.apply(input)
 
         return NotImplemented
