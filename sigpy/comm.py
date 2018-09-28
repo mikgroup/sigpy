@@ -38,7 +38,7 @@ class Communicator(object):
             return
 
         if config.mpi4py_enabled:
-            mpi_buffer = util.move(input)
+            mpi_buffer = util.to_device(input, util.cpu_device)
             self.mpi_comm.Allreduce(MPI.IN_PLACE, mpi_buffer)
             util.move_to(input, mpi_buffer)
 

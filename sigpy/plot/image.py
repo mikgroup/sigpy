@@ -8,7 +8,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sigpy.util import prod, move
+from sigpy.util import prod, to_device
 
 
 class Image(object):
@@ -319,7 +319,7 @@ class Image(object):
             else:
                 idx.append(self.slices[i])
 
-        imv = move(self.im[idx])
+        imv = to_device(self.im[idx], cpu_device)
 
         # Transpose to have [z, y, x, c].
         imv_dims = [self.y, self.x]

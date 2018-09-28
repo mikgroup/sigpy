@@ -34,8 +34,8 @@ def interp(input, width, table, coord):
     device = util.get_device(input)
     xp = device.xp
     isreal = np.issubdtype(input.dtype, np.floating)
-    coord = util.move(coord, device)
-    table = util.move(table, device)
+    coord = util.to_device(coord, device)
+    table = util.to_device(table, device)
 
     with device:
         input = input.reshape([batch_size] + list(input.shape[-ndim:]))

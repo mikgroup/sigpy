@@ -53,7 +53,6 @@ def check_linop_pickleable(A):
 class TestLinop(unittest.TestCase):
 
     def test_Identity(self):
-
         shape = [5]
         A = linop.Identity(shape)
         x = util.randn(shape)
@@ -64,12 +63,11 @@ class TestLinop(unittest.TestCase):
         check_linop_unitary(A)
         check_linop_pickleable(A)
 
-    def test_Move(self):
-
+    def test_ToDevice(self):
         shape = [5]
         odevice = util.cpu_device
         idevice = util.cpu_device
-        A = linop.Move(shape, odevice, idevice)
+        A = linop.ToDevice(shape, odevice, idevice)
         x = util.randn(shape)
 
         npt.assert_allclose(A(x), x)
@@ -78,7 +76,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_Conj(self):
-
         shape = [5]
         I = linop.Identity(shape)
         A = linop.Conj(I)
@@ -90,7 +87,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_Add(self):
-
         shape = [5]
         I = linop.Identity(shape)
         A = linop.Add([I, I])
@@ -102,7 +98,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_Compose(self):
-
         shape = [5]
         I = linop.Identity(shape)
         A = linop.Compose([I, I])
@@ -114,7 +109,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_Hstack(self):
-
         shape = [5]
         I = linop.Identity(shape)
         x1 = util.randn(shape)
@@ -140,7 +134,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_Vstack(self):
-
         shape = [5]
         I = linop.Identity(shape)
         x = util.randn(shape)
@@ -162,7 +155,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_Diag(self):
-
         shape = [5]
         I = linop.Identity(shape)
         x = util.randn([10])
@@ -184,7 +176,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_FFT(self):
-
         for ndim in [1, 2, 3]:
             for n in [3, 4, 5, 6]:
                 ishape = [n] * ndim
@@ -195,7 +186,6 @@ class TestLinop(unittest.TestCase):
                 check_linop_pickleable(A)
 
     def test_NUFFT(self):
-
         for ndim in [1, 2, 3]:
             for n in [2, 3, 4, 5, 6]:
                 ishape = [3] * ndim
@@ -207,7 +197,6 @@ class TestLinop(unittest.TestCase):
                 check_linop_pickleable(A)
 
     def test_MatMul(self):
-
         mshape = (5, 4, 2)
         ishape = (5, 2, 3)
         A = linop.MatMul(ishape, util.randn(mshape))
@@ -216,7 +205,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_RightMatMul(self):
-
         ishape = (5, 4, 2)
         mshape = (5, 2, 3)
         A = linop.RightMatMul(ishape, util.randn(mshape))
@@ -225,7 +213,6 @@ class TestLinop(unittest.TestCase):
         check_linop_pickleable(A)
 
     def test_Multiply(self):
-
         # Test scalar
         ishape = [2]
         mult = 1.1

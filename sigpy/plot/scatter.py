@@ -8,7 +8,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sigpy.util import prod, move
+from sigpy.util import prod, to_device, cpu_device
 
 
 class Scatter(object):
@@ -238,13 +238,13 @@ class Scatter(object):
                 idx.append(self.slices[i])
 
         if idx:
-            datav = move(self.data[idx])
+            datav = to_device(self.data[idx], cpu_device)
         else:
-            datav = move(self.data)
+            datav = to_device(self.data, cpu_device)
 
         # if self.z is not None:
         #     datav_dims = [self.z] + datav_dims
-        coordv = move(self.coord)
+        coordv = to_device(self.coord, cpu_device)
 
         if self.mode == 'm':
             datav = np.abs(datav)

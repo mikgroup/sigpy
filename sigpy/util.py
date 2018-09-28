@@ -147,7 +147,7 @@ def get_device(input):
         return Device(input.device)
 
 
-def move(input, device=cpu_device):
+def to_device(input, device):
     """Move input to device. Does not copy if same device.
 
     Args:
@@ -207,7 +207,7 @@ def asscalar(input):
         scalar.
 
     """
-    return np.asscalar(move(input))
+    return np.asscalar(to_device(input, cpu_device))
 
 
 def prod(shape):
@@ -590,8 +590,8 @@ def axpy(y, a, x):
 
     """
     device = get_device(x)
-    x = move(x, device)
-    a = move(a, device)
+    x = to_device(x, device)
+    a = to_device(a, device)
 
     with device:
         if device == cpu_device:
@@ -610,8 +610,8 @@ def xpay(y, a, x):
     """
 
     device = get_device(y)
-    x = move(x, device)
-    a = move(a, device)
+    x = to_device(x, device)
+    a = to_device(a, device)
 
     with device:
         if device == cpu_device:

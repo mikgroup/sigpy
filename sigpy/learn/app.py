@@ -412,8 +412,8 @@ class ConvSparseCoefficients(object):
                 y_j = self.y[index[0]]
                 index = [slice(None)] + list(index[1:])
 
-        y_j = sp.util.move(y_j, self.device)
-        l = sp.util.move(self.l, self.device)
+        y_j = sp.util.to_device(y_j, self.device)
+        l = sp.util.to_device(self.l, self.device)
         app_j = ConvSparseDecom(y_j, l, lamda=self.lamda,
                                 multi_channel=self.multi_channel, mode=self.mode,
                                 max_iter=self.max_iter, max_power_iter=self.max_power_iter,

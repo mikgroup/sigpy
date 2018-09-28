@@ -146,7 +146,7 @@ class Identity(Linop):
         return self
 
 
-class Move(Linop):
+class ToDevice(Linop):
     """Move input between devices.
 
     Args:
@@ -162,10 +162,10 @@ class Move(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        return util.move(input, self.odevice)
+        return util.to_device(input, self.odevice)
 
     def _adjoint_linop(self):
-        return Move(self.ishape, self.idevice, self.odevice)
+        return ToDevice(self.ishape, self.idevice, self.odevice)
 
 
 class AllReduce(Linop):
@@ -719,7 +719,7 @@ class MatMul(Linop):
     def _apply(self, input):
         device = util.get_device(input)
         xp = device.xp
-        mat = util.move(self.mat, device)
+        mat = util.to_device(self.mat, device)
         with device:
             if self.adjoint:
                 mat = xp.conj(mat).swapaxes(-1, -2)
@@ -780,7 +780,7 @@ class RightMatMul(Linop):
     def _apply(self, input):
         device = util.get_device(input)
         xp = device.xp
-        mat = util.move(self.mat, device)
+        mat = util.to_device(self.mat, device)
         with device:
             if self.adjoint:
                 mat = xp.conj(mat).swapaxes(-1, -2)
@@ -852,7 +852,7 @@ class Multiply(Linop):
 
                 mult = self.mult
             else:
-                mult = util.move(self.mult, device)
+                mult = util.to_device(self.mult, device)
                 if mult.dtype != input.dtype:
                     mult = mult.astype(input.dtype)
 
@@ -901,9 +901,9 @@ class Interp(Linop):
     def _apply(self, input):
 
         device = util.get_device(input)
-        coord = util.move(self.coord, device)
-        table = util.move(self.table, device)
-        shift = util.move(self.shift, device)
+        coord = util.to_device(self.coord, device)
+        table = util.to_device(self.table, device)
+        shift = util.to_device(self.shift, device)
 
         with device:
             return interp.interp(input, self.width, table,
@@ -945,9 +945,9 @@ class Gridding(Linop):
 
     def _apply(self, input):
         device = util.get_device(input)
-        coord = util.move(self.coord, device)
-        table = util.move(self.table, device)
-        shift = util.move(self.shift, device)
+        coord = util.to_device(self.coord, device)
+        table = util.to_device(self.table, device)
+        shift = util.to_device(self.shift, device)
 
         with device:
             return interp.gridding(input, self.oshape, self.width, table,

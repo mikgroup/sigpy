@@ -27,7 +27,7 @@ def fwt(input, wave_name='db4', axes=None, level=None):
         level (None or int): Number of wavelet levels.
     """
     device = util.get_device(input)
-    input = util.move(input)
+    input = util.to_device(input, util.cpu_device)
 
     zshape = [((i + 1) // 2) * 2 for i in input.shape]
     zinput = util.resize(input, zshape)
@@ -35,7 +35,7 @@ def fwt(input, wave_name='db4', axes=None, level=None):
     coeffs = pywt.wavedecn(zinput, wave_name, mode='zero', axes=axes, level=level)
     output, _ = pywt.coeffs_to_array(coeffs, axes=axes)
 
-    output = util.move(output, device)
+    output = util.to_device(output, device)
     return output
 
 
@@ -51,11 +51,11 @@ def iwt(input, oshape, coeff_slices, wave_name='db4', axes=None, level=None):
         level (None or int): Number of wavelet levels.
     """
     device = util.get_device(input)
-    input = util.move(input)
+    input = util.to_device(input, util.cpu_device)
 
     input = pywt.array_to_coeffs(input, coeff_slices, output_format='wavedecn')
     output = pywt.waverecn(input, wave_name, mode='zero', axes=axes)
     output = util.resize(output, oshape)
 
-    output = util.move(output, device)
+    output = util.to_device(output, device)
     return output
