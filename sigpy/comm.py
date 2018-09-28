@@ -43,7 +43,7 @@ class Communicator(object):
             util.move_to(input, mpi_buffer)
 
 
-class MultiGpuCommunicator(object):
+class MultiGpuCommunicator(Communicator):
     """Communicator for distributed computing between multiple GPU.
 
     If nccl is installed with cupy, then nccl will be used. Otherwise,
