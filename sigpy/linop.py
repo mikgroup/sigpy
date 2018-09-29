@@ -6,7 +6,7 @@ such as reshape, transpose, and resize.
 """
 import numpy as np
 
-from sigpy import config, fft, nufft, util, interp, conv, wavelet
+from sigpy import backend, config, fft, nufft, util, interp, conv, wavelet
 
 if config.cupy_enabled:
     import cupy as cp
@@ -22,9 +22,9 @@ def _check_shape_positive(shape):
 class Linop(object):
     """Abstraction for linear operator.
 
-    Linop can be called or multiply to an array to perform a linear operation.
+    Linop can be called or multiplied to an array to perform a linear operation.
     Given a Linop A, and an appropriately shaped input x, the following are
-    both valid operations to compute A(x):
+    both valid operations to compute x -> A(x):
     
        >>> y = A * x
        >>> y = A(x)
@@ -76,7 +76,7 @@ class Linop(object):
 
     def apply(self, input):
         self._check_domain(input)
-        with util.get_device_from_array(input):
+        with backend.get_device(input):
             output = self._apply(input)
         self._check_codomain(output)
 
@@ -98,7 +98,7 @@ class Linop(object):
         elif np.isscalar(input):
             M = Multiply(self.ishape, input)
             return Compose([self, M])
-        elif isinstance(input, util.get_array_module(input).ndarray):
+        elif isinstance(input, backend.get_array_module(input).ndarray):
             return self.apply(input)
 
         return NotImplemented
@@ -162,7 +162,7 @@ class ToDevice(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        return util.to_device(input, self.odevice)
+        return backend.to_device(input, self.odevice)
 
     def _adjoint_linop(self):
         return ToDevice(self.ishape, self.idevice, self.odevice)
@@ -173,7 +173,7 @@ class AllReduce(Linop):
 
     Args:
         shape (tuple of ints): Input/output shape.
-        device (Device): Device.
+        comm (Communicator): Communicator.
 
     """
     def __init__(self, shape, comm):
@@ -182,7 +182,7 @@ class AllReduce(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        with util.get_device_from_array(input):
+        with backend.get_device(input):
             output = input
             self.comm.allreduce(output)
             return output
@@ -196,7 +196,7 @@ class AllReduceAdjoint(Linop):
 
     Args:
         shape (tuple of ints): Input/output shape.
-        device (Device): Device.
+        comm (Communicator): Communicator.
 
     """
     def __init__(self, shape, comm):
@@ -224,13 +224,13 @@ class Conj(Linop):
         super().__init__(A.oshape, A.ishape, repr_str=A.repr_str)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         with device:
             input = device.xp.conj(input)
 
         output = self.A._apply(input)
 
-        device = util.get_device_from_array(output)
+        device = backend.get_device(output)
         with device:
             return device.xp.conj(output)
 
@@ -263,7 +263,7 @@ class Add(Linop):
 
     def _apply(self, input):
         output = 0
-        with util.get_device_from_array(output):
+        with backend.get_device(output):
             for linop in self.linops:
                 output += linop._apply(input)
 
@@ -386,7 +386,7 @@ class Hstack(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         xp = device.xp
         output = 0
         with device:
@@ -470,7 +470,7 @@ class Vstack(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         xp = device.xp
         with device:
             output = xp.empty(self.oshape, dtype=input.dtype)
@@ -525,7 +525,7 @@ class Diag(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         xp = device.xp
         with device:
             output = xp.empty(self.oshape, dtype=input.dtype)
@@ -717,9 +717,9 @@ class MatMul(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         xp = device.xp
-        mat = util.to_device(self.mat, device)
+        mat = backend.to_device(self.mat, device)
         with device:
             if self.adjoint:
                 mat = xp.conj(mat).swapaxes(-1, -2)
@@ -778,9 +778,9 @@ class RightMatMul(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         xp = device.xp
-        mat = util.to_device(self.mat, device)
+        mat = backend.to_device(self.mat, device)
         with device:
             if self.adjoint:
                 mat = xp.conj(mat).swapaxes(-1, -2)
@@ -842,7 +842,7 @@ class Multiply(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         xp = device.xp
 
         with device:
@@ -852,7 +852,7 @@ class Multiply(Linop):
 
                 mult = self.mult
             else:
-                mult = util.to_device(self.mult, device)
+                mult = backend.to_device(self.mult, device)
                 if mult.dtype != input.dtype:
                     mult = mult.astype(input.dtype)
 
@@ -900,10 +900,10 @@ class Interp(Linop):
 
     def _apply(self, input):
 
-        device = util.get_device_from_array(input)
-        coord = util.to_device(self.coord, device)
-        table = util.to_device(self.table, device)
-        shift = util.to_device(self.shift, device)
+        device = backend.get_device(input)
+        coord = backend.to_device(self.coord, device)
+        table = backend.to_device(self.table, device)
+        shift = backend.to_device(self.shift, device)
 
         with device:
             return interp.interp(input, self.width, table,
@@ -944,10 +944,10 @@ class Gridding(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
-        coord = util.to_device(self.coord, device)
-        table = util.to_device(self.table, device)
-        shift = util.to_device(self.shift, device)
+        device = backend.get_device(input)
+        coord = backend.to_device(self.coord, device)
+        table = backend.to_device(self.table, device)
+        shift = backend.to_device(self.shift, device)
 
         with device:
             return interp.gridding(input, self.oshape, self.width, table,
@@ -1156,7 +1156,7 @@ class Sum(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         xp = device.xp
         with device:
             return xp.sum(input, axis=self.axes)
@@ -1192,7 +1192,7 @@ class Tile(Linop):
 
     def _apply(self, input):
 
-        device = util.get_device_from_array(input)
+        device = backend.get_device(input)
         xp = device.xp
         with device:
             return xp.tile(input.reshape(self.expanded_ishape), self.reps)
@@ -1235,7 +1235,7 @@ class ArrayToBlocks(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        with util.get_device_from_array(input):
+        with backend.get_device(input):
             return input.reshape(self.ireshape).transpose(self.perm).reshape(self.oshape)
 
     def _adjoint_linop(self):
@@ -1271,8 +1271,7 @@ class BlocksToArray(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-
-        with util.get_device_from_array(input):
+        with backend.get_device(input):
             return input.transpose(self.perm).reshape(self.oshape)
 
     def _adjoint_linop(self):

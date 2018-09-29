@@ -6,12 +6,12 @@ These functions are wrapped in two higher level classes to better interface with
 
 These classes can then be used to build an App as a final deliverable. An App simplifies the usage of Alg, and provides convenient features such as iteration progress bars. A particularly useful App implemented is the LinearLeastSquares App.
 """
-from sigpy import alg, app, dataset, comm, config, conv, fft, index, interp, linop, prox, nufft, thresh, util
+from sigpy import alg, app, dataset, config, conv, fft, index, interp, linop, prox, nufft, thresh, util
+from sigpy.backend import *
 
 __all__ = [
     'alg',
     'app',
-    'comm',
     'config',
     'fft',
     'index',

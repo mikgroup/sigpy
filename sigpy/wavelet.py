@@ -3,7 +3,7 @@
 """
 import numpy as np
 import pywt
-from sigpy import util
+from sigpy import backend, util
 
 
 def get_wavelet_shape(shape, wave_name, axes, level):
@@ -26,8 +26,8 @@ def fwt(input, wave_name='db4', axes=None, level=None):
         wave_name (str): Wavelet name.
         level (None or int): Number of wavelet levels.
     """
-    device = util.get_device_from_array(input)
-    input = util.to_device(input, util.cpu_device)
+    device = backend.get_device(input)
+    input = backend.to_device(input, backend.cpu_device)
 
     zshape = [((i + 1) // 2) * 2 for i in input.shape]
     zinput = util.resize(input, zshape)
@@ -35,7 +35,7 @@ def fwt(input, wave_name='db4', axes=None, level=None):
     coeffs = pywt.wavedecn(zinput, wave_name, mode='zero', axes=axes, level=level)
     output, _ = pywt.coeffs_to_array(coeffs, axes=axes)
 
-    output = util.to_device(output, device)
+    output = backend.to_device(output, device)
     return output
 
 
@@ -50,12 +50,12 @@ def iwt(input, oshape, coeff_slices, wave_name='db4', axes=None, level=None):
         wave_name (str): Wavelet name.
         level (None or int): Number of wavelet levels.
     """
-    device = util.get_device_from_array(input)
-    input = util.to_device(input, util.cpu_device)
+    device = backend.get_device(input)
+    input = backend.to_device(input, backend.cpu_device)
 
     input = pywt.array_to_coeffs(input, coeff_slices, output_format='wavedecn')
     output = pywt.waverecn(input, wave_name, mode='zero', axes=axes)
     output = util.resize(output, oshape)
 
-    output = util.to_device(output, device)
+    output = backend.to_device(output, device)
     return output

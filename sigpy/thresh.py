@@ -4,7 +4,7 @@
 import numpy as np
 import numba as nb
 
-from sigpy import config, util
+from sigpy import backend, config, util
 
 if config.cupy_enabled:
     import cupy as cp
@@ -25,12 +25,12 @@ def soft_thresh(lamda, input):
         array: soft-thresholded result.
 
     """
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
 
     lamda = xp.real(lamda)
     with device:
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             output = _soft_thresh(lamda, input)
         else:
             output = _soft_thresh_cuda(lamda, input)
@@ -56,9 +56,9 @@ def hard_thresh(lamda, input):
         array: hard-thresholded result.
 
     """
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
 
-    if device == util.cpu_device:
+    if device == backend.cpu_device:
         return _hard_thresh(lamda, input)
     else:
         with device:
@@ -80,7 +80,7 @@ def l1_proj(eps, input):
         the l1-ball for learning in high dimensions" 2008.
 
     """
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
 
     with device:
@@ -110,7 +110,7 @@ def l2_proj(eps, input, axes=None):
     """
     axes = util._normalize_axes(axes, input.ndim)
 
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     with device:
         norm = xp.sum(xp.abs(input)**2, axis=axes, keepdims=True)**0.5
@@ -155,14 +155,14 @@ def elitist_thresh(lamda, input, axes=None):
 
 
 def find_elitist_thresh(lamda, input):
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     batch = len(input)
     with device:
         sorted_input = xp.sort(xp.abs(input), axis=-1)[:, ::-1]
         thresh = xp.empty([batch, 1], dtype=sorted_input.dtype)
 
-    if device == util.cpu_device:
+    if device == backend.cpu_device:
         _find_elitist_thresh(thresh, lamda, sorted_input)
     else:
         _find_elitist_thresh_cuda(thresh, lamda, sorted_input, size=batch)

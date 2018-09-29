@@ -5,7 +5,7 @@
 import sigpy as sp
 
 
-def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_device):
+def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device):
     """Compute a diagonal preconditioner in k-space.
 
     Considers the optimization problem:
@@ -24,9 +24,9 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_de
     dtype = mps.dtype
 
     if weights is not None:
-        weights = sp.util.to_device(weights, device)
+        weights = sp.to_device(weights, device)
 
-    device = sp.util.Device(device)
+    device = sp.Device(device)
     xp = device.xp
 
     mps_shape = list(mps.shape)
@@ -55,7 +55,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_de
 
             psf = sp.nufft.nufft_adjoint(ones, coord2, img2_shape)
 
-        mps = sp.util.to_device(mps, device)
+        mps = sp.to_device(mps, device)
         mps_ij = mps * xp.conj(mps.reshape([num_coils, 1] + img_shape))
         xcorr_fourier = xp.sum(xp.abs(sp.fft.fft(mps_ij, [num_coils, num_coils] + img2_shape, axes=range(-ndim, 0)))**2, axis=0)
         xcorr = sp.fft.ifft(xcorr_fourier, axes=range(-ndim, 0))
@@ -79,7 +79,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_de
         return p.astype(dtype)
 
 
-def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu_device):
+def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device):
     """Compute circulant preconditioner.
 
     Considers the optimization problem:
@@ -97,13 +97,13 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu
 
     """
     if coord is not None:
-        coord = sp.util.to_device(coord, device)
+        coord = sp.to_device(coord, device)
 
     if weights is not None:
-        weights = sp.util.to_device(weights, device)
+        weights = sp.to_device(weights, device)
 
     dtype = mps.dtype
-    device = sp.util.Device(device)
+    device = sp.Device(device)
     xp = device.xp
 
     mps_shape = list(mps.shape)
@@ -131,7 +131,7 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.util.cpu
 
             psf = sp.nufft.nufft_adjoint(ones, coord2, img2_shape)
 
-        mps = sp.util.to_device(mps, device)
+        mps = sp.to_device(mps, device)
         xcorr_fourier = xp.abs(sp.fft.fft(xp.conj(mps), [num_coils] + img2_shape, axes=range(-ndim, 0)))**2
         xcorr = sp.fft.ifft(xcorr_fourier, axes=range(-ndim, 0))
         xcorr *= psf

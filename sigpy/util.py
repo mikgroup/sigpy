@@ -4,91 +4,9 @@
 import numpy as np
 import numba as nb
 
-from sigpy import config
+from sigpy import backend, config
 if config.cupy_enabled:
     import cupy as cp
-
-if config.mpi4py_enabled:
-    from mpi4py import MPI
-
-
-class Device(object):
-    """Device class.
-
-    This class extends from cupy.Device, with id = -1 representing CPU,
-    and other ids representing the corresponding GPUs. 
-    Similar to cupy.Device, the Device object can be used as a context. 
-
-    Args:
-        id_or_device (int or Device or cupy.Device): id = -1 represents CPU.
-            and other ids represents corresponding GPUs.
-
-    Attributes:
-        id (int): id = -1 represents CPU, and other ids represents corresponding GPUs.
-
-    """
-
-    def __init__(self, id_or_device):
-
-        if isinstance(id_or_device, int):
-            id = id_or_device
-        elif isinstance(id_or_device, Device):
-            id = id_or_device.id
-        elif config.cupy_enabled and isinstance(id_or_device, cp.cuda.device.Device):
-            id = id_or_device.id
-        else:
-            raise ValueError('Accepts int, Device or cupy.Device, got {id_or_device}'.format(
-                id_or_device=id_or_device))
-
-        if id != -1:
-            if config.cupy_enabled:
-                self.device = cp.cuda.device.Device(id)
-            else:
-                raise ValueError(
-                    'cupy not installed, but set device {id}'.format(id=id))
-
-        self.id = id
-
-    @property
-    def xp(self):
-        """module: numpy or cupy module for the device."""
-        if self.id == -1:
-            return np
-        else:
-            return cp
-
-    def __eq__(self, other):
-
-        if isinstance(other, int):
-            return self.id == other
-        elif isinstance(other, Device):
-            return self.id == other.id
-        elif config.cupy_enabled and isinstance(other, cp.cuda.device.Device):
-            return self.id == other.id
-
-    def __enter__(self):
-
-        if self.id == -1:
-            return None
-        else:
-            return self.device.__enter__()
-
-    def __exit__(self, *args):
-
-        if self.id == -1:
-            pass
-        else:
-            self.device.__exit__()
-
-    def __repr__(self):
-
-        if self.id == -1:
-            return '<cpu Device>'
-        else:
-            return '<gpu{id} Device>'.format(id=self.id)
-
-
-cpu_device = Device(-1)
 
 
 def _normalize_axes(axes, ndim):
@@ -117,104 +35,6 @@ def _check_same_dtype(*arrays):
                 a_dtype=a.dtype, dtype=dtype))
 
 
-def get_array_module(array):
-    """Gets an appropriate module from :mod:`numpy` or :mod:`cupy`.
-
-    This is almost equivalent to :func:`cupy.get_array_module`. The differences
-    are that this function can be used even if cupy is not available.
-
-    Args:
-        array: Input array.
-
-    Returns:
-        module: :mod:`cupy` or :mod:`numpy` is returned based on input.
-    """
-    if config.cupy_enabled:
-        return cp.get_array_module(array)
-    else:
-        return np
-
-
-def get_device_from_array(array):
-    """Get Device from input array.
-
-    Args:
-        array (array): Array.
-    
-    Returns:
-        Device.
-
-    """
-    if get_array_module(array) == np:
-        return cpu_device
-    else:
-        return Device(array.device)
-
-
-def get_device_from_id(device_id):
-    """Gets the device from an ID integer.
-
-    Args:
-        device_id (int or None): The ID of the device which this function
-            returns.
-
-    Returns:
-        Device.
-
-    """
-    return Device(device_id)
-
-
-def to_device(input, device):
-    """Move input to device. Does not copy if same device.
-
-    Args:
-        input (array): Input.
-        device (int or Device or cupy.Device): Output device.
-    
-    Returns:
-        array: Output array placed in device.
-    """
-    device = Device(device)
-
-    if get_device_from_array(input) == device:
-        output = input
-
-    elif device == cpu_device:
-        with get_device_from_array(input):
-            output = input.get()
-    else:
-        with device:
-            output = cp.array(input)
-
-    return output
-
-
-def move_to(output, input):
-    """Copy from input to output. Input/output can be in different device.
-
-    Args:
-        input (array): Input.
-        output (array): Output.
-
-    """
-    if get_device_from_array(input) == get_device_from_array(output):
-        with get_device_from_array(input):
-            output[:] = input
-
-    elif get_device_from_array(output) == cpu_device:
-        with get_device_from_array(input):
-            output[:] = input.get()
-
-    elif get_device_from_array(input) == cpu_device:
-        with get_device_from_array(output):
-            output.set(input)
-
-    else:
-        with get_device_from_array(output):
-            output[:] = cp.array(input)
-
-
 def asscalar(input):
     """Returns input array as scalar.
 
@@ -225,7 +45,7 @@ def asscalar(input):
         scalar.
 
     """
-    return np.asscalar(to_device(input, cpu_device))
+    return np.asscalar(backend.to_device(input, backend.cpu_device))
 
 
 def prod(shape):
@@ -250,7 +70,7 @@ def vec(inputs):
     Returns:
         array: Vectorized result.
     """
-    device = get_device_from_array(inputs[0])
+    device = backend.get_device(inputs[0])
     xp = device.xp
 
     with device:
@@ -266,7 +86,7 @@ def split(vec, oshapes):
     Returns:
         list of arrays: Splitted outputs.
     """
-    device = get_device_from_array(vec)
+    device = backend.get_device(vec)
     with device:
         outputs = []
         for oshape in oshapes:
@@ -288,7 +108,7 @@ def rss(input, axes=(0, )):
         array: Result.
     """
 
-    device = get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
 
     with device:
@@ -326,7 +146,7 @@ def resize(input, oshape, ishift=None, oshift=None):
     islice = tuple([slice(si, si + c) for si, c in zip(ishift, copy_shape)])
     oslice = tuple([slice(so, so + c) for so, c in zip(oshift, copy_shape)])
 
-    device = get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     with device:
         output = xp.zeros(oshape_exp, dtype=input.dtype)
@@ -360,7 +180,7 @@ def flip(input, axes=None):
             slc.append(slice(None))
 
     slc = tuple(slc)
-    device = get_device_from_array(input)
+    device = backend.get_device(input)
     with device:
         output = input[slc]
 
@@ -383,7 +203,7 @@ def circshift(input, shifts, axes=None):
         axes = range(input.ndim)
 
     assert(len(axes) == len(shifts))
-    device = get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
 
     with device:
@@ -410,7 +230,7 @@ def downsample(input, factors, shift=None):
 
     slc = [slice(s, None, f) for s, f in zip(shift, factors)]
 
-    device = get_device_from_array(input)
+    device = backend.get_device(input)
     with device:
         return input[slc]
 
@@ -432,7 +252,7 @@ def upsample(input, oshape, factors, shift=None):
 
     slc = [slice(s, None, f) for s, f in zip(shift, factors)]
 
-    device = get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     with device:
         output = xp.zeros(oshape, dtype=input.dtype)
@@ -441,7 +261,7 @@ def upsample(input, oshape, factors, shift=None):
     return output
 
 
-def dirac(shape, dtype=np.complex, device=cpu_device):
+def dirac(shape, dtype=np.complex, device=backend.cpu_device):
     """Create Dirac delta.
 
     Args:
@@ -453,14 +273,14 @@ def dirac(shape, dtype=np.complex, device=cpu_device):
         array: Dirac delta array.
     """
 
-    device = Device(device)
+    device = backend.Device(device)
     xp = device.xp
 
     with device:
         return resize(xp.ones([1], dtype=dtype), shape)
 
 
-def randn(shape, scale=1, dtype=np.complex, device=cpu_device):
+def randn(shape, scale=1, dtype=np.complex, device=backend.cpu_device):
     """Create random Gaussian array.
 
     Args:
@@ -473,7 +293,7 @@ def randn(shape, scale=1, dtype=np.complex, device=cpu_device):
         array: Random Gaussian array.
     """
 
-    device = Device(device)
+    device = backend.Device(device)
     xp = device.xp
 
     with device:
@@ -486,7 +306,7 @@ def randn(shape, scale=1, dtype=np.complex, device=cpu_device):
             return xp.random.normal(size=shape, scale=scale).astype(dtype)
 
 
-def triang(shape, dtype=np.complex, device=cpu_device):
+def triang(shape, dtype=np.complex, device=backend.cpu_device):
     """Create multi-dimensional triangular window.
 
     Args:
@@ -498,7 +318,7 @@ def triang(shape, dtype=np.complex, device=cpu_device):
         array: All-ones array.
 
     """
-    device = Device(device)
+    device = backend.Device(device)
     xp = device.xp
 
     with device:
@@ -521,7 +341,7 @@ def dot(input1, input2, axes=None, keepdims=False):
         float: Dot product between input1 and input2.
 
     """
-    device = get_device_from_array(input1)
+    device = backend.get_device(input1)
     xp = device.xp
     if input1.ndim != input2.ndim:
         raise ValueError('Inputs must have the same number of dimensions.')
@@ -542,7 +362,7 @@ def norm2(input, axes=None, keepdims=False):
         float: Sum of squares of input.
 
     """
-    device = get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     axes = _normalize_axes(axes, input.ndim)
     with device:
@@ -584,7 +404,7 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
         for General Denoising Algorithms. IEEE Transactions on Image Processing.
         17, 9 (2008), 1540-1554.
     """
-    device = get_device_from_array(y)
+    device = backend.get_device(y)
     xp = device.xp
 
     n = y.size
@@ -607,12 +427,12 @@ def axpy(y, a, x):
         x (array): Input array.
 
     """
-    device = get_device_from_array(x)
-    x = to_device(x, device)
-    a = to_device(a, device)
+    device = backend.get_device(x)
+    x = backend.to_device(x, device)
+    a = backend.to_device(a, device)
 
     with device:
-        if device == cpu_device:
+        if device == backend.cpu_device:
             _axpy(y, a, x, out=y)
         else:
             _axpy_cuda(y, a, x)
@@ -627,12 +447,12 @@ def xpay(y, a, x):
         x (array): Input array.
     """
 
-    device = get_device_from_array(y)
-    x = to_device(x, device)
-    a = to_device(a, device)
+    device = backend.get_device(y)
+    x = backend.to_device(x, device)
+    a = backend.to_device(a, device)
 
     with device:
-        if device == cpu_device:
+        if device == backend.cpu_device:
             _xpay(y, a, x, out=y)
         else:
             _xpay_cuda(y, a, x)

@@ -37,7 +37,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
 
     """
     def __init__(self, y_j, l, lamda=0.001,
-                 mode='full', multi_channel=False, device=sp.util.cpu_device,
+                 mode='full', multi_channel=False, device=sp.cpu_device,
                  elitist=False, **kwargs):
         self.y_j = y_j
         self.l = l
@@ -67,7 +67,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         super()._init()
 
     def _get_params(self):
-        self.device = sp.util.Device(self.device)
+        self.device = sp.Device(self.device)
         self.dtype = self.y_j.dtype
         self.batch_size = len(self.y_j)
         self.num_filters = self.l.shape[self.multi_channel]
@@ -130,7 +130,7 @@ class ConvSparseCoding(sp.app.App):
                  max_epoch=1,
                  mode='full', multi_channel=False,
                  elitist=False, init_scale=1e-3,
-                 device=sp.util.cpu_device,
+                 device=sp.cpu_device,
                  checkpoint_path=None, show_pbar=True):
         self.y = y
         self.num_filters = num_filters
@@ -157,7 +157,7 @@ class ConvSparseCoding(sp.app.App):
         super().__init__(self.alg, show_pbar=show_pbar)
 
     def _init(self):
-        sp.util.move_to(self.l, sp.util.randn_like(self.l))
+        sp.move_to(self.l, sp.util.randn_like(self.l))
         xp = self.device.xp
         with self.device:
             if self.multi_channel:
@@ -176,8 +176,8 @@ class ConvSparseCoding(sp.app.App):
         j_start = j * self.batch_size
         j_end = (j + 1) * self.batch_size
 
-        sp.util.move_to(self.y_j, self.y[j_start:j_end])
-        sp.util.move_to(self.l_old, self.l)
+        sp.move_to(self.y_j, self.y[j_start:j_end])
+        sp.move_to(self.l_old, self.l)
 
     def _summarize(self):
         xp = self.device.xp
@@ -199,9 +199,9 @@ class ConvSparseCoding(sp.app.App):
             l_norm2 = sp.util.norm2(self.l, axes=range(-self.data_ndim, 0))
             idx = xp.argsort(l_norm2)
             if self.multi_channel:
-                sp.util.move_to(self.l, self.l[:, idx])
+                sp.move_to(self.l, self.l[:, idx])
             else:
-                sp.util.move_to(self.l, self.l[idx])
+                sp.move_to(self.l, self.l[idx])
 
         r = ConvSparseCoefficients(self.y, self.l, lamda=self.lamda,
                                    multi_channel=self.multi_channel,
@@ -211,7 +211,7 @@ class ConvSparseCoding(sp.app.App):
         return self.l, r
 
     def _get_params(self):
-        self.device = sp.util.Device(self.device)
+        self.device = sp.Device(self.device)
         self.dtype = self.y.dtype
         self.num_batches = len(self.y) // self.batch_size
         self.data_ndim = self.y.ndim - self.multi_channel - 1
@@ -293,7 +293,7 @@ class LinearRegression(sp.app.App):
 
     """
     def __init__(self, input, output, batch_size, alpha,
-                 max_epoch=1, max_inner_iter=100, device=sp.util.cpu_device,
+                 max_epoch=1, max_inner_iter=100, device=sp.cpu_device,
                  checkpoint_path=None):
         dtype = output.dtype
 
@@ -329,8 +329,8 @@ class LinearRegression(sp.app.App):
         j_start = j * self.batch_size
         j_end = (j + 1) * self.batch_size
         
-        sp.util.move_to(self.input_j, self.input[j_start:j_end])
-        sp.util.move_to(self.output_j, self.output[j_start:j_end])
+        sp.move_to(self.input_j, self.input[j_start:j_end])
+        sp.move_to(self.output_j, self.output[j_start:j_end])
 
     def _summarize(self):
         xp = self.device.xp
@@ -378,7 +378,7 @@ class ConvSparseCoefficients(object):
     def __init__(self, y, l,
                  lamda=1, multi_channel=False, mode='full',
                  max_iter=100, max_power_iter=10, elitist=False,
-                 device=sp.util.cpu_device):
+                 device=sp.cpu_device):
         
         self.y = y
         self.l = l
@@ -395,7 +395,7 @@ class ConvSparseCoefficients(object):
         self.use_device(device)
 
     def use_device(self, device):
-        self.device = sp.util.Device(device)
+        self.device = sp.Device(device)
         
     def __getitem__(self, index):
         if isinstance(index, int):
@@ -412,8 +412,8 @@ class ConvSparseCoefficients(object):
                 y_j = self.y[index[0]]
                 index = [slice(None)] + list(index[1:])
 
-        y_j = sp.util.to_device(y_j, self.device)
-        l = sp.util.to_device(self.l, self.device)
+        y_j = sp.to_device(y_j, self.device)
+        l = sp.to_device(self.l, self.device)
         app_j = ConvSparseDecom(y_j, l, lamda=self.lamda,
                                 multi_channel=self.multi_channel, mode=self.mode,
                                 max_iter=self.max_iter, max_power_iter=self.max_power_iter,

@@ -5,7 +5,7 @@ This module contains convolution functions that support multi-dimension, and mul
 
 """
 import numpy as np
-from sigpy import fft, util, config
+from sigpy import backend, fft, util, config
 
 if config.cudnn_enabled:
     from cupy import cudnn
@@ -38,12 +38,12 @@ def convolve(x, W, input_multi_channel=False, output_multi_channel=False, mode='
         input_channel, output_channel = _get_convolve_params(
         x, W, input_multi_channel, output_multi_channel)
 
-    device = util.get_device_from_array(x)
+    device = backend.get_device(x)
     with device:
         x = x.reshape((batch_size, input_channel) + input_shape)
         W = W.reshape((output_channel, input_channel) + filter_shape)            
         
-    if device != util.cpu_device and config.cudnn_enabled:
+    if device != backend.cpu_device and config.cudnn_enabled:
         y = _cudnn_convolve(x, W, mode=mode)
     else:
         y = _fft_convolve(x, W, mode=mode)
@@ -84,12 +84,12 @@ def convolve_adjoint_input(W, y, input_multi_channel=False,
         input_channel, output_channel = _get_convolve_adjoint_input_params(
             W, y, input_multi_channel, output_multi_channel)
 
-    device = util.get_device_from_array(y)
+    device = backend.get_device(y)
     with device:
         y = y.reshape((batch_size, output_channel) + output_shape)
         W = W.reshape((output_channel, input_channel) + filter_shape)            
 
-    if device != util.cpu_device and config.cudnn_enabled:
+    if device != backend.cpu_device and config.cudnn_enabled:
         x = _cudnn_convolve_adjoint_input(W, y, mode=mode)
     else:
         x = _fft_convolve_adjoint_input(W, y, mode=mode)
@@ -128,12 +128,12 @@ def convolve_adjoint_filter(x, y, ndim, input_multi_channel=False,
         input_channel, output_channel = _get_convolve_adjoint_filter_params(
             x, y, ndim, input_multi_channel, output_multi_channel)
 
-    device = util.get_device_from_array(x)
+    device = backend.get_device(x)
     with device:
         x = x.reshape((batch_size, input_channel) + input_shape)
         y = y.reshape((batch_size, output_channel) + output_shape)          
 
-    if device != util.cpu_device and config.cudnn_enabled:
+    if device != backend.cpu_device and config.cudnn_enabled:
         W = _cudnn_convolve_adjoint_filter(x, y, mode=mode)
     else:
         W = _fft_convolve_adjoint_filter(x, y, mode=mode)
@@ -226,7 +226,7 @@ def _fft_convolve(x, W, mode='full'):
         pad_shape = input_shape
 
     dtype = x.dtype
-    device = util.get_device_from_array(x)
+    device = backend.get_device(x)
     xp = device.xp
     with device:
         x = x.reshape((batch_size, 1, input_channel) + input_shape)
@@ -271,7 +271,7 @@ def _fft_convolve_adjoint_input(W, y, mode='full'):
         pad_shape = input_shape
 
     dtype = y.dtype
-    device = util.get_device_from_array(y)
+    device = backend.get_device(y)
     xp = device.xp
     with device:
         y = y.reshape((batch_size, output_channel, 1) + output_shape)
@@ -318,7 +318,7 @@ def _fft_convolve_adjoint_filter(x, y, mode='full'):
         pad_shape = input_shape
 
     dtype = x.dtype
-    device = util.get_device_from_array(x)
+    device = backend.get_device(x)
     xp = device.xp
     with device:
         x = xp.conj(util.flip(x, axes=range(-ndim, 0)))
@@ -354,7 +354,7 @@ def _fft_convolve_adjoint_filter(x, y, mode='full'):
 
 def _cudnn_convolve(x, W, mode='full'):
     dtype = x.dtype
-    device = util.get_device_from_array(x)
+    device = backend.get_device(x)
     xp = device.xp
     if np.issubdtype(dtype, np.complexfloating):
         with device:
@@ -387,9 +387,8 @@ def _cudnn_convolve(x, W, mode='full'):
         output_shape = tuple(m - n + 1 for m, n in zip(input_shape, filter_shape))
         pads = (0, ) * ndim
 
-    y = util.empty((batch_size, output_channel) + output_shape, dtype=dtype,
-                   device=device)
     with device:
+        y = xp.empty((batch_size, output_channel) + output_shape, dtype=dtype)
         W = util.flip(W, axes=range(-ndim, 0))
         cudnn.convolution_forward(x, W, None, y,
                                   pads, strides, dilations, groups,
@@ -400,7 +399,7 @@ def _cudnn_convolve(x, W, mode='full'):
 
 def _cudnn_convolve_adjoint_input(W, y, mode='full'):
     dtype = y.dtype
-    device = util.get_device_from_array(y)
+    device = backend.get_device(y)
     xp = device.xp
     if np.issubdtype(dtype, np.complexfloating):
         with device:
@@ -434,9 +433,8 @@ def _cudnn_convolve_adjoint_input(W, y, mode='full'):
         input_shape = tuple(p + n - 1 for p, n in zip(output_shape, filter_shape))
         pads = (0, ) * ndim
 
-    x = util.empty((batch_size, input_channel) + input_shape, dtype=dtype,
-                   device=device)
     with device:
+        x = xp.empty((batch_size, input_channel) + input_shape, dtype=dtype)
         W = util.flip(W, axes=range(-ndim, 0))
         cudnn.convolution_backward_data(W, y, None, x,
                                         pads, strides, dilations, groups,
@@ -449,7 +447,7 @@ def _cudnn_convolve_adjoint_input(W, y, mode='full'):
 
 def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
     dtype = y.dtype
-    device = util.get_device_from_array(y)
+    device = backend.get_device(y)
     xp = device.xp
     if np.issubdtype(dtype, np.complexfloating):
         with device:
@@ -484,9 +482,8 @@ def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
         filter_shape = tuple(m - p + 1 for m, p in zip(input_shape, output_shape))
         pads = (0, ) * ndim
 
-    W = util.empty((output_channel, input_channel) + filter_shape, dtype=dtype,
-                   device=device)
     with device:
+        W = xp.empty((output_channel, input_channel) + filter_shape, dtype=dtype)
         cudnn.convolution_backward_filter(x, y, W,
                                           pads, strides, dilations, groups,
                                           deterministic=deterministic,

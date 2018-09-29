@@ -2,7 +2,7 @@ import pickle
 import unittest
 import numpy as np
 import numpy.testing as npt
-from sigpy import util
+from sigpy import util, backend
 
 if __name__ == '__main__':
     unittest.main()
@@ -11,7 +11,7 @@ if __name__ == '__main__':
 class TestUtil(unittest.TestCase):
 
     def test_device(self):
-        device = util.Device(-1)
+        device = backend.Device(-1)
         pickle.dumps(device)
 
     def test_dot(self):

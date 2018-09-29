@@ -15,7 +15,7 @@ def labels_to_scores(labels):
         array: Score array of shape (len(labels), max(labels) + 1).
 
     """
-    device = sp.util.get_device_from_array(labels)
+    device = sp.get_device(labels)
     xp = device.xp
     with device:
         num_classes = labels.max() + 1
@@ -35,7 +35,7 @@ def scores_to_labels(scores):
         array: Label array of lengths scores.shape[0].
 
     """
-    device = sp.util.get_device_from_array(scores)
+    device = sp.get_device(scores)
     xp = device.xp
     with device:
         return xp.argmax(scores, axis=1)

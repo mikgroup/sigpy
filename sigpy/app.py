@@ -6,9 +6,8 @@ and a maximum eigenvalue estimation App.
 import numpy as np
 
 from tqdm import tqdm
-from sigpy import linop, prox, util, config
-from sigpy.alg import PowerMethod, GradientMethod, \
-    ConjugateGradient, PrimalDualHybridGradient
+from sigpy import backend, linop, prox, util, config
+from sigpy.alg import PowerMethod, GradientMethod, ConjugateGradient, PrimalDualHybridGradient
 
 if config.cupy_enabled:
     import cupy as cp
@@ -98,7 +97,7 @@ class MaxEig(App):
         max_eig (int): Largest eigenvalue of A.
 
     """
-    def __init__(self, A, dtype=np.complex, device=util.cpu_device,
+    def __init__(self, A, dtype=np.complex, device=backend.cpu_device,
                  max_iter=30, show_pbar=True):
         self.x = util.randn(A.ishape, dtype=dtype, device=device)
         alg = PowerMethod(A, self.x, max_iter=max_iter)
@@ -179,12 +178,12 @@ class LinearLeastSquares(App):
         self.save_objective_values = save_objective_values
         self.show_pbar = show_pbar
 
-        self.y_device = util.get_device_from_array(y)
+        self.y_device = backend.get_device(y)
         if self.x is None:
             with self.y_device:
                 self.x = self.y_device.xp.zeros(A.ishape, dtype=y.dtype)
 
-        self.x_device = util.get_device_from_array(x)
+        self.x_device = backend.get_device(x)
         self._get_alg()
         if self.save_objective_values:
             self.objective_values = []
@@ -249,7 +248,7 @@ class LinearLeastSquares(App):
                 r = self.A(x)
                 r -= self.y
                 
-            with util.get_device_from_array(self.x):
+            with backend.get_device(self.x):
                 gradf_x = self.A.H(r)
 
                 if self.lamda != 0:
@@ -299,7 +298,7 @@ class LinearLeastSquares(App):
 
         if self.lamda > 0 or self.mu > 0:
             def gradh(x):
-                with util.get_device_from_array(self.x):
+                with backend.get_device(self.x):
                     gradh_x = 0
                     if self.lamda > 0:
                         if self.R is None:
@@ -413,12 +412,12 @@ class L2ConstrainedMinimization(App):
                  show_pbar=True):
         self.y = y
         self.x = x
-        self.y_device = util.get_device_from_array(y)
+        self.y_device = backend.get_device(y)
         if self.x is None:
             with self.y_device:
                 self.x = self.y_device.xp.zeros(A.ishape, dtype=self.y.dtype)
             
-        self.x_device = util.get_device_from_array(self.x)
+        self.x_device = backend.get_device(self.x)
         if G is None:
             self.max_eig_app = MaxEig(A.H * A, dtype=self.x.dtype, device=self.x_device)
 

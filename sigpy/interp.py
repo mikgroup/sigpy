@@ -4,7 +4,7 @@
 import numpy as np
 import numba as nb
 
-from sigpy import config, util
+from sigpy import backend, config, util
 
 if config.cupy_enabled:
     import cupy as cp
@@ -31,11 +31,11 @@ def interp(input, width, table, coord):
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
 
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     isreal = np.issubdtype(input.dtype, np.floating)
-    coord = util.to_device(coord, device)
-    table = util.to_device(table, device)
+    coord = backend.to_device(coord, device)
+    table = backend.to_device(table, device)
 
     with device:
         input = input.reshape([batch_size] + list(input.shape[-ndim:]))
@@ -43,7 +43,7 @@ def interp(input, width, table, coord):
         output = xp.zeros([batch_size, npts], dtype=input.dtype)
 
         _interp = _select_interp(ndim, npts, device, isreal)
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             _interp(output, input, width, table, coord)
         else:
             _interp(output, input, width, table, coord, size=npts)
@@ -73,7 +73,7 @@ def gridding(input, shape, width, table, coord):
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
 
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     isreal = np.issubdtype(input.dtype, np.floating)
 
@@ -83,7 +83,7 @@ def gridding(input, shape, width, table, coord):
         output = xp.zeros([batch_size] + list(shape[-ndim:]), dtype=input.dtype)
 
         _gridding = _select_gridding(ndim, npts, device, isreal)
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             _gridding(output, input, width, table, coord)
         else:
             _gridding(output, input, width, table, coord, size=npts)
@@ -93,17 +93,17 @@ def gridding(input, shape, width, table, coord):
 
 def _select_interp(ndim, npts, device, isreal):
     if ndim == 1:
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             _interp = _interp1
         else:
             _interp = _interp1_cuda
     elif ndim == 2:
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             _interp = _interp2
         else:
             _interp = _interp2_cuda
     elif ndim == 3:
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             _interp = _interp3
         else:
             _interp = _interp3_cuda
@@ -116,7 +116,7 @@ def _select_interp(ndim, npts, device, isreal):
 
 def _select_gridding(ndim, npts, device, isreal):
     if ndim == 1:
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             _gridding = _gridding1
         else:
             if isreal:
@@ -124,7 +124,7 @@ def _select_gridding(ndim, npts, device, isreal):
             else:
                 _gridding = _gridding1_cuda_complex
     elif ndim == 2:
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             _gridding = _gridding2
         else:
             if isreal:
@@ -132,7 +132,7 @@ def _select_gridding(ndim, npts, device, isreal):
             else:
                 _gridding = _gridding2_cuda_complex
     elif ndim == 3:
-        if device == util.cpu_device:
+        if device == backend.cpu_device:
             _gridding = _gridding3
         else:
             if isreal:

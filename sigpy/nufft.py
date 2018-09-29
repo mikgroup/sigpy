@@ -2,7 +2,7 @@
 """NUFFT functions.
 """
 import numpy as np
-from sigpy import fft, util, interp
+from sigpy import backend, fft, util, interp
 
 
 def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
@@ -29,7 +29,7 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         IEEE transactions on medical imaging, 24(6), 799-808.
 
     """
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
@@ -43,7 +43,6 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
             os_i = _get_ugly_number(oversamp * i)
             os_shape[a] = os_i
             idx = xp.arange(i, dtype=input.dtype)
-            os_idx = xp.arange(os_i, dtype=input.dtype)
 
             # Calculate apodization
             apod = (beta**2 - (np.pi * width * (idx - i // 2) / os_i)**2)**0.5
@@ -65,8 +64,8 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
             output = output.swapaxes(a, -1)
             os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
 
-        coord = _scale_coord(util.to_device(coord, device), input.shape, oversamp)
-        table = util.to_device(
+        coord = _scale_coord(backend.to_device(coord, device), input.shape, oversamp)
+        table = backend.to_device(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
 
         output = interp.interp(output, width, table, coord)
@@ -84,9 +83,8 @@ def estimate_shape(coord):
         coord (array): Coordinates.
     """
     ndim = coord.shape[-1]
-    with util.get_device_from_array(coord):
-        shape = [int(coord[..., i].max() - coord[..., i].min())
-                 for i in range(ndim)]
+    with backend.get_device(coord):
+        shape = [int(coord[..., i].max() - coord[..., i].min()) for i in range(ndim)]
 
     return shape
 
@@ -110,7 +108,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         :func:`sigpy.nufft.nufft`
 
     """
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
@@ -120,8 +118,8 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         oshape = list(oshape)
 
     with device:
-        coord = _scale_coord(util.to_device(coord, device), oshape, oversamp)
-        table = util.to_device(
+        coord = _scale_coord(backend.to_device(coord, device), oshape, oversamp)
+        table = backend.to_device(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
         os_shape = oshape[:-ndim] + [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
         output = interp.gridding(input, os_shape, width, table, coord)
@@ -130,8 +128,6 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
             i = oshape[a]
             os_i = os_shape[a]
             idx = xp.arange(i, dtype=input.dtype)
-            os_idx = xp.arange(os_i, dtype=input.dtype)
-
             os_shape[a] = i
 
             # Swap axes
@@ -163,9 +159,9 @@ def _kb(x, width, beta, dtype=np.complex):
 
 def _scale_coord(coord, shape, oversamp):
     ndim = coord.shape[-1]
-    device = util.get_device_from_array(coord)
-    scale = util.to_device([_get_ugly_number(oversamp * i) / i for i in shape[-ndim:]], device)
-    shift = util.to_device([_get_ugly_number(oversamp * i) // 2 for i in shape[-ndim:]], device)
+    device = backend.get_device(coord)
+    scale = backend.to_device([_get_ugly_number(oversamp * i) / i for i in shape[-ndim:]], device)
+    shift = backend.to_device([_get_ugly_number(oversamp * i) // 2 for i in shape[-ndim:]], device)
 
     with device:
         coord = scale * coord + shift

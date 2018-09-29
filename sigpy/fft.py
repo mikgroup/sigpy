@@ -6,7 +6,7 @@ This module contains FFT functions that support centered operation.
 """
 import numpy as np
 
-from sigpy import config, util
+from sigpy import backend, config, util
 if config.cupy_enabled:
     import cupy as cp
 
@@ -27,7 +27,7 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
         :func:`numpy.fft.fftn`
 
     """
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
 
     with device:
@@ -61,7 +61,7 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
         :func:`numpy.fft.ifftn`
 
     """
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
 
     with device:
@@ -83,7 +83,7 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
 
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
 
     if oshape is None:
@@ -95,7 +95,6 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
         for a in axes:
             i = oshape[a]
             tshape[a] = i
-            idx = xp.arange(i, dtype=input.dtype)
 
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]
@@ -114,10 +113,9 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
 
 
 def _ifftc(input, oshape=None, axes=None, norm='ortho'):
-
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
-    device = util.get_device_from_array(input)
+    device = backend.get_device(input)
     xp = device.xp
 
     if oshape is None:
@@ -130,7 +128,6 @@ def _ifftc(input, oshape=None, axes=None, norm='ortho'):
 
             i = oshape[a]
             tshape[a] = i
-            idx = xp.arange(i, dtype=input.dtype)
 
             tmp = tmp.swapaxes(a, -1)
             tshape[a], tshape[-1] = tshape[-1], tshape[a]

@@ -5,13 +5,11 @@ import numpy as np
 import sigpy as sp
 
 from sigpy.mri import linop
-if sp.config.mpi4py_enabled:
-    from mpi4py import MPI
 
 
 def _estimate_weights(y, weights, coord):
     if weights is None and coord is None:
-        with sp.util.get_device_from_array(y):
+        with sp.get_device(y):
             weights = (sp.util.rss(y, axes=(0, )) > 0).astype(y.dtype)
 
     return weights
@@ -46,12 +44,12 @@ class SenseRecon(sp.app.LinearLeastSquares):
        
     """
     def __init__(self, y, mps, lamda=0, weights=None,
-                 coord=None, device=sp.util.cpu_device, **kwargs):
+                 coord=None, device=sp.cpu_device, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
-            y = sp.util.to_device(y * weights**0.5, device=device)
+            y = sp.to_device(y * weights**0.5, device=device)
         else:
-            y = sp.util.to_device(y, device=device)
+            y = sp.to_device(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
 
@@ -84,12 +82,12 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(self, y, mps, eps,
                  weights=None, coord=None,
-                 device=sp.util.cpu_device, **kwargs):
+                 device=sp.cpu_device, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
-            y = sp.util.to_device(y * weights**0.5, device=device)
+            y = sp.to_device(y * weights**0.5, device=device)
         else:
-            y = sp.util.to_device(y, device=device)
+            y = sp.to_device(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
         proxg = sp.prox.L2Reg(A.ishape, 1)
@@ -125,12 +123,12 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
     """
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None,
-                 wave_name='db4', device=sp.util.cpu_device, **kwargs):
+                 wave_name='db4', device=sp.cpu_device, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
-            y = sp.util.to_device(y * weights**0.5, device=device)
+            y = sp.to_device(y * weights**0.5, device=device)
         else:
-            y = sp.util.to_device(y, device=device)
+            y = sp.to_device(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
         img_shape = mps.shape[1:]
@@ -138,7 +136,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
 
         def g(input):
-            device = sp.util.get_device_from_array(input)
+            device = sp.get_device(input)
             xp = device.xp
             with device:
                 return lamda * xp.sum(xp.abs(W(input)))
@@ -174,12 +172,12 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(
             self, y, mps, eps,
-            wave_name='db4', weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
+            wave_name='db4', weights=None, coord=None, device=sp.cpu_device, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
-            y = sp.util.to_device(y * weights**0.5, device=device)
+            y = sp.to_device(y * weights**0.5, device=device)
         else:
-            y = sp.util.to_device(y, device=device)
+            y = sp.to_device(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
         img_shape = mps.shape[1:]
@@ -216,12 +214,12 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
 
     """
     def __init__(self, y, mps, lamda,
-                 weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
+                 weights=None, coord=None, device=sp.cpu_device, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
-            y = sp.util.to_device(y * weights**0.5, device=device)
+            y = sp.to_device(y * weights**0.5, device=device)
         else:
-            y = sp.util.to_device(y, device=device)
+            y = sp.to_device(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
 
@@ -229,7 +227,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         proxg = sp.prox.L1Reg(G.oshape, lamda)
 
         def g(x):
-            device = sp.util.get_device_from_array(x)
+            device = sp.get_device(x)
             xp = device.xp
             with device:
                 return lamda * xp.sum(xp.abs(x))
@@ -264,12 +262,12 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(
             self, y, mps, eps,
-            weights=None, coord=None, device=sp.util.cpu_device, **kwargs):
+            weights=None, coord=None, device=sp.cpu_device, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
-            y = sp.util.to_device(y * weights**0.5, device=device)
+            y = sp.to_device(y * weights**0.5, device=device)
         else:
-            y = sp.util.to_device(y, device=device)
+            y = sp.to_device(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights)
         G = sp.linop.Gradient(A.ishape)
@@ -312,7 +310,7 @@ class JsenseRecon(sp.app.App):
     """
     def __init__(self, y,
                  mps_ker_width=16, ksp_calib_width=24,
-                 lamda=0, device=sp.util.cpu_device,
+                 lamda=0, device=sp.cpu_device,
                  weights=None, coord=None, max_iter=10,
                  max_inner_iter=10, show_pbar=True):
         self.y = y
@@ -324,7 +322,7 @@ class JsenseRecon(sp.app.App):
         self.max_iter = max_iter
         self.max_inner_iter = max_inner_iter
 
-        self.device = sp.util.Device(device)
+        self.device = sp.Device(device)
         self.dtype = y.dtype
         self.num_coils = len(y)
 
@@ -355,14 +353,14 @@ class JsenseRecon(sp.app.App):
                 self.weights = self.weights[calib_idx]
 
         if self.weights is None:
-            self.y = sp.util.to_device(self.y / np.abs(self.y).max(), self.device)
+            self.y = sp.to_device(self.y / np.abs(self.y).max(), self.device)
         else:
-            self.y = sp.util.to_device(self.weights * self.y / np.abs(self.y).max(), self.device)
+            self.y = sp.to_device(self.weights * self.y / np.abs(self.y).max(), self.device)
 
         if self.coord is not None:
-            self.coord = sp.util.to_device(self.coord, self.device)
+            self.coord = sp.to_device(self.coord, self.device)
         if self.weights is not None:
-            self.weights = sp.util.to_device(self.weights, self.device)
+            self.weights = sp.to_device(self.weights, self.device)
 
         self.weights = _estimate_weights(self.y, self.weights, self.coord)
 
@@ -403,10 +401,10 @@ class JsenseRecon(sp.app.App):
             mps = []
             for mps_ker_c in self.mps_ker:
                 mps_c = sp.fft.ifft(sp.util.resize(mps_ker_c, self.img_shape))
-                mps.append(sp.util.to_device(mps_c, sp.util.cpu_device))
+                mps.append(sp.to_device(mps_c, sp.cpu_device))
                 mps_rss += xp.abs(mps_c)**2
 
-            mps_rss = sp.util.to_device(mps_rss**0.5, sp.util.cpu_device)
+            mps_rss = sp.to_device(mps_rss**0.5, sp.cpu_device)
             mps = np.stack(mps)
             mps /= mps_rss
 

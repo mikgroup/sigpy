@@ -2,15 +2,15 @@ import unittest
 import pickle
 import numpy as np
 import numpy.testing as npt
-from sigpy import linop, util, config
+from sigpy import backend, linop, util, config
 
 if __name__ == '__main__':
     unittest.main()
 
 
-def check_linop_unitary(A, dtype=np.complex, device=util.cpu_device):
+def check_linop_unitary(A, dtype=np.complex, device=backend.cpu_device):
 
-    device = util.Device(device)
+    device = backend.Device(device)
     x = util.randn(A.ishape, dtype=dtype, device=device)
 
     xp = device.xp
@@ -18,9 +18,9 @@ def check_linop_unitary(A, dtype=np.complex, device=util.cpu_device):
         xp.testing.assert_allclose(A.H * A * x, x, atol=1e-5, rtol=1e-5)
 
 
-def check_linop_linear(A, dtype=np.complex, device=util.cpu_device):
+def check_linop_linear(A, dtype=np.complex, device=backend.cpu_device):
 
-    device = util.Device(device)
+    device = backend.Device(device)
     a = util.randn([1], dtype=dtype, device=device)
     x = util.randn(A.ishape, dtype=dtype, device=device)
     y = util.randn(A.ishape, dtype=dtype, device=device)
@@ -31,9 +31,9 @@ def check_linop_linear(A, dtype=np.complex, device=util.cpu_device):
                                    a * A(x) + A(y), atol=1e-5, rtol=1e-5)
 
 
-def check_linop_adjoint(A, dtype=np.complex, device=util.cpu_device):
+def check_linop_adjoint(A, dtype=np.complex, device=backend.cpu_device):
 
-    device = util.Device(device)
+    device = backend.Device(device)
     x = util.randn(A.ishape, dtype=dtype, device=device)
     y = util.randn(A.oshape, dtype=dtype, device=device)
 
@@ -46,7 +46,6 @@ def check_linop_adjoint(A, dtype=np.complex, device=util.cpu_device):
 
 
 def check_linop_pickleable(A):
-
     assert A.__repr__() == pickle.loads(pickle.dumps(A)).__repr__()
 
 
@@ -65,8 +64,8 @@ class TestLinop(unittest.TestCase):
 
     def test_ToDevice(self):
         shape = [5]
-        odevice = util.cpu_device
-        idevice = util.cpu_device
+        odevice = backend.cpu_device
+        idevice = backend.cpu_device
         A = linop.ToDevice(shape, odevice, idevice)
         x = util.randn(shape)
 
@@ -422,9 +421,9 @@ class TestLinop(unittest.TestCase):
                                    [3, 4]])
 
     def test_ConvolveInput(self):
-        devices = [util.cpu_device]
+        devices = [backend.cpu_device]
         if config.cupy_enabled:
-            devices.append(util.Device(0))
+            devices.append(backend.Device(0))
         for device in devices:
             for mode in ['full', 'valid']:
                 x_shape = [3, 4]
@@ -457,9 +456,9 @@ class TestLinop(unittest.TestCase):
                 check_linop_pickleable(A)
 
     def test_ConvolveFilter(self):
-        devices = [util.cpu_device]
+        devices = [backend.cpu_device]
         if config.cupy_enabled:
-            devices.append(util.Device(0))
+            devices.append(backend.Device(0))
         for device in devices:
             for mode in ['full', 'valid']:
                 W_shape = [2, 3]

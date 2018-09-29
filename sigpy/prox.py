@@ -2,7 +2,7 @@
 """Proximal operators.
 """
 import numpy as np
-from sigpy import config, util, thresh
+from sigpy import backend, config, util, thresh
 
 if config.cupy_enabled:
     import cupy as cp
@@ -68,7 +68,7 @@ class Conj(Prox):
 
     def _prox(self, alpha, input):
 
-        with util.get_device_from_array(input):
+        with backend.get_device(input):
             return input - alpha * self.prox(1 / alpha, input / alpha)
 
 
@@ -159,7 +159,7 @@ class L2Reg(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        with util.get_device_from_array(input):
+        with backend.get_device(input):
             return (input + self.lamda * alpha * self.y) / (1 + self.lamda * alpha)
 
 
@@ -180,7 +180,7 @@ class L2Proj(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        with util.get_device_from_array(input):
+        with backend.get_device(input):
             return thresh.l2_proj(self.epsilon, input - self.y, self.axes) + self.y
 
 
@@ -210,13 +210,11 @@ class L1Proj(Prox):
 
     """
     def __init__(self, shape, epsilon):
-
         self.epsilon = epsilon
 
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-
         return thresh.l1_proj(self.epsilon, input)
 
 
