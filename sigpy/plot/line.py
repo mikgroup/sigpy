@@ -8,7 +8,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sigpy.util import prod
+from sigpy import prod
 
 
 class Line(object):

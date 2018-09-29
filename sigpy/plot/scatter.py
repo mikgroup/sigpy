@@ -8,7 +8,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sigpy.util import prod, to_device, cpu_device
+from sigpy import prod, to_device, cpu_device
 
 
 class Scatter(object):
