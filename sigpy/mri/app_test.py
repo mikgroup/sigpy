@@ -21,7 +21,7 @@ class TestApp(unittest.TestCase):
         mask = np.zeros(img_shape)
         mask[:, ::2] = 1
 
-        ksp = mask * sp.fft.fft(mps * img, axes=[-2, -1])
+        ksp = mask * sp.fft(mps * img, axes=[-2, -1])
         return img, mps, ksp
 
     def test_shepp_logan_SenseRecon(self):
@@ -86,7 +86,7 @@ class TestApp(unittest.TestCase):
 
         img = np.ones(img_shape, dtype=np.complex)
         mps = sim.birdcage_maps(mps_shape)
-        ksp = sp.fft.fft(mps * img, axes=[-2, -1])
+        ksp = sp.fft(mps * img, axes=[-2, -1])
 
         _app = app.JsenseRecon(ksp, mps_ker_width=6, ksp_calib_width=6)
         mps_rec = _app.run()

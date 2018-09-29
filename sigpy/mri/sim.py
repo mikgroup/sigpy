@@ -4,6 +4,9 @@
 import numpy as np
 
 
+__all__ = ['shepp_logan', 'birdcage_maps']
+
+
 def shepp_logan(shape, dtype=np.complex):
     """Generates a Shepp Logan phantom with a given shape and dtype.
 
@@ -112,39 +115,6 @@ oscillation_a = [0, 0, 0, 0, 0.0, 0.3, 0.3, 0.3, 0.3, 0.3]
 oscillation_f = [0, 0, 0, 0, 0.0, 10.0, 10.0, 10.0, 10.0, 10.0]
 enhancement_a = [0, 0, 0, 0, 0.6, 0.3, 0.3, 0.3, 0.3, 0.3]
 enhancement_f = [0, 0, 0, 0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0]
-
-
-def dynamic_shepp_logan(shape, dtype=np.complex):
-    """
-    Generates a Shepp Logan phantom with a given shape
-    """
-    nt = shape[0]
-    output = np.zeros(shape, dtype=dtype)
-
-    for t in range(nt):
-
-        amps = (np.array(sl_amps) +
-                oscillation_a * np.sin(2 * np.pi * t / nt * np.array(oscillation_f)) +
-                enhancement_a * (1 - np.exp(-np.array(enhancement_f) * t / nt)))
-
-        output[t, ...] = phantom(
-            shape[1:], amps, sl_scales, sl_offsets, sl_angles, dtype)
-
-    return output
-
-
-def quant_shepp_logan(shape, dtype=np.complex):
-    """
-    Generate Quantatiative t1, t2, offresonance maps
-    """
-
-    t1 = phantom(shape, sl_t1_amps, sl_scales, sl_offsets, sl_angles, dtype)
-    t2 = phantom(shape, sl_t2_amps, sl_scales, sl_offsets, sl_angles, dtype)
-    f = (1 - np.outer(np.hanning(shape[0]),
-                      np.hanning(shape[1]))).astype(dtype) * 0.001
-    proton = phantom(shape, sl_amps, sl_scales, sl_offsets, sl_angles, dtype)
-
-    return t1 * (proton > 0), t2 * (proton > 0), f * (proton > 0), proton
 
 
 def phantom(shape, amps, scales, offsets, angles, dtype):

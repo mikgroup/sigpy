@@ -15,9 +15,9 @@ class TestPrecond(unittest.TestCase):
         nc = 4
         n = 10
         shape = (nc, n)
-        mps = sp.util.randn(shape)
+        mps = sp.randn(shape)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
-        weights = sp.util.randn([n]) >= 0
+        weights = sp.randn([n]) >= 0
 
         A = sp.linop.Multiply(shape, weights**0.5) * linop.Sense(mps)
 
@@ -50,9 +50,9 @@ class TestPrecond(unittest.TestCase):
         n = 10
         nc = 3
         shape = [nc, n]
-        mps = sp.util.randn(shape)
+        mps = sp.randn(shape)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
-        coord = sp.util.randn([n, 1], dtype=np.float)
+        coord = sp.randn([n, 1], dtype=np.float)
 
         A = linop.Sense(mps, coord=coord)
 
@@ -125,9 +125,9 @@ class TestPrecond(unittest.TestCase):
         nc = 4
         n = 10
         shape = (nc, n)
-        mps = sp.util.randn(shape)
+        mps = sp.randn(shape)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
-        weights = sp.util.randn([n]) >= 0
+        weights = sp.randn([n]) >= 0
 
         A = sp.linop.Multiply(shape, weights**0.5) * linop.Sense(mps)
         F = sp.linop.FFT([n])
@@ -148,7 +148,7 @@ class TestPrecond(unittest.TestCase):
         shape = [nc, n]
         mps = np.ones(shape)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
-        coord = sp.util.randn([n, 1], dtype=np.float)
+        coord = sp.randn([n, 1], dtype=np.float)
 
         A = linop.Sense(mps, coord=coord)
         F = sp.linop.FFT([n])

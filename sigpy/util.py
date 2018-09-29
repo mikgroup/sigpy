@@ -9,6 +9,11 @@ if config.cupy_enabled:
     import cupy as cp
 
 
+__all__ = ['asscalar', 'prod', 'vec', 'split', 'rss', 'resize',
+           'flip', 'circshift', 'downsample', 'upsample', 'dirac', 'randn',
+           'triang', 'dot', 'norm2', 'norm', 'monte_carlo_sure', 'axpy', 'xpay']
+
+
 def _normalize_axes(axes, ndim):
     if axes is None:
         return tuple(range(ndim))

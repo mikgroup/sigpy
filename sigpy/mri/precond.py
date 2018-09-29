@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """MRI preconditioners.
 """
-
 import sigpy as sp
+
+
+__all__ = ['kspace_precond', 'circulant_precond']
 
 
 def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device):
@@ -35,7 +37,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
     ndim = len(img_shape)
     num_coils = mps.shape[0]
 
-    scale = sp.util.prod(img2_shape)**1.5 / sp.util.prod(img_shape)
+    scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)
     with device:
         if coord is None:
             idx = [slice(None, None, 2)] * ndim
@@ -46,30 +48,30 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
             else:
                 ones[idx] = weights**0.5
 
-            psf = sp.fft.ifft(ones)
+            psf = sp.ifft(ones)
         else:
             coord2 = coord * 2
             ones = xp.ones(coord.shape[:-1], dtype=dtype)
             if weights is not None:
                 ones *= weights**0.5
 
-            psf = sp.nufft.nufft_adjoint(ones, coord2, img2_shape)
+            psf = sp.nufft_adjoint(ones, coord2, img2_shape)
 
         mps = sp.to_device(mps, device)
         mps_ij = mps * xp.conj(mps.reshape([num_coils, 1] + img_shape))
-        xcorr_fourier = xp.sum(xp.abs(sp.fft.fft(mps_ij, [num_coils, num_coils] + img2_shape, axes=range(-ndim, 0)))**2, axis=0)
-        xcorr = sp.fft.ifft(xcorr_fourier, axes=range(-ndim, 0))
+        xcorr_fourier = xp.sum(xp.abs(sp.fft(mps_ij, [num_coils, num_coils] + img2_shape, axes=range(-ndim, 0)))**2, axis=0)
+        xcorr = sp.ifft(xcorr_fourier, axes=range(-ndim, 0))
         xcorr *= psf
         
         if coord is None:
-            p_inv = sp.fft.fft(xcorr, axes=range(-ndim, 0))[[slice(None)] + idx]
+            p_inv = sp.fft(xcorr, axes=range(-ndim, 0))[[slice(None)] + idx]
         else:
-            p_inv = sp.nufft.nufft(xcorr, coord2)
+            p_inv = sp.nufft(xcorr, coord2)
 
         if weights is not None:
             p_inv *= weights**0.5
 
-        mps_norm2 = sp.util.norm2(mps, axes=range(-ndim, 0)).reshape([num_coils] + [1] * (p_inv.ndim - 1))
+        mps_norm2 = sp.norm2(mps, axes=range(-ndim, 0)).reshape([num_coils] + [1] * (p_inv.ndim - 1))
         p_inv *= scale / mps_norm2
         p_inv += lamda
         p_inv /= 1 + lamda
@@ -112,7 +114,7 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_devi
     ndim = len(img_shape)
     num_coils = mps.shape[0]
 
-    scale = sp.util.prod(img2_shape)**1.5 / sp.util.prod(img_shape)**2
+    scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)**2
     with device:
         idx = [slice(None, None, 2)] * ndim
         if coord is None:
@@ -122,20 +124,20 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_devi
             else:
                 ones[idx] = weights**0.5
 
-            psf = sp.fft.ifft(ones)
+            psf = sp.ifft(ones)
         else:
             coord2 = coord * 2
             ones = xp.ones(coord.shape[:-1], dtype=dtype)
             if weights is not None:
                 ones *= weights**0.5
 
-            psf = sp.nufft.nufft_adjoint(ones, coord2, img2_shape)
+            psf = sp.nufft_adjoint(ones, coord2, img2_shape)
 
         mps = sp.to_device(mps, device)
-        xcorr_fourier = xp.abs(sp.fft.fft(xp.conj(mps), [num_coils] + img2_shape, axes=range(-ndim, 0)))**2
-        xcorr = sp.fft.ifft(xcorr_fourier, axes=range(-ndim, 0))
+        xcorr_fourier = xp.abs(sp.fft(xp.conj(mps), [num_coils] + img2_shape, axes=range(-ndim, 0)))**2
+        xcorr = sp.ifft(xcorr_fourier, axes=range(-ndim, 0))
         xcorr *= psf
-        p_inv = sp.fft.fft(xcorr, axes=range(-ndim, 0))
+        p_inv = sp.fft(xcorr, axes=range(-ndim, 0))
         p_inv = p_inv[[slice(None)] + idx]
         p_inv *= scale
         if weights is not None:

@@ -5,10 +5,13 @@ This module contains convolution functions that support multi-dimension, and mul
 
 """
 import numpy as np
-from sigpy import backend, fft, util, config
+from sigpy import backend, fourier, util, config
 
 if config.cudnn_enabled:
     from cupy import cudnn
+
+
+__all__ = ['convolve', 'convolve_adjoint_input', 'convolve_adjoint_filter']
 
 
 def convolve(x, W, input_multi_channel=False, output_multi_channel=False, mode='full'):
@@ -242,10 +245,10 @@ def _fft_convolve(x, W, mode='full'):
             y = xp.fft.irfftn(y_fft, pad_shape,
                               axes=range(-ndim, 0), norm='ortho').astype(dtype)
         else:
-            x_fft = fft.fft(x_pad, axes=range(-ndim, 0), center=False)
-            W_fft = fft.fft(W_pad, axes=range(-ndim, 0), center=False)
+            x_fft = fourier.fft(x_pad, axes=range(-ndim, 0), center=False)
+            W_fft = fourier.fft(W_pad, axes=range(-ndim, 0), center=False)
             y_fft = xp.sum(x_fft * W_fft, axis=-ndim - 1)
-            y = fft.ifft(y_fft, axes=range(-ndim, 0), center=False)
+            y = fourier.ifft(y_fft, axes=range(-ndim, 0), center=False)
 
         if mode == 'full':
             shift = [0] * y.ndim
@@ -288,10 +291,10 @@ def _fft_convolve_adjoint_input(W, y, mode='full'):
             x_fft = xp.sum(y_fft * W_fft, axis=-ndim - 2)
             x = xp.fft.irfftn(x_fft, pad_shape, axes=range(-ndim, 0), norm='ortho').astype(dtype)
         else:
-            y_fft = fft.fft(y_pad, axes=range(-ndim, 0), center=False)
-            W_fft = fft.fft(W_pad, axes=range(-ndim, 0), center=False)
+            y_fft = fourier.fft(y_pad, axes=range(-ndim, 0), center=False)
+            W_fft = fourier.fft(W_pad, axes=range(-ndim, 0), center=False)
             x_fft = xp.sum(y_fft * W_fft, axis=-ndim - 2)
-            x = fft.ifft(x_fft, axes=range(-ndim, 0), center=False)
+            x = fourier.ifft(x_fft, axes=range(-ndim, 0), center=False)
 
         if mode == 'full':
             shift = [0, 0] + [n - 1 for n in filter_shape]
@@ -337,10 +340,10 @@ def _fft_convolve_adjoint_filter(x, y, mode='full'):
             W = xp.fft.irfftn(W_fft, pad_shape,
                               axes=range(-ndim, 0), norm='ortho').astype(dtype)
         else:
-            x_fft = fft.fft(x_pad, axes=range(-ndim, 0), center=False)
-            y_fft = fft.fft(y_pad, axes=range(-ndim, 0), center=False)
+            x_fft = fourier.fft(x_pad, axes=range(-ndim, 0), center=False)
+            y_fft = fourier.fft(y_pad, axes=range(-ndim, 0), center=False)
             W_fft = xp.sum(x_fft * y_fft, axis=0)
-            W = fft.ifft(W_fft, axes=range(-ndim, 0), center=False)
+            W = fourier.ifft(W_fft, axes=range(-ndim, 0), center=False)
 
         if mode == 'full':
             shift = [0, 0] + [m - 1 for m in input_shape]

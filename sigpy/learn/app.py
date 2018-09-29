@@ -48,7 +48,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         self.elitist = elitist
 
         self._get_params()
-        self.r_j = sp.util.empty(self.r_j_shape, dtype=self.dtype, device=device)
+        self.r_j = sp.empty(self.r_j_shape, dtype=self.dtype, device=device)
         self.A_r_j = sp.linop.ConvolveInput(self.r_j.shape, self.l, mode=self.mode,
                                             input_multi_channel=True,
                                             output_multi_channel=self.multi_channel)
@@ -151,20 +151,20 @@ class ConvSparseCoding(sp.app.App):
 
         self._get_params()
         self._get_batch_vars()
-        self.l = sp.util.empty(self.l_shape, dtype=self.dtype, device=self.device)
-        self.l_old = sp.util.empty(self.l_shape, dtype=self.dtype, device=self.device)
+        self.l = sp.empty(self.l_shape, dtype=self.dtype, device=self.device)
+        self.l_old = sp.empty(self.l_shape, dtype=self.dtype, device=self.device)
         self._get_alg()
         super().__init__(self.alg, show_pbar=show_pbar)
 
     def _init(self):
-        sp.copyto(self.l, sp.util.randn_like(self.l))
+        sp.copyto(self.l, sp.randn_like(self.l))
         xp = self.device.xp
         with self.device:
             if self.multi_channel:
-                l_norm = sp.util.norm(self.l, axes=[0] + list(range(-self.data_ndim, 0)),
+                l_norm = sp.norm(self.l, axes=[0] + list(range(-self.data_ndim, 0)),
                                       keepdims=True)
             else:
-                l_norm = sp.util.norm(self.l, axes=range(-self.data_ndim, 0), keepdims=True)
+                l_norm = sp.norm(self.l, axes=range(-self.data_ndim, 0), keepdims=True)
 
             self.l /= l_norm
 
@@ -184,7 +184,7 @@ class ConvSparseCoding(sp.app.App):
         with self.device:
             if self.checkpoint_path is not None:
                 if self.elitist:
-                    l_norm2 = sp.util.norm2(self.l, axes=range(-self.data_ndim, 0))
+                    l_norm2 = sp.norm2(self.l, axes=range(-self.data_ndim, 0))
                     idx = xp.argsort(l_norm2)
                     if self.multi_channel:
                         xp.save(self.checkpoint_path, self.l[:, idx])
@@ -196,7 +196,7 @@ class ConvSparseCoding(sp.app.App):
     def _output(self):
         xp = self.device.xp
         with self.device:
-            l_norm2 = sp.util.norm2(self.l, axes=range(-self.data_ndim, 0))
+            l_norm2 = sp.norm2(self.l, axes=range(-self.data_ndim, 0))
             idx = xp.argsort(l_norm2)
             if self.multi_channel:
                 sp.copyto(self.l, self.l[:, idx])
@@ -226,7 +226,7 @@ class ConvSparseCoding(sp.app.App):
 
     def _get_batch_vars(self):
         self.j_idx = sp.index.ShuffledIndex(self.num_batches)
-        self.y_j = sp.util.empty((self.batch_size, ) + self.y.shape[1:],
+        self.y_j = sp.empty((self.batch_size, ) + self.y.shape[1:],
                                  dtype=self.dtype, device=self.device)
 
     def _get_alg(self):
@@ -305,12 +305,12 @@ class LinearRegression(sp.app.App):
         self.output = output
         self.checkpoint_path = checkpoint_path
 
-        self.mat = sp.util.zeros(input.shape[1:] + output.shape[1:], dtype=dtype, device=device)
+        self.mat = sp.zeros(input.shape[1:] + output.shape[1:], dtype=dtype, device=device)
         
         self.j_idx = sp.index.ShuffledIndex(num_batches)
-        self.input_j = sp.util.empty((batch_size, ) + input.shape[1:],
+        self.input_j = sp.empty((batch_size, ) + input.shape[1:],
                                      dtype=dtype, device=device)
-        self.output_j = sp.util.empty((batch_size, ) + output.shape[1:],
+        self.output_j = sp.empty((batch_size, ) + output.shape[1:],
                                       dtype=dtype, device=device)
         
         self._get_A()
@@ -341,8 +341,8 @@ class LinearRegression(sp.app.App):
         return self.mat
     
     def _get_A(self):
-        input_j_size = sp.util.prod(self.input_j.shape[1:])
-        output_j_size = sp.util.prod(self.output_j.shape[1:])
+        input_j_size = sp.prod(self.input_j.shape[1:])
+        output_j_size = sp.prod(self.output_j.shape[1:])
 
         Ri = sp.linop.Reshape([input_j_size, output_j_size], self.mat.shape)
         M = sp.linop.MatMul([input_j_size, output_j_size],

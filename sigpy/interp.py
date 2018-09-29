@@ -10,7 +10,10 @@ if config.cupy_enabled:
     import cupy as cp
 
 
-def interp(input, width, table, coord):
+__all__ = ['interpolate', 'gridding']
+
+
+def interpolate(input, width, table, coord):
     """Interpolation from array to points specified by coordinates.
 
     Args:
@@ -42,11 +45,11 @@ def interp(input, width, table, coord):
         coord = coord.reshape([npts, ndim])
         output = xp.zeros([batch_size, npts], dtype=input.dtype)
 
-        _interp = _select_interp(ndim, npts, device, isreal)
+        _interpolate = _select_interpolate(ndim, npts, device, isreal)
         if device == backend.cpu_device:
-            _interp(output, input, width, table, coord)
+            _interpolate(output, input, width, table, coord)
         else:
-            _interp(output, input, width, table, coord, size=npts)
+            _interpolate(output, input, width, table, coord, size=npts)
 
         return output.reshape(batch_shape + pts_shape)
 
@@ -91,27 +94,27 @@ def gridding(input, shape, width, table, coord):
         return output.reshape(shape)
 
 
-def _select_interp(ndim, npts, device, isreal):
+def _select_interpolate(ndim, npts, device, isreal):
     if ndim == 1:
         if device == backend.cpu_device:
-            _interp = _interp1
+            _interpolate = _interpolate1
         else:
-            _interp = _interp1_cuda
+            _interpolate = _interpolate1_cuda
     elif ndim == 2:
         if device == backend.cpu_device:
-            _interp = _interp2
+            _interpolate = _interpolate2
         else:
-            _interp = _interp2_cuda
+            _interpolate = _interpolate2_cuda
     elif ndim == 3:
         if device == backend.cpu_device:
-            _interp = _interp3
+            _interpolate = _interpolate3
         else:
-            _interp = _interp3_cuda
+            _interpolate = _interpolate3_cuda
     else:
         raise ValueError(
             'Number of dimensions can only be 1, 2 or 3, got {}'.format(ndim))
 
-    return _interp
+    return _interpolate
 
 
 def _select_gridding(ndim, npts, device, isreal):
@@ -147,7 +150,7 @@ def _select_gridding(ndim, npts, device, isreal):
 
 
 @nb.jit(nopython=True)
-def lin_interp(table, x):
+def lin_interpolate(table, x):
     if x >= 1:
         return 0.0
     n = len(table)
@@ -163,7 +166,7 @@ def lin_interp(table, x):
 
 
 @nb.jit(nopython=True, cache=True)
-def _interp1(output, input, width, table, coord):
+def _interpolate1(output, input, width, table, coord):
     batch_size, nx = input.shape
     npts = coord.shape[0]
 
@@ -176,7 +179,7 @@ def _interp1(output, input, width, table, coord):
 
         for x in range(x0, x1 + 1):
 
-            w = lin_interp(table, abs(x - kx) / (width / 2))
+            w = lin_interpolate(table, abs(x - kx) / (width / 2))
 
             for b in range(batch_size):
                 output[b, i] += w * input[b, x % nx]
@@ -198,7 +201,7 @@ def _gridding1(output, input, width, table, coord):
 
         for x in range(x0, x1 + 1):
 
-            w = lin_interp(table, abs(x - kx) / (width / 2))
+            w = lin_interpolate(table, abs(x - kx) / (width / 2))
 
             for b in range(batch_size):
                 output[b, x % nx] += w * input[b, i]
@@ -207,7 +210,7 @@ def _gridding1(output, input, width, table, coord):
 
 
 @nb.jit(nopython=True, cache=True)
-def _interp2(output, input, width, table, coord):
+def _interpolate2(output, input, width, table, coord):
 
     batch_size, ny, nx = input.shape
     npts = coord.shape[0]
@@ -223,10 +226,10 @@ def _interp2(output, input, width, table, coord):
                   np.floor(ky + width / 2))
 
         for y in range(y0, y1 + 1):
-            wy = lin_interp(table, abs(y - ky) / (width / 2))
+            wy = lin_interpolate(table, abs(y - ky) / (width / 2))
 
             for x in range(x0, x1 + 1):
-                w = wy * lin_interp(table, abs(x - kx) / (width / 2))
+                w = wy * lin_interpolate(table, abs(x - kx) / (width / 2))
 
                 for b in range(batch_size):
                     output[b, i] += w * input[b, y % ny, x % nx]
@@ -250,10 +253,10 @@ def _gridding2(output, input, width, table, coord):
                   np.floor(ky + width / 2))
 
         for y in range(y0, y1 + 1):
-            wy = lin_interp(table, abs(y - ky) / (width / 2))
+            wy = lin_interpolate(table, abs(y - ky) / (width / 2))
 
             for x in range(x0, x1 + 1):
-                w = wy * lin_interp(table, abs(x - kx) / (width / 2))
+                w = wy * lin_interpolate(table, abs(x - kx) / (width / 2))
 
                 for b in range(batch_size):
                     output[b, y % ny, x % nx] += w * input[b, i]
@@ -262,7 +265,7 @@ def _gridding2(output, input, width, table, coord):
 
 
 @nb.jit(nopython=True, cache=True)
-def _interp3(output, input, width, table, coord):
+def _interpolate3(output, input, width, table, coord):
     batch_size, nz, ny, nx = input.shape
     npts = coord.shape[0]
 
@@ -279,13 +282,13 @@ def _interp3(output, input, width, table, coord):
                       np.floor(kz + width / 2))
 
         for z in range(z0, z1 + 1):
-            wz = lin_interp(table, abs(z - kz) / (width / 2))
+            wz = lin_interpolate(table, abs(z - kz) / (width / 2))
 
             for y in range(y0, y1 + 1):
-                wy = wz * lin_interp(table, abs(y - ky) / (width / 2))
+                wy = wz * lin_interpolate(table, abs(y - ky) / (width / 2))
 
                 for x in range(x0, x1 + 1):
-                    w = wy * lin_interp(table, abs(x - kx) / (width / 2))
+                    w = wy * lin_interpolate(table, abs(x - kx) / (width / 2))
 
                     for b in range(batch_size):
                         output[b, i] += w * input[b, z % nz, y % ny, x % nx]
@@ -311,13 +314,13 @@ def _gridding3(output, input, width, table, coord):
                       np.floor(kz + width / 2))
 
         for z in range(z0, z1 + 1):
-            wz = lin_interp(table, abs(z - kz) / (width / 2))
+            wz = lin_interpolate(table, abs(z - kz) / (width / 2))
 
             for y in range(y0, y1 + 1):
-                wy = wz * lin_interp(table, abs(y - ky) / (width / 2))
+                wy = wz * lin_interpolate(table, abs(y - ky) / (width / 2))
 
                 for x in range(x0, x1 + 1):
-                    w = wy * lin_interp(table, abs(x - kx) / (width / 2))
+                    w = wy * lin_interpolate(table, abs(x - kx) / (width / 2))
 
                     for b in range(batch_size):
                         output[b, z % nz, y % ny, x % nx] += w * input[b, i]
@@ -327,8 +330,8 @@ def _gridding3(output, input, width, table, coord):
 
 if config.cupy_enabled:
 
-    lin_interp_cuda = """
-    __device__ inline S lin_interp(S* table, int n, S x) {
+    lin_interpolate_cuda = """
+    __device__ inline S lin_interpolate(S* table, int n, S x) {
         if (x >= 1)
            return 0;
         const int idx = x * n;
@@ -348,7 +351,7 @@ if config.cupy_enabled:
     }
     """
 
-    _interp1_cuda = cp.ElementwiseKernel(
+    _interpolate1_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
@@ -361,7 +364,7 @@ if config.cupy_enabled:
         const int x1 = floor(kx + width / 2.0);
 
         for (int x = x0; x < x1 + 1; x++) {
-            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+            const S w = lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
             for (int b = 0; b < batch_size; b++) {
                 const int input_idx[] = {b, mod(x, nx)};
                 const T v = (T) w * input[input_idx];
@@ -370,7 +373,7 @@ if config.cupy_enabled:
             }
         }
         """,
-        name='interp1', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
+        name='interpolate1', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding1_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
@@ -385,7 +388,7 @@ if config.cupy_enabled:
         const int x1 = floor(kx + width / 2.0);
 
         for (int x = x0; x < x1 + 1; x++) {
-            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+            const S w = lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
             for (int b = 0; b < batch_size; b++) {
                 const int input_idx[] = {b, i};
                 const T v = (T) w * input[input_idx];
@@ -394,7 +397,7 @@ if config.cupy_enabled:
             }
         }
         """,
-        name='gridding1', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
+        name='gridding1', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding1_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
@@ -409,21 +412,21 @@ if config.cupy_enabled:
         const int x1 = floor(kx + width / 2.0);
 
         for (int x = x0; x < x1 + 1; x++) {
-            const S w = lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+            const S w = lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
             for (int b = 0; b < batch_size; b++) {
                 const int input_idx[] = {b, i};
                 const T v = (T) w * input[input_idx];
                 const int output_idx[] = {b, mod(x, nx)};
-                atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
-                atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
+                atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])), v.real());
+                atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
             }
         }
         """,
         name='gridding1_complex',
-        preamble=lin_interp_cuda + mod_cuda,
+        preamble=lin_interpolate_cuda + mod_cuda,
         reduce_dims=False)
 
-    _interp2_cuda = cp.ElementwiseKernel(
+    _interpolate2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
@@ -443,9 +446,9 @@ if config.cupy_enabled:
         const int y1 = floor(ky + width / 2.0);
 
         for (int y = y0; y < y1 + 1; y++) {
-            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+            const S wy = lin_interpolate(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
             for (int x = x0; x < x1 + 1; x++) {
-                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                const S w = wy * lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, mod(y, ny), mod(x, nx)};
                     const T v = (T) w * input[input_idx];
@@ -455,7 +458,7 @@ if config.cupy_enabled:
             }
         }
         """,
-        name='interp2', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
+        name='interpolate2', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
@@ -477,9 +480,9 @@ if config.cupy_enabled:
         const int y1 = floor(ky + width / 2.0);
 
         for (int y = y0; y < y1 + 1; y++) {
-            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+            const S wy = lin_interpolate(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
             for (int x = x0; x < x1 + 1; x++) {
-                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                const S w = wy * lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
@@ -489,7 +492,7 @@ if config.cupy_enabled:
             }
         }
         """,
-        name='gridding2', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
+        name='gridding2', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding2_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
@@ -511,24 +514,24 @@ if config.cupy_enabled:
         const int y1 = floor(ky + width / 2.0);
 
         for (int y = y0; y < y1 + 1; y++) {
-            const S wy = lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+            const S wy = lin_interpolate(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
             for (int x = x0; x < x1 + 1; x++) {
-                const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                const S w = wy * lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
                     const int output_idx[] = {b, mod(y, ny), mod(x, nx)};
-                    atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
-                    atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
+                    atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])), v.real());
+                    atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
                 }
             }
         }
         """,
         name='gridding2_complex',
-        preamble=lin_interp_cuda + mod_cuda,
+        preamble=lin_interpolate_cuda + mod_cuda,
         reduce_dims=False)
 
-    _interp3_cuda = cp.ElementwiseKernel(
+    _interpolate3_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
         '',
         """
@@ -553,11 +556,11 @@ if config.cupy_enabled:
         const int z1 = floor(kz + width / 2.0);
 
         for (int z = z0; z < z1 + 1; z++) {
-            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
+            const S wz = lin_interpolate(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
             for (int y = y0; y < y1 + 1; y++) {
-                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+                const S wy = wz * lin_interpolate(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
                 for (int x = x0; x < x1 + 1; x++) {
-                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                    const S w = wy * lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, mod(z, nz), mod(y, ny), mod(x, nx)};
                         const T v = (T) w * input[input_idx];
@@ -568,7 +571,7 @@ if config.cupy_enabled:
             }
         }
         """,
-        name='interp3', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
+        name='interpolate3', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding3_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
@@ -595,11 +598,11 @@ if config.cupy_enabled:
         const int z1 = floor(kz + width / 2.0);
 
         for (int z = z0; z < z1 + 1; z++) {
-            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
+            const S wz = lin_interpolate(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
             for (int y = y0; y < y1 + 1; y++) {
-                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+                const S wy = wz * lin_interpolate(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
                 for (int x = x0; x < x1 + 1; x++) {
-                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                    const S w = wy * lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
@@ -610,7 +613,7 @@ if config.cupy_enabled:
             }
         }
         """,
-        name='gridding3', preamble=lin_interp_cuda + mod_cuda, reduce_dims=False)
+        name='gridding3', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding3_cuda_complex = cp.ElementwiseKernel(
         'raw T output, raw T input, raw S width, raw S table, raw S coord',
@@ -637,22 +640,22 @@ if config.cupy_enabled:
         const int z1 = floor(kz + width / 2.0);
 
         for (int z = z0; z < z1 + 1; z++) {
-            const S wz = lin_interp(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
+            const S wz = lin_interpolate(&table[0], table.size(), fabsf((S) z - kz) / (width / 2.0));
             for (int y = y0; y < y1 + 1; y++) {
-                const S wy = wz * lin_interp(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
+                const S wy = wz * lin_interpolate(&table[0], table.size(), fabsf((S) y - ky) / (width / 2.0));
                 for (int x = x0; x < x1 + 1; x++) {
-                    const S w = wy * lin_interp(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
+                    const S w = wy * lin_interpolate(&table[0], table.size(), fabsf((S) x - kx) / (width / 2.0));
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
                         const int output_idx[] = {b, mod(z, nz), mod(y, ny), mod(x, nx)};
-                        atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), v.real());
-                        atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
+                        atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])), v.real());
+                        atomicAdd(reinterpolateret_cast<T::value_type*>(&(output[output_idx])) + 1, v.imag());
                     }
                 }
             }
         }
         """,
         name='gridding3_complex',
-        preamble=lin_interp_cuda + mod_cuda,
+        preamble=lin_interpolate_cuda + mod_cuda,
         reduce_dims=False)

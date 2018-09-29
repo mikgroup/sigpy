@@ -5,6 +5,9 @@ import numpy as np
 from scipy.linalg import solve_triangular
 
 
+__all__ = ['get_cov', 'whiten']
+
+
 def get_cov(noise):
     """Get covariance matrix from noise measurements.
     

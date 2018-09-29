@@ -5,6 +5,9 @@ import numpy as np
 import sigpy as sp
 
 
+__all__ = ['labels_to_scores', 'scores_to_labels']
+
+
 def labels_to_scores(labels):
     """Convert labels to scores.
 

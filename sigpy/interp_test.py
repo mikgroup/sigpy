@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
 class TestInterp(unittest.TestCase):
 
-    def test_interp(self):
+    def test_interpolate(self):
 
         batch = 2
 
@@ -24,7 +24,7 @@ class TestInterp(unittest.TestCase):
                               [2.1] + [0] * (ndim - 1)])
 
             input = np.array([[0, 1.0, 0]] * batch).reshape([batch] + shape)
-            output = interp.interp(input, width, table, coord)
+            output = interp.interpolate(input, width, table, coord)
             output_expected = np.array([[0.1, 0.9, 0]] * batch)
             np.testing.assert_allclose(output, output_expected)
 
@@ -51,17 +51,17 @@ class TestInterp(unittest.TestCase):
 
         import cupy as cp
 
-        def test_lin_interp(self):
+        def test_lin_interpolate(self):
 
-            lin_interp = cp.ElementwiseKernel('raw S table, S x', 'S y',
-                                              'y = lin_interp(&table[0], table.size(), x)',
-                                              preamble=interp.lin_interp_cuda)
+            lin_interpolate = cp.ElementwiseKernel('raw S table, S x', 'S y',
+                                              'y = lin_interpolate(&table[0], table.size(), x)',
+                                              preamble=interp.lin_interpolate_cuda)
 
             table = cp.array([0.0, 2.0])
             x = cp.array([0.5])
-            cp.testing.assert_allclose(lin_interp(table, x), 2.0)
+            cp.testing.assert_allclose(lin_interpolate(table, x), 2.0)
 
-        def test_interp_cuda(self):
+        def test_interpolate_cuda(self):
 
             batch = 2
             for ndim in [1, 2, 3]:
@@ -75,7 +75,7 @@ class TestInterp(unittest.TestCase):
 
                     input = cp.array([[0, 1.0, 0]] * batch,
                                      dtype=dtype).reshape([batch] + shape)
-                    output = interp.interp(input, width, table, coord)
+                    output = interp.interpolate(input, width, table, coord)
                     output_expected = cp.array(
                         [[0.1, 0.9, 0]] * batch, dtype=dtype)
                     cp.testing.assert_allclose(

@@ -6,7 +6,7 @@ such as reshape, transpose, and resize.
 """
 import numpy as np
 
-from sigpy import backend, config, fft, nufft, util, interp, conv, wavelet
+from sigpy import backend, config, fourier, util, interp, conv, wavelet
 
 if config.cupy_enabled:
     import cupy as cp
@@ -78,7 +78,7 @@ class Linop(object):
         self._check_domain(input)
         with backend.get_device(input):
             output = self._apply(input)
-        self._check_codomain(output)
+            self._check_codomain(output)
 
         return output
 
@@ -635,7 +635,7 @@ class FFT(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        return fft.fft(input, axes=self.axes, center=self.center)
+        return fourier.fft(input, axes=self.axes, center=self.center)
 
     def _adjoint_linop(self):
         return IFFT(self.ishape, axes=self.axes, center=self.center)
@@ -658,7 +658,7 @@ class IFFT(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        return fft.ifft(input, axes=self.axes, center=self.center)
+        return fourier.ifft(input, axes=self.axes, center=self.center)
 
     def _adjoint_linop(self):
         return FFT(self.ishape, axes=self.axes, center=self.center)
@@ -871,7 +871,7 @@ class Multiply(Linop):
         return R * S * M
 
 
-class Interp(Linop):
+class Interpolate(Linop):
     """Interpolation linear operator.
 
     Args:
@@ -885,9 +885,7 @@ class Interp(Linop):
 
     """
     def __init__(self, ishape, coord, width, table, scale=1, shift=0):
-
         ndim = coord.shape[-1]
-
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
@@ -906,11 +904,10 @@ class Interp(Linop):
         shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.interp(input, self.width, table,
+            return interp.interpolate(input, self.width, table,
                                  coord * self.scale + shift)
 
     def _adjoint_linop(self):
-
         return Gridding(self.ishape, self.coord, self.width, self.table,
                         scale=self.scale, shift=self.shift)
 
@@ -930,9 +927,7 @@ class Gridding(Linop):
 
     """
     def __init__(self, oshape, coord, width, table, scale=1, shift=0):
-
         ndim = coord.shape[-1]
-
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
@@ -954,9 +949,8 @@ class Gridding(Linop):
                                    coord * self.scale + shift)
 
     def _adjoint_linop(self):
-
-        return Interp(self.oshape, self.coord, self.width, self.table,
-                      scale=self.scale, shift=self.shift)
+        return Interpolate(self.oshape, self.coord, self.width, self.table,
+                           scale=self.scale, shift=self.shift)
 
 
 class Resize(Linop):
@@ -1015,8 +1009,8 @@ class Downsample(Linop):
 
         if shift is None:
             shift = [0] * len(ishape)
-        self.shift = shift
 
+        self.shift = shift
         oshape = [((i - s + f - 1) // f)
                   for i, f, s in zip(ishape, factors, shift)]
 
@@ -1043,8 +1037,8 @@ class Upsample(Linop):
 
         if shift is None:
             shift = [0] * len(oshape)
-        self.shift = shift
 
+        self.shift = shift
         ishape = [((i - s + f - 1) // f)
                   for i, f, s in zip(oshape, factors, shift)]
 
@@ -1321,7 +1315,7 @@ class NUFFT(Linop):
 
     def _apply(self, input):
 
-        return nufft.nufft(input, self.coord, oversamp=self.oversamp, width=self.width, n=self.n)
+        return fourier.nufft(input, self.coord, oversamp=self.oversamp, width=self.width, n=self.n)
 
     def _adjoint_linop(self):
 
@@ -1353,9 +1347,8 @@ class NUFFTAdjoint(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-
-        return nufft.nufft_adjoint(input, self.coord, self.oshape,
-                                   oversamp=self.oversamp, width=self.width, n=self.n)
+        return fourier.nufft_adjoint(input, self.coord, self.oshape,
+                                     oversamp=self.oversamp, width=self.width, n=self.n)
 
     def _adjoint_linop(self):
 
@@ -1422,13 +1415,13 @@ class ConvolveAdjointInput(Linop):
 
     def _apply(self, input):
         return conv.convolve_adjoint_input(self.W, input, mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+                                           input_multi_channel=self.input_multi_channel,
+                                           output_multi_channel=self.output_multi_channel)
 
     def _adjoint_linop(self):
         return ConvolveInput(self.oshape, self.W, mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+                             input_multi_channel=self.input_multi_channel,
+                             output_multi_channel=self.output_multi_channel)
 
 
 class ConvolveFilter(Linop):

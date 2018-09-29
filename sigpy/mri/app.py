@@ -10,7 +10,7 @@ from sigpy.mri import linop
 def _estimate_weights(y, weights, coord):
     if weights is None and coord is None:
         with sp.get_device(y):
-            weights = (sp.util.rss(y, axes=(0, )) > 0).astype(y.dtype)
+            weights = (sp.rss(y, axes=(0, )) > 0).astype(y.dtype)
 
     return weights
 
@@ -336,14 +336,14 @@ class JsenseRecon(sp.app.App):
             self.img_shape = self.y.shape[1:]
             ndim = len(self.img_shape)
 
-            self.y = sp.util.resize(
+            self.y = sp.resize(
                 self.y, [self.num_coils] + ndim * [self.ksp_calib_width])
 
             if self.weights is not None:
-                self.weights = sp.util.resize(self.weights, ndim * [self.ksp_calib_width])
+                self.weights = sp.resize(self.weights, ndim * [self.ksp_calib_width])
 
         else:
-            self.img_shape = sp.nufft.estimate_shape(self.coord)
+            self.img_shape = sp.estimate_shape(self.coord)
             calib_idx = np.amax(np.abs(self.coord), axis=-1) < self.ksp_calib_width / 2
 
             self.coord = self.coord[calib_idx]
@@ -371,10 +371,10 @@ class JsenseRecon(sp.app.App):
         if self.coord is None:
             img_ker_shape = [i + self.mps_ker_width - 1 for i in self.y.shape[1:]]
         else:
-            grd_shape = sp.nufft.estimate_shape(self.coord)
+            grd_shape = sp.estimate_shape(self.coord)
             img_ker_shape = [i + self.mps_ker_width - 1 for i in grd_shape]
 
-        self.img_ker = sp.util.dirac(img_ker_shape, dtype=self.dtype, device=self.device)
+        self.img_ker = sp.dirac(img_ker_shape, dtype=self.dtype, device=self.device)
         with self.device:
             self.mps_ker = self.device.xp.zeros(mps_ker_shape, dtype=self.dtype)
 
@@ -400,7 +400,7 @@ class JsenseRecon(sp.app.App):
             mps_rss = 0
             mps = []
             for mps_ker_c in self.mps_ker:
-                mps_c = sp.fft.ifft(sp.util.resize(mps_ker_c, self.img_shape))
+                mps_c = sp.ifft(sp.resize(mps_ker_c, self.img_shape))
                 mps.append(sp.to_device(mps_c, sp.cpu_device))
                 mps_rss += xp.abs(mps_c)**2
 

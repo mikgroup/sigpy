@@ -10,6 +10,9 @@ if config.cupy_enabled:
     import cupy as cp
 
 
+__all__ = ['soft_thresh', 'hard_thresh', 'l1_proj', 'l2_proj', 'elitist_thresh']
+
+
 def soft_thresh(lamda, input):
     r"""Soft threshold.
 
@@ -120,6 +123,8 @@ def l2_proj(eps, input, axes=None):
         output = mask * input + (1 - mask) * input / (norm + tol) * eps
 
     return output
+
+
 def elitist_thresh(lamda, input, axes=None):
     """Elitist threshold.
 
