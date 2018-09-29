@@ -157,7 +157,7 @@ class ConvSparseCoding(sp.app.App):
         super().__init__(self.alg, show_pbar=show_pbar)
 
     def _init(self):
-        sp.move_to(self.l, sp.util.randn_like(self.l))
+        sp.copyto(self.l, sp.util.randn_like(self.l))
         xp = self.device.xp
         with self.device:
             if self.multi_channel:
@@ -176,8 +176,8 @@ class ConvSparseCoding(sp.app.App):
         j_start = j * self.batch_size
         j_end = (j + 1) * self.batch_size
 
-        sp.move_to(self.y_j, self.y[j_start:j_end])
-        sp.move_to(self.l_old, self.l)
+        sp.copyto(self.y_j, self.y[j_start:j_end])
+        sp.copyto(self.l_old, self.l)
 
     def _summarize(self):
         xp = self.device.xp
@@ -199,9 +199,9 @@ class ConvSparseCoding(sp.app.App):
             l_norm2 = sp.util.norm2(self.l, axes=range(-self.data_ndim, 0))
             idx = xp.argsort(l_norm2)
             if self.multi_channel:
-                sp.move_to(self.l, self.l[:, idx])
+                sp.copyto(self.l, self.l[:, idx])
             else:
-                sp.move_to(self.l, self.l[idx])
+                sp.copyto(self.l, self.l[idx])
 
         r = ConvSparseCoefficients(self.y, self.l, lamda=self.lamda,
                                    multi_channel=self.multi_channel,
@@ -329,8 +329,8 @@ class LinearRegression(sp.app.App):
         j_start = j * self.batch_size
         j_end = (j + 1) * self.batch_size
         
-        sp.move_to(self.input_j, self.input[j_start:j_end])
-        sp.move_to(self.output_j, self.output[j_start:j_end])
+        sp.copyto(self.input_j, self.input[j_start:j_end])
+        sp.copyto(self.output_j, self.output[j_start:j_end])
 
     def _summarize(self):
         xp = self.device.xp

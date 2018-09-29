@@ -11,7 +11,7 @@ if config.mpi4py_enabled:
 
 
 __all__ = ['Device', 'get_device', 'get_array_module', 'cpu_device',
-           'to_device', 'move_to', 'Communicator', 'MultiGpuCommunicator']
+           'to_device', 'copyto', 'Communicator', 'MultiGpuCommunicator']
 
 
 class Device(object):
@@ -145,44 +145,38 @@ def to_device(input, device):
     Returns:
         array: Output array placed in device.
     """
-    device = Device(device)
+    idevice = get_device(input)
+    odevice = Device(device)
 
-    if get_device(input) == device:
-        output = input
+    if idevice == odevice:
+        return input
 
-    elif device == cpu_device:
-        with get_device(input):
-            output = input.get()
+    if odevice == cpu_device:
+        with idevice:
+            return input.get()
     else:
-        with device:
-            output = cp.array(input)
-
-    return output
+        with odevice:
+            return cp.asarray(input)
 
 
-def move_to(output, input):
-    """Move from input to output. Input/output can be in different device.
+def copyto(output, input):
+    """Copy from input to output. Input/output can be in different device.
 
     Args:
         input (array): Input.
         output (array): Output.
 
     """
-    if get_device(input) == get_device(output):
-        with get_device(input):
-            output[:] = input
-
-    elif get_device(output) == cpu_device:
-        with get_device(input):
-            output[:] = input.get()
-
-    elif get_device(input) == cpu_device:
-        with get_device(output):
+    idevice = get_device(input)
+    odevice = get_device(output)
+    if idevice == cpu_device and odevice != cpu_device:
+        with odevice:
             output.set(input)
-
+    elif idevice != cpu_device and odevice == cpu_device:
+        with idevice:
+            np.copyto(output, input.get())
     else:
-        with get_device(output):
-            output[:] = cp.array(input)
+        idevice.xp.copyto(output, input)
 
 
 class Communicator(object):
@@ -208,7 +202,7 @@ class Communicator(object):
         if config.mpi4py_enabled:
             mpi_buffer = to_device(input, cpu_device)
             self.mpi_comm.Allreduce(MPI.IN_PLACE, mpi_buffer)
-            move_to(input, mpi_buffer)
+            copyto(input, mpi_buffer)
 
 
 class MultiGpuCommunicator(Communicator):

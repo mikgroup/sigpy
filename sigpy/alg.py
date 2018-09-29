@@ -88,7 +88,7 @@ class PowerMethod(Alg):
         if self.max_eig == 0:
             self.x.fill(0)
         else:
-            backend.move_to(self.x, y / self.max_eig)
+            backend.copyto(self.x, y / self.max_eig)
 
     def _done(self):
         return self.iter >= self.max_iter or self.max_eig == 0
@@ -106,7 +106,7 @@ class ProximalPointMethod(Alg):
         super().__init__(max_iter, device=device)
 
     def _update(self):
-        backend.move_to(self.x, self.proxf(self.alpha, self.x))
+        backend.copyto(self.x, self.proxf(self.alpha, self.x))
 
 
 class GradientMethod(Alg):
@@ -158,22 +158,22 @@ class GradientMethod(Alg):
 
     def _update(self):
         if self.accelerate or self.proxg is not None:
-            backend.move_to(self.x_old, self.x)
+            backend.copyto(self.x_old, self.x)
 
         if self.accelerate:
-            backend.move_to(self.x, self.z)
+            backend.copyto(self.x, self.z)
 
         gradf_x = self.gradf(self.x)
             
         util.axpy(self.x, -self.alpha, gradf_x)
 
         if self.proxg is not None:
-            backend.move_to(self.x, self.proxg(self.alpha, self.x))
+            backend.copyto(self.x, self.proxg(self.alpha, self.x))
 
         if self.accelerate:
             t_old = self.t
             self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
-            backend.move_to(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
+            backend.copyto(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
 
         if self.accelerate or self.proxg is not None:
             self.resid = util.asscalar(util.norm((self.x - self.x_old) / self.alpha**0.5))
@@ -308,13 +308,13 @@ class PrimalDualHybridGradient(Alg):
         super().__init__(max_iter, backend.get_device(x))
 
     def _update(self):
-        backend.move_to(self.u_old, self.u)
-        backend.move_to(self.x_old, self.x)
+        backend.copyto(self.u_old, self.u)
+        backend.copyto(self.x_old, self.x)
 
         # Update dual.
         delta_u = self.A(self.x_ext)
         util.axpy(self.u, self.sigma, delta_u)
-        backend.move_to(self.u, self.proxfc(self.sigma, self.u))
+        backend.copyto(self.u, self.proxfc(self.sigma, self.u))
 
         # Update primal.
         delta_x = self.AH(self.u)
@@ -322,7 +322,7 @@ class PrimalDualHybridGradient(Alg):
             delta_x += self.gradh(self.x)
             
         util.axpy(self.x, -self.tau, delta_x)
-        backend.move_to(self.x, self.proxg(self.tau, self.x))
+        backend.copyto(self.x, self.proxg(self.tau, self.x))
 
         # Update step-size if neccessary.
         xp = self.device.xp
@@ -339,7 +339,7 @@ class PrimalDualHybridGradient(Alg):
 
         # Extrapolate primal.
         x_diff = self.x - self.x_old
-        backend.move_to(self.x_ext, self.x + theta * x_diff)
+        backend.copyto(self.x_ext, self.x + theta * x_diff)
 
         u_diff = self.u - self.u_old
         self.resid = util.asscalar(util.norm2(x_diff / self.tau**0.5) +
