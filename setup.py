@@ -23,9 +23,9 @@ setup(name='sigpy',
       scripts=['bin/image_plot',
                'bin/line_plot',
                'bin/scatter_plot'],
-      classifiers=(
+      classifiers=[
           "Programming Language :: Python :: 3",
           "License :: OSI Approved :: BSD License",
           "Operating System :: OS Independent",
-      )
+      ]
 )
