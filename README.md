@@ -17,9 +17,13 @@ SigPy provides a preliminary submodule sigpy.learn that implements convolutional
 
 Installation
 ------------
-The package is on PyPI, and can be installed via pip:
+The package can be installed via pip:
 
 	pip install sigpy
+	
+Or conda:
+
+	conda install -c frankong sigpy
 
 To enable GPU support, the package requires CuPy.
 
