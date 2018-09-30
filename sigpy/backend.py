@@ -135,7 +135,7 @@ def get_device(array):
         return Device(array.device)
 
 
-def to_device(input, device):
+def to_device(input, device=cpu_device):
     """Move input to device. Does not copy if same device.
 
     Args:
