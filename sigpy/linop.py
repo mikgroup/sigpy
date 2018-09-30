@@ -78,8 +78,8 @@ class Linop(object):
         self._check_domain(input)
         with backend.get_device(input):
             output = self._apply(input)
-            self._check_codomain(output)
 
+        self._check_codomain(output)
         return output
 
     def _adjoint_linop(self):
@@ -358,8 +358,7 @@ def _hstack_params(shapes, axis):
                 indices.append(idx)
                 idx += shape[i]
             elif shape[i] != ishape[i]:
-                raise Exception(
-                    'Shapes not along axis must be the same to concatenate.')
+                raise RuntimeError('Shapes not along axis must be the same to concatenate.')
 
     return ishape, indices
 
@@ -854,13 +853,16 @@ class Multiply(Linop):
                     return input
 
                 mult = self.mult
+                if self.conj:
+                    mult = mult.conjugate()
+
             else:
                 mult = backend.to_device(self.mult, device)
                 if mult.dtype != input.dtype:
                     mult = mult.astype(input.dtype)
 
-            if self.conj:
-                mult = xp.conj(mult)
+                if self.conj:
+                    mult = xp.conj(mult)
 
             return input * mult
 
