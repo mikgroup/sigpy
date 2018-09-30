@@ -11,7 +11,8 @@ if config.cupy_enabled:
 
 __all__ = ['asscalar', 'prod', 'vec', 'split', 'rss', 'resize',
            'flip', 'circshift', 'downsample', 'upsample', 'dirac', 'randn',
-           'triang', 'dot', 'norm2', 'norm', 'monte_carlo_sure', 'axpy', 'xpay']
+           'triang', 'dot', 'norm2', 'norm', 'monte_carlo_sure', 'axpy', 'xpay',
+           'ShuffledNumbers']
 
 
 def _normalize_axes(axes, ndim):
@@ -421,6 +422,35 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
             2 * sigma**2 * divf_y / n
 
     return sure
+
+
+class ShuffledNumbers(object):
+    """Produces shuffled numbers between given range.
+
+    Args:
+        Arguements to numpy.arange.
+    
+    """
+    def __init__(self, *args):
+        self.numbers = np.arange(*args)
+        np.random.shuffle(self.numbers)
+        self.i = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+    
+    def next(self):
+        ret = self.numbers[self.i]
+
+        self.i += 1
+        if self.i == len(self.numbers):
+            np.random.shuffle(self.numbers)
+            self.i = 0
+
+        return ret
 
 
 def axpy(y, a, x):

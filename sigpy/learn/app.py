@@ -227,7 +227,7 @@ class ConvSparseCoding(sp.app.App):
         self.l_shape = tuple(self.l_shape)
 
     def _get_batch_vars(self):
-        self.j_idx = sp.index.ShuffledIndex(self.num_batches)
+        self.j_idx = sp.ShuffledNumbers(self.num_batches)
         self.y_j = sp.empty((self.batch_size, ) + self.y.shape[1:],
                                  dtype=self.dtype, device=self.device)
 
@@ -310,7 +310,7 @@ class LinearRegression(sp.app.App):
 
         self.mat = sp.zeros(input.shape[1:] + output.shape[1:], dtype=dtype, device=device)
         
-        self.j_idx = sp.index.ShuffledIndex(num_batches)
+        self.j_idx = sp.ShuffledNumbers(num_batches)
         self.input_j = sp.empty((batch_size, ) + input.shape[1:],
                                      dtype=dtype, device=device)
         self.output_j = sp.empty((batch_size, ) + output.shape[1:],

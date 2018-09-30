@@ -155,3 +155,9 @@ class TestUtil(unittest.TestCase):
 
         npt.assert_allclose(
             sigma**2, util.monte_carlo_sure(f, y, sigma), atol=1e-3)
+
+    def test_ShuffledNumbers(self):
+        n = 5
+        idx = util.ShuffledNumbers(n)
+        x = sorted([idx.next() for _ in range(2 * n)])
+        npt.assert_allclose(x, [0, 0, 1, 1, 2, 2, 3, 3, 4, 4])
