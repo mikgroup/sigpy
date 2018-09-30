@@ -104,7 +104,6 @@ class Linop(object):
         return NotImplemented
 
     def __rmul__(self, input):
-
         if np.isscalar(input):
             M = Multiply(self.oshape, input)
             return Compose([M, self])
@@ -140,7 +139,7 @@ class Identity(Linop):
         super().__init__(shape, shape)
 
     def _apply(self, input):
-        return input.copy()
+        return input
 
     def _adjoint_linop(self):
         return self
@@ -176,19 +175,24 @@ class AllReduce(Linop):
         comm (Communicator): Communicator.
 
     """
-    def __init__(self, shape, comm):
+    def __init__(self, shape, comm, in_place=False):
         self.comm = comm
+        self.in_place = in_place
 
         super().__init__(shape, shape)
 
     def _apply(self, input):
         with backend.get_device(input):
-            output = input
+            if self.in_place:
+                output = input
+            else:
+                output = input.copy()
+                
             self.comm.allreduce(output)
             return output
 
     def _adjoint_linop(self):
-        return AllReduceAdjoint(self.ishape, self.comm)
+        return AllReduceAdjoint(self.ishape, self.comm, in_place=self.in_place)
 
 
 class AllReduceAdjoint(Linop):
@@ -199,8 +203,9 @@ class AllReduceAdjoint(Linop):
         comm (Communicator): Communicator.
 
     """
-    def __init__(self, shape, comm):
+    def __init__(self, shape, comm, in_place=False):
         self.comm = comm
+        self.in_place = in_place
 
         super().__init__(shape, shape)
 
@@ -208,7 +213,7 @@ class AllReduceAdjoint(Linop):
         return input
 
     def _adjoint_linop(self):
-        return AllReduce(self.ishape, self.comm)
+        return AllReduce(self.ishape, self.comm, in_place=self.in_place)
 
 
 class Conj(Linop):
@@ -228,7 +233,7 @@ class Conj(Linop):
         with device:
             input = device.xp.conj(input)
 
-        output = self.A._apply(input)
+        output = self.A(input)
 
         device = backend.get_device(output)
         with device:
@@ -265,7 +270,7 @@ class Add(Linop):
         output = 0
         with backend.get_device(output):
             for linop in self.linops:
-                output += linop._apply(input)
+                output += linop(input)
 
         return output
 
@@ -311,8 +316,7 @@ class Compose(Linop):
     def _apply(self, input):
         output = input
         for linop in self.linops[::-1]:
-            output = linop._apply(output)
-            linop._check_codomain(output)
+            output = linop(output)
 
         return output
 
@@ -387,7 +391,6 @@ class Hstack(Linop):
 
     def _apply(self, input):
         device = backend.get_device(input)
-        xp = device.xp
         output = 0
         with device:
             for n, linop in enumerate(self.linops):
