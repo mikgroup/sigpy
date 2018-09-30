@@ -188,6 +188,7 @@ class ConjugateGradient(Alg):
     r"""Conjugate Gradient Method. Solves for:
 
     .. math:: A x = b
+
     where A is hermitian.
 
     Args:

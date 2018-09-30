@@ -20,7 +20,9 @@ class SenseRecon(sp.app.LinearLeastSquares):
 
     Considers the problem
 
-    .. math:: \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \frac{\lambda}{2} \| x \|_2^2
+    .. math::
+        \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \frac{\lambda}{2} \| x \|_2^2
+
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, x is the image, and y is the k-space measurements.
 
@@ -64,6 +66,7 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
     .. math::
         \min_x &\| x \|_2^2 \\
         \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
+
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, x is the image, and y is the k-space measurements.
 
@@ -100,7 +103,9 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
 
     Considers the problem
 
-    .. math:: \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| W x \|_1
+    .. math:: 
+        \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| W x \|_1
+
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, W is the wavelet operator,
     x is the image, and y is the k-space measurements.
@@ -152,6 +157,7 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
     .. math::
         \min_x &\| W x \|_1 \\
         \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
+
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, W is the wavelet operator, 
     x is the image, and y is the k-space measurements.
@@ -191,8 +197,10 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
     r"""Total variation regularized reconstruction.
 
     Considers the problem:
+
     .. math::
         \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| G x \|_1
+
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, G is the gradient operator,
     x is the image, and y is the k-space measurements.
@@ -243,6 +251,7 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
     .. math::
         \min_x &\| G x \|_1 \\
         \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
+
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, G is the gradient operator,
     x is the image, and y is the k-space measurements.
@@ -284,6 +293,7 @@ class JsenseRecon(sp.app.App):
     .. math:: 
         \min_{l, r} \frac{1}{2} \| l \ast r - y \|_2^2 + 
         \frac{\lambda}{2} (\| l \|_2^2 + \| r \|_2^2)
+
     where \ast is the convolution operator.
 
     Args:

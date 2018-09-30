@@ -11,7 +11,10 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
     """Compute a diagonal preconditioner in k-space.
 
     Considers the optimization problem:
-        p = argmin_p || diag(p) A A^H - I ||_2^2
+
+    .. math::
+        \min_P \| P A A^H - I \|_2^2
+
     where A is the Sense operator.
 
     Args:
@@ -85,7 +88,10 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_devi
     """Compute circulant preconditioner.
 
     Considers the optimization problem:
-        p = argmin_p || A^H A - F diag(p) F^H  ||_2^2
+
+    .. math::
+        \min_P \| A^H A - F P F^H  \|_2^2
+
     where A is the Sense operator, and F is a unitary Fourier transform operator.
 
     Args:

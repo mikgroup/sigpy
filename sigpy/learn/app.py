@@ -14,6 +14,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
     .. math:: 
         \min_{r_{ij}} \sum_j \frac{1}{2}\|y_j - \sum_i l_i * r_{ij}\|_2^2 + 
         \lambda \|r_{ij}\|_1^2
+
     where :math:`y_j` is the jth data, :math:`l_i` is the ith filter, 
     :math:`r_{ij}` is the ith coefficient for jth data.
 
@@ -95,6 +96,7 @@ class ConvSparseCoding(sp.app.App):
         f(l, c) = 
         \sum_j \frac{1}{2} \|y_j - \sum_i l_i * r_{ij}\|_2^2 
         + \frac{\lambda}{2} \sum_i (\|l_i\|_2^2 + \|r_{ij}\|_1^2)
+
     where :math:`y_j` is the jth data, :math:`l_i` is the ith filter, 
     :math:`r_{ij}` is the ith coefficient for jth data.
 
@@ -272,6 +274,7 @@ class LinearRegression(sp.app.App):
 
     .. math::
         \min_M \sum_j \frac{1}{2} \| y_j - M x_j \|_2^2
+
     where :math:`y_j` is the jth output, :math:`M` is the learned matrix,
     and :math:`x_j` is the jth input.
 
