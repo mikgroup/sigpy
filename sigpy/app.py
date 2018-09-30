@@ -105,7 +105,7 @@ class MaxEig(App):
 
     def _summarize(self):
         if self.show_pbar:
-            self.pbar.set_postfix(max_eig='{0:.2E}'.format(self.alg.max_eig))
+            self.pbar.set_postfix(max_eig='{0:.2E}'.format(self.alg.max_eig), refresh=False)
 
     def _output(self):
         return self.alg.max_eig
@@ -194,9 +194,9 @@ class LinearLeastSquares(App):
 
         if self.show_pbar:
             if self.save_objective_values:
-                self.pbar.set_postfix(obj='{0:.2E}'.format(self.objective_values[-1]))
+                self.pbar.set_postfix(obj='{0:.2E}'.format(self.objective_values[-1]), refresh=False)
             else:
-                self.pbar.set_postfix(resid='{0:.2E}'.format(self.alg.resid))
+                self.pbar.set_postfix(resid='{0:.2E}'.format(self.alg.resid), refresh=False)
 
     def _output(self):
         return self.x
@@ -444,7 +444,7 @@ class L2ConstrainedMinimization(App):
 
     def _summarize(self):
         if self.show_pbar:
-            self.pbar.set_postfix(resid='{0:.2E}'.format(self.alg.resid))
+            self.pbar.set_postfix(resid='{0:.2E}'.format(self.alg.resid), refresh=False)
 
     def _output(self):
         return self.x
