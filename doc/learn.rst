@@ -1,8 +1,10 @@
-Machine Learning
-================
+Machine Learning (``sigpy.learn``)
+==================================
 
 .. toctree::
    :maxdepth: 2
 	 
    learn_app
-   learn_util
+   
+.. automodule:: sigpy.learn
+   :members:

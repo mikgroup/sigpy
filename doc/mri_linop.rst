@@ -1,5 +1,5 @@
-Linear Operators
-================
+Linear Operators (``sigpy.mri.linop``)
+======================================
 
 .. automodule:: sigpy.mri.linop
    :members:

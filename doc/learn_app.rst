@@ -1,5 +1,5 @@
-Machine Learning App
-====================
+Applications (``sigpy.learn.app``)
+==================================
 
 .. automodule:: sigpy.learn.app
    :members:

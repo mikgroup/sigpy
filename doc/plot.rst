@@ -1,9 +1,5 @@
-Plot
-====
+Plot (``sigpy.plot``)
+=====================
 
-.. toctree::
-   :maxdepth: 2
-
-   plot_image
-   plot_line
-   plot_scatter
+.. automodule:: sigpy.plot
+   :members:
