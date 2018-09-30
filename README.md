@@ -29,7 +29,6 @@ Alternatively, the package can be installed from source with the following requi
 
 - python3
 - numpy
-- scipy
 - pywavelets
 - numba
 

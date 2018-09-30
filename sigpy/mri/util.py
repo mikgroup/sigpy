@@ -2,7 +2,6 @@
 """MRI utilities.
 """
 import numpy as np
-from scipy.linalg import solve_triangular
 
 
 __all__ = ['get_cov', 'whiten']
@@ -42,7 +41,7 @@ def whiten(ksp, cov):
     x = ksp.reshape([num_coils, -1])
 
     L = np.linalg.cholesky(cov)
-    x_w = solve_triangular(L, x, lower=True)
+    x_w = np.linalg.solve(L, x)
     ksp_w = x_w.reshape(ksp.shape)
 
     return ksp_w
