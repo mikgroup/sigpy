@@ -767,10 +767,10 @@ class ScatterPlot(object):
         self.mode = mode
         self.axsc = None
         self.entering_slice = False
-        self.vmin = None
-        self.vmax = None
         self.save_basename = save_basename
         self.fps = fps
+        self.vmin = None
+        self.vmax = None
 
         self.fig.canvas.mpl_disconnect(
             self.fig.canvas.manager.key_press_handler_id)
@@ -836,10 +836,9 @@ class ScatterPlot(object):
 
         elif (event.key == 'm' or event.key == 'p' or
               event.key == 'r' or event.key == 'i' or event.key == 'l'):
-
+            self.mode = event.key
             self.vmin = None
             self.vmax = None
-            self.mode = event.key
 
             self.update_axes()
             self.update_data()
@@ -949,13 +948,13 @@ class ScatterPlot(object):
                 idx.append(self.slices[i])
 
         if idx:
-            datav = to_device(self.data[idx], cpu_device)
+            datav = to_device(self.data[idx])
         else:
-            datav = to_device(self.data, cpu_device)
+            datav = to_device(self.data)
 
         # if self.z is not None:
         #     datav_dims = [self.z] + datav_dims
-        coordv = to_device(self.coord, cpu_device)
+        coordv = to_device(self.coord)
 
         if self.mode == 'm':
             datav = np.abs(datav)
@@ -970,6 +969,14 @@ class ScatterPlot(object):
             datav = np.log(np.abs(datav) + eps)
 
         datav = datav.ravel()
+        if self.vmin is None:
+            if datav.min() == datav.max():
+                self.vmin = 0
+            else:
+                self.vmin = datav.min()
+
+        if self.vmax is None:
+            self.vmax = datav.max()
 
         if self.axsc is None:
             self.axsc = self.ax.scatter(
