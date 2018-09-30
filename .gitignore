@@ -56,3 +56,4 @@ Thumbs.db
 *~
 
 .pytest_cache
+*.tar.bz2
