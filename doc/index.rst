@@ -1,11 +1,8 @@
-Welcome to sigpy's documentation!
+Welcome to SigPy's documentation!
 =================================
 
 .. toctree::
    :maxdepth: 2
 
    intro
-   core
-   mri
-   learn
-   plot
+   api

@@ -3,32 +3,37 @@ Overview
 
 Introduction
 ------------
-SigPy is a package for developing iterative signal reconstruction methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU. This allows users to easily use Sigpy with other packages. It also provides preliminary support for distributed computing using mpi4py. 
+SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU, so that users can easily use Sigpy with other packages. Its main features include:
 
-SigPy provides simple interfaces to commonly used signal processing functions, including convolution, FFT, NUFFT, wavelet transform, and thresholding functions. All functions, except wavelet transform, can run on both CPU and GPU.
+- A unified CPU/GPU interface to signal processing functions, including convolution, FFT, NUFFT, wavelet transform, and thresholding functions.
+- Linear operator classes (``Linop``) that can do adjoint, addition, composing, and stacking, including the above signal transforms. 
+  For example, A.H * A creates a normal operator from the ``Linop`` A.
+- Proximal operator classes (``Prox``) that can do stacking, and conjugation, including proximal operators for l1 norm, l2 norm, l1 ball, and l2 ball.
+- Iterative algorithm classes (``Alg``) that include conjugate gradient, (accelerated/proximal) gradient method, and primal dual hybrid gradient.
+- Application classes (``App``) that wrap ``Alg``, ``Linop``, and ``Prox`` to form a final deliverable for each application.
 
-These functions are wrapped in two higher level classes to better interface with iterative methods: Linop, which abstracts linear operator, and Prox, which abstracts proximal operator. SigPy provides an abstraction class Alg for iterative algorithms, and implements commonly used methods, including conjugate gradient, (accelerated/proximal) gradient method, and primal dual hybrid gradient.
+SigPy also provides a submodule sigpy.mri for MRI iterative reconstruction methods. Its main features include:
 
-These classes can then be used to build an App as a final deliverable. An App simplifies the usage of Alg, and provides convenient features such as iteration progress bars. A particularly useful App implemented is the LinearLeastSquares App.
+- Commonly used MRI reconstruction methods as an ``App``: SENSE reconstruction, l1-wavelet reconstruction, total-variation reconstruction, and JSENSE reconstruction
+- Convenient simulation and sampling functions, including poisson-disc sampling function, and shepp-logan phantom generation function.
 
-SigPy also provides a submodule sigpy.mri that uses the core module to implement common MRI iterative reconstruction methods, including SENSE reconstruction, l1-wavelet reconstruction, total-variation reconstruction, and JSENSE reconstruction. In addition, it provides convenient simulation and sampling functions, such as poisson-disc sampling function, and shepp-logan phantom generation function.
-
-SigPy provides a preliminary submodule sigpy.learn that implements convolutional sparse coding, and linear regression, using the core module.
+Finally, SigPy provides a preliminary submodule sigpy.learn that implements convolutional sparse coding, and linear regression, using the core module.
 
 Installation
 ------------
-The package can be installed via pip:
+The package can be installed via pip::
 
+	# (optional for CUDA support) pip install cupy
+	# (optional for MPI support) pip install mpi4py
 	pip install sigpy
-	
-Or conda:
 
+	
+Or via conda::
+
+	# (optional for CUDA support) conda install cupy
+	# (optional for MPI support) conda install mpi4py
 	conda install -c frankong sigpy
 
-To enable GPU support, the package requires CuPy.
-
-To enable distributed programming support, the package requires mpi4py.
-	
 Alternatively, the package can be installed from source with the following requirements:
 
 - python3
