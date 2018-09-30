@@ -1,0 +1,14 @@
+#!/usr/bin/env python
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Plot .npy file as scatter.')
+    parser.add_argument("filename", type=str, help=".npy file name.")
+
+    args = parser.parse_args()
+
+    import numpy as np
+    import sigpy.plot as pl
+    pl.ScatterPlot(np.load(args.filename))
