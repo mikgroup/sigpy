@@ -884,18 +884,18 @@ class Interpolate(Linop):
         coord (array): Coordinates, values from - nx / 2 to nx / 2 - 1.
                 ndim can only be 1, 2 or 3, of shape pts_shape + [ndim]
         width (float): Width of interp. kernel in grid size.
-        table (array): Look-up table of kernel K, from K[0] to K[width].
+        kernel (array): Look-up kernel of kernel K, from K[0] to K[width].
         scale (float): Scaling of coordinates.
         shift (float): Shifting of coordinates.
 
     """
-    def __init__(self, ishape, coord, width, table, scale=1, shift=0):
+    def __init__(self, ishape, coord, width, kernel, scale=1, shift=0):
         ndim = coord.shape[-1]
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.width = width
-        self.table = table
+        self.kernel = kernel
         self.shift = shift
         self.scale = scale
 
@@ -905,15 +905,15 @@ class Interpolate(Linop):
 
         device = backend.get_device(input)
         coord = backend.to_device(self.coord, device)
-        table = backend.to_device(self.table, device)
+        kernel = backend.to_device(self.kernel, device)
         shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.interpolate(input, self.width, table,
+            return interp.interpolate(input, self.width, kernel,
                                  coord * self.scale + shift)
 
     def _adjoint_linop(self):
-        return Gridding(self.ishape, self.coord, self.width, self.table,
+        return Gridding(self.ishape, self.coord, self.width, self.kernel,
                         scale=self.scale, shift=self.shift)
 
 
@@ -926,18 +926,18 @@ class Gridding(Linop):
         coord (array): Coordinates, values from - nx / 2 to nx / 2 - 1.
                 ndim can only be 1, 2 or 3. of shape pts_shape + [ndim]
         width (float): Width of interp. kernel in grid size
-        table (array): Llook-up table of kernel K, from K[0] to K[width]
+        kernel (array): Llook-up kernel of kernel K, from K[0] to K[width]
             scale (float): Scaling of coordinates.
             shift (float): Shifting of coordinates.
 
     """
-    def __init__(self, oshape, coord, width, table, scale=1, shift=0):
+    def __init__(self, oshape, coord, width, kernel, scale=1, shift=0):
         ndim = coord.shape[-1]
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.width = width
-        self.table = table
+        self.kernel = kernel
         self.shift = shift
         self.scale = scale
 
@@ -946,15 +946,15 @@ class Gridding(Linop):
     def _apply(self, input):
         device = backend.get_device(input)
         coord = backend.to_device(self.coord, device)
-        table = backend.to_device(self.table, device)
+        kernel = backend.to_device(self.kernel, device)
         shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.gridding(input, self.oshape, self.width, table,
+            return interp.gridding(input, self.oshape, self.width, kernel,
                                    coord * self.scale + shift)
 
     def _adjoint_linop(self):
-        return Interpolate(self.oshape, self.coord, self.width, self.table,
+        return Interpolate(self.oshape, self.coord, self.width, self.kernel,
                            scale=self.scale, shift=self.shift)
 
 
@@ -1303,7 +1303,7 @@ class NUFFT(Linop):
         coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
         oversamp (float): Oversampling factor.
         width (float): Kernel width.
-        n (int): Table sampling number.
+        n (int): Kernel sampling number.
 
     """
     def __init__(self, ishape, coord, oversamp=1.25, width=4.0, n=128):
@@ -1336,7 +1336,7 @@ class NUFFTAdjoint(Linop):
         coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
         oversamp (float): Oversampling factor.
         width (float): Kernel width.
-        n (int): Table sampling number.
+        n (int): Kernel sampling number.
 
     """
     def __init__(self, oshape, coord, oversamp=1.25, width=4.0, n=128):

@@ -142,10 +142,10 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
             os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
 
         coord = _scale_coord(backend.to_device(coord, device), input.shape, oversamp)
-        table = backend.to_device(
+        kernel = backend.to_device(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
 
-        output = interp.interpolate(output, width, table, coord)
+        output = interp.interpolate(output, width, kernel, coord)
 
         return output
 
@@ -196,10 +196,10 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
 
     with device:
         coord = _scale_coord(backend.to_device(coord, device), oshape, oversamp)
-        table = backend.to_device(
+        kernel = backend.to_device(
             _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
         os_shape = oshape[:-ndim] + [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
-        output = interp.gridding(input, os_shape, width, table, coord)
+        output = interp.gridding(input, os_shape, width, kernel, coord)
 
         for a in range(-ndim, 0):
             i = oshape[a]

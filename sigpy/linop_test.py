@@ -316,9 +316,9 @@ class TestLinop(unittest.TestCase):
         width = 2.0
         ishape = [5]
         coord = np.array([[0.5], [1.5], [2.5]])
-        table = [1.0, 0.5]
+        kernel = [1.0, 0.5]
 
-        A = linop.Interpolate(ishape, coord, width, table)
+        A = linop.Interpolate(ishape, coord, width, kernel)
         check_linop_adjoint(A)
         check_linop_linear(A)
         check_linop_pickleable(A)
@@ -333,7 +333,7 @@ class TestLinop(unittest.TestCase):
                           [1, 0],
                           [1.5, 0]]) / 4.0
 
-        A = linop.Interpolate(ishape, coord, width, table)
+        A = linop.Interpolate(ishape, coord, width, kernel)
         check_linop_adjoint(A)
         check_linop_linear(A)
         check_linop_pickleable(A)
@@ -341,7 +341,7 @@ class TestLinop(unittest.TestCase):
         # Test batch
         ishape = [2, 2, 2]
 
-        A = linop.Interpolate(ishape, coord, width, table)
+        A = linop.Interpolate(ishape, coord, width, kernel)
         check_linop_adjoint(A)
         check_linop_linear(A)
         check_linop_pickleable(A)
