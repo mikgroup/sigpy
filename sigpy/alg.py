@@ -219,7 +219,8 @@ class ConjugateGradient(Alg):
 
         self.zero_gradient = False
         self.rzold = util.dot(self.r, z)
-        self.resid = util.asscalar(self.rzold**0.5)
+        with device:
+            self.resid = util.asscalar(self.rzold**0.5)
         super().__init__(max_iter, device)
 
     def _update(self):

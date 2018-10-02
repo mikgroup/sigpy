@@ -365,7 +365,7 @@ class JsenseRecon(sp.app.App):
         if self.weights is None:
             self.y = sp.to_device(self.y / np.abs(self.y).max(), self.device)
         else:
-            self.y = sp.to_device(self.weights * self.y / np.abs(self.y).max(), self.device)
+            self.y = sp.to_device(self.weights**0.5 * self.y / np.abs(self.y).max(), self.device)
 
         if self.coord is not None:
             self.coord = sp.to_device(self.coord, self.device)

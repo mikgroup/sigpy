@@ -37,7 +37,9 @@ def Sense(mps, coord=None, weights=None, ishape=None, coil_batch_size=None):
     A = F * S
     
     if weights is not None:
-        P = sp.linop.Multiply(F.oshape, weights**0.5)
+        with sp.get_device(weights):
+            P = sp.linop.Multiply(F.oshape, weights**0.5)
+
         A = P * A
         
     A.repr_str = 'Sense'

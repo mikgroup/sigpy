@@ -200,7 +200,7 @@ class LinearLeastSquares(App):
 
     def _output(self):
         return self.x
-            
+
     def _get_alg(self):
         if self.alg_name is None:
             if self.proxg is None:
@@ -250,7 +250,6 @@ class LinearLeastSquares(App):
                 
             with backend.get_device(self.x):
                 gradf_x = self.A.H(r)
-
                 if self.lamda != 0:
                     if self.R is None:
                         util.axpy(gradf_x, self.lamda, x)
