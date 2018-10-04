@@ -4,7 +4,7 @@ import numba as nb
 from sigpy import backend, config, util
 
 
-__all__ = ['array_to_block', 'blocks_to_array']
+__all__ = ['array_to_blocks', 'blocks_to_array']
 
 
 def array_to_blocks(input, blk_shape, blk_strides):
@@ -84,11 +84,18 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   blk_strides[-1],
                                   num_blks[-1])
             else:
-                _blocks_to_array1_cuda(output, input,
-                                       blk_shape[-1],
-                                       blk_strides[-1],
-                                       num_blks[-1],
-                                       size=num_blks[-1] * blk_shape[-1])
+                if np.issubdtype(input.dtype, np.floating):
+                    _blocks_to_array1_cuda(output, input,
+                                           blk_shape[-1],
+                                           blk_strides[-1],
+                                           num_blks[-1],
+                                           size=num_blks[-1] * blk_shape[-1])
+                else:
+                    _blocks_to_array1_cuda_complex(output, input,
+                                                   blk_shape[-1],
+                                                   blk_strides[-1],
+                                                   num_blks[-1],
+                                                   size=num_blks[-1] * blk_shape[-1])
         elif ndim == 2:
             if device == backend.cpu_device:
                 _blocks_to_array2(output, input,
@@ -96,11 +103,18 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   blk_strides[-1], blk_strides[-2],
                                   num_blks[-1], num_blks[-2])
             else:
-                _blocks_to_array2_cuda(output, input,
-                                       blk_shape[-1], blk_shape[-2],
-                                       blk_strides[-1], blk_strides[-2],
-                                       num_blks[-1], num_blks[-2],
-                                       size=num_blks[-1] * num_blks[-2] * blk_shape[-1] * blk_shape[-2])
+                if np.issubdtype(input.dtype, np.floating):
+                    _blocks_to_array2_cuda(output, input,
+                                           blk_shape[-1], blk_shape[-2],
+                                           blk_strides[-1], blk_strides[-2],
+                                           num_blks[-1], num_blks[-2],
+                                           size=num_blks[-1] * num_blks[-2] * blk_shape[-1] * blk_shape[-2])
+                else:
+                    _blocks_to_array2_cuda_complex(output, input,
+                                                   blk_shape[-1], blk_shape[-2],
+                                                   blk_strides[-1], blk_strides[-2],
+                                                   num_blks[-1], num_blks[-2],
+                                                   size=num_blks[-1] * num_blks[-2] * blk_shape[-1] * blk_shape[-2])
         elif ndim == 3:
             if device == backend.cpu_device:
                 _blocks_to_array3(output, input,
@@ -108,11 +122,18 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   blk_strides[-1], blk_strides[-2], blk_strides[-3],
                                   num_blks[-1], num_blks[-2], num_blks[-3])
             else:
-                _blocks_to_array3_cuda(output, input,
-                                       blk_shape[-1], blk_shape[-2], blk_shape[-3],
-                                       blk_strides[-1], blk_strides[-2], blk_strides[-3],
-                                       num_blks[-1], num_blks[-2], num_blks[-3],
-                                       size=num_blks[-1] * num_blks[-2] * num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
+                if np.issubdtype(input.dtype, np.floating):
+                    _blocks_to_array3_cuda(output, input,
+                                           blk_shape[-1], blk_shape[-2], blk_shape[-3],
+                                           blk_strides[-1], blk_strides[-2], blk_strides[-3],
+                                           num_blks[-1], num_blks[-2], num_blks[-3],
+                                           size=num_blks[-1] * num_blks[-2] * num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
+                else:
+                    _blocks_to_array3_cuda_complex(output, input,
+                                                   blk_shape[-1], blk_shape[-2], blk_shape[-3],
+                                                   blk_strides[-1], blk_strides[-2], blk_strides[-3],
+                                                   num_blks[-1], num_blks[-2], num_blks[-3],
+                                                   size=num_blks[-1] * num_blks[-2] * num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
 
         return output
 
@@ -295,6 +316,28 @@ if config.cupy_enabled:
         """,
         name='_blocks_to_array1_cuda')
 
+
+    _blocks_to_array1_cuda_complex = cp.ElementwiseKernel(
+        'raw T output, raw T input, int32 Bx, int32 Sx, int32 Nx',
+        '',
+        """
+        const int ndim = output.ndim;
+
+        int nx = i / Bx;
+        i -= nx * Bx;
+        int bx = i;
+
+        int ix = nx * Sx + bx;
+        if (ix < output.shape()[ndim - 1]) {
+            int input_idx[] = {nx, bx};
+            int output_idx[] = {ix};
+            atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), input[input_idx].real());
+            atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, input[input_idx].imag());
+        }
+        """,
+        name='_blocks_to_array1_cuda_complex')
+    
+
     _blocks_to_array2_cuda = cp.ElementwiseKernel(
         'raw T output, raw T input, int32 Bx, int32 By, int32 Sx, int32 Sy, int32 Nx, int32 Ny',
         '',
@@ -318,6 +361,32 @@ if config.cupy_enabled:
         }
         """,
         name='_blocks_to_array2_cuda')
+    
+
+    _blocks_to_array2_cuda_complex = cp.ElementwiseKernel(
+        'raw T output, raw T input, int32 Bx, int32 By, int32 Sx, int32 Sy, int32 Nx, int32 Ny',
+        '',
+        """
+        const int ndim = output.ndim;
+
+        int ny = i / Bx / By / Nx;
+        i -= ny * Bx * By * Nx;
+        int nx = i / Bx / By;
+        i -= nx * Bx * By;
+        int by = i / Bx;
+        i -= by * Bx;
+        int bx = i;
+
+        int iy = ny * Sy + by;
+        int ix = nx * Sx + bx;
+        if (ix < output.shape()[ndim - 1] && iy < output.shape()[ndim - 2]) {
+            int input_idx[] = {ny, nx, by, bx};
+            int output_idx[] = {iy, ix};
+            atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), input[input_idx].real());
+            atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, input[input_idx].imag());
+        }
+        """,
+        name='_blocks_to_array2_cuda_complex')
 
 
     _blocks_to_array3_cuda = cp.ElementwiseKernel(
@@ -348,3 +417,35 @@ if config.cupy_enabled:
         }
         """,
         name='_blocks_to_array3_cuda')
+
+
+    _blocks_to_array3_cuda_complex = cp.ElementwiseKernel(
+        'raw T output, raw T input, int32 Bx, int32 By, int32 Bz, int32 Sx, int32 Sy, int32 Sz, int32 Nx, int32 Ny, int32 Nz',
+        '',
+        """
+        const int ndim = output.ndim;
+
+        int nz = i / Bx / By / Bz / Nx / Ny;
+        i -= nz * Bx * By * Bz * Nx * Ny;
+        int ny = i / Bx / By / Bz / Nx;
+        i -= ny * Bx * By * Bz * Nx;
+        int nx = i / Bx / By / Bz;
+        i -= nx * Bx * By * Bz;
+        int bz = i / Bx / By;
+        i -= bz * Bx * By;
+        int by = i / Bx;
+        i -= by * Bx;
+        int bx = i;
+
+        int iz = nz * Sz + bz;
+        int iy = ny * Sy + by;
+        int ix = nx * Sx + bx;
+        if (ix < output.shape()[ndim - 1] && iy < output.shape()[ndim - 2] && iz < output.shape()[ndim - 3]) {
+            int input_idx[] = {nz, ny, nx, bz, by, bx};
+            int output_idx[] = {iz, iy, ix};
+            atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])), input[input_idx].real());
+            atomicAdd(reinterpret_cast<T::value_type*>(&(output[output_idx])) + 1, input[input_idx].imag());
+        }
+        """,
+        name='_blocks_to_array3_cuda_complex')
+
