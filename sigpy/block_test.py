@@ -17,70 +17,75 @@ class TestInterp(unittest.TestCase):
             xps.append(cp)
             
         for xp in xps:
-            input = xp.array([0, 1, 2, 3, 4, 5], dtype=np.float)
+            for ndim in [1, 2, 3]:
+                input = xp.array([0, 1, 2, 3, 4, 5], dtype=np.float).reshape([6] + [1] * (ndim - 1))
 
-            blk_shape = [1]
-            blk_strides = [1]
-            output = xp.array([[0], [1], [2], [3], [4], [5]], dtype=xp.float)
-            xp.testing.assert_allclose(output, block.array_to_blocks(input, blk_shape, blk_strides))
+                blk_shape = [1] + [1] * (ndim - 1)
+                blk_strides = [1] + [1] * (ndim - 1)
+                output = xp.array([[0], [1], [2], [3], [4], [5]], dtype=xp.float).reshape(
+                    [6] + [1] * (ndim - 1) + [1] + [1] * (ndim - 1))
+                xp.testing.assert_allclose(output, block.array_to_blocks(input, blk_shape, blk_strides))
 
-            blk_shape = [2]
-            blk_strides = [1]
-            output = xp.array([[0, 1],
-                               [1, 2],
-                               [2, 3],
-                               [3, 4],
-                               [4, 5]], dtype=xp.float)
-            xp.testing.assert_allclose(output, block.array_to_blocks(input, blk_shape, blk_strides))
+                blk_shape = [2] + [1] * (ndim - 1)
+                blk_strides = [1] + [1] * (ndim - 1)
+                output = xp.array([[0, 1],
+                                   [1, 2],
+                                   [2, 3],
+                                   [3, 4],
+                                   [4, 5]], dtype=xp.float).reshape([5] + [1] * (ndim - 1) + [2] + [1] * (ndim - 1))
+                xp.testing.assert_allclose(output, block.array_to_blocks(input, blk_shape, blk_strides))
 
-            blk_shape = [2]
-            blk_strides = [2]
-            output = xp.array([[0, 1],
-                               [2, 3],
-                               [4, 5]], dtype=xp.float)
-            xp.testing.assert_allclose(output, block.array_to_blocks(input, blk_shape, blk_strides))
+                blk_shape = [2] + [1] * (ndim - 1)
+                blk_strides = [2] + [1] * (ndim - 1)
+                output = xp.array([[0, 1],
+                                   [2, 3],
+                                   [4, 5]], dtype=xp.float).reshape([3] + [1] * (ndim - 1) + [2] + [1] * (ndim - 1))
+                xp.testing.assert_allclose(output, block.array_to_blocks(input, blk_shape, blk_strides))
 
-            blk_shape = [3]
-            blk_strides = [2]
-            output = xp.array([[0, 1, 2],
-                               [2, 3, 4]], dtype=xp.float)
-            xp.testing.assert_allclose(output, block.array_to_blocks(input, blk_shape, blk_strides))
+                blk_shape = [3] + [1] * (ndim - 1)
+                blk_strides = [2] + [1] * (ndim - 1)
+                output = xp.array([[0, 1, 2],
+                                   [2, 3, 4]], dtype=xp.float).reshape([2] + [1] * (ndim - 1) + [3] + [1] * (ndim - 1))
+                xp.testing.assert_allclose(output, block.array_to_blocks(input, blk_shape, blk_strides))
 
     def test_blocks_to_array1(self):
-        shape = [6]
         
         xps = [np]
         if config.cupy_enabled:
             xps.append(cp)
             
         for xp in xps:
-            blk_shape = [1]
-            blk_strides = [1]
-            input = xp.array([[0], [1], [2], [3], [4], [5]], dtype=xp.float)
-            output = xp.array([0, 1, 2, 3, 4, 5], dtype=xp.float)
-            xp.testing.assert_allclose(output, block.blocks_to_array(input, shape, blk_shape, blk_strides))
+            for ndim in [1, 2, 3]:
+                shape = [6] + [1] * (ndim - 1)
 
-            blk_shape = [2]
-            blk_strides = [1]
-            input = xp.array([[0, 1],
-                              [1, 2],
-                              [2, 3],
-                              [3, 4],
-                              [4, 5]], dtype=xp.float)
-            output = xp.array([0, 2, 4, 6, 8, 5], dtype=xp.float)
-            xp.testing.assert_allclose(output, block.blocks_to_array(input, shape, blk_shape, blk_strides))
+                blk_shape = [1] + [1] * (ndim - 1)
+                blk_strides = [1] + [1] * (ndim - 1)
+                input = xp.array([[0], [1], [2], [3], [4], [5]], dtype=xp.float).reshape(
+                    [6] + [1] * (ndim - 1) + [1] + [1] * (ndim - 1))
+                output = xp.array([0, 1, 2, 3, 4, 5], dtype=xp.float).reshape([6] + [1] * (ndim - 1))
+                xp.testing.assert_allclose(output, block.blocks_to_array(input, shape, blk_shape, blk_strides))
 
-            blk_shape = [2]
-            blk_strides = [2]
-            input = xp.array([[0, 1],
-                              [2, 3],
-                              [4, 5]], dtype=xp.float)
-            output = xp.array([0, 1, 2, 3, 4, 5], dtype=xp.float)
-            xp.testing.assert_allclose(output, block.blocks_to_array(input, shape, blk_shape, blk_strides))
+                blk_shape = [2] + [1] * (ndim - 1)
+                blk_strides = [1] + [1] * (ndim - 1)
+                input = xp.array([[0, 1],
+                                  [1, 2],
+                                  [2, 3],
+                                  [3, 4],
+                                  [4, 5]], dtype=xp.float).reshape([5] + [1] * (ndim - 1) + [2] + [1] * (ndim - 1))
+                output = xp.array([0, 2, 4, 6, 8, 5], dtype=xp.float).reshape([6] + [1] * (ndim - 1))
+                xp.testing.assert_allclose(output, block.blocks_to_array(input, shape, blk_shape, blk_strides))
 
-            blk_shape = [3]
-            blk_strides = [2]
-            input = xp.array([[0, 1, 2],
-                              [2, 3, 4]], dtype=xp.float)
-            output = xp.array([0, 1, 4, 3, 4, 0], dtype=xp.float)
-            xp.testing.assert_allclose(output, block.blocks_to_array(input, shape, blk_shape, blk_strides))
+                blk_shape = [2] + [1] * (ndim - 1)
+                blk_strides = [2] + [1] * (ndim - 1)
+                input = xp.array([[0, 1],
+                                  [2, 3],
+                                  [4, 5]], dtype=xp.float).reshape([3] + [1] * (ndim - 1) + [2] + [1] * (ndim - 1))
+                output = xp.array([0, 1, 2, 3, 4, 5], dtype=xp.float).reshape([6] + [1] * (ndim - 1))
+                xp.testing.assert_allclose(output, block.blocks_to_array(input, shape, blk_shape, blk_strides))
+
+                blk_shape = [3] + [1] * (ndim - 1)
+                blk_strides = [2] + [1] * (ndim - 1)
+                input = xp.array([[0, 1, 2],
+                                  [2, 3, 4]], dtype=xp.float).reshape([2] + [1] * (ndim - 1) + [3] + [1] * (ndim - 1))
+                output = xp.array([0, 1, 4, 3, 4, 0], dtype=xp.float).reshape([6] + [1] * (ndim - 1))
+                xp.testing.assert_allclose(output, block.blocks_to_array(input, shape, blk_shape, blk_strides))

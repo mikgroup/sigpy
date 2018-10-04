@@ -66,7 +66,8 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None):
         A = N * iF * A
         
     if weights is not None:
-        P = sp.linop.Multiply(A.oshape, weights**0.5)
+        with sp.get_device(weights):
+            P = sp.linop.Multiply(A.oshape, weights**0.5)
         A = P * A
 
     return A
@@ -93,7 +94,8 @@ def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None):
         A = N * iF * A
         
     if weights is not None:
-        P = sp.linop.Multiply(A.oshape, weights**0.5)
+        with sp.get_device(weights):
+            P = sp.linop.Multiply(A.oshape, weights**0.5)
         A = P * A
 
     return A

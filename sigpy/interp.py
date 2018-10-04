@@ -6,9 +6,6 @@ import numba as nb
 
 from sigpy import backend, config, util
 
-if config.cupy_enabled:
-    import cupy as cp
-
 
 __all__ = ['interpolate', 'gridding']
 
@@ -329,6 +326,7 @@ def _gridding3(output, input, width, kernel, coord):
 
 
 if config.cupy_enabled:
+    import cupy as cp
 
     lin_interpolate_cuda = """
     __device__ inline S lin_interpolate(S* kernel, int n, S x) {
