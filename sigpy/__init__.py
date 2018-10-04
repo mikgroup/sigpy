@@ -8,8 +8,9 @@ These classes can then be used to build an App as a final deliverable. An App si
 """
 from sigpy import alg, app, config, linop, prox
 
-from sigpy import backend, conv, interp, fourier, thresh, util
+from sigpy import backend, block, conv, interp, fourier, thresh, util
 from sigpy.backend import *
+from sigpy.block import *
 from sigpy.conv import *
 from sigpy.interp import *
 from sigpy.fourier import *
@@ -18,6 +19,7 @@ from sigpy.util import *
 
 __all__ = ['alg', 'app', 'config', 'linop', 'prox']
 __all__.extend(backend.__all__)
+__all__.extend(block.__all__)
 __all__.extend(conv.__all__)
 __all__.extend(interp.__all__)
 __all__.extend(fourier.__all__)

@@ -408,9 +408,10 @@ class TestLinop(unittest.TestCase):
 
     def test_ArrayToBlocks(self):
         ishape = [4]
-        bshape = [2]
+        blk_shape = [2]
+        blk_strides = [2]
 
-        A = linop.ArrayToBlocks(ishape, bshape)
+        A = linop.ArrayToBlocks(ishape, blk_shape, blk_strides)
         check_linop_adjoint(A)
         check_linop_linear(A)
         check_linop_pickleable(A)

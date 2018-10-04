@@ -6,7 +6,7 @@ such as reshape, transpose, and resize.
 """
 import numpy as np
 
-from sigpy import backend, config, fourier, util, interp, conv, wavelet
+from sigpy import backend, block, config, fourier, util, interp, conv, wavelet
 
 if config.cupy_enabled:
     import cupy as cp
@@ -1202,80 +1202,51 @@ class Tile(Linop):
 
 
 class ArrayToBlocks(Linop):
-    """Block partition input array. Block shape must divide input shape.
+    """Extract blocks from array.
     
     Args:
         ishape (tuple of ints): Input shape.
         blk_shape (tuple of ints): Block shape.
+        blk_shape (tuple of ints): Block strides.
 
     """
-    def __init__(self, ishape, blk_shape):
-
-        if not all([i % b == 0 for i, b in zip(ishape, blk_shape)]):
-            raise ValueError('blk_shape should divide ishape, got {ishape} and {blk_shape}.'.format(
-                ishape=ishape, blk_shape=blk_shape))
-
-        ndim = len(blk_shape)
-        self.blk_shape = list(blk_shape)
-
-        batch_shape = ishape[:-ndim]
-        batch_ndim = len(batch_shape)
-        num_blocks = [i // b for i, b in zip(ishape[-ndim:], self.blk_shape)]
-        oshape = batch_shape + num_blocks + self.blk_shape
-
-        self.ireshape = batch_shape.copy()
-        for n, b in zip(num_blocks, blk_shape):
-            self.ireshape += [n, b]
-
-        self.perm = (list(range(batch_ndim)) +
-                     [batch_ndim + 2 * d for d in range(ndim)] +
-                     [batch_ndim + 2 * d + 1 for d in range(ndim)])
+    def __init__(self, ishape, blk_shape, blk_strides):
+        self.blk_shape = blk_shape
+        self.blk_strides = blk_strides
+        num_blks = [(i - b + s) // s for i, b, s in zip(ishape, blk_shape, blk_strides)]
+        oshape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        with backend.get_device(input):
-            return input.reshape(self.ireshape).transpose(self.perm).reshape(self.oshape)
+        return block.array_to_blocks(input, self.blk_shape, self.blk_strides)
 
     def _adjoint_linop(self):
-        return BlocksToArray(self.ishape, self.blk_shape)
+        return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides)
 
 
 class BlocksToArray(Linop):
-    """Sum blocks to array. Block shape must divide output shape.
+    """Average blocks to array.
     
     Args:
         oshape (tuple of ints): Output shape.
         blk_shape (tuple of ints): Block shape.
+        blk_shape (tuple of ints): Block strides.
 
     """
-    def __init__(self, oshape, blk_shape):
-
-        if not all([o % b == 0 for o, b in zip(oshape, blk_shape)]):
-            raise ValueError(
-                'blk_shape must divide oshape, got {oshape}, and {blk_shape}.')
-
-        ndim = len(blk_shape)
-        self.blk_shape = list(blk_shape)
-
-        batch_shape = oshape[:-ndim]
-        batch_ndim = len(batch_shape)
-        num_blocks = [i // b for i, b in zip(oshape[-ndim:], self.blk_shape)]
-        ishape = batch_shape + num_blocks + self.blk_shape
-
-        self.perm = list(range(batch_ndim))
-        for i in range(ndim):
-            self.perm += [batch_ndim + i, batch_ndim + ndim + i]
+    def __init__(self, oshape, blk_shape, blk_strides):
+        self.blk_shape = blk_shape
+        self.blk_strides = blk_strides
+        num_blks = [(i - b + s) // s for i, b, s in zip(oshape, blk_shape, blk_strides)]
+        ishape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        with backend.get_device(input):
-            return input.transpose(self.perm).reshape(self.oshape)
+        return block.blocks_to_array(input, self.oshape, self.blk_shape, self.blk_strides)
 
     def _adjoint_linop(self):
-
-        return ArrayToBlocks(self.oshape, self.blk_shape)
+        return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides)
 
 
 def Gradient(ishape, axes=None):
