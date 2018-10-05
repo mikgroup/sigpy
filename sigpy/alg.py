@@ -37,9 +37,8 @@ class Alg(object):
         device (int or Device): Device.
 
     """
-    def __init__(self, max_iter, device):
-        self.max_iter = max_iter
-        self.device = backend.Device(device)    
+    def __init__(self, max_iter):
+        self.max_iter = max_iter 
         self.iter = 0
 
     def _update(self):
@@ -55,13 +54,11 @@ class Alg(object):
                                'Each Alg object is only meant to be run once.'
                                'Please consider creating a new Alg.')
             
-        with self.device:
-            self._update()
-            self.iter += 1
+        self._update()
+        self.iter += 1
 
     def done(self):
-        with self.device:
-            return self._done()
+        return self._done()
 
 
 class PowerMethod(Alg):
@@ -80,15 +77,12 @@ class PowerMethod(Alg):
         self.A = A
         self.x = x
         self.max_eig = np.infty
-        super().__init__(max_iter, backend.get_device(x))
+        super().__init__(max_iter)
 
     def _update(self):
         y = self.A(self.x)
         self.max_eig = util.asscalar(util.norm(y))
-        if self.max_eig == 0:
-            self.x.fill(0)
-        else:
-            backend.copyto(self.x, y / self.max_eig)
+        backend.copyto(self.x, y / self.max_eig)
 
     def _done(self):
         return self.iter >= self.max_iter or self.max_eig == 0
@@ -145,40 +139,43 @@ class GradientMethod(Alg):
         self.accelerate = accelerate
         self.proxg = proxg
         self.x = x
-        
-        if self.accelerate:
-            self.z = self.x.copy()
-            self.t = 1
 
-        if self.accelerate or self.proxg is not None:
-            self.x_old = self.x.copy()
+        self.device = backend.get_device(x)
+        with self.device:
+            if self.accelerate:
+                self.z = self.x.copy()
+                self.t = 1
+
+            if self.accelerate or self.proxg is not None:
+                self.x_old = self.x.copy()
 
         self.resid = np.infty
-        super().__init__(max_iter, backend.get_device(x))
+        super().__init__(max_iter)
 
     def _update(self):
-        if self.accelerate or self.proxg is not None:
-            backend.copyto(self.x_old, self.x)
+        with self.device:
+            if self.accelerate or self.proxg is not None:
+                backend.copyto(self.x_old, self.x)
 
-        if self.accelerate:
-            backend.copyto(self.x, self.z)
+            if self.accelerate:
+                backend.copyto(self.x, self.z)
 
-        gradf_x = self.gradf(self.x)
-            
-        util.axpy(self.x, -self.alpha, gradf_x)
+            gradf_x = self.gradf(self.x)
 
-        if self.proxg is not None:
-            backend.copyto(self.x, self.proxg(self.alpha, self.x))
+            util.axpy(self.x, -self.alpha, gradf_x)
 
-        if self.accelerate:
-            t_old = self.t
-            self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
-            backend.copyto(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
+            if self.proxg is not None:
+                backend.copyto(self.x, self.proxg(self.alpha, self.x))
 
-        if self.accelerate or self.proxg is not None:
-            self.resid = util.asscalar(util.norm((self.x - self.x_old) / self.alpha**0.5))
-        else:
-            self.resid = util.asscalar(util.norm(gradf_x))
+            if self.accelerate:
+                t_old = self.t
+                self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
+                backend.copyto(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
+
+            if self.accelerate or self.proxg is not None:
+                self.resid = util.asscalar(util.norm((self.x - self.x_old) / self.alpha**0.5))
+            else:
+                self.resid = util.asscalar(util.norm(gradf_x))
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.resid == 0
@@ -203,8 +200,8 @@ class ConjugateGradient(Alg):
         self.A = A
         self.P = P
         self.x = x
-        device = backend.get_device(x)
-        with device:
+        self.device = backend.get_device(x)
+        with self.device:
             self.r = b - self.A(self.x)
 
             if self.P is None:
@@ -217,34 +214,35 @@ class ConjugateGradient(Alg):
             else:
                 self.p = z
 
-        self.zero_gradient = False
-        self.rzold = util.dot(self.r, z)
-        with device:
+            self.zero_gradient = False
+            self.rzold = util.dot(self.r, z)
             self.resid = util.asscalar(self.rzold**0.5)
-        super().__init__(max_iter, device)
+
+        super().__init__(max_iter)
 
     def _update(self):
-        Ap = self.A(self.p)
-        pAp = util.dot(self.p, Ap)
-        if pAp == 0:
-            self.zero_gradient = True
-            return
+        with self.device:
+            Ap = self.A(self.p)
+            pAp = util.dot(self.p, Ap)
+            if pAp == 0:
+                self.zero_gradient = True
+                return
 
-        self.alpha = self.rzold / pAp
-        util.axpy(self.x, self.alpha, self.p)
-        if self.iter < self.max_iter - 1:
-            util.axpy(self.r, -self.alpha, Ap)
-            if self.P is not None:
-                z = self.P(self.r)
-            else:
-                z = self.r
-                
-            rznew = util.dot(self.r, z)
-            beta = rznew / self.rzold
-            util.xpay(self.p, beta, z)
-            self.rzold = rznew
+            self.alpha = self.rzold / pAp
+            util.axpy(self.x, self.alpha, self.p)
+            if self.iter < self.max_iter - 1:
+                util.axpy(self.r, -self.alpha, Ap)
+                if self.P is not None:
+                    z = self.P(self.r)
+                else:
+                    z = self.r
 
-        self.resid = util.asscalar(self.rzold**0.5)
+                rznew = util.dot(self.r, z)
+                beta = rznew / self.rzold
+                util.xpay(self.p, beta, z)
+                self.rzold = rznew
+
+            self.resid = util.asscalar(self.rzold**0.5)
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.zero_gradient or self.resid == 0
@@ -301,13 +299,20 @@ class PrimalDualHybridGradient(Alg):
         self.theta = theta
         self.gamma_primal = gamma_primal
         self.gamma_dual = gamma_dual
-        
-        self.x_ext = self.x.copy()
-        self.u_old = self.u.copy()
-        self.x_old = self.x.copy()
+
+        self.x_device = backend.get_device(x)
+        self.u_device = backend.get_device(u)
+
+        with self.x_device:
+            self.x_ext = self.x.copy()
+
+        with self.u_device:
+            self.u_old = self.u.copy()
+            self.x_old = self.x.copy()
+
         self.resid = np.infty
 
-        super().__init__(max_iter, backend.get_device(x))
+        super().__init__(max_iter)
 
     def _update(self):
         backend.copyto(self.u_old, self.u)
@@ -319,33 +324,45 @@ class PrimalDualHybridGradient(Alg):
         backend.copyto(self.u, self.proxfc(self.sigma, self.u))
 
         # Update primal.
-        delta_x = self.AH(self.u)
-        if self.gradh is not None:
-            delta_x += self.gradh(self.x)
-            
-        util.axpy(self.x, -self.tau, delta_x)
-        backend.copyto(self.x, self.proxg(self.tau, self.x))
+        with self.x_device:
+            delta_x = self.AH(self.u)
+            if self.gradh is not None:
+                delta_x += self.gradh(self.x)
+
+            util.axpy(self.x, -self.tau, delta_x)
+            backend.copyto(self.x, self.proxg(self.tau, self.x))
 
         # Update step-size if neccessary.
-        xp = self.device.xp
         if self.gamma_primal > 0 and self.gamma_dual == 0:
-            theta = 1 / (1 + 2 * self.gamma_primal * xp.amin(xp.abs(self.tau)))**0.5
-            self.tau *= theta
-            self.sigma /= theta
+            with self.x_device:
+                xp = self.x_device.xp
+                theta = 1 / (1 + 2 * self.gamma_primal * xp.amin(xp.abs(self.tau)))**0.5
+                self.tau *= theta
+
+            with self.u_device:
+                self.sigma /= theta
         elif self.gamma_primal == 0 and self.gamma_dual > 0:
-            theta = 1 / (1 + 2 * self.gamma_dual * xp.amin(xp.abs(self.sigma)))**0.5
-            self.tau /= theta
-            self.sigma *= theta
+            with self.u_device:
+                xp = self.u_device.xp
+                theta = 1 / (1 + 2 * self.gamma_dual * xp.amin(xp.abs(self.sigma)))**0.5
+                self.sigma *= theta
+
+            with self.x_device:
+                self.tau /= theta
         else:
             theta = self.theta
 
         # Extrapolate primal.
-        x_diff = self.x - self.x_old
-        backend.copyto(self.x_ext, self.x + theta * x_diff)
+        with self.x_device:
+            x_diff = self.x - self.x_old
+            backend.copyto(self.x_ext, self.x + theta * x_diff)
+            x_diff /= self.tau**0.5
 
-        u_diff = self.u - self.u_old
-        self.resid = util.asscalar(util.norm2(x_diff / self.tau**0.5) +
-                                   util.norm2(u_diff / self.sigma**0.5))**0.5
+        with self.u_device:
+            u_diff = self.u - self.u_old
+            u_diff /= self.sigma**0.5
+
+        self.resid = util.asscalar(util.norm2(x_diff) + util.norm2(u_diff))**0.5
 
 
 class AltMin(Alg):
@@ -360,7 +377,7 @@ class AltMin(Alg):
     def __init__(self, min1, min2, max_iter=30):
         self.min1 = min1
         self.min2 = min2
-        super().__init__(max_iter, backend.cpu_device)
+        super().__init__(max_iter)
 
     def _update(self):
         self.min1()
