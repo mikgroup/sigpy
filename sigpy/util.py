@@ -409,7 +409,10 @@ def norm(input, axes=None, keepdims=False):
         float: L2 norm of input.
 
     """
-    return norm2(input, axes=axes, keepdims=keepdims)**0.5 
+    device = backend.get_device(input)
+    xp = device.xp
+    with device:
+        return norm2(input, axes=axes, keepdims=keepdims)**0.5 
 
 
 def monte_carlo_sure(f, y, sigma, eps=1e-10):
