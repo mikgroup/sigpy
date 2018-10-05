@@ -56,7 +56,7 @@ class TestUtil(unittest.TestCase):
         npt.assert_allclose(util.triang([3]), [0.5, 1, 0.5])
         npt.assert_allclose(util.triang([4]), [0.25, 0.75, 0.75, 0.25])
 
-    def test_triang(self):
+    def test_hanning(self):
         npt.assert_allclose(util.hanning([4]), [0, 0.5, 1, 0.5])
         npt.assert_allclose(util.hanning([5]), [0, 0.5, 1, 0.5, 0])
 
