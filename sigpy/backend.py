@@ -49,7 +49,7 @@ class Device(object):
 
         if id != -1:
             if config.cupy_enabled:
-                self.device = cp.cuda.Device(id)
+                self.cpdevice = cp.cuda.Device(id)
             else:
                 raise ValueError('cupy not installed, but set device {id}.'.format(id=id))
 
@@ -83,19 +83,19 @@ class Device(object):
         if self.id == -1:
             return None
 
-        return self.device.__enter__()
+        return self.cpdevice.__enter__()
 
     def __exit__(self, *args):
         if self.id == -1:
             pass
         else:
-            self.device.__exit__()
+            self.cpdevice.__exit__()
 
     def __repr__(self):
         if self.id == -1:
             return '<CPU Device>'
 
-        return '<GPU Device {id}>'.format(id=self.id)
+        return self.cpdevice.__repr__()
 
 
 cpu_device = Device(-1)
