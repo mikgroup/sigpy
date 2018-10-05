@@ -11,7 +11,7 @@ if config.cupy_enabled:
 
 __all__ = ['asscalar', 'prod', 'vec', 'split', 'rss', 'resize',
            'flip', 'circshift', 'downsample', 'upsample', 'dirac', 'randn',
-           'triang', 'dot', 'norm2', 'norm', 'monte_carlo_sure', 'axpy', 'xpay',
+           'triang', 'hanning', 'dot', 'norm2', 'norm', 'monte_carlo_sure', 'axpy', 'xpay',
            'ShuffledNumbers']
 
 
@@ -321,7 +321,7 @@ def triang(shape, dtype=np.complex, device=backend.cpu_device):
         device (Device): Output device.
 
     Returns:
-        array: All-ones array.
+        array: triangular filter.
 
     """
     device = backend.Device(device)
@@ -331,6 +331,30 @@ def triang(shape, dtype=np.complex, device=backend.cpu_device):
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
             w = 1 - xp.abs(xp.arange(i, dtype=dtype) - i // 2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
+            window *= w.reshape([i] + [1] * n)
+
+    return window
+
+
+def hanning(shape, dtype=np.complex, device=backend.cpu_device):
+    """Create multi-dimensional hanning window.
+
+    Args:
+        shape (tuple of ints): Output shape.
+        dtype (Dtype): Output data-type.
+        device (Device): Output device.
+
+    Returns:
+        array: hanning filter.
+
+    """
+    device = backend.Device(device)
+    xp = device.xp
+
+    with device:
+        window = xp.ones(shape, dtype=dtype)
+        for n, i in enumerate(shape[::-1]):
+            w = 0.5 - 0.5 * xp.cos(2 * np.pi * xp.arange(i, dtype=dtype) / (i - (i % 2)))
             window *= w.reshape([i] + [1] * n)
 
     return window
