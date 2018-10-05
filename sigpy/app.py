@@ -248,7 +248,7 @@ class LinearLeastSquares(App):
                 r = self.A(x)
                 r -= self.y
                 
-            with backend.get_device(self.x):
+            with self.x_device:
                 gradf_x = self.A.H(r)
                 if self.lamda != 0:
                     if self.R is None:
