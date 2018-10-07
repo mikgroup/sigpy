@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.com/mikgroup/sigpy.svg?branch=master)](https://travis-ci.com/mikgroup/sigpy)
 [![codecov](https://codecov.io/gh/mikgroup/sigpy/branch/master/graph/badge.svg)](https://codecov.io/gh/mikgroup/sigpy)
+[![Documentation Status](https://readthedocs.org/projects/sigpy/badge/?version=latest)](https://sigpy.readthedocs.io/en/latest/?badge=latest)
 
 Overview
 ========
