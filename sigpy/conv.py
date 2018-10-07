@@ -366,12 +366,15 @@ def _cudnn_convolve(x, W, mode='full'):
             Wr = xp.real(W)
             Wi = xp.imag(W)
 
-            yr = _cudnn_convolve(xr, Wr, mode=mode)
-            yr -= _cudnn_convolve(xi, Wi, mode=mode)
-            yi = _cudnn_convolve(xr, Wi, mode=mode)
-            yi += _cudnn_convolve(xi, Wr, mode=mode)
+            # Concatenate real and imaginary to input/output channels
+            x = xp.concatenate([xr, xi], axis=1)
+            W = xp.concatenate([xp.concatenate([Wr, -Wi], axis=1),
+                                xp.concatenate([Wi, Wr], axis=1)], axis=0)
 
-            return (yr + 1j * yi).astype(dtype)
+            y = _cudnn_convolve(x, W, mode=mode)
+
+            # Convert back to complex
+            return (y[:, :y.shape[1] // 2] + 1j * y[:, y.shape[1] // 2:]).astype(dtype)
 
     ndim = x.ndim - 2
     batch_size = len(x)
@@ -407,16 +410,19 @@ def _cudnn_convolve_adjoint_input(W, y, mode='full'):
     if np.issubdtype(dtype, np.complexfloating):
         with device:
             Wr = xp.real(W)
-            Wi = -xp.imag(W)
+            Wi = xp.imag(W)
             yr = xp.real(y)
             yi = xp.imag(y)
 
-            xr = _cudnn_convolve_adjoint_input(Wr, yr, mode=mode)
-            xr -= _cudnn_convolve_adjoint_input(Wi, yi, mode=mode)
-            xi = _cudnn_convolve_adjoint_input(Wi, yr, mode=mode)
-            xi += _cudnn_convolve_adjoint_input(Wr, yi, mode=mode)
+            # Concatenate real and imaginary to input/output channels
+            y = xp.concatenate([yr, yi], axis=1)
+            W = xp.concatenate([xp.concatenate([Wr, -Wi], axis=1),
+                                xp.concatenate([Wi, Wr], axis=1)], axis=0)
 
-            return (xr + 1j * xi).astype(dtype)
+            x = _cudnn_convolve_adjoint_input(W, y, mode=mode)
+
+            # Convert back to complex
+            return (x[:, :x.shape[1] // 2] + 1j * x[:, x.shape[1] // 2:]).astype(dtype)
 
     ndim = y.ndim - 2
     batch_size = len(y)
@@ -455,15 +461,21 @@ def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
     if np.issubdtype(dtype, np.complexfloating):
         with device:
             xr = xp.real(x)
-            xi = -xp.imag(x)
+            xi = xp.imag(x)
             yr = xp.real(y)
             yi = xp.imag(y)
 
-            Wr = _cudnn_convolve_adjoint_filter(xr, yr, mode=mode)
-            Wr -= _cudnn_convolve_adjoint_filter(xi, yi, mode=mode)
-            Wi = _cudnn_convolve_adjoint_filter(xi, yr, mode=mode)
-            Wi += _cudnn_convolve_adjoint_filter(xr, yi, mode=mode)
+            # Concatenate real and imaginary to input/output channels
+            x = xp.concatenate([xr, xi], axis=1)
+            y = xp.concatenate([yr, yi], axis=1)
 
+            W = _cudnn_convolve_adjoint_filter(x, y, mode=mode)
+    
+            # Convert back to complex
+            Wr = W[:W.shape[0] // 2, :W.shape[1] // 2]
+            Wr += W[W.shape[0] // 2:, W.shape[1] // 2:]
+            Wi = W[W.shape[0] // 2:, :W.shape[1] // 2]
+            Wi -= W[:W.shape[0] // 2, W.shape[1] // 2:]
             return (Wr + 1j * Wi).astype(dtype)
 
     ndim = y.ndim - 2
