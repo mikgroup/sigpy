@@ -82,7 +82,8 @@ class PowerMethod(Alg):
     def _update(self):
         y = self.A(self.x)
         self.max_eig = util.asscalar(util.norm(y))
-        backend.copyto(self.x, y / self.max_eig)
+        with backend.get_device(y):
+            backend.copyto(self.x, y / self.max_eig)
 
     def _done(self):
         return self.iter >= self.max_iter or self.max_eig == 0
@@ -97,7 +98,7 @@ class ProximalPointMethod(Alg):
         self.alpha = alpha
         self.x = x
         
-        super().__init__(max_iter, device=device)
+        super().__init__(max_iter)
 
     def _update(self):
         backend.copyto(self.x, self.proxf(self.alpha, self.x))
