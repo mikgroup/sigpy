@@ -18,7 +18,8 @@ def soft_thresh(lamda, input):
 
     Performs:
 
-    .. math:: (| x | - \lambda)_+  \text{sgn}(x)
+    .. math:: 
+        (| x | - \lambda)_+  \text{sgn}(x)
 
     Args:
         lamda (float, or array): Threshold parameter.
@@ -49,7 +50,8 @@ def hard_thresh(lamda, input):
 
     Performs: 
 
-    .. math:: 1\{|x| > \lambda\} x.
+    .. math:: 
+        1\{|x| > \lambda\} x.
 
     Args:
         lamda (float, or array): Threshold parameter.
@@ -127,6 +129,11 @@ def l2_proj(eps, input, axes=None):
 
 def elitist_thresh(lamda, input, axes=None):
     """Elitist threshold.
+
+    Solves for
+
+    :math::
+        \text{argmin}_x \| x - y \|_2^2 + \lambda \| x \|_1^2
 
     Args:
         lamda (float, or array): Threshold parameter.
@@ -257,12 +264,10 @@ if config.cupy_enabled:
             S t = l1 * lamda / ((S) 1. + lamda * (S) (j + 1.));
             
             const int thresh_idx[] = {i, 0};
+            const int next_idx[] = {i, j + 1};
             if (j == length - 1) {
                 thresh[thresh_idx] = t;
-                break;
-            }
-            const int next_idx[] = {i, j + 1};
-            if (t > input[next_idx]) {
+            } else if (l1 * lamda > input[next_idx] * ((S) 1. + lamda * (S) (j + 1.))) {
                 thresh[thresh_idx] = t;
                 break;
             }

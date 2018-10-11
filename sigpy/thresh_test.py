@@ -73,8 +73,6 @@ class TestThresh(unittest.TestCase):
 
             cp.testing.assert_allclose(thresh.hard_thresh(lamda, x), y)
 
-    if config.cupy_enabled:
-
         def test_elitist_thresh_cuda(self):
             lamda = 1.0
             x = np.array([-2, -1.5, -1, 0.5, 0, 0.5, 1, 1.5, 2])
