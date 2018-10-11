@@ -22,6 +22,13 @@ def _normalize_axes(axes, ndim):
         return tuple(a % ndim for a in sorted(axes))
 
 
+def _normalize_shape(shape):
+    if isinstance(shape, int):
+        return (shape, )
+    else:
+        return tuple(shape)
+
+
 def _expand_shapes(*shapes):
 
     shapes = [list(shape) for shape in shapes]
@@ -326,7 +333,7 @@ def triang(shape, dtype=np.complex, device=backend.cpu_device):
     """
     device = backend.Device(device)
     xp = device.xp
-
+    shape = _normalize_shape(shape)
     with device:
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
@@ -350,11 +357,11 @@ def hanning(shape, dtype=np.complex, device=backend.cpu_device):
     """
     device = backend.Device(device)
     xp = device.xp
-
+    shape = _normalize_shape(shape)
     with device:
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
-            w = 0.5 - 0.5 * xp.cos(2 * np.pi * xp.arange(i, dtype=dtype) / (i - (i % 2)))
+            w = 0.5 - 0.5 * xp.cos(2 * np.pi * xp.arange(i, dtype=dtype) / max(1, (i - (i % 2))))
             window *= w.reshape([i] + [1] * n)
 
     return window
