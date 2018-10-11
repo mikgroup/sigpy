@@ -17,8 +17,7 @@ import subprocess
 import datetime
 import numpy as np
 import matplotlib.pyplot as plt
-
-from sigpy import prod, to_device
+import sigpy as sp
 
 
 __all__ = ['ImagePlot', 'LinePlot', 'ScatterPlot']
@@ -332,7 +331,7 @@ class ImagePlot(object):
             else:
                 idx.append(self.slices[i])
 
-        imv = to_device(self.im[idx])
+        imv = sp.to_device(self.im[idx])
 
         # Transpose to have [z, y, x, c].
         imv_dims = [self.y, self.x]
@@ -426,7 +425,7 @@ def mosaic_shape(batch):
 
     mshape = [int(batch**0.5), batch // int(batch**0.5)]
 
-    while (prod(mshape) < batch):
+    while (sp.prod(mshape) < batch):
         mshape[1] += 1
 
     if (mshape[0] - 1) * (mshape[1] + 1) == batch:
@@ -454,15 +453,16 @@ def array_to_image(arr, color=False):
         ndim = 3
     else:
         ndim = 2
-
+        
+    arr = sp.resize(arr, arr.shape[:-2] + (arr.shape[-2] + 2, arr.shape[-1] + 2))
     shape = arr.shape
-    batch = prod(shape[:-ndim])
+    batch = sp.prod(shape[:-ndim])
     mshape = mosaic_shape(batch)
 
-    if prod(mshape) == batch:
+    if sp.prod(mshape) == batch:
         img = arr.reshape((batch, ) + shape[-ndim:])
     else:
-        img = np.zeros((prod(mshape), ) + shape[-ndim:], dtype=arr.dtype)
+        img = np.zeros((sp.prod(mshape), ) + shape[-ndim:], dtype=arr.dtype)
         img[:batch, ...] = arr.reshape((batch, ) + shape[-ndim:])
 
     img = img.reshape(mshape + shape[-ndim:])
@@ -948,13 +948,13 @@ class ScatterPlot(object):
                 idx.append(self.slices[i])
 
         if idx:
-            datav = to_device(self.data[idx])
+            datav = sp.to_device(self.data[idx])
         else:
-            datav = to_device(self.data)
+            datav = sp.to_device(self.data)
 
         # if self.z is not None:
         #     datav_dims = [self.z] + datav_dims
-        coordv = to_device(self.coord)
+        coordv = sp.to_device(self.coord)
 
         if self.mode == 'm':
             datav = np.abs(datav)
