@@ -154,7 +154,7 @@ class LinearLeastSquares(App):
     def __init__(self, A, y, x=None, proxg=None,
                  lamda=0, G=None, g=None, R=None, mu=0, z=0,
                  alg_name=None, max_iter=100,
-                 P=None, alpha=None, max_power_iter=10, accelerate=True,
+                 P=None, alpha=None, max_power_iter=30, accelerate=True,
                  tau=None, sigma=None,
                  save_objective_values=False, show_pbar=True):
         self.A = A
