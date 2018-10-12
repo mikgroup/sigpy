@@ -97,7 +97,7 @@ class MaxEig(App):
         max_eig (int): Largest eigenvalue of A.
 
     """
-    def __init__(self, A, dtype=np.complex, device=backend.cpu_device,
+    def __init__(self, A, dtype=np.float, device=backend.cpu_device,
                  max_iter=30, show_pbar=True):
         self.x = util.randn(A.ishape, dtype=dtype, device=device)
         alg = PowerMethod(A, self.x, max_iter=max_iter)

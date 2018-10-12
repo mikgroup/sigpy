@@ -143,7 +143,7 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
 
         coord = _scale_coord(backend.to_device(coord, device), input.shape, oversamp)
         kernel = backend.to_device(
-            _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
+            _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, coord.dtype), device)
 
         output = interp.interpolate(output, width, kernel, coord)
 
@@ -197,7 +197,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
     with device:
         coord = _scale_coord(backend.to_device(coord, device), oshape, oversamp)
         kernel = backend.to_device(
-            _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, dtype=coord.dtype), device)
+            _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, coord.dtype), device)
         os_shape = oshape[:-ndim] + [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
         output = interp.gridding(input, os_shape, width, kernel, coord)
 
@@ -296,7 +296,7 @@ def _ifftc(input, oshape=None, axes=None, norm='ortho'):
     return output
 
 
-def _kb(x, width, beta, dtype=np.complex):
+def _kb(x, width, beta, dtype):
     return 1 / width * np.i0(beta * (1 - x**2)**0.5).astype(dtype)
 
 

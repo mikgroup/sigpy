@@ -12,21 +12,21 @@ if config.cupy_enabled:
 class Alg(object):
     """Abstraction for iterative algorithms.
 
-    The standard way of using an Alg object, say alg, is as follows:
+    The standard way of using an :class:`Alg` object, say alg, is as follows:
 
     >>> while not alg.done():
     >>>     alg.update()
 
     The user is free to run other things in the while loop.
-    An Alg object is meant to run once. Once done, the object should not be run again.
+    An :class:`Alg` object is meant to run once. Once done, the object should not be run again.
 
-    When creating a new Alg class, the user should supply an _update() function
+    When creating a new :class:`Alg` class, the user should supply an _update() function
     to perform the iterative update, and optionally a _done() function
     to determine when to terminate the iteration. The default _done() function
     simply checks whether the number of iterations has reached the maximum.
 
-    The interface for each Alg class should not depend on Linop or Prox explicitly.
-    For example, if the user wants to design an Alg class to accept a Linop, say A,
+    The interface for each :class:`Alg` class should not depend on Linop or Prox explicitly.
+    For example, if the user wants to design an :class:`Alg` class to accept a Linop, say A,
     as an argument, then it should also accept any function that can be called
     to compute x -> A(x). Similarly, to accept a Prox, say proxg, as an argument,
     the Alg class should accept any function that can be called to compute
@@ -34,7 +34,6 @@ class Alg(object):
 
     Args:
         max_iter (int): Maximum number of iterations.
-        device (int or Device): Device.
 
     """
     def __init__(self, max_iter):

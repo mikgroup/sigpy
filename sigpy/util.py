@@ -274,7 +274,7 @@ def upsample(input, oshape, factors, shift=None):
     return output
 
 
-def dirac(shape, dtype=np.complex, device=backend.cpu_device):
+def dirac(shape, dtype=np.float, device=backend.cpu_device):
     """Create Dirac delta.
 
     Args:
@@ -293,7 +293,7 @@ def dirac(shape, dtype=np.complex, device=backend.cpu_device):
         return resize(xp.ones([1], dtype=dtype), shape)
 
 
-def randn(shape, scale=1, dtype=np.complex, device=backend.cpu_device):
+def randn(shape, scale=1, dtype=np.float, device=backend.cpu_device):
     """Create random Gaussian array.
 
     Args:
@@ -304,8 +304,8 @@ def randn(shape, scale=1, dtype=np.complex, device=backend.cpu_device):
 
     Returns:
         array: Random Gaussian array.
-    """
 
+    """
     device = backend.Device(device)
     xp = device.xp
 
@@ -319,7 +319,7 @@ def randn(shape, scale=1, dtype=np.complex, device=backend.cpu_device):
             return xp.random.normal(size=shape, scale=scale).astype(dtype)
 
 
-def triang(shape, dtype=np.complex, device=backend.cpu_device):
+def triang(shape, dtype=np.float, device=backend.cpu_device):
     """Create multi-dimensional triangular window.
 
     Args:
@@ -343,7 +343,7 @@ def triang(shape, dtype=np.complex, device=backend.cpu_device):
     return window
 
 
-def hanning(shape, dtype=np.complex, device=backend.cpu_device):
+def hanning(shape, dtype=np.float, device=backend.cpu_device):
     """Create multi-dimensional hanning window.
 
     Args:
