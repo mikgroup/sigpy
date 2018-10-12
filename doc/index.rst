@@ -5,4 +5,5 @@ Welcome to SigPy's documentation!
    :maxdepth: 2
 
    intro
+   guide
    api

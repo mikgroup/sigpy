@@ -4,10 +4,10 @@
 .. toctree::
    :maxdepth: 2
 
-   alg
-   app
-   linop
-   prox
+   core_alg
+   core_app
+   core_linop
+   core_prox
 
 .. automodule:: sigpy
    :members:
