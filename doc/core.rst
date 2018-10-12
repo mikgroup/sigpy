@@ -1,5 +1,5 @@
-Core Module (``sigpy``)
-=======================
+``sigpy``
+=========
 		
 .. toctree::
    :maxdepth: 2

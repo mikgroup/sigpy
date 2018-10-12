@@ -1,5 +1,5 @@
-Applications (``sigpy.app``)
-============================
+``sigpy.app``
+=============
 
 .. automodule:: sigpy.app
    :members:
