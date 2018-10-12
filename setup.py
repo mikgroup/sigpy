@@ -6,7 +6,7 @@ if sys.version_info < (3, 5):
 
 REQUIRED_PACKAGES = ['numpy', 'pywavelets', 'numba', 'tqdm']
 
-with open("README.md", "r") as f:
+with open("README.rst", "r") as f:
     long_description = f.read()
 
 setup(name='sigpy',
