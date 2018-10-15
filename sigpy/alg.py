@@ -80,8 +80,10 @@ class PowerMethod(Alg):
 
     def _update(self):
         y = self.A(self.x)
-        self.max_eig = util.asscalar(util.norm(y))
-        with backend.get_device(y):
+        device = backend.get_device(y)
+        xp = device.xp
+        with device:
+            self.max_eig = util.asscalar(xp.linalg.norm(y))
             backend.copyto(self.x, y / self.max_eig)
 
     def _done(self):
@@ -172,10 +174,11 @@ class GradientMethod(Alg):
                 self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
                 backend.copyto(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
 
+            xp = self.device.xp
             if self.accelerate or self.proxg is not None:
-                self.resid = util.asscalar(util.norm((self.x - self.x_old) / self.alpha**0.5))
+                self.resid = util.asscalar(xp.linalg.norm((self.x - self.x_old) / self.alpha**0.5))
             else:
-                self.resid = util.asscalar(util.norm(gradf_x))
+                self.resid = util.asscalar(xp.linalg.norm(gradf_x))
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.resid == 0
@@ -202,6 +205,7 @@ class ConjugateGradient(Alg):
         self.x = x
         self.device = backend.get_device(x)
         with self.device:
+            xp = self.device.xp
             self.r = b - self.A(self.x)
 
             if self.P is None:
@@ -215,15 +219,16 @@ class ConjugateGradient(Alg):
                 self.p = z
 
             self.zero_gradient = False
-            self.rzold = util.dot(self.r, z)
-            self.resid = util.asscalar(self.rzold**0.5)
+            self.rzold = xp.real(xp.vdot(self.r, z))
+            self.resid = util.asscalar(self.rzold)**0.5
 
         super().__init__(max_iter)
 
     def _update(self):
         with self.device:
+            xp = self.device.xp
             Ap = self.A(self.p)
-            pAp = util.dot(self.p, Ap)
+            pAp = xp.real(xp.vdot(self.p, Ap))
             if pAp == 0:
                 self.zero_gradient = True
                 return
@@ -237,12 +242,12 @@ class ConjugateGradient(Alg):
                 else:
                     z = self.r
 
-                rznew = util.dot(self.r, z)
+                rznew = xp.real(xp.vdot(self.r, z))
                 beta = rznew / self.rzold
                 util.xpay(self.p, beta, z)
                 self.rzold = rznew
 
-            self.resid = util.asscalar(self.rzold**0.5)
+            self.resid = util.asscalar(self.rzold)**0.5
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.zero_gradient or self.resid == 0
@@ -354,15 +359,17 @@ class PrimalDualHybridGradient(Alg):
 
         # Extrapolate primal.
         with self.x_device:
+            xp = self.x_device.xp
             x_diff = self.x - self.x_old
             backend.copyto(self.x_ext, self.x + theta * x_diff)
-            x_diff /= self.tau**0.5
+            x_diff_norm = xp.linalg.norm(x_diff / self.tau**0.5)
 
         with self.u_device:
+            xp = self.u_device.xp
             u_diff = self.u - self.u_old
-            u_diff /= self.sigma**0.5
+            u_diff_norm = xp.linalg.norm(u_diff / self.sigma**0.5)
 
-        self.resid = util.asscalar(util.norm2(x_diff) + util.norm2(u_diff))**0.5
+        self.resid = util.asscalar(x_diff_norm**2 + u_diff_norm**2)
 
 
 class AltMin(Alg):

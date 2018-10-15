@@ -170,9 +170,9 @@ class ConvSparseCoding(sp.app.App):
             self.R_t = xp.empty(self.R_t_shape, dtype=self.dtype)
             self.L = sp.randn(self.L_shape, dtype=self.dtype, device=self.device)
             if self.multi_channel:
-                self.L /= sp.norm(self.L, axes=[0] + list(range(-self.data_ndim, 0)), keepdims=True)
+                self.L /= xp.linalg.norm(self.L, axis=(0, ) + tuple(range(-self.data_ndim, 0)), keepdims=True)
             else:
-                self.L /= sp.norm(self.L, axes=range(-self.data_ndim, 0), keepdims=True)
+                self.L /= xp.linalg.norm(self.L, axis=tuple(range(-self.data_ndim, 0)), keepdims=True)
                 
             self.L_old = xp.empty(self.L_shape, dtype=self.dtype)
             self.R = ConvSparseCoefficients(self.y, self.L, lamda=self.lamda,
@@ -228,15 +228,6 @@ class ConvSparseCoding(sp.app.App):
                 xp.save(str(self.checkpoint_path / 'y_t.npy'), self.y_t)
 
     def _output(self):
-        xp = self.device.xp
-        with self.device:
-            L_norm2 = sp.norm2(self.L, axes=range(-self.data_ndim, 0))
-            idx = xp.argsort(L_norm2)
-            if self.multi_channel:
-                sp.copyto(self.L, self.L[:, idx])
-            else:
-                sp.copyto(self.L, self.L[idx])
-
         R = ConvSparseCoefficients(self.y, self.L, lamda=self.lamda,
                                    multi_channel=self.multi_channel,
                                    mode=self.mode, max_iter=self.max_inner_iter,
