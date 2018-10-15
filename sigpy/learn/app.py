@@ -118,7 +118,6 @@ class ConvSparseCoding(sp.app.App):
                  max_iter=10,
                  mode='full',
                  multi_channel=False,
-                 init_scale=1e-5,
                  device=sp.cpu_device,
                  checkpoint_path=None, show_pbar=True):
         self.y = y
@@ -132,7 +131,6 @@ class ConvSparseCoding(sp.app.App):
         self.max_iter = max_iter
         self.mode = mode
         self.multi_channel = multi_channel
-        self.init_scale = init_scale
         self.device = device
         self.checkpoint_path = checkpoint_path
 
