@@ -75,7 +75,7 @@ class ConvSparseCoding(sp.app.App):
     and the objective function
 
     .. math:: 
-        f(L, R) = \sum_t \frac{1}{2} \|y_t - \sum_j L_j * R_{tj}\|_2^2 + \lambda \|R_\|_1
+        f(L, R) = \sum_t \frac{1}{2} \|y_t - \sum_j L_j * R_{tj}\|_2^2 + \lambda \|R\|_1
 
     where :math:`y_t` is the tth data, :math:`L_j` is the jth filter constrained to have unit norm, 
     and :math:`R_{tj}` is the jth coefficient for t th data.
