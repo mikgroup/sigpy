@@ -9,12 +9,11 @@ import sigpy as sp
 class ConvSparseDecom(sp.app.LinearLeastSquares):
     r"""Convolutional sparse decomposition app.
 
-    Considers the convolutional sparse linear model :math:`y_t = \sum_i L_i * R_{ti}`, 
-    with :math:`l` fixed, and the problem,
+    Considers the convolutional sparse linear model :math:`y_t = \sum_j L_j * R_{tj}`, 
+    with :math:`L` fixed, and the problem,
 
     .. math:: 
-        \min_{R_{ti}} \sum_t \frac{1}{2}\|y_t - \sum_i L_i * R_{ti}\|_2^2 + 
-        \lambda \|R_{ti}\|_1^2
+        \min_{R_t} \frac{1}{2}\|y_t - \sum_i L_i * R_{tj}\|_2^2 + \lambda \|R_{tj}\|_1^2
 
     Args:
         y_t (array): data array, the first dimension is the number of data.
@@ -56,8 +55,8 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
                                             mode=self.mode,
                                             input_multi_channel=True,
                                             output_multi_channel=self.multi_channel)
-
-        proxg_R_t = sp.prox.L1L2Reg(self.A_R_t.ishape, lamda, axes=range(-self.data_ndim, 0))
+        
+        proxg_R_t = sp.prox.L1Reg(self.R_t.shape, lamda)
         super().__init__(self.A_R_t, self.y_t, x=self.R_t, proxg=proxg_R_t, **kwargs)
 
     def _get_params(self):
@@ -67,28 +66,26 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         self.filt_width = self.L.shape[-1]
         self.num_filters = self.L.shape[self.multi_channel]
         self.data_ndim = self.y_t.ndim - self.multi_channel - 1
-        self.data_shape = self.y_t.shape[-self.data_ndim:]
 
         if self.mode == 'full':
             self.R_t_shape = [self.batch_size, self.num_filters] + [i - self.filt_width + 1
-                                                                    for i in self.data_shape]
+                                                                    for i in self.y_t.shape[-self.data_ndim:]]
         else:
             self.R_t_shape = [self.batch_size, self.num_filters] + [i + self.filt_width - 1
-                                                                    for i in self.data_shape]
+                                                                    for i in self.y_t.shape[-self.data_ndim:]]
 
 
 class ConvSparseCoding(sp.app.App):
     r"""Convolutional sparse coding application.
 
-    Considers the convolutional sparse bilinear model :math:`y_t = \sum_i L_i * R_{ti}`,
+    Considers the convolutional sparse model :math:`y_t = \sum_j L_j * R_{tj}`,
     and the objective function
 
     .. math:: 
-        f(l, c) = \sum_t \frac{1}{2} \|y_t - \sum_i L_i * R_{ti}\|_2^2 
-        + \frac{\lambda}{2} \sum_i (\|L_i\|_2^2 + \|R_{ti}\|_1^2)
+        f(L, R) = \sum_t \frac{1}{2} \|y_t - \sum_j L_j * R_{tj}\|_2^2 + \lambda \sum_j \|R_{tj}\|_1
 
-    where :math:`y_t` is the jth data, :math:`L_i` is the ith filter, 
-    :math:`R_{ti}` is the ith coefficient for jth data.
+    where :math:`y_t` is the tth data, :math:`L_j` is the jth filter constrained to have unit norm, 
+    and :math:`R_{tj}` is the jth coefficient for t th data.
 
     Args:
         y (array): data array, the first dimension is the number of data.
@@ -119,7 +116,8 @@ class ConvSparseCoding(sp.app.App):
                  max_inner_iter=100,
                  max_power_iter=10,
                  max_iter=10,
-                 mode='full', multi_channel=False,
+                 mode='full',
+                 multi_channel=False,
                  init_scale=1e-5,
                  device=sp.cpu_device,
                  checkpoint_path=None, show_pbar=True):
@@ -148,8 +146,9 @@ class ConvSparseCoding(sp.app.App):
         self.device = sp.Device(self.device)
         self.dtype = self.y.dtype
         self.data_ndim = self.y.ndim - self.multi_channel - 1
-        self.checkpoint_path = pathlib.Path(self.checkpoint_path)
-        self.checkpoint_path.mkdir(parents=True, exist_ok=True)
+        if self.checkpoint_path is not None:
+            self.checkpoint_path = pathlib.Path(self.checkpoint_path)
+            self.checkpoint_path.mkdir(parents=True, exist_ok=True)
 
         self.batch_size = min(len(self.y), self.batch_size)
         self.num_batches = len(self.y) // self.batch_size
@@ -159,17 +158,19 @@ class ConvSparseCoding(sp.app.App):
             self.L_shape = [self.y.shape[1]] + self.L_shape
 
         if self.mode == 'full':
-            self.R_t_shape = [self.batch_size, self.num_filters] + [i - self.filt_width + 1 for i in self.y.shape[-self.data_ndim:]]
+            self.R_t_shape = [self.batch_size, self.num_filters] + [i - self.filt_width + 1
+                                                                    for i in self.y.shape[-self.data_ndim:]]
         else:
-            self.R_t_shape = [self.batch_size, self.num_filters] + [i + self.filt_width - 1 for i in self.y.shape[-self.data_ndim:]]
+            self.R_t_shape = [self.batch_size, self.num_filters] + [i + self.filt_width - 1
+                                                                    for i in self.y.shape[-self.data_ndim:]]
 
     def _get_vars(self):
-        self.j_idx = sp.ShuffledNumbers(self.num_batches)
+        self.t_idx = sp.ShuffledNumbers(self.num_batches)
         xp = self.device.xp
         with self.device:
             self.y_t = xp.empty((self.batch_size, ) + self.y.shape[1:], dtype=self.dtype)
             self.R_t = xp.empty(self.R_t_shape, dtype=self.dtype)
-            self.L = sp.randn(self.L_shape, scale=self.init_scale, dtype=self.dtype, device=self.device)
+            self.L = sp.randn(self.L_shape, dtype=self.dtype, device=self.device)
             self.L_old = xp.empty(self.L_shape, dtype=self.dtype)
             self.R = ConvSparseCoefficients(self.y, self.L, lamda=self.lamda,
                                             multi_channel=self.multi_channel,
@@ -189,38 +190,28 @@ class ConvSparseCoding(sp.app.App):
                                                output_multi_channel=self.multi_channel)
 
             mu = (1 - self.alpha) / self.alpha
+            if self.multi_channel:
+                proxg_L = sp.prox.L2Proj(self.L.shape, 1, axes=[0] + list(range(-self.data_ndim, 0)))
+            else:
+                proxg_L = sp.prox.L2Proj(self.L.shape, 1, axes=range(-self.data_ndim, 0))
+
             sp.app.LinearLeastSquares(self.A_L, self.y_t, x=self.L,
-                                      mu=mu,
-                                      z=self.L_old,
-                                      lamda=self.lamda / self.num_batches,
+                                      mu=mu, z=self.L_old,
+                                      proxg=proxg_L,
                                       max_power_iter=self.max_power_iter,
                                       max_iter=self.max_inner_iter).run()
 
         self.alg = sp.alg.AltMin(min_R_t, min_L, max_iter=self.max_iter)
 
     def _pre_update(self):
-        j = self.j_idx.next()
-        j_start = j * self.batch_size
-        j_end = (j + 1) * self.batch_size
+        t = self.t_idx.next()
+        t_start = t * self.batch_size
+        t_end = (t + 1) * self.batch_size
 
-        sp.copyto(self.y_t, self.y[j_start:j_end])
+        sp.copyto(self.y_t, self.y[t_start:t_end])
         sp.copyto(self.L_old, self.L)
         with self.device:
             self.R_t.fill(0)
-
-    def _post_update(self):
-        xp = self.device.xp
-        with self.device:
-            L_norm2 = sp.norm2(self.L, axes=range(-self.data_ndim, 0))
-            idx = xp.argsort(L_norm2)
-            if self.multi_channel:
-                sp.copyto(self.L, self.L[:, idx])
-                sp.copyto(self.L_old, self.L_old[:, idx])
-            else:
-                sp.copyto(self.L, self.L[idx])
-                sp.copyto(self.L_old, self.L_old[idx])
-
-            sp.copyto(self.R_t, self.R_t[:, idx, ...])
 
     def _summarize(self):
         if self.checkpoint_path is not None:
@@ -258,8 +249,8 @@ class LinearRegression(sp.app.App):
     .. math::
         \min_M \sum_t \frac{1}{2} \| y_t - M x_t \|_2^2
 
-    where :math:`y_t` is the jth output, :math:`M` is the learned matrix,
-    and :math:`x_t` is the jth input.
+    where :math:`y_t` is the tth output, :math:`M` is the learned matrix,
+    and :math:`x_t` is the tth input.
 
     It uses the randomized block Kaczmarz method.
 
@@ -299,7 +290,7 @@ class LinearRegression(sp.app.App):
             self.mat = xp.zeros(input.shape[1:] + output.shape[1:], dtype=dtype)
             self.input_t = xp.empty((batch_size, ) + input.shape[1:], dtype=dtype)
             self.output_t = xp.empty((batch_size, ) + output.shape[1:], dtype=dtype)
-            self.j_idx = sp.ShuffledNumbers(num_batches)
+            self.t_idx = sp.ShuffledNumbers(num_batches)
         
         self._get_A()
         def proxf(mu, x):
@@ -312,12 +303,12 @@ class LinearRegression(sp.app.App):
         super().__init__(alg)
         
     def _pre_update(self):
-        j = self.j_idx.next()
-        j_start = j * self.batch_size
-        j_end = (j + 1) * self.batch_size
+        t = self.t_idx.next()
+        t_start = t * self.batch_size
+        t_end = (t + 1) * self.batch_size
         
-        sp.copyto(self.input_t, self.input[j_start:j_end])
-        sp.copyto(self.output_t, self.output[j_start:j_end])
+        sp.copyto(self.input_t, self.input[t_start:t_end])
+        sp.copyto(self.output_t, self.output[t_start:t_end])
 
     def _summarize(self):
         xp = self.device.xp
