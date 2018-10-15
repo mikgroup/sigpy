@@ -1,5 +1,5 @@
-``sigpy.alg``
-=============
+sigpy.alg
+=========
 
 .. automodule:: sigpy.alg
    :members:

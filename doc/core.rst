@@ -1,5 +1,5 @@
-``sigpy``
-=========
+sigpy
+=====
 		
 .. toctree::
    :maxdepth: 2

@@ -1,4 +1,4 @@
-``sigpy.prox``
+sigpy.prox
 ==============
 
 .. automodule:: sigpy.prox

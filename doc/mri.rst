@@ -1,5 +1,5 @@
-``sigpy.mri``
-=============
+sigpy.mri
+=========
 		
 .. toctree::
    :maxdepth: 2

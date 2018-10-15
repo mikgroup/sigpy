@@ -408,14 +408,13 @@ class JsenseRecon(sp.app.App):
         # Coil by coil to save memory
         with self.device:
             mps_rss = 0
-            mps = []
+            mps = np.empty((self.num_coils, ) + self.img_shape, dtype=self.dtype)
             for mps_ker_c in self.mps_ker:
                 mps_c = sp.ifft(sp.resize(mps_ker_c, self.img_shape))
-                mps.append(sp.to_device(mps_c, sp.cpu_device))
                 mps_rss += xp.abs(mps_c)**2
+                sp.copyto(mps[c], mps_c)
 
             mps_rss = sp.to_device(mps_rss**0.5, sp.cpu_device)
-            mps = np.stack(mps)
             mps /= mps_rss
 
         return mps

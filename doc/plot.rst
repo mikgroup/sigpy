@@ -1,5 +1,5 @@
-``sigpy.plot``
-==============
+sigpy.plot
+==========
 
 .. automodule:: sigpy.plot
    :members:
