@@ -47,12 +47,6 @@ class Alg(object):
         return self.iter >= self.max_iter
 
     def update(self):
-        if self.done():
-            raise RuntimeError('Alg is already done. One reason for this error '
-                               'is that you are running the Alg object twice.'
-                               'Each Alg object is only meant to be run once.'
-                               'Please consider creating a new Alg.')
-            
         self._update()
         self.iter += 1
 
