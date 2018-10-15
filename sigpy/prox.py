@@ -11,8 +11,11 @@ if config.cupy_enabled:
 class Prox(object):
     """Abstraction for proximal operator.
 
-    Prox can be called on to a float and an array to perform a proximal operation,
-    which is defined as a, x -> argmin_z 1 / 2 || x - z ||_2^2 + a g(z), for some function g.
+    Prox can be called on a float (:math:`\alpha`) and an array (:math:`x`) to perform a proximal operation
+
+    ..math::
+        \text{prox}_{\alpha g} (y) = \text{argmin}_x 1 / 2 || x - y ||_2^2 + \alpha g(x)
+
     Prox can be stacked, and conjugated.
 
     Args:
@@ -50,15 +53,15 @@ class Prox(object):
         return output
 
     def __repr__(self):
-
         return '<{shape} {repr_str} Prox>.'.format(shape=self.shape, repr_str=self.repr_str)
 
 
 class Conj(Prox):
-    """Returns the convex conjugate of proximal operator.
+    """Returns the proximal operator for the convex conjugate function.
 
-    The convex conjugate of a proximal operator P is defined as:
-    a, x -> x - a * P(1 / a, x / a)
+    The proximal operator of the convex conjugate function :math:`g^*` is defined as:
+    .. math::
+        \text{prox}_{\alpha g^*} (x) = x - \alpha \text{prox}_{1 / \alpha g} (1 / \alpha x)
 
     """
     def __init__(self, prox):
@@ -122,7 +125,8 @@ class UnitaryTransform(Prox):
     
     Returns a proximal operator that does
 
-    .. math:: A^H \text{prox}(A x)
+    .. math:: 
+        A^H \text{prox}_{\alpha g}(A x)
     
     Args:
         prox (Prox): Proximal operator.
@@ -141,10 +145,10 @@ class UnitaryTransform(Prox):
 
 
 class L2Reg(Prox):
-    """Proximal operator for lamda / 2 || x - y ||_2^2.
+    """Proximal operator for l2 regularization.
 
-    Performs:
-    a, x -> (x + lamda * alpha * y) / (1 + lamda * alpha)
+    .. math::
+        \min_x \frac{1}{2} \| x - y \|_2^2 + \frac{\lambda}{2} \| x \|_2^2
 
     Args:
         shape (tuple of ints): Input shape.
@@ -164,7 +168,10 @@ class L2Reg(Prox):
 
 
 class L2Proj(Prox):
-    """Proximal operator for I{ ||x - y||_2 < epsilon}.
+    """Proximal operator for l2 norm projection.
+
+    .. math::
+        \min_x \frac{1}{2} \| x - y \|_2^2 + 1\{\| x \|_2 < \epsilon\}
 
     Args:
         shape (tuple of ints): Input shape.
@@ -185,7 +192,10 @@ class L2Proj(Prox):
 
 
 class L1Reg(Prox):
-    """Proximal operator for lamda * || x ||_1. Soft threshold input.
+    """Proximal operator for l1 regularization.
+
+    .. math::
+        \min_x \frac{1}{2} \| x - y \|_2^2 + \lambda \| x \|_1
 
     Args:
         shape (tuple of ints): input shape
@@ -202,7 +212,10 @@ class L1Reg(Prox):
 
 
 class L1Proj(Prox):
-    """Proximal operator for 1{ ||x||_1 < epsilon}.
+    """Proximal operator for l1 norm projection.
+
+    .. math::
+        \min_x \frac{1}{2} \| x - y \|_2^2 + 1\{\| x \|_1 < \epsilon\}
 
     Args:
         shape (tuple of ints): input shape.
@@ -220,7 +233,10 @@ class L1Proj(Prox):
 
 class L1L2Reg(Prox):
     """
-    Proximal operator for lamda * sum_j ||x_j||_1^2
+    Proximal operator for mixed l1 l2 norm regularization.
+
+    .. math::
+        \min_x \frac{1}{2} \| x - y \|_2^2 + \lambda \sum_j \| x_j \|_1^2
 
     Args:
         shape (tuple of ints): input shape.
