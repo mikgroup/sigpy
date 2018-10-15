@@ -120,9 +120,7 @@ def l2_proj(eps, input, axes=None):
     with device:
         norm = xp.sum(xp.abs(input)**2, axis=axes, keepdims=True)**0.5
         mask = norm < eps
-
-        tol = 1e-30
-        output = mask * input + (1 - mask) * input / (norm + tol) * eps
+        output = mask * input + (1 - mask) * (eps * input / (norm + mask))
 
     return output
 
