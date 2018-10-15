@@ -59,4 +59,4 @@ class TestApp(unittest.TestCase):
         mat = app.LinearRegression(X, y, batch_size, alpha, max_iter=100).run()
         mat_lstsq = np.linalg.lstsq(X, y, rcond=-1)[0]
         
-        npt.assert_allclose(mat, mat_lstsq, atol=1e-3, rtol=1e-3)
+        npt.assert_allclose(mat, mat_lstsq, atol=1e-2, rtol=1e-2)
