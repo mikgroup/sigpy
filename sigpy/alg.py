@@ -12,21 +12,21 @@ if config.cupy_enabled:
 class Alg(object):
     """Abstraction for iterative algorithms.
 
-    The standard way of using an Alg object, say alg, is as follows:
+    The standard way of using an :class:`Alg` object, say alg, is as follows:
 
     >>> while not alg.done():
     >>>     alg.update()
 
     The user is free to run other things in the while loop.
-    An Alg object is meant to run once. Once done, the object should not be run again.
+    An :class:`Alg` object is meant to run once. Once done, the object should not be run again.
 
-    When creating a new Alg class, the user should supply an _update() function
+    When creating a new :class:`Alg` class, the user should supply an _update() function
     to perform the iterative update, and optionally a _done() function
     to determine when to terminate the iteration. The default _done() function
     simply checks whether the number of iterations has reached the maximum.
 
-    The interface for each Alg class should not depend on Linop or Prox explicitly.
-    For example, if the user wants to design an Alg class to accept a Linop, say A,
+    The interface for each :class:`Alg` class should not depend on Linop or Prox explicitly.
+    For example, if the user wants to design an :class:`Alg` class to accept a Linop, say A,
     as an argument, then it should also accept any function that can be called
     to compute x -> A(x). Similarly, to accept a Prox, say proxg, as an argument,
     the Alg class should accept any function that can be called to compute
@@ -34,7 +34,6 @@ class Alg(object):
 
     Args:
         max_iter (int): Maximum number of iterations.
-        device (int or Device): Device.
 
     """
     def __init__(self, max_iter):
@@ -48,12 +47,6 @@ class Alg(object):
         return self.iter >= self.max_iter
 
     def update(self):
-        if self.done():
-            raise RuntimeError('Alg is already done. One reason for this error '
-                               'is that you are running the Alg object twice.'
-                               'Each Alg object is only meant to be run once.'
-                               'Please consider creating a new Alg.')
-            
         self._update()
         self.iter += 1
 
@@ -81,8 +74,10 @@ class PowerMethod(Alg):
 
     def _update(self):
         y = self.A(self.x)
-        self.max_eig = util.asscalar(util.norm(y))
-        with backend.get_device(y):
+        device = backend.get_device(y)
+        xp = device.xp
+        with device:
+            self.max_eig = util.asscalar(xp.linalg.norm(y))
             backend.copyto(self.x, y / self.max_eig)
 
     def _done(self):
@@ -173,10 +168,11 @@ class GradientMethod(Alg):
                 self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
                 backend.copyto(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
 
+            xp = self.device.xp
             if self.accelerate or self.proxg is not None:
-                self.resid = util.asscalar(util.norm((self.x - self.x_old) / self.alpha**0.5))
+                self.resid = util.asscalar(xp.linalg.norm((self.x - self.x_old) / self.alpha**0.5))
             else:
-                self.resid = util.asscalar(util.norm(gradf_x))
+                self.resid = util.asscalar(xp.linalg.norm(gradf_x))
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.resid == 0
@@ -203,6 +199,7 @@ class ConjugateGradient(Alg):
         self.x = x
         self.device = backend.get_device(x)
         with self.device:
+            xp = self.device.xp
             self.r = b - self.A(self.x)
 
             if self.P is None:
@@ -216,15 +213,16 @@ class ConjugateGradient(Alg):
                 self.p = z
 
             self.zero_gradient = False
-            self.rzold = util.dot(self.r, z)
-            self.resid = util.asscalar(self.rzold**0.5)
+            self.rzold = xp.real(xp.vdot(self.r, z))
+            self.resid = util.asscalar(self.rzold)**0.5
 
         super().__init__(max_iter)
 
     def _update(self):
         with self.device:
+            xp = self.device.xp
             Ap = self.A(self.p)
-            pAp = util.dot(self.p, Ap)
+            pAp = xp.real(xp.vdot(self.p, Ap))
             if pAp == 0:
                 self.zero_gradient = True
                 return
@@ -238,12 +236,12 @@ class ConjugateGradient(Alg):
                 else:
                     z = self.r
 
-                rznew = util.dot(self.r, z)
+                rznew = xp.real(xp.vdot(self.r, z))
                 beta = rznew / self.rzold
                 util.xpay(self.p, beta, z)
                 self.rzold = rznew
 
-            self.resid = util.asscalar(self.rzold**0.5)
+            self.resid = util.asscalar(self.rzold)**0.5
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.zero_gradient or self.resid == 0
@@ -355,15 +353,17 @@ class PrimalDualHybridGradient(Alg):
 
         # Extrapolate primal.
         with self.x_device:
+            xp = self.x_device.xp
             x_diff = self.x - self.x_old
             backend.copyto(self.x_ext, self.x + theta * x_diff)
-            x_diff /= self.tau**0.5
+            x_diff_norm = xp.linalg.norm(x_diff / self.tau**0.5)
 
         with self.u_device:
+            xp = self.u_device.xp
             u_diff = self.u - self.u_old
-            u_diff /= self.sigma**0.5
+            u_diff_norm = xp.linalg.norm(u_diff / self.sigma**0.5)
 
-        self.resid = util.asscalar(util.norm2(x_diff) + util.norm2(u_diff))**0.5
+        self.resid = util.asscalar(x_diff_norm**2 + u_diff_norm**2)
 
 
 class AltMin(Alg):

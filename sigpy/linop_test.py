@@ -8,7 +8,7 @@ if __name__ == '__main__':
     unittest.main()
 
 
-def check_linop_unitary(A, dtype=np.complex, device=backend.cpu_device):
+def check_linop_unitary(A, dtype=np.float, device=backend.cpu_device):
 
     device = backend.Device(device)
     x = util.randn(A.ishape, dtype=dtype, device=device)
@@ -18,7 +18,7 @@ def check_linop_unitary(A, dtype=np.complex, device=backend.cpu_device):
         xp.testing.assert_allclose(A.H * A * x, x, atol=1e-5, rtol=1e-5)
 
 
-def check_linop_linear(A, dtype=np.complex, device=backend.cpu_device):
+def check_linop_linear(A, dtype=np.float, device=backend.cpu_device):
 
     device = backend.Device(device)
     a = util.randn([1], dtype=dtype, device=device)
@@ -31,7 +31,7 @@ def check_linop_linear(A, dtype=np.complex, device=backend.cpu_device):
                                    a * A(x) + A(y), atol=1e-5, rtol=1e-5)
 
 
-def check_linop_adjoint(A, dtype=np.complex, device=backend.cpu_device):
+def check_linop_adjoint(A, dtype=np.float, device=backend.cpu_device):
 
     device = backend.Device(device)
     x = util.randn(A.ishape, dtype=dtype, device=device)

@@ -1,5 +1,5 @@
-Machine Learning (``sigpy.learn``)
-==================================
+``sigpy.learn``
+===============
 
 .. toctree::
    :maxdepth: 2

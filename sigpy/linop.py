@@ -409,8 +409,8 @@ class Hstack(Linop):
                     ndim = len(linop.ishape)
                     axis = self.axis % ndim
 
-                    slc = ([slice(None)] * axis + [slice(start, end)] +
-                           [slice(None)] * (ndim - axis - 1))
+                    slc = tuple([slice(None)] * axis + [slice(start, end)] +
+                                [slice(None)] * (ndim - axis - 1))
 
                     output += linop(input[slc])
 
@@ -492,8 +492,8 @@ class Vstack(Linop):
                 else:
                     ndim = len(linop.oshape)
                     axis = self.axis % ndim
-                    slc = ([slice(None)] * axis + [slice(start, end)] +
-                           [slice(None)] * (ndim - axis - 1))
+                    slc = tuple([slice(None)] * axis + [slice(start, end)] +
+                                [slice(None)] * (ndim - axis - 1))
                     output[slc] = linop(input)
 
         return output
@@ -552,13 +552,13 @@ class Diag(Linop):
                 else:
                     ndim = len(linop.oshape)
                     axis = self.axis % ndim
-                    oslc = ([slice(None)] * axis + [slice(ostart, oend)] +
-                            [slice(None)] * (ndim - axis - 1))
+                    oslc = tuple([slice(None)] * axis + [slice(ostart, oend)] +
+                                 [slice(None)] * (ndim - axis - 1))
 
                     ndim = len(linop.ishape)
                     axis = self.axis % ndim
-                    islc = ([slice(None)] * axis + [slice(istart, iend)] +
-                            [slice(None)] * (ndim - axis - 1))
+                    islc = tuple([slice(None)] * axis + [slice(istart, iend)] +
+                                 [slice(None)] * (ndim - axis - 1))
 
                     output[oslc] = linop(input[islc])
 

@@ -11,7 +11,7 @@ if config.cupy_enabled:
 
 __all__ = ['asscalar', 'prod', 'vec', 'split', 'rss', 'resize',
            'flip', 'circshift', 'downsample', 'upsample', 'dirac', 'randn',
-           'triang', 'hanning', 'dot', 'norm2', 'norm', 'monte_carlo_sure', 'axpy', 'xpay',
+           'triang', 'hanning', 'monte_carlo_sure', 'axpy', 'xpay',
            'ShuffledNumbers']
 
 
@@ -241,7 +241,7 @@ def downsample(input, factors, shift=None):
     if shift is None:
         shift = [0] * len(factors)
 
-    slc = [slice(s, None, f) for s, f in zip(shift, factors)]
+    slc = tuple(slice(s, None, f) for s, f in zip(shift, factors))
 
     device = backend.get_device(input)
     with device:
@@ -263,7 +263,7 @@ def upsample(input, oshape, factors, shift=None):
     if shift is None:
         shift = [0] * len(factors)
 
-    slc = [slice(s, None, f) for s, f in zip(shift, factors)]
+    slc = tuple(slice(s, None, f) for s, f in zip(shift, factors))
 
     device = backend.get_device(input)
     xp = device.xp
@@ -274,7 +274,7 @@ def upsample(input, oshape, factors, shift=None):
     return output
 
 
-def dirac(shape, dtype=np.complex, device=backend.cpu_device):
+def dirac(shape, dtype=np.float, device=backend.cpu_device):
     """Create Dirac delta.
 
     Args:
@@ -293,7 +293,7 @@ def dirac(shape, dtype=np.complex, device=backend.cpu_device):
         return resize(xp.ones([1], dtype=dtype), shape)
 
 
-def randn(shape, scale=1, dtype=np.complex, device=backend.cpu_device):
+def randn(shape, scale=1, dtype=np.float, device=backend.cpu_device):
     """Create random Gaussian array.
 
     Args:
@@ -304,8 +304,8 @@ def randn(shape, scale=1, dtype=np.complex, device=backend.cpu_device):
 
     Returns:
         array: Random Gaussian array.
-    """
 
+    """
     device = backend.Device(device)
     xp = device.xp
 
@@ -319,7 +319,7 @@ def randn(shape, scale=1, dtype=np.complex, device=backend.cpu_device):
             return xp.random.normal(size=shape, scale=scale).astype(dtype)
 
 
-def triang(shape, dtype=np.complex, device=backend.cpu_device):
+def triang(shape, dtype=np.float, device=backend.cpu_device):
     """Create multi-dimensional triangular window.
 
     Args:
@@ -343,7 +343,7 @@ def triang(shape, dtype=np.complex, device=backend.cpu_device):
     return window
 
 
-def hanning(shape, dtype=np.complex, device=backend.cpu_device):
+def hanning(shape, dtype=np.float, device=backend.cpu_device):
     """Create multi-dimensional hanning window.
 
     Args:
@@ -365,61 +365,6 @@ def hanning(shape, dtype=np.complex, device=backend.cpu_device):
             window *= w.reshape([i] + [1] * n)
 
     return window
-
-
-def dot(input1, input2, axes=None, keepdims=False):
-    """Compute dot product.
-
-    Args:
-        input1 (array)
-        input2 (array)
-
-    Returns:
-        float: Dot product between input1 and input2.
-
-    """
-    device = backend.get_device(input1)
-    xp = device.xp
-    if input1.ndim != input2.ndim:
-        raise ValueError('Inputs must have the same number of dimensions.')
-
-    axes = _normalize_axes(axes, input1.ndim)
-
-    with device:
-        return xp.real(xp.sum(xp.conj(input1) * input2, axis=axes, keepdims=keepdims))
-
-
-def norm2(input, axes=None, keepdims=False):
-    """Compute sum of squares.
-
-    Args:
-        input (array)
-
-    Returns:
-        float: Sum of squares of input.
-
-    """
-    device = backend.get_device(input)
-    xp = device.xp
-    axes = _normalize_axes(axes, input.ndim)
-    with device:
-        return xp.sum(xp.abs(input)**2, axis=axes, keepdims=keepdims)
-
-
-def norm(input, axes=None, keepdims=False):
-    """Compute L2 norm.
-
-    Args:
-        input (array)
-
-    Returns:
-        float: L2 norm of input.
-
-    """
-    device = backend.get_device(input)
-    xp = device.xp
-    with device:
-        return norm2(input, axes=axes, keepdims=keepdims)**0.5 
 
 
 def monte_carlo_sure(f, y, sigma, eps=1e-10):
@@ -451,9 +396,8 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
     f_y = f(y)
     b = randn(y.shape, dtype=y.dtype, device=device)
     with device:
-        divf_y = dot(b, (f(y + eps * b) - f_y)) / eps
-        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + \
-            2 * sigma**2 * divf_y / n
+        divf_y = xp.real(xp.vdot(b, (f(y + eps * b) - f_y))) / eps
+        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + 2 * sigma**2 * divf_y / n
 
     return sure
 

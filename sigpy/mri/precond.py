@@ -43,7 +43,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
     scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)
     with device:
         if coord is None:
-            idx = [slice(None, None, 2)] * ndim
+            idx = (slice(None, None, 2), ) * ndim
 
             ones = xp.zeros(img2_shape, dtype=dtype)
             if weights is None:
@@ -63,7 +63,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
         p_inv = []
         for mps_i in mps:
             mps_i = sp.to_device(mps_i, device)
-            mps_i_norm2 = sp.norm2(mps_i)
+            mps_i_norm2 = xp.linalg.norm(mps_i)**2
             xcorr_fourier = 0
             for mps_j in mps:
                 mps_j = sp.to_device(mps_j, device)
@@ -126,7 +126,7 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_devi
 
     scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)**2
     with device:
-        idx = [slice(None, None, 2)] * ndim
+        idx = (slice(None, None, 2), ) * ndim
         if coord is None:
             ones = xp.zeros(img2_shape, dtype=dtype)
             if weights is None:

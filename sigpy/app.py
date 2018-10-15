@@ -58,12 +58,6 @@ class App(object):
         return
 
     def run(self):
-        if self.alg.done():
-            raise RuntimeError('App is already done. One reason for this error '
-                               'is that you are running the App object twice.'
-                               'Each App object is only meant to be run once.'
-                               'Please consider creating a new App.')
-            
         if self.show_pbar:
             self.pbar = tqdm(total=self.alg.max_iter,
                              desc=self.__class__.__name__)
@@ -97,7 +91,7 @@ class MaxEig(App):
         max_eig (int): Largest eigenvalue of A.
 
     """
-    def __init__(self, A, dtype=np.complex, device=backend.cpu_device,
+    def __init__(self, A, dtype=np.float, device=backend.cpu_device,
                  max_iter=30, show_pbar=True):
         self.x = util.randn(A.ishape, dtype=dtype, device=device)
         alg = PowerMethod(A, self.x, max_iter=max_iter)
@@ -154,7 +148,7 @@ class LinearLeastSquares(App):
     def __init__(self, A, y, x=None, proxg=None,
                  lamda=0, G=None, g=None, R=None, mu=0, z=0,
                  alg_name=None, max_iter=100,
-                 P=None, alpha=None, max_power_iter=10, accelerate=True,
+                 P=None, alpha=None, max_power_iter=30, accelerate=True,
                  tau=None, sigma=None,
                  save_objective_values=False, show_pbar=True):
         self.A = A
