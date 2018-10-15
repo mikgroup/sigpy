@@ -9,11 +9,11 @@ import sigpy as sp
 class ConvSparseDecom(sp.app.LinearLeastSquares):
     r"""Convolutional sparse decomposition app.
 
-    Considers the convolutional sparse linear model :math:`y = \sum_j L_j * R_{tj}`, 
+    Considers the convolutional sparse linear model :math:`y = \sum_j L_j * R_j`, 
     with :math:`L` fixed, and the problem,
 
     .. math:: 
-        \min_{R} \frac{1}{2}\|y - \sum_i L_i * R_{tj}\|_2^2 + \lambda \|R_{tj}\|_1
+        \min_{R} \frac{1}{2}\|y - \sum_j L_j * R_j\|_2^2 + \lambda \|R\|_1
 
     Args:
         y (array): data array, the first dimension is the number of data.
@@ -75,7 +75,7 @@ class ConvSparseCoding(sp.app.App):
     and the objective function
 
     .. math:: 
-        f(L, R) = \sum_t \frac{1}{2} \|y_t - \sum_j L_j * R_{tj}\|_2^2 + \lambda \sum_j \|R_{tj}\|_1
+        f(L, R) = \sum_t \frac{1}{2} \|y_t - \sum_j L_j * R_{tj}\|_2^2 + \lambda \|R_\|_1
 
     where :math:`y_t` is the tth data, :math:`L_j` is the jth filter constrained to have unit norm, 
     and :math:`R_{tj}` is the jth coefficient for t th data.
