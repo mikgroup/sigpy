@@ -170,9 +170,9 @@ class ConvSparseCoding(sp.app.App):
             self.R_t = xp.empty(self.R_t_shape, dtype=self.dtype)
             self.L = sp.randn(self.L_shape, dtype=self.dtype, device=self.device)
             if self.multi_channel:
-                self.L /= sp.norm(self.L, axes=[0] + list(range(-self.data_ndim, 0)))
+                self.L /= sp.norm(self.L, axes=[0] + list(range(-self.data_ndim, 0)), keepdims=True)
             else:
-                self.L /= sp.norm(self.L, axes=range(-self.data_ndim, 0))
+                self.L /= sp.norm(self.L, axes=range(-self.data_ndim, 0), keepdims=True)
                 
             self.L_old = xp.empty(self.L_shape, dtype=self.dtype)
             self.R = ConvSparseCoefficients(self.y, self.L, lamda=self.lamda,
