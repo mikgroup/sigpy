@@ -177,7 +177,7 @@ class LinearLeastSquares(App):
             with self.y_device:
                 self.x = self.y_device.xp.zeros(A.ishape, dtype=y.dtype)
 
-        self.x_device = backend.get_device(x)
+        self.x_device = backend.get_device(self.x)
         self._get_alg()
         if self.save_objective_values:
             self.objective_values = []
