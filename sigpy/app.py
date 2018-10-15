@@ -58,12 +58,6 @@ class App(object):
         return
 
     def run(self):
-        if self.alg.done():
-            raise RuntimeError('App is already done. One reason for this error '
-                               'is that you are running the App object twice.'
-                               'Each App object is only meant to be run once.'
-                               'Please consider creating a new App.')
-            
         if self.show_pbar:
             self.pbar = tqdm(total=self.alg.max_iter,
                              desc=self.__class__.__name__)
