@@ -9,21 +9,21 @@ import sigpy as sp
 class ConvSparseDecom(sp.app.LinearLeastSquares):
     r"""Convolutional sparse decomposition app.
 
-    Considers the convolutional sparse linear model :math:`y_t = \sum_j L_j * R_{tj}`, 
+    Considers the convolutional sparse linear model :math:`y = \sum_j L_j * R_{tj}`, 
     with :math:`L` fixed, and the problem,
 
     .. math:: 
-        \min_{R_t} \frac{1}{2}\|y_t - \sum_i L_i * R_{tj}\|_2^2 + \lambda \|R_{tj}\|_1^2
+        \min_{R} \frac{1}{2}\|y - \sum_i L_i * R_{tj}\|_2^2 + \lambda \|R_{tj}\|_1
 
     Args:
-        y_t (array): data array, the first dimension is the number of data.
+        y (array): data array, the first dimension is the number of data.
             If multi_channel is True, then the second dimension should be the number of channels.
         L (array): filter array. If multi_channel is True,
             the first dimension is the number of filters. Otherwise, the first dimension
             is the number of channels, and second dimension is the number of filters.
         lamda (float): regularization parameter.
         mode (str): convolution mode in forward model. {'full', 'valid'}.
-            If 'full', then R_t is smaller than y. If 'valid', then R_t is larger than y.
+            If 'full', then R is smaller than y. If 'valid', then R is larger than y.
         multi_channel (bool): whether data is multi-channel or not.
         **kwargs: other LinearLeastSquares arguments.
 
@@ -34,9 +34,9 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         :func:`sigpy.app.LinearLeastSquares`
 
     """
-    def __init__(self, y_t, L, R_t=None, lamda=0.005,
+    def __init__(self, y, L, lamda=0.005,
                  mode='full', multi_channel=False, device=sp.cpu_device, **kwargs):
-        self.y_t = sp.to_device(y_t, device)
+        self.y = sp.to_device(y, device)
         self.L = sp.to_device(L, device)
         self.lamda = lamda
         self.mode = mode
@@ -44,35 +44,28 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         self.device = device
 
         self._get_params()
-        if R_t is None:
-            xp = self.device.xp
-            with self.device:
-                self.R_t = xp.zeros(self.R_t_shape, dtype=self.dtype,)
-        else:
-            self.R_t = R_t
-
-        self.A_R_t = sp.linop.ConvolveInput(self.R_t.shape, self.L,
-                                            mode=self.mode,
-                                            input_multi_channel=True,
-                                            output_multi_channel=self.multi_channel)
+        self.A_R = sp.linop.ConvolveInput(self.R_shape, self.L,
+                                          mode=self.mode,
+                                          input_multi_channel=True,
+                                          output_multi_channel=self.multi_channel)
         
-        proxg_R_t = sp.prox.L1Reg(self.R_t.shape, lamda)
-        super().__init__(self.A_R_t, self.y_t, x=self.R_t, proxg=proxg_R_t, **kwargs)
+        proxg_R = sp.prox.L1Reg(self.R_shape, lamda)
+        super().__init__(self.A_R, self.y, proxg=proxg_R, **kwargs)
 
     def _get_params(self):
         self.device = sp.Device(self.device)
-        self.dtype = self.y_t.dtype
-        self.batch_size = len(self.y_t)
+        self.dtype = self.y.dtype
+        self.num_data = len(self.y)
         self.filt_width = self.L.shape[-1]
         self.num_filters = self.L.shape[self.multi_channel]
-        self.data_ndim = self.y_t.ndim - self.multi_channel - 1
+        self.data_ndim = self.y.ndim - self.multi_channel - 1
 
         if self.mode == 'full':
-            self.R_t_shape = [self.batch_size, self.num_filters] + [i - self.filt_width + 1
-                                                                    for i in self.y_t.shape[-self.data_ndim:]]
+            self.R_shape = [self.num_data, self.num_filters] + [i - self.filt_width + 1
+                                                                for i in self.y.shape[-self.data_ndim:]]
         else:
-            self.R_t_shape = [self.batch_size, self.num_filters] + [i + self.filt_width - 1
-                                                                    for i in self.y_t.shape[-self.data_ndim:]]
+            self.R_shape = [self.num_data, self.num_filters] + [i + self.filt_width - 1
+                                                                for i in self.y.shape[-self.data_ndim:]]
 
 
 class ConvSparseCoding(sp.app.App):
@@ -167,12 +160,11 @@ class ConvSparseCoding(sp.app.App):
         xp = self.device.xp
         with self.device:
             self.y_t = xp.empty((self.batch_size, ) + self.y.shape[1:], dtype=self.dtype)
-            self.R_t = xp.empty(self.R_t_shape, dtype=self.dtype)
             self.L = sp.randn(self.L_shape, dtype=self.dtype, device=self.device)
             if self.multi_channel:
-                self.L /= xp.linalg.norm(self.L, axis=(0, ) + tuple(range(-self.data_ndim, 0)), keepdims=True)
+                self.L /= xp.sum(xp.abs(self.L)**2, axis=(0, ) + tuple(range(-self.data_ndim, 0)), keepdims=True)**0.5
             else:
-                self.L /= xp.linalg.norm(self.L, axis=tuple(range(-self.data_ndim, 0)), keepdims=True)
+                self.L /= xp.sum(xp.abs(self.L)**2, axis=tuple(range(-self.data_ndim, 0)), keepdims=True)**0.5
                 
             self.L_old = xp.empty(self.L_shape, dtype=self.dtype)
             self.R = ConvSparseCoefficients(self.y, self.L, lamda=self.lamda,
@@ -182,10 +174,10 @@ class ConvSparseCoding(sp.app.App):
 
     def _get_alg(self):
         def min_R_t():
-            ConvSparseDecom(self.y_t, self.L, R_t=self.R_t, lamda=self.lamda,
-                            mode=self.mode, multi_channel=self.multi_channel,
-                            max_power_iter=self.max_power_iter,
-                            max_iter=self.max_inner_iter, device=self.device).run()
+            self.R_t = ConvSparseDecom(self.y_t, self.L, lamda=self.lamda,
+                                       mode=self.mode, multi_channel=self.multi_channel,
+                                       max_power_iter=self.max_power_iter,
+                                       max_iter=self.max_inner_iter, device=self.device).run()
 
         def min_L():
             self.A_L = sp.linop.ConvolveFilter(self.L_shape, self.R_t, mode=self.mode,
@@ -213,8 +205,6 @@ class ConvSparseCoding(sp.app.App):
 
         sp.copyto(self.y_t, self.y[t_start:t_end])
         sp.copyto(self.L_old, self.L)
-        with self.device:
-            self.R_t.fill(0)
 
     def _summarize(self):
         if self.checkpoint_path is not None:
