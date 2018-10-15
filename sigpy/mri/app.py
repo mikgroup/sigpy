@@ -343,7 +343,7 @@ class JsenseRecon(sp.app.App):
 
     def _get_data(self):
         if self.coord is None:
-            self.img_shape = self.y.shape[1:]
+            self.img_shape = list(self.y.shape[1:])
             ndim = len(self.img_shape)
 
             self.y = sp.resize(
@@ -408,9 +408,9 @@ class JsenseRecon(sp.app.App):
         # Coil by coil to save memory
         with self.device:
             mps_rss = 0
-            mps = np.empty((self.num_coils, ) + self.img_shape, dtype=self.dtype)
-            for mps_ker_c in self.mps_ker:
-                mps_c = sp.ifft(sp.resize(mps_ker_c, self.img_shape))
+            mps = np.empty([self.num_coils] + self.img_shape, dtype=self.dtype)
+            for c in range(self.num_coils):
+                mps_c = sp.ifft(sp.resize(self.mps_ker[c], self.img_shape))
                 mps_rss += xp.abs(mps_c)**2
                 sp.copyto(mps[c], mps_c)
 
