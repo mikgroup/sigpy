@@ -9,7 +9,7 @@ if config.cupy_enabled:
 
 
 class Prox(object):
-    """Abstraction for proximal operator.
+    r"""Abstraction for proximal operator.
 
     Prox can be called on a float (:math:`\alpha`) and an array (:math:`x`) to perform a proximal operation
 
@@ -57,7 +57,7 @@ class Prox(object):
 
 
 class Conj(Prox):
-    """Returns the proximal operator for the convex conjugate function.
+    r"""Returns the proximal operator for the convex conjugate function.
 
     The proximal operator of the convex conjugate function :math:`g^*` is defined as:
     .. math::
@@ -76,7 +76,7 @@ class Conj(Prox):
 
 
 class NoOp(Prox):
-    """Proximal operator for empty function. Equivalant to an identity function.
+    r"""Proximal operator for empty function. Equivalant to an identity function.
 
     Args:
        shape (tuple of ints): Input shape
@@ -90,7 +90,7 @@ class NoOp(Prox):
 
 
 class Stack(Prox):
-    """Stack outputs of proximal operators.
+    r"""Stack outputs of proximal operators.
 
     Args:
        proxs (list of proxs): Prox of the same shape.
@@ -121,7 +121,7 @@ class Stack(Prox):
 
 
 class UnitaryTransform(Prox):
-    """Unitary transform input space.
+    r"""Unitary transform input space.
     
     Returns a proximal operator that does
 
@@ -145,7 +145,7 @@ class UnitaryTransform(Prox):
 
 
 class L2Reg(Prox):
-    """Proximal operator for l2 regularization.
+    r"""Proximal operator for l2 regularization.
 
     .. math::
         \min_x \frac{1}{2} \| x - y \|_2^2 + \frac{\lambda}{2} \| x \|_2^2
@@ -168,7 +168,7 @@ class L2Reg(Prox):
 
 
 class L2Proj(Prox):
-    """Proximal operator for l2 norm projection.
+    r"""Proximal operator for l2 norm projection.
 
     .. math::
         \min_x \frac{1}{2} \| x - y \|_2^2 + 1\{\| x \|_2 < \epsilon\}
@@ -192,7 +192,7 @@ class L2Proj(Prox):
 
 
 class L1Reg(Prox):
-    """Proximal operator for l1 regularization.
+    r"""Proximal operator for l1 regularization.
 
     .. math::
         \min_x \frac{1}{2} \| x - y \|_2^2 + \lambda \| x \|_1
@@ -212,7 +212,7 @@ class L1Reg(Prox):
 
 
 class L1Proj(Prox):
-    """Proximal operator for l1 norm projection.
+    r"""Proximal operator for l1 norm projection.
 
     .. math::
         \min_x \frac{1}{2} \| x - y \|_2^2 + 1\{\| x \|_1 < \epsilon\}
@@ -232,7 +232,7 @@ class L1Proj(Prox):
 
 
 class L1L2Reg(Prox):
-    """
+    r"""
     Proximal operator for mixed l1 l2 norm regularization.
 
     .. math::
