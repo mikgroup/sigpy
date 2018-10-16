@@ -12,6 +12,7 @@ GTAGS
 .cache
 *.npy
 *.ra
+.idea*
 
 # sphinx build folder
 _build
