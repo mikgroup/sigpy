@@ -46,14 +46,14 @@ class SenseRecon(sp.app.LinearLeastSquares):
        
     """
     def __init__(self, y, mps, lamda=0, weights=None,
-                 coord=None, device=sp.cpu_device, **kwargs):
+                 coord=None, device=sp.cpu_device, coil_batch_size=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights)
+        A = linop.Sense(mps, coord=coord, weights=weights, coil_batch_size=coil_batch_size)
 
         super().__init__(A, y, lamda=lamda, **kwargs)
 
@@ -85,14 +85,14 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(self, y, mps, eps,
                  weights=None, coord=None,
-                 device=sp.cpu_device, **kwargs):
+                 device=sp.cpu_device, coil_batch_size=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights)
+        A = linop.Sense(mps, coord=coord, weights=weights, coil_batch_size=coil_batch_size)
         proxg = sp.prox.L2Reg(A.ishape, 1)
 
         super().__init__(A, y, proxg, eps, **kwargs)
@@ -128,14 +128,14 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
     """
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None,
-                 wave_name='db4', device=sp.cpu_device, **kwargs):
+                 wave_name='db4', device=sp.cpu_device, coil_batch_size=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights)
+        A = linop.Sense(mps, coord=coord, weights=weights, coil_batch_size=coil_batch_size)
         img_shape = mps.shape[1:]
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
@@ -178,14 +178,14 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(
             self, y, mps, eps,
-            wave_name='db4', weights=None, coord=None, device=sp.cpu_device, **kwargs):
+            wave_name='db4', weights=None, coord=None, device=sp.cpu_device, coil_batch_size=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights)
+        A = linop.Sense(mps, coord=coord, weights=weights, coil_batch_size=coil_batch_size)
         img_shape = mps.shape[1:]
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, 1), W)
@@ -222,14 +222,14 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
 
     """
     def __init__(self, y, mps, lamda,
-                 weights=None, coord=None, device=sp.cpu_device, **kwargs):
+                 weights=None, coord=None, device=sp.cpu_device, coil_batch_size=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights)
+        A = linop.Sense(mps, coord=coord, weights=weights, coil_batch_size=coil_batch_size)
 
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, lamda)
@@ -271,14 +271,14 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(
             self, y, mps, eps,
-            weights=None, coord=None, device=sp.cpu_device, **kwargs):
+            weights=None, coord=None, device=sp.cpu_device, coil_batch_size=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights)
+        A = linop.Sense(mps, coord=coord, weights=weights, coil_batch_size=coil_batch_size)
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, 1)
 
