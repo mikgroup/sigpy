@@ -33,7 +33,6 @@ class Device(object):
 
     Attributes:
         id (int): id = -1 represents CPU, and other ids represents corresponding GPUs.
-        xp (module): numpy or cupy, corresponding array module.
 
     """
     def __init__(self, id_or_device):

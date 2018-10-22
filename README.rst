@@ -13,7 +13,7 @@ Overview
 
 Introduction
 ------------
-SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU, so that users can easily use Sigpy with other packages. Its main features include:
+SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU. Its main features include:
 
 * A unified CPU/GPU interface to signal processing functions, including convolution, FFT, NUFFT, wavelet transform, and thresholding functions.
 * Linear operator classes (``Linop``) that can do adjoint, addition, composing, and stacking.

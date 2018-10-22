@@ -1,7 +1,7 @@
 User Guide
 ----------
 
-This user guide introduces several main elements of using SigPy, including:
+This user guide introduces several elements of using SigPy, including:
 
 - How to use CPU/GPU
 - How to use multi-CPU/GPU
@@ -15,7 +15,7 @@ SigPy is designed to be used with NumPy and CuPy.
 
 You are probably already familiar with NumPy.
 CuPy has **the same** interface as NumPy, but with a CUDA backend.
-Hence, if you know NumPy well, you can use CuPy with almost no learning curve.
+So if you know NumPy well, you can use CuPy with almost no learning curve.
 
 SigPy does not bundle CuPy installation by default.
 To enable CUDA support, you must install CuPy as an additional step.
@@ -32,8 +32,8 @@ In the following, we will use the following abbreviations:
 >>> import sigpy as sp
 
 
-Using CPU/GPU
-=============
+Using Single CPU/GPU
+====================
 
 SigPy provides a device class :class:`sigpy.Device` to allow you to specify the current device for functions and arrays.
 It extends the ``Device`` class from CuPy.
@@ -55,7 +55,7 @@ To transfer an array between device, we can use :class:`sigpy.to_device`. For ex
 >>> x = np.array([1, 2, 3, 4])
 >>> x_on_gpu1 = sp.to_device(x, 1)
 
-Finally, we can use :func:`sigpy.Device.xp` to choose NumPy or CuPy adaptively, and write CPU/GPU generic code.
+Finally, we can use :func:`sigpy.Device.xp` to choose NumPy or CuPy adaptively.
 For example, given a device id,
 the following code creates an array on the appropriate device using the appropriate module:
 
@@ -68,9 +68,10 @@ the following code creates an array on the appropriate device using the appropri
 Using Multi-CPU/GPU
 ===================
 
-SigPy uses MPI and MPI4Py for multi-CPU/GPU programming. This is still under heavy development.
-Although MPI may incur some overhead (for example redundant memory) for shared memory system,
-we find an MPI solution to be the simplest to support multi-threading in Python.
+SigPy uses MPI and MPI4Py for multi-CPU/GPU programming. We note that this is still under heavy development.
+
+Although MPI may incur some overhead (for example redundant memory usage) for shared memory system,
+we find an MPI solution to be the simplest for multi-threading in Python.
 Another benefit is that an MPI parallelized code can run on both shared memory and distributed memory systems.
 
 For example, if we consider the following shared memory configuration (one multi-core CPU and two GPUs),
@@ -79,10 +80,13 @@ and want to run the blue and red tasks concurrently:
 .. image:: figures/multiprocess_desired.pdf
    :align: center
 
-Then, using MPI, we can split the tasks to two MPI ranks as follows:
+Then, using MPI, we can split the tasks to two MPI nodes as follows:
 
 .. image:: figures/multiprocess_mpi.pdf
    :align: center
+
+Note that tasks on each MPI node can run on any CPU/GPU device, and in our example, the blue task uses CPU and GPU 0, and
+the red task uses CPU and GPU 1.
 
 SigPy provides a communicator class :class:`sigpy.Communicator` that can be used to synchronize variables between ranks.
 It extends the ``Communicator`` class from ChainerMN.
@@ -91,13 +95,13 @@ It extends the ``Communicator`` class from ChainerMN.
 Building iterative methods
 ==========================
 
-SigPy provides four abstraction classes to facilitate the building of iterative methods.
+SigPy provides four abstraction classes to help you build iterative methods.
 
 .. image:: figures/architecture.pdf
    :align: center
 
-The final deliverable is an App (:class:`sigpy.app.App`), which runs an algorithm (:class:`sigpy.alg.Alg`).
-An App is meant to represent many different applications, and only enforces a very minimal structure.
+The final deliverable is an App (:class:`sigpy.app.App`).
+An App is meant to represent many different applications, and enforces a very minimal structure.
 A typical usage of an App is as follows:
 
 >>> out = app.run()
