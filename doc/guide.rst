@@ -8,14 +8,19 @@ This user guide introduces several elements of using SigPy, including:
 - How to build iterative methods
 
 
-NumPy and CuPy
-==============
+A few words about NumPy and CuPy
+================================
 
-SigPy is designed to be used with NumPy and CuPy.
+Before we start, let us first talk briefly about NumPy and CuPy.
 
-You are probably already familiar with NumPy.
+You have probably already heard of NumPy,
+as it is **the** package for scientific computing.
+CuPy, on the other hand, is less well-known, but no less powerful.
 CuPy has **the same** interface as NumPy, but with a CUDA backend.
-So if you know NumPy well, you can use CuPy with almost no learning curve.
+So if you know NumPy well, you can harness the power of GPU using CuPy with almost no learning curve.
+
+SigPy is designed to be used with NumPy and CuPy to minimize the learning curve.
+In particular, all SigPy functions are built to operate on NumPy and CuPy arrays directly.
 
 SigPy does not bundle CuPy installation by default.
 To enable CUDA support, you must install CuPy as an additional step.
