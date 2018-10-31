@@ -360,8 +360,6 @@ class LinearLeastSquares(App):
         xp = self.y_device.xp
         with self.y_device:
             r = self.A(self.x) - self.y
-            if self.weights is not None:
-                r *= self.weights**0.5
 
             obj = 1 / 2 * util.norm2(r)
             if self.lamda > 0:
