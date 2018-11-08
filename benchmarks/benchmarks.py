@@ -3,6 +3,7 @@ import sigpy as sp
 
 
 class FftSuite:
+    
     def setup(self):
         self.x = np.random.randn(100)
 
@@ -20,6 +21,7 @@ class FftSuite:
 
         
 class NufftSuite:
+    
     def setup(self):
         self.x = np.random.randn(100)
         self.coord = np.random.randn(100, 1)
@@ -29,3 +31,21 @@ class NufftSuite:
 
     def time_nufft_adjoint(self):
         y = sp.nufft_adjoint(self.x, self.coord)
+
+
+class ThreshSuite:
+    
+    def setup(self):
+        self.x = np.random.randn(100)
+
+    def time_soft_thresh(self):
+        y = sp.soft_thresh(1e-3, self.x)
+
+    def time_hard_thresh(self):
+        y = sp.hard_thresh(1e-3, self.x)
+
+    def time_elitist_thresh(self):
+        y = sp.elitist_thresh(1e-3, self.x)
+
+    def time_l1_proj(self):
+        y = sp.l1_proj(1, self.x)
