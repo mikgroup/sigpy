@@ -49,3 +49,30 @@ class ThreshSuite:
 
     def time_l1_proj(self):
         y = sp.l1_proj(1, self.x)
+
+
+class AlgSuite:
+    
+    def setup(self):
+        x = np.random.randn(100)
+        A = np.random.randn(100, 100)
+        self.AHA = A.T @ A
+        self.AHy = self.AHA @ x
+        self.x = np.zeros(100)
+
+    def time_ConjugateGradient(self):
+        alg = sp.alg.ConjugateGradient(lambda x: self.AHA @ x, self.AHy, self.x, max_iter=100)
+        while not alg.done():
+            alg.update()
+
+    def time_GradientMethod(self):
+        alg = sp.alg.GradientMethod(lambda x: self.AHA @ x - self.AHy, self.x,
+                                    alpha=1e-3, max_iter=100)
+        while not alg.done():
+            alg.update()
+
+    def time_AcceleratedGradientMethod(self):
+        alg = sp.alg.GradientMethod(lambda x: self.AHA @ x - self.AHy, self.x,
+                                    alpha=1e-3, max_iter=100, accelerate=True)
+        while not alg.done():
+            alg.update()
