@@ -1,26 +1,20 @@
 User Guide
 ----------
 
-This user guide introduces several elements of using SigPy, including:
+**This guide is still under construction**
 
-- How to use CPU/GPU
-- How to use multi-CPU/GPU
-- How to build iterative methods
+This user guide introduces several elements of SigPy, including:
+
+- Basic usage
+- Choosing computing device
+- Using multi-CPU/GPU
+- Building iterative methods
 
 
-A few words about NumPy and CuPy
-================================
+Basic Usage
+===========
 
-Before we start, let us first talk briefly about NumPy and CuPy.
-
-You have probably already heard of NumPy,
-as it is **the** package for scientific computing.
-CuPy, on the other hand, is less well-known, but no less powerful.
-CuPy has **the same** interface as NumPy, but with a CUDA backend.
-So if you know NumPy well, you can harness the power of GPU using CuPy with almost no learning curve.
-
-SigPy is designed to be used with NumPy and CuPy to minimize the learning curve.
-In particular, all SigPy functions are built to operate on NumPy and CuPy arrays directly.
+SigPy is designed to have as little learning curve as possible. Since almost all Python users already use NumPy, SigPy operates on NumPy arrays directly on CPU, and avoids defining any redundant functions.  When NumPy implementation is slow, SigPy uses Numba instead to translate Python functions to optimized machine code at runtime. For example, gridding functions in SigPy are implemented using Numba. For GPU, SigPy operates on CuPy arrays, which have the same interface as NumPy but are implemented in CUDA. 
 
 SigPy does not bundle CuPy installation by default.
 To enable CUDA support, you must install CuPy as an additional step.
@@ -37,10 +31,10 @@ In the following, we will use the following abbreviations:
 >>> import sigpy as sp
 
 
-Using Single CPU/GPU
-====================
+Choosing Computing Device
+=========================
 
-SigPy provides a device class :class:`sigpy.Device` to allow you to specify the current device for functions and arrays.
+SigPy provides a device class :class:`sigpy.Device` to allow you to specify the current computing device for functions and arrays.
 It extends the ``Device`` class from CuPy.
 Similar approach is also used by machine learning packages, such as TensorFlow, and PyTorch.
 
@@ -100,36 +94,31 @@ It extends the ``Communicator`` class from ChainerMN.
 Building iterative methods
 ==========================
 
-SigPy provides four abstraction classes to help you build iterative methods.
+SigPy provides four abstraction classes (Linop, Prox, Alg, and App) for optimization based iterative methods. Such abstraction is inspired by similar structure in BART.
 
 .. image:: figures/architecture.pdf
    :align: center
 
-The final deliverable is an App (:class:`sigpy.app.App`).
-An App is meant to represent many different applications, and enforces a very minimal structure.
-A typical usage of an App is as follows:
-
->>> out = app.run()
-
-To build an App, you will need an iterative algorithm (:class:`sigpy.alg.Alg`), which specifies how to initialize, update and terminate the algorithm.
-An Alg can be used without an App, and a typical usage is as follows:
-
->>> while not alg.done():
->>>     alg.update()
-
-You can use the linear operator class (:class:`sigpy.linop.Linop`) to construct neccessary functions (for example the gradient function) for Alg.
-The Linop class provides several convenient operations to do so. For example, given a Linop ``A``, the following operations can be performed:
+The Linop class abstracts a linear operator, and supports adjoint, addition, composing, and stacking. Prepackaged Linops include FFT, NUFFT, and wavelet, and common array manipulation functions. In particular, given a Linop ``A``, the following operations can be performed:
 
 >>> A.H  # adjoint
 >>> A.H * A  # compose
 >>> A.H * A + lamda * I  # addition and scalar multiplication
->>> Hstack([A, B])  # horizontal stack, ie in matrix form [A, B]
->>> Vstack([A, B])  # vertical stack, ie in matrix form [A.T, B.T].T
->>> Diag([A, B])  # diagonal stack, ie, in matrix form [[A, 0], [0, B]]
+>>> Hstack([A, B])  # horizontal stack
+>>> Vstack([A, B])  # vertical stack
+>>> Diag([A, B])  # diagonal stack
 
-Finally, you can use the proximal operator class (:class:`sigpy.prox.Prox`) for proximal algorithms.
-The Prox class also provides several convenient operations. For example, the following operations can be performed:
+The Prox class abstracts a proximal operator, and can do stacking and conjugation. Prepackaged Proxs include L1/L2 regularization and projection functions. In particular, given a proximal operator ``proxg``, the following operations can be performed:
 
 >>> Conj(proxg)  # convex conjugate
 >>> UnitaryTransform(proxg, A)  # A.H * proxg * A
 >>> Stack([proxg1, proxg2])  # diagonal stack
+
+The Alg class abstracts iterative algorithms. Prepackaged Algs include conjugate gradient, (accelerated/proximal) gradient method, and primal dual hybrid gradient. A typical usage is as follows:
+
+>>> while not alg.done():
+>>>     alg.update()
+
+Finally, the App class wraps the above three classes into a final deliverable application. Users can run an App without knowing the internal implementation. A typical usage of an App is as follows:
+
+>>> out = app.run()
