@@ -13,8 +13,8 @@ class Prox(object):
 
     Prox can be called on a float (:math:`\alpha`) and an array (:math:`x`) to perform a proximal operation
 
-    ..math::
-        \text{prox}_{\alpha g} (y) = \text{argmin}_x 1 / 2 || x - y ||_2^2 + \alpha g(x)
+    .. math::
+        \text{prox}_{\alpha g} (y) = \text{argmin}_x \frac{1}{2} || x - y ||_2^2 + \alpha g(x)
 
     Prox can be stacked, and conjugated.
 
@@ -60,8 +60,9 @@ class Conj(Prox):
     r"""Returns the proximal operator for the convex conjugate function.
 
     The proximal operator of the convex conjugate function :math:`g^*` is defined as:
+
     .. math::
-        \text{prox}_{\alpha g^*} (x) = x - \alpha \text{prox}_{1 / \alpha g} (1 / \alpha x)
+        \text{prox}_{\alpha g^*} (x) = x - \alpha \text{prox}_{\frac{1}{\alpha} g} (\frac{1}{\alpha} x)
 
     """
     def __init__(self, prox):

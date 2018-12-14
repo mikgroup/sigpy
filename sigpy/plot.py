@@ -331,6 +331,7 @@ class ImagePlot(object):
             else:
                 idx.append(self.slices[i])
 
+        idx = tuple(idx)
         imv = sp.to_device(self.im[idx])
 
         # Transpose to have [z, y, x, c].
@@ -657,8 +658,8 @@ class LinePlot(object):
 
         order = ([i for i in range(self.ndim)
                   if i != self.x] + [self.x])
-        idx = ([self.slices[i] for i in order[:-1]] +
-               [slice(None, None, self.flips[self.x])])
+        idx = tuple([self.slices[i] for i in order[:-1]] +
+                    [slice(None, None, self.flips[self.x])])
 
         arrv = self.arr.transpose(order)[idx]
 
@@ -947,6 +948,7 @@ class ScatterPlot(object):
             else:
                 idx.append(self.slices[i])
 
+        idx = tuple(idx)
         if idx:
             datav = sp.to_device(self.data[idx])
         else:

@@ -114,11 +114,12 @@ class LinearLeastSquares(App):
         \min_x \frac{1}{2} \| A x - y \|_2^2 + g(G x) + 
         \frac{\lambda}{2} \| R x \|_2^2 + \frac{\mu}{2} \| x - z \|_2^2
 
-    Three algorithms can be used: `ConjugateGradient`, `GradientMethod`,
-    and `PrimalDualHybridGradient`. If `alg_name` is None, `ConjugateGradient` is used
-    when `proxg` is not specified. If `proxg` is specified,
-    then `GradientMethod` is used when `G` is specified, and `PrimalDualHybridGradient` is
-    used otherwise.
+    Three algorithms can be used: :class:`sigpy.alg.ConjugateGradient`, :class:`sigpy.alg.GradientMethod`,
+    and :class:`sigpy.alg.PrimalDualHybridGradient`. 
+    If ``alg_name`` is None, :class:`sigpy.alg.ConjugateGradient` is used
+    when ``proxg`` is not specified. If ``proxg`` is specified,
+    then :class:`sigpy.alg.GradientMethod` is used when ``G`` is specified, 
+    and :class:`sigpy.alg.PrimalDualHybridGradient` is used otherwise.
 
     Args:
         A (Linop): Forward linear operator.
@@ -387,11 +388,13 @@ class LinearLeastSquares(App):
 
 
 class L2ConstrainedMinimization(App):
-    """L2 contrained minimization application.
+    r"""L2 contrained minimization application.
 
     Solves for problem:
-    min g(G x)
-    s.t. ||A x - y||_2 <= eps
+
+    .. math::
+        &\min_x g(G x) \\
+        &\text{s.t.} \| A x - y \|_2 \leq \epsilon
 
     Args:
         A (Linop): Forward model linear operator.
