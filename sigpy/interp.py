@@ -46,7 +46,7 @@ def interpolate(input, width, kernel, coord):
         if device == backend.cpu_device:
             _interpolate(output, input, width, kernel, coord)
         else:
-            _interpolate(output, input, width, kernel, coord, size=npts)
+            _interpolate(input, width, kernel, coord, output, size=npts)
 
         return output.reshape(batch_shape + pts_shape)
 
@@ -86,7 +86,7 @@ def gridding(input, shape, width, kernel, coord):
         if device == backend.cpu_device:
             _gridding(output, input, width, kernel, coord)
         else:
-            _gridding(output, input, width, kernel, coord, size=npts)
+            _gridding(input, width, kernel, coord, output, size=npts)
 
         return output.reshape(shape)
 
@@ -329,7 +329,7 @@ if config.cupy_enabled:
     import cupy as cp
 
     lin_interpolate_cuda = """
-    __device__ inline S lin_interpolate(S* kernel, int n, S x) {
+    __device__ inline S lin_interpolate(const S* kernel, int n, S x) {
         if (x >= 1)
            return 0;
         const int idx = x * n;
@@ -350,8 +350,8 @@ if config.cupy_enabled:
     """
 
     _interpolate1_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = input.shape()[0];
         const int nx = input.shape()[1];
@@ -374,8 +374,8 @@ if config.cupy_enabled:
         name='interpolate1', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding1_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = output.shape()[0];
         const int nx = output.shape()[1];
@@ -398,8 +398,8 @@ if config.cupy_enabled:
         name='gridding1', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding1_cuda_complex = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = output.shape()[0];
         const int nx = output.shape()[1];
@@ -425,8 +425,8 @@ if config.cupy_enabled:
         reduce_dims=False)
 
     _interpolate2_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = input.shape()[0];
         const int ny = input.shape()[1];
@@ -459,8 +459,8 @@ if config.cupy_enabled:
         name='interpolate2', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding2_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw S width, raw S kernel, raw S coord',
+        'raw T input',
         """
         const int batch_size = output.shape()[0];
         const int ny = output.shape()[1];
@@ -493,8 +493,8 @@ if config.cupy_enabled:
         name='gridding2', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding2_cuda_complex = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = output.shape()[0];
         const int ny = output.shape()[1];
@@ -530,8 +530,8 @@ if config.cupy_enabled:
         reduce_dims=False)
 
     _interpolate3_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = input.shape()[0];
         const int nz = input.shape()[1];
@@ -572,8 +572,8 @@ if config.cupy_enabled:
         name='interpolate3', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding3_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = output.shape()[0];
         const int nz = output.shape()[1];
@@ -614,8 +614,8 @@ if config.cupy_enabled:
         name='gridding3', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding3_cuda_complex = cp.ElementwiseKernel(
-        'raw T output, raw T input, raw S width, raw S kernel, raw S coord',
-        '',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = output.shape()[0];
         const int nz = output.shape()[1];
