@@ -239,28 +239,13 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
 
     if oshape is None:
         oshape = input.shape
-
+        
     with device:
-        tmp = input
-        tshape = list(input.shape)
-        for a in axes:
-            i = oshape[a]
-            tshape[a] = i
-
-            tmp = tmp.swapaxes(a, -1)
-            tshape[a], tshape[-1] = tshape[-1], tshape[a]
-
-            tmp = util.resize(tmp, tshape)
-            tmp = xp.fft.ifftshift(tmp, axes=-1)
-            tmp = xp.fft.fft(tmp, axis=-1, norm=norm)
-            tmp = xp.fft.fftshift(tmp, axes=-1)
-
-            tmp = tmp.swapaxes(a, -1)
-            tshape[a], tshape[-1] = tshape[-1], tshape[a]
-
-        output = tmp
-
-    return output
+        tmp = util.resize(input, oshape)
+        tmp = xp.fft.ifftshift(tmp, axes=axes)
+        tmp = xp.fft.fftn(tmp, axes=axes, norm=norm)
+        output = xp.fft.fftshift(tmp, axes=axes)
+        return output
 
 
 def _ifftc(input, oshape=None, axes=None, norm='ortho'):
@@ -273,27 +258,11 @@ def _ifftc(input, oshape=None, axes=None, norm='ortho'):
         oshape = input.shape
 
     with device:
-        tmp = input
-        tshape = list(input.shape)
-        for a in axes:
-
-            i = oshape[a]
-            tshape[a] = i
-
-            tmp = tmp.swapaxes(a, -1)
-            tshape[a], tshape[-1] = tshape[-1], tshape[a]
-
-            tmp = util.resize(tmp, tshape)
-            tmp = xp.fft.ifftshift(tmp, axes=-1)
-            tmp = xp.fft.ifft(tmp, axis=-1, norm=norm)
-            tmp = xp.fft.fftshift(tmp, axes=-1)
-
-            tmp = tmp.swapaxes(a, -1)
-            tshape[a], tshape[-1] = tshape[-1], tshape[a]
-
-        output = tmp
-
-    return output
+        tmp = util.resize(input, oshape)
+        tmp = xp.fft.ifftshift(tmp, axes=axes)
+        tmp = xp.fft.ifftn(tmp, axes=axes, norm=norm)
+        output = xp.fft.fftshift(tmp, axes=axes)
+        return output
 
 
 def _kb(x, width, beta, dtype):
