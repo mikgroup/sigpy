@@ -8,8 +8,25 @@ __all__ = ['array_to_blocks', 'blocks_to_array']
 
 
 def array_to_blocks(input, blk_shape, blk_strides):
-    """
-    output - num_blks + blk_shape
+    """Extract blocks from an array in a sliding window manner.
+
+    Args:
+        input (array): input array.
+        blk_shape (tuple): block shape. Must have same length as input ndim.
+        blk_strides (tuple): block strides. Must have same length as input ndim.
+
+    Returns:
+        array: array of shape num_blks + blk_shape, where 
+        num_blks = (input.shape - blk_shape + blk_strides) // blk_strides
+
+    Example:
+
+        >>> input = np.array([0, 1, 2, 3, 4, 5])
+        >>> print(array_to_blocks(input, [2], [2]))
+        [[0, 1],
+         [2, 3],
+         [4, 5]]
+
     """
     ndim = input.ndim
 
@@ -45,7 +62,8 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                        blk_shape[-1], blk_shape[-2],
                                        blk_strides[-1], blk_strides[-2],
                                        num_blks[-1], num_blks[-2],
-                                       size=num_blks[-1] * num_blks[-2] * blk_shape[-1] * blk_shape[-2])
+                                       size=num_blks[-1] * num_blks[-2] *
+                                       blk_shape[-1] * blk_shape[-2])
         elif ndim == 3:
             if device == backend.cpu_device:
                 _array_to_blocks3(output, input,
@@ -57,14 +75,24 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                        blk_shape[-1], blk_shape[-2], blk_shape[-3],
                                        blk_strides[-1], blk_strides[-2], blk_strides[-3],
                                        num_blks[-1], num_blks[-2], num_blks[-3],
-                                       size=num_blks[-1] * num_blks[-2] * num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
+                                       size=num_blks[-1] * num_blks[-2] *
+                                       num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
 
         return output
 
 
 def blocks_to_array(input, oshape, blk_shape, blk_strides):
-    """
-    output - num_blks + blk_shape
+    """Accumulate blocks into an array in a sliding window manner.
+
+    Args:
+        input (array): input array of shape num_blks + blk_shape
+        oshape (tuple): output shape.
+        blk_shape (tuple): block shape. Must have same length as oshape.
+        blk_strides (tuple): block strides. Must have same length as oshape.
+
+    Returns:
+        array: array of shape oshape.
+
     """
     ndim = len(blk_shape)
 
@@ -108,13 +136,15 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                            blk_shape[-1], blk_shape[-2],
                                            blk_strides[-1], blk_strides[-2],
                                            num_blks[-1], num_blks[-2],
-                                           size=num_blks[-1] * num_blks[-2] * blk_shape[-1] * blk_shape[-2])
+                                           size=num_blks[-1] * num_blks[-2] *
+                                           blk_shape[-1] * blk_shape[-2])
                 else:
                     _blocks_to_array2_cuda_complex(output, input,
                                                    blk_shape[-1], blk_shape[-2],
                                                    blk_strides[-1], blk_strides[-2],
                                                    num_blks[-1], num_blks[-2],
-                                                   size=num_blks[-1] * num_blks[-2] * blk_shape[-1] * blk_shape[-2])
+                                                   size=num_blks[-1] * num_blks[-2] *
+                                                   blk_shape[-1] * blk_shape[-2])
         elif ndim == 3:
             if device == backend.cpu_device:
                 _blocks_to_array3(output, input,
@@ -127,13 +157,16 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                            blk_shape[-1], blk_shape[-2], blk_shape[-3],
                                            blk_strides[-1], blk_strides[-2], blk_strides[-3],
                                            num_blks[-1], num_blks[-2], num_blks[-3],
-                                           size=num_blks[-1] * num_blks[-2] * num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
+                                           size=num_blks[-1] * num_blks[-2] *
+                                           num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
                 else:
                     _blocks_to_array3_cuda_complex(output, input,
                                                    blk_shape[-1], blk_shape[-2], blk_shape[-3],
-                                                   blk_strides[-1], blk_strides[-2], blk_strides[-3],
+                                                   blk_strides[-1], blk_strides[-2],
+                                                   blk_strides[-3],
                                                    num_blks[-1], num_blks[-2], num_blks[-3],
-                                                   size=num_blks[-1] * num_blks[-2] * num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
+                                                   size=num_blks[-1] * num_blks[-2] * num_blks[-3] *
+                                                   blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
 
         return output
 
