@@ -106,7 +106,7 @@ class GradientMethod(Alg):
     
     .. math:: \min_x f(x)
     
-    where :math:`f` is smooth and performs the update:
+    where :math:`f` is (sub)-differentiable and performs the update:
 
     .. math:: x_\text{new} = x - \alpha \nabla f(x)
 
@@ -114,24 +114,24 @@ class GradientMethod(Alg):
 
     .. math:: f(x) + g(x)
 
-    where f is smooth, and g is simple. The algorithm performs the update:
+    where :math:`f` is (sub)-differentiable and :math:`g` is simple, and performs the update:
     
     .. math:: x_\text{new} = \text{prox}_{\alpha g}(x - \alpha \nabla f(x))
 
     Nesterov's acceleration is supported by toggling the `accelerate` input option.
     
-    Backtracking line search is also supported by setting beta < 1, 
-    which keeps shrinking alpha by the beta factor until the following condition holds:
+    Backtracking line search is supported by setting :math:`\beta < 1`, 
+    which keeps scaling the step-size :math:`\alpha` by :math:`\beta` until the following condition holds:
 
-    .. math:: f(x_\text{new}) \leq f(x) + < \Delta x, \nabla f(x) > + \frac{1}{2 \alpha} \| \Delta x \|_2^2
+    .. math:: f(x_\text{new}) \leq f(x) + \left< \Delta x, \nabla f(x) \right> + \frac{1}{2 \alpha} \| \Delta x \|_2^2
 
     Args:
-        gradf (function): function to compute gradient of f.
+        gradf (function): function to compute :math:`\nabla f`.
         x (array): variable to optimize over.
         alpha (float or None): step size, or initial step size if backtracking line-search is on.
         beta (scalar): backtracking linesearch factor. Enables backtracking when beta < 1.
-        f (function or None): function to compute f for backtracking line-search.
-        proxg (Prox, function or None): Prox or function to compute proximal mapping of g.
+        f (function or None): function to compute :math:`f` for backtracking line-search.
+        proxg (Prox, function or None): Prox or function to compute proximal operator of :math:`g`.
         accelerate (bool): toggle Nesterov acceleration.
         P (Linop, function or None): Linop or function to precondition input, 
             assumes proxg has already incorporated P.
