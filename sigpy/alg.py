@@ -170,8 +170,8 @@ class GradientMethod(Alg):
         super().__init__(max_iter)
 
     def _update(self):
+        xp = self.device.xp
         with self.device:
-            xp = self.device.xp
             if self.accelerate:
                 backend.copyto(self.x, self.z)
 
@@ -180,7 +180,7 @@ class GradientMethod(Alg):
             alpha = self.alpha
             x_new = self.x - alpha * gradf_x
             if self.proxg is not None:
-                x_new = self.proxg(alpha, self.x - alpha * gradf_x)
+                x_new = self.proxg(alpha, x_new)
                 
             delta_x = x_new - self.x
             # Backtracking line search
@@ -191,17 +191,16 @@ class GradientMethod(Alg):
 
                     x_new = self.x - alpha * gradf_x
                     if self.proxg is not None:
-                        x_new = self.proxg(alpha, self.x - alpha * gradf_x)
+                        x_new = self.proxg(alpha, x_new)
                         
                     delta_x = x_new - self.x
-                        
 
+            backend.copyto(self.x, x_new)
             if self.accelerate:
                 t_old = self.t
                 self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
                 backend.copyto(self.z, x_new + ((t_old - 1) / self.t) * delta_x)
                 
-            backend.copyto(self.x, x_new)
             self.resid = util.asscalar(xp.linalg.norm(delta_x / alpha))
 
     def _done(self):
