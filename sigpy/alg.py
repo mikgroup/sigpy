@@ -100,18 +100,37 @@ class ProximalPointMethod(Alg):
 
 
 class GradientMethod(Alg):
-    """First order gradient method.
+    r"""First order gradient method.
 
-    Considers the composite cost function:
+    For the simplest setting when proxg is not specified, the method considers the objective function:
+    
+    .. math:: \min_x f(x)
+    
+    where :math:`f` is smooth and performs the update:
+
+    .. math:: x_\text{new} = x - \alpha \nabla f(x)
+
+    When proxg is specified, the method considers the composite objective function:
 
     .. math:: f(x) + g(x)
 
-    where f is smooth, and g is simple, ie proximal operator of g is simple to compute.
+    where f is smooth, and g is simple. The algorithm performs the update:
+    
+    .. math:: x_\text{new} = \text{prox}_{\alpha g}(x - \alpha \nabla f(x))
+
+    Nesterov's acceleration is supported by toggling the `accelerate` input option.
+    
+    Backtracking line search is also supported by setting beta < 1, 
+    which keeps shrinking alpha by the beta factor until the following condition holds:
+
+    .. math:: f(x_\text{new}) \leq f(x) + < \Delta x, \nabla f(x) > + \frac{1}{2 \alpha} \| \Delta x \|_2^2
 
     Args:
         gradf (function): function to compute gradient of f.
         x (array): variable to optimize over.
-        alpha (float): step size.
+        alpha (float or None): step size, or initial step size if backtracking line-search is on.
+        beta (scalar): backtracking linesearch factor. Enables backtracking when beta < 1.
+        f (function or None): function to compute f for backtracking line-search.
         proxg (Prox, function or None): Prox or function to compute proximal mapping of g.
         accelerate (bool): toggle Nesterov acceleration.
         P (Linop, function or None): Linop or function to precondition input, 
@@ -129,9 +148,14 @@ class GradientMethod(Alg):
 
     """
     def __init__(self, gradf, x, alpha, proxg=None,
-                 accelerate=False, max_iter=100):
+                 f=None, beta=1, accelerate=False, max_iter=100):
+        if beta < 1 and f is None:
+            raise TypeError("Cannot do backtracking linesearch without specifying f.")
+            
         self.gradf = gradf
         self.alpha = alpha
+        self.f = f
+        self.beta = beta
         self.accelerate = accelerate
         self.proxg = proxg
         self.x = x
@@ -142,37 +166,43 @@ class GradientMethod(Alg):
                 self.z = self.x.copy()
                 self.t = 1
 
-            if self.accelerate or self.proxg is not None:
-                self.x_old = self.x.copy()
-
         self.resid = np.infty
         super().__init__(max_iter)
 
     def _update(self):
         with self.device:
-            if self.accelerate or self.proxg is not None:
-                backend.copyto(self.x_old, self.x)
-
+            xp = self.device.xp
             if self.accelerate:
                 backend.copyto(self.x, self.z)
 
+            # Perform update
             gradf_x = self.gradf(self.x)
-
-            util.axpy(self.x, -self.alpha, gradf_x)
-
+            alpha = self.alpha
+            x_new = self.x - alpha * gradf_x
             if self.proxg is not None:
-                backend.copyto(self.x, self.proxg(self.alpha, self.x))
+                x_new = self.proxg(alpha, self.x - alpha * gradf_x)
+                
+            delta_x = x_new - self.x
+            # Backtracking line search
+            if self.beta < 1:
+                fx = self.f(self.x)
+                while self.f(x_new) > fx + xp.vdot(delta_x, gradf_x) + 1 / (2 * alpha) * xp.linalg.norm(delta_x)**2:
+                    alpha *= self.beta
+
+                    x_new = self.x - alpha * gradf_x
+                    if self.proxg is not None:
+                        x_new = self.proxg(alpha, self.x - alpha * gradf_x)
+                        
+                    delta_x = x_new - self.x
+                        
 
             if self.accelerate:
                 t_old = self.t
                 self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
-                backend.copyto(self.z, self.x + (t_old - 1) / self.t * (self.x - self.x_old))
-
-            xp = self.device.xp
-            if self.accelerate or self.proxg is not None:
-                self.resid = util.asscalar(xp.linalg.norm((self.x - self.x_old) / self.alpha**0.5))
-            else:
-                self.resid = util.asscalar(xp.linalg.norm(gradf_x))
+                backend.copyto(self.z, x_new + ((t_old - 1) / self.t) * delta_x)
+                
+            backend.copyto(self.x, x_new)
+            self.resid = util.asscalar(xp.linalg.norm(delta_x / alpha))
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.resid == 0
