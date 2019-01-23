@@ -448,7 +448,7 @@ def axpy(y, a, x):
         if device == backend.cpu_device:
             _axpy(y, a, x, out=y)
         else:
-            _axpy_cuda(y, a, x)
+            _axpy_cuda( a, x, y )
 
 
 def xpay(y, a, x):
@@ -468,7 +468,7 @@ def xpay(y, a, x):
         if device == backend.cpu_device:
             _xpay(y, a, x, out=y)
         else:
-            _xpay_cuda(y, a, x)
+            _xpay_cuda( a, x, y)
 
 
 @nb.vectorize(nopython=True, cache=True)
@@ -484,16 +484,16 @@ def _xpay(y, a, x):
 if config.cupy_enabled:
 
     _axpy_cuda = cp.ElementwiseKernel(
-        'T y, S a, T x',
-        '',
+        'S a, T x',
+        'T y',
         """
         y += (T) a * x;
         """,
         name='axpy')
 
     _xpay_cuda = cp.ElementwiseKernel(
-        'T y, S a, T x',
-        '',
+        'S a, T x',
+        'T y',
         """
         y = x + (T) a * y;
         """,
