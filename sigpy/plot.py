@@ -47,12 +47,13 @@ class ImagePlot(object):
         s: save as png.
         g: save as gif by traversing current dimension.
         v: save as mp4 by traversing current dimension.
+        q: refresh if file given.
         0-9: enter slice number.
         enter: Set current dimension as slice number.
 
     """
     def __init__(self, im, x=-1, y=-2, z=None, c=None, hide=False, mode='m', title='',
-                 interpolation='lanczos', save_basename='Figure', fps=10):
+                 interpolation='lanczos', save_basename='Figure', fps=10, filename=None):
         if im.ndim < 2:
             raise TypeError('Image dimension must at least be two, got {im_ndim}'.format(
                 im_ndim=im.ndim))
@@ -79,6 +80,7 @@ class ImagePlot(object):
         self.vmax = None
         self.save_basename = save_basename
         self.fps = fps
+        self.filename = filename
 
         self.fig.canvas.mpl_disconnect(
             self.fig.canvas.manager.key_press_handler_id)
@@ -181,6 +183,15 @@ class ImagePlot(object):
 
         elif event.key == 'f':
             self.fig.canvas.manager.full_screen_toggle()
+
+        elif event.key == 'q':
+            if self.filename:
+                self.im = np.load(self.filename)
+            self.vmin = None
+            self.vmax = None
+            self.update_axes()
+            self.update_image()
+            self.fig.canvas.draw()
 
         elif event.key == ']':
             width = self.vmax - self.vmin
