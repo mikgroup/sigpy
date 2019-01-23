@@ -8,7 +8,7 @@ import sigpy as sp
 
 
 def Sense(mps, coord=None, weights=None, ishape=None,
-          coil_batch_size=None):
+          coil_batch_size=None, comm=None):
     """Sense linear operator.
     
     Args:
@@ -18,8 +18,10 @@ def Sense(mps, coord=None, weights=None, ishape=None,
         ishape (None or tuple): image shape.
         coil_batch_size (None or int): batch size for processing multi-channel.
             When None, process all coils at the same time. Useful for saving memory.
+        comm (None or `sigpy.Communicator`): communicator for distributed computing.
 
     """
+    # Get image shape and dimension.
     num_coils = len(mps)
     if ishape is None:
         ishape = mps.shape[1:]
@@ -27,6 +29,7 @@ def Sense(mps, coord=None, weights=None, ishape=None,
     else:
         img_ndim = len(ishape)
 
+    # Serialize linop if coil_batch_size is smaller than num_coils.
     num_coils = len(mps)
     if coil_batch_size is None:
         coil_batch_size = num_coils
@@ -34,9 +37,10 @@ def Sense(mps, coord=None, weights=None, ishape=None,
     if coil_batch_size < len(mps):
         num_coil_batches = (num_coils + coil_batch_size - 1) // coil_batch_size
         return sp.linop.Vstack([Sense(mps[c::num_coil_batches], coord=coord,
-                                      weights=weights, ishape=ishape)
+                                      weights=weights, ishape=ishape, comm=comm)
                                 for c in range(num_coil_batches)], axis=0)
 
+    # Create Sense linear operator
     S = sp.linop.Multiply(ishape, mps)
     if coord is None:
         F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
@@ -44,12 +48,16 @@ def Sense(mps, coord=None, weights=None, ishape=None,
         F = sp.linop.NUFFT(S.oshape, coord)
 
     A = F * S
-    
+
     if weights is not None:
         with sp.get_device(weights):
             P = sp.linop.Multiply(F.oshape, weights**0.5)
 
         A = P * A
+
+    if comm is not None:
+        C = sp.linop.AllReduceAdjoint(ishape, comm, in_place=True)
+        A = A * C
         
     A.repr_str = 'Sense'
     return A
