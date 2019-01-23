@@ -7,12 +7,17 @@ which integrates multi-channel coil sensitivity maps and discrete Fourier transf
 import sigpy as sp
 
 
-def Sense(mps, coord=None, weights=None, ishape=None, coil_batch_size=None):
+def Sense(mps, coord=None, weights=None, ishape=None,
+          coil_batch_size=None):
     """Sense linear operator.
     
     Args:
         mps (array): sensitivity maps of length = number of channels.
         coord (None or array): coordinates.
+        weights (None or array): k-space weights. Useful for soft-gating or density compensation.
+        ishape (None or tuple): image shape.
+        coil_batch_size (None or int): batch size for processing multi-channel.
+            When None, process all coils at the same time. Useful for saving memory.
 
     """
     num_coils = len(mps)
