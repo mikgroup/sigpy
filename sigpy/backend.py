@@ -203,9 +203,21 @@ class Communicator(object):
             self.mpi_comm.Allreduce(MPI.IN_PLACE, mpi_buffer)
             copyto(input, mpi_buffer)
 
+    def reduce(self, input, root=0):
+        if self.size == 1:
+            return
+
+        if config.mpi4py_enabled:
+            mpi_buffer = to_device(input, cpu_device)
+            if self.rank == root:
+                self.mpi_comm.Reduce(MPI.IN_PLACE, mpi_buffer, op=MPI.SUM, root=root)
+                copyto(input, mpi_buffer)
+            else:
+                self.mpi_comm.Reduce(mpi_buffer, None, op=MPI.SUM, root=root)
+
 
 class MultiGpuCommunicator(Communicator):
-    """Communicator for distributed computing between multiple GPU.
+    """Communicator for distributed computing between multiple GPUs.
 
     If nccl is installed with cupy, then nccl will be used. Otherwise,
     reduces to Communicator.
@@ -231,17 +243,34 @@ class MultiGpuCommunicator(Communicator):
             nccl_comm_id = self.mpi_comm.bcast(nccl_comm_id)
 
             with self.device:
-                self.nccl_comm = nccl.NcclCommunicator(
-                    self.size, nccl_comm_id, self.rank)
+                self.nccl_comm = nccl.NcclCommunicator(self.size, nccl_comm_id, self.rank)
 
-    def allreduce(self, input):
-        if self.device != get_device(input):
-            raise ValueError('Input device is different from communicator device.')
+    if config.nccl_enabled:
+        def allreduce(self, input):
+            if self.device != get_device(input):
+                raise ValueError('Input device is different from communicator device.')
 
-        if self.size == 1:
-            return
+            if self.size == 1:
+                return
 
-        if config.nccl_enabled:
+            nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
+            with self.device:
+                self.nccl_comm.allReduce(input.data.ptr, input.data.ptr, nccl_size, nccl_dtype,
+                                         nccl.NCCL_SUM, cp.cuda.Stream.null.ptr)
+
+        def reduce(self, input, root=0):
+            if self.device != get_device(input):
+                raise ValueError('Input device is different from communicator device.')
+
+            if self.size == 1:
+                return
+
+            nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
+            with self.device:
+                self.nccl_comm.reduce(input.data.ptr, input.data.ptr, nccl_size, nccl_dtype,
+                                      nccl.NCCL_SUM, root, cp.cuda.Stream.null.ptr)
+
+        def _get_nccl_dtype_size(self, input):
             if input.dtype == np.float32:
                 nccl_dtype = nccl.NCCL_FLOAT32
                 nccl_size = input.size
@@ -257,8 +286,4 @@ class MultiGpuCommunicator(Communicator):
             else:
                 raise ValueError('dtype not supported, got {dtype}.'.format(dtype=input.dtype))
 
-            with self.device:
-                self.nccl_comm.allReduce(input.data.ptr, input.data.ptr, nccl_size, nccl_dtype,
-                                         nccl.NCCL_SUM, cp.cuda.Stream.null.ptr)
-        else:
-            super().allreduce(input)
+            return nccl_dtype, nccl_size
