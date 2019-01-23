@@ -459,8 +459,8 @@ if config.cupy_enabled:
         name='interpolate2', preamble=lin_interpolate_cuda + mod_cuda, reduce_dims=False)
 
     _gridding2_cuda = cp.ElementwiseKernel(
-        'raw S width, raw S kernel, raw S coord',
-        'raw T input',
+        'raw T input, raw S width, raw S kernel, raw S coord',
+        'raw T output',
         """
         const int batch_size = output.shape()[0];
         const int ny = output.shape()[1];
