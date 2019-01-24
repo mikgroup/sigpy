@@ -33,6 +33,8 @@ class SenseRecon(sp.app.LinearLeastSquares):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
+        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
     References:
@@ -46,14 +48,16 @@ class SenseRecon(sp.app.LinearLeastSquares):
        
     """
     def __init__(self, y, mps, lamda=0, weights=None,
-                 coord=None, device=sp.cpu_device, coil_batch_size=None, **kwargs):
+                 coord=None, device=sp.cpu_device, coil_batch_size=None,
+                 comm=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights, coil_batch_size=coil_batch_size)
+        A = linop.Sense(mps, coord=coord, weights=weights, coil_batch_size=coil_batch_size,
+                        comm=comm)
 
         super().__init__(A, y, lamda=lamda, **kwargs)
 
@@ -77,6 +81,8 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
+        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
     See also:
@@ -85,7 +91,8 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(self, y, mps, eps,
                  weights=None, coord=None,
-                 device=sp.cpu_device, coil_batch_size=None, **kwargs):
+                 device=sp.cpu_device, coil_batch_size=None,
+                 comm=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
@@ -118,6 +125,8 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         coord (None or array): coordinates.
         wave_name (str): wavelet name.
         device (Device): device to perform reconstruction.
+        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
     References:
@@ -128,7 +137,8 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
     """
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None,
-                 wave_name='db4', device=sp.cpu_device, coil_batch_size=None, **kwargs):
+                 wave_name='db4', device=sp.cpu_device,
+                 coil_batch_size=None, comm=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
@@ -170,6 +180,8 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
+        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
     See also:
@@ -178,7 +190,8 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(
             self, y, mps, eps,
-            wave_name='db4', weights=None, coord=None, device=sp.cpu_device, coil_batch_size=None, **kwargs):
+            wave_name='db4', weights=None, coord=None,
+            device=sp.cpu_device, coil_batch_size=None, comm=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
@@ -212,6 +225,8 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
+        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
     References:
@@ -222,7 +237,8 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
 
     """
     def __init__(self, y, mps, lamda,
-                 weights=None, coord=None, device=sp.cpu_device, coil_batch_size=None, **kwargs):
+                 weights=None, coord=None, device=sp.cpu_device,
+                 coil_batch_size=None, comm=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
@@ -263,6 +279,8 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
+        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
     See also:
@@ -271,7 +289,8 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
     """
     def __init__(
             self, y, mps, eps,
-            weights=None, coord=None, device=sp.cpu_device, coil_batch_size=None, **kwargs):
+            weights=None, coord=None, device=sp.cpu_device,
+            coil_batch_size=None, comm=None, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
