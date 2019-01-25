@@ -6,18 +6,17 @@ if config.cupy_enabled:
 if config.mpi4py_enabled:
     from mpi4py import MPI
 
-    if config.nccl_enabled:
-        from cupy.cuda import nccl
-
 
 __all__ = ['Device', 'get_device', 'get_array_module', 'cpu_device',
-           'to_device', 'copyto', 'Communicator', 'MultiGpuCommunicator']
+           'to_device', 'copyto', 'Communicator']
 
 
 class Device(object):
     """Device class.
 
-    This class extends cupy.Device, with id = -1 representing CPU, and other ids representing the corresponding GPUs. 
+    This class extends cupy.Device, with id > 0 representing the corresponding GPUs,
+    and id = -1 representing CPU. cupy must be installed to use GPUs.
+
     The array module for the corresponding device can be obtained via .xp property.
     Similar to cupy.Device, the Device object can be used as a context. For example:
        
@@ -28,8 +27,8 @@ class Device(object):
         >>>     x += 1
 
     Args:
-        id_or_device (int or Device or cupy.cuda.Device): id = -1 represents CPU.
-            and other ids represents corresponding GPUs.
+        id_or_device (int or Device or cupy.cuda.Device): id > 0 represents
+            the corresponding GPUs, and id = -1 represents CPU.
 
     Attributes:
         id (int): id = -1 represents CPU, and other ids represents corresponding GPUs.
@@ -50,7 +49,7 @@ class Device(object):
             if config.cupy_enabled:
                 self.cpdevice = cp.cuda.Device(id)
             else:
-                raise ValueError('cupy not installed, but set device {id}.'.format(id=id))
+                raise ValueError('cupy not installed, but set device {}.'.format(id))
 
         self.id = id
 
@@ -179,10 +178,10 @@ def copyto(output, input):
 
 
 class Communicator(object):
-    """General communicator for distributed computing using MPI.
+    """Communicator for distributed computing using MPI.
 
     All arrays are moved to CPU, then communicated through MPI, and moved back
-    to original device.
+    to original device. When mpi4py is not installed, the communicator basically does nothing.
 
     """
     def __init__(self):
@@ -195,95 +194,60 @@ class Communicator(object):
             self.rank = 0
 
     def allreduce(self, input):
-        if self.size == 1:
-            return
+        """All reduce operation in-place.
 
-        if config.mpi4py_enabled:
-            mpi_buffer = to_device(input, cpu_device)
-            self.mpi_comm.Allreduce(MPI.IN_PLACE, mpi_buffer)
-            copyto(input, mpi_buffer)
+        Sums input across all nodes and broadcast back to each node.
+
+        Args:
+            input (array): input array.
+
+        """
+        if self.size > 1:
+            cpu_input = to_device(input, cpu_device)
+            self.mpi_comm.Allreduce(MPI.IN_PLACE, cpu_input)
+            copyto(input, cpu_input)
 
     def reduce(self, input, root=0):
-        if self.size == 1:
-            return
+        """Reduce operation in-place.
 
-        if config.mpi4py_enabled:
-            mpi_buffer = to_device(input, cpu_device)
+        Sums input across all nodes in root node.
+
+        Args:
+            input (array): input array.
+            root (int): root node rank.
+
+        """
+        if self.size > 1:
+            cpu_input = to_device(input, cpu_device)
             if self.rank == root:
-                self.mpi_comm.Reduce(MPI.IN_PLACE, mpi_buffer, op=MPI.SUM, root=root)
-                copyto(input, mpi_buffer)
+                self.mpi_comm.Reduce(MPI.IN_PLACE, cpu_input, root=root)
+                copyto(input, cpu_input)
             else:
-                self.mpi_comm.Reduce(mpi_buffer, None, op=MPI.SUM, root=root)
+                self.mpi_comm.Reduce(cpu_input, None, root=root)
 
+    def gatherv(self, input, root=0):
+        """Gather with variable sizes operation.
 
-class MultiGpuCommunicator(Communicator):
-    """Communicator for distributed computing between multiple GPUs.
+        Gather inputs across all nodes to the root node,
+        and vectorizes them. 
 
-    If nccl is installed with cupy, then nccl will be used. Otherwise,
-    reduces to Communicator.
+        Args:
+            input (array): input array.
+            root (int): root node rank.
 
-    """
-    def __init__(self):
-        if config.mpi4py_enabled:
-            self.mpi_comm = MPI.COMM_WORLD
-            self.size = self.mpi_comm.Get_size()
-            self.rank = self.mpi_comm.Get_rank()
-        else:
-            self.size = 1
-            self.rank = 0
+        Returns:
+            array or None: vectorized array if rank==root else None.
+
+        """
+        if self.size > 1:
+            cpu_input = to_device(input, cpu_device)
             
-        self.device = Device(self.rank % cp.cuda.runtime.getDeviceCount())
-
-        if config.nccl_enabled:
-            if self.rank == 0:
-                nccl_comm_id = nccl.get_unique_id()
+            sizes = self.mpi_comm.gather(input.size, root=root)
+            if self.rank == root:
+                cpu_output = np.empty(sum(sizes), dtype=input.dtype)
+                self.mpi_comm.Gatherv(cpu_input, [cpu_output, sizes], root=root)
+                return to_device(cpu_output, get_device(input))
             else:
-                nccl_comm_id = None
-
-            nccl_comm_id = self.mpi_comm.bcast(nccl_comm_id)
-
-            with self.device:
-                self.nccl_comm = nccl.NcclCommunicator(self.size, nccl_comm_id, self.rank)
-
-    if config.nccl_enabled:
-        def allreduce(self, input):
-            if self.device != get_device(input):
-                raise ValueError('Input device is different from communicator device.')
-
-            if self.size == 1:
-                return
-
-            nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
-            with self.device:
-                self.nccl_comm.allReduce(input.data.ptr, input.data.ptr, nccl_size, nccl_dtype,
-                                         nccl.NCCL_SUM, cp.cuda.Stream.null.ptr)
-
-        def reduce(self, input, root=0):
-            if self.device != get_device(input):
-                raise ValueError('Input device is different from communicator device.')
-
-            if self.size == 1:
-                return
-
-            nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
-            with self.device:
-                self.nccl_comm.reduce(input.data.ptr, input.data.ptr, nccl_size, nccl_dtype,
-                                      nccl.NCCL_SUM, root, cp.cuda.Stream.null.ptr)
-
-        def _get_nccl_dtype_size(self, input):
-            if input.dtype == np.float32:
-                nccl_dtype = nccl.NCCL_FLOAT32
-                nccl_size = input.size
-            elif input.dtype == np.float64:
-                nccl_dtype = nccl.NCCL_FLOAT64
-                nccl_size = input.size
-            elif input.dtype == np.complex64:
-                nccl_dtype = nccl.NCCL_FLOAT32
-                nccl_size = input.size * 2
-            elif input.dtype == np.complex128:
-                nccl_dtype = nccl.NCCL_FLOAT64
-                nccl_size = input.size * 2
-            else:
-                raise ValueError('dtype not supported, got {dtype}.'.format(dtype=input.dtype))
-
-            return nccl_dtype, nccl_size
+                self.mpi_comm.Gatherv(cpu_input, [None, sizes], root=root)
+        else:
+            return input
