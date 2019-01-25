@@ -339,7 +339,7 @@ class JsenseRecon(sp.app.App):
     """
     def __init__(self, y,
                  mps_ker_width=16, ksp_calib_width=24,
-                 lamda=0, device=sp.cpu_device,
+                 lamda=0, device=sp.cpu_device, comm=None,
                  weights=None, coord=None, max_iter=10,
                  max_inner_iter=10, show_pbar=True):
         self.y = y
@@ -352,6 +352,7 @@ class JsenseRecon(sp.app.App):
         self.max_inner_iter = max_inner_iter
 
         self.device = sp.Device(device)
+        self.comm = comm
         self.dtype = y.dtype
         self.num_coils = len(y)
 
@@ -416,7 +417,8 @@ class JsenseRecon(sp.app.App):
 
         def min_img_ker():
             self.A_img_ker = linop.ConvSense(self.img_ker.shape, self.mps_ker,
-                                             coord=self.coord, weights=self.weights)
+                                             coord=self.coord, weights=self.weights,
+                                             comm=self.comm)
             sp.app.LinearLeastSquares(self.A_img_ker, self.y, self.img_ker,
                                       lamda=self.lamda, max_iter=self.max_inner_iter).run()
 
@@ -424,7 +426,7 @@ class JsenseRecon(sp.app.App):
 
     def _output(self):
         xp = self.device.xp
-        # Coil by coil to save memory
+        # Normalize by root-sum-of-squares.
         with self.device:
             mps_rss = 0
             mps = np.empty([self.num_coils] + self.img_shape, dtype=self.dtype)
@@ -433,7 +435,16 @@ class JsenseRecon(sp.app.App):
                 mps_rss += xp.abs(mps_c)**2
                 sp.copyto(mps[c], mps_c)
 
-            mps_rss = sp.to_device(mps_rss**0.5, sp.cpu_device)
-            mps /= mps_rss
-
-        return mps
+            mps_rss = sp.to_device(mps_rss)
+            if self.comm is not None:
+                self.comm.reduce(mps_rss, root=0)
+                mps = self.comm.gatherv(mps, root=0)
+                if self.comm.rank == 0:
+                    mps = mps.reshape([-1] + self.img_shape)
+                    mps_rss = mps_rss**0.5
+                    mps /= mps_rss
+                    return mps
+            else:
+                mps_rss = mps_rss**0.5
+                mps /= mps_rss
+                return mps

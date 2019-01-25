@@ -63,7 +63,7 @@ def Sense(mps, coord=None, weights=None, ishape=None,
     return A
 
 
-def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None):
+def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
     """Convolution linear operator with sensitivity maps kernel in k-space.
     
     Args:
@@ -85,7 +85,12 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None):
     if weights is not None:
         with sp.get_device(weights):
             P = sp.linop.Multiply(A.oshape, weights**0.5)
+            
         A = P * A
+
+    if comm is not None:
+        C = sp.linop.AllReduceAdjoint(img_ker_shape, comm, in_place=True)
+        A = A * C
 
     return A
 
