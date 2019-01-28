@@ -437,14 +437,8 @@ class JsenseRecon(sp.app.App):
 
             mps_rss = sp.to_device(mps_rss)
             if self.comm is not None:
-                self.comm.reduce(mps_rss, root=0)
-                mps = self.comm.gatherv(mps, root=0)
-                if self.comm.rank == 0:
-                    mps = mps.reshape([-1] + self.img_shape)
-                    mps_rss = mps_rss**0.5
-                    mps /= mps_rss
-                    return mps
-            else:
-                mps_rss = mps_rss**0.5
-                mps /= mps_rss
-                return mps
+                self.comm.allreduce(mps_rss)
+                
+            mps_rss = mps_rss**0.5
+            mps /= mps_rss
+            return mps
