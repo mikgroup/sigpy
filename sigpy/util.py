@@ -406,7 +406,7 @@ class ShuffledNumbers(object):
     """Produces shuffled numbers between given range.
 
     Args:
-        Arguements to numpy.arange.
+        Arguments to numpy.arange.
     
     """
     def __init__(self, *args):
