@@ -40,24 +40,25 @@ class TestApp(unittest.TestCase):
             ksp, mps, lamda, alg_name='PrimalDualHybridGradient', max_iter=1000).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
-    def test_shepp_logan_SenseRecon_with_comm(self):
-        img, mps, ksp = self.shepp_logan_setup()
-        lamda = 0
-        comm = sp.Communicator()
-        ksp = ksp[comm.rank::comm.size]
-        mps = mps[comm.rank::comm.size]
+    if sp.config.mpi4py_enabled:
+        def test_shepp_logan_SenseRecon_with_comm(self):
+            img, mps, ksp = self.shepp_logan_setup()
+            lamda = 0
+            comm = sp.Communicator()
+            ksp = ksp[comm.rank::comm.size]
+            mps = mps[comm.rank::comm.size]
 
-        img_rec = app.SenseRecon(
-            ksp, mps, lamda, comm=comm, alg_name='ConjugateGradient').run()
-        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
+            img_rec = app.SenseRecon(
+                ksp, mps, lamda, comm=comm, alg_name='ConjugateGradient').run()
+            npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
-        img_rec = app.SenseRecon(
-            ksp, mps, lamda, alg_name='GradientMethod').run()
-        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
+            img_rec = app.SenseRecon(
+                ksp, mps, lamda, alg_name='GradientMethod').run()
+            npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
-        img_rec = app.SenseRecon(
-            ksp, mps, lamda, alg_name='PrimalDualHybridGradient', max_iter=1000).run()
-        npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
+            img_rec = app.SenseRecon(
+                ksp, mps, lamda, alg_name='PrimalDualHybridGradient', max_iter=1000).run()
+            npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_SenseConstrainedRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
