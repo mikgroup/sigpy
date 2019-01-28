@@ -190,8 +190,7 @@ class Communicator(object):
             self.size = self.mpi_comm.Get_size()
             self.rank = self.mpi_comm.Get_rank()
         else:
-            self.size = 1
-            self.rank = 0
+            raise ValueError('Attempting to use Communicator, but mpi4py is not installed.')
 
     def allreduce(self, input):
         """All reduce operation in-place.
