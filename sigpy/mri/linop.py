@@ -112,7 +112,8 @@ def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None):
     """
     ndim = img_ker.ndim
 
-    A = sp.linop.ConvolveFilter(mps_ker_shape, img_ker, mode='valid', output_multi_channel=True)
+    A = sp.linop.ConvolveFilter(mps_ker_shape, img_ker,
+                                mode='valid', output_multi_channel=True)
 
     if coord is not None:
         num_coils = mps_ker_shape[0]
