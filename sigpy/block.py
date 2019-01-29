@@ -46,10 +46,11 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                   blk_strides[-1],
                                   num_blks[-1])
             else:
-                _array_to_blocks1_cuda(output, input,
+                _array_to_blocks1_cuda(input,
                                        blk_shape[-1],
                                        blk_strides[-1],
                                        num_blks[-1],
+                                       output,
                                        size=num_blks[-1] * blk_shape[-1])
         elif ndim == 2:
             if device == backend.cpu_device:
@@ -58,10 +59,11 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                   blk_strides[-1], blk_strides[-2],
                                   num_blks[-1], num_blks[-2])
             else:
-                _array_to_blocks2_cuda(output, input,
+                _array_to_blocks2_cuda(input,
                                        blk_shape[-1], blk_shape[-2],
                                        blk_strides[-1], blk_strides[-2],
                                        num_blks[-1], num_blks[-2],
+                                       output,
                                        size=num_blks[-1] * num_blks[-2] *
                                        blk_shape[-1] * blk_shape[-2])
         elif ndim == 3:
@@ -71,10 +73,11 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                   blk_strides[-1], blk_strides[-2], blk_strides[-3],
                                   num_blks[-1], num_blks[-2], num_blks[-3])
             else:
-                _array_to_blocks3_cuda(output, input,
+                _array_to_blocks3_cuda(input,
                                        blk_shape[-1], blk_shape[-2], blk_shape[-3],
                                        blk_strides[-1], blk_strides[-2], blk_strides[-3],
                                        num_blks[-1], num_blks[-2], num_blks[-3],
+                                       output,
                                        size=num_blks[-1] * num_blks[-2] *
                                        num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
 
@@ -113,16 +116,18 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   num_blks[-1])
             else:
                 if np.issubdtype(input.dtype, np.floating):
-                    _blocks_to_array1_cuda(output, input,
+                    _blocks_to_array1_cuda(input,
                                            blk_shape[-1],
                                            blk_strides[-1],
                                            num_blks[-1],
+                                           output,
                                            size=num_blks[-1] * blk_shape[-1])
                 else:
-                    _blocks_to_array1_cuda_complex(output, input,
+                    _blocks_to_array1_cuda_complex(input,
                                                    blk_shape[-1],
                                                    blk_strides[-1],
                                                    num_blks[-1],
+                                                   output,
                                                    size=num_blks[-1] * blk_shape[-1])
         elif ndim == 2:
             if device == backend.cpu_device:
@@ -132,17 +137,19 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   num_blks[-1], num_blks[-2])
             else:
                 if np.issubdtype(input.dtype, np.floating):
-                    _blocks_to_array2_cuda(output, input,
+                    _blocks_to_array2_cuda(input,
                                            blk_shape[-1], blk_shape[-2],
                                            blk_strides[-1], blk_strides[-2],
                                            num_blks[-1], num_blks[-2],
+                                           output,
                                            size=num_blks[-1] * num_blks[-2] *
                                            blk_shape[-1] * blk_shape[-2])
                 else:
-                    _blocks_to_array2_cuda_complex(output, input,
+                    _blocks_to_array2_cuda_complex(input,
                                                    blk_shape[-1], blk_shape[-2],
                                                    blk_strides[-1], blk_strides[-2],
                                                    num_blks[-1], num_blks[-2],
+                                                   output,
                                                    size=num_blks[-1] * num_blks[-2] *
                                                    blk_shape[-1] * blk_shape[-2])
         elif ndim == 3:
@@ -153,18 +160,20 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   num_blks[-1], num_blks[-2], num_blks[-3])
             else:
                 if np.issubdtype(input.dtype, np.floating):
-                    _blocks_to_array3_cuda(output, input,
+                    _blocks_to_array3_cuda(input,
                                            blk_shape[-1], blk_shape[-2], blk_shape[-3],
                                            blk_strides[-1], blk_strides[-2], blk_strides[-3],
                                            num_blks[-1], num_blks[-2], num_blks[-3],
+                                           output,
                                            size=num_blks[-1] * num_blks[-2] *
                                            num_blks[-3] * blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
                 else:
-                    _blocks_to_array3_cuda_complex(output, input,
+                    _blocks_to_array3_cuda_complex(input,
                                                    blk_shape[-1], blk_shape[-2], blk_shape[-3],
                                                    blk_strides[-1], blk_strides[-2],
                                                    blk_strides[-3],
                                                    num_blks[-1], num_blks[-2], num_blks[-3],
+                                                   output,
                                                    size=num_blks[-1] * num_blks[-2] * num_blks[-3] *
                                                    blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
 
@@ -259,8 +268,8 @@ if config.cupy_enabled:
     import cupy as cp
 
     _array_to_blocks1_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 Sx, int32 Nx',
-        '',
+        'raw T input, int32 Bx, int32 Sx, int32 Nx',
+        'raw T output',
         """
         const int ndim = input.ndim;
 
@@ -278,8 +287,8 @@ if config.cupy_enabled:
         name='_array_to_blocks1_cuda')
 
     _array_to_blocks2_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 By, int32 Sx, int32 Sy, int32 Nx, int32 Ny',
-        '',
+        'raw T input, int32 Bx, int32 By, int32 Sx, int32 Sy, int32 Nx, int32 Ny',
+        'raw T output',
         """
         const int ndim = input.ndim;
 
@@ -302,8 +311,8 @@ if config.cupy_enabled:
         name='_array_to_blocks2_cuda')
 
     _array_to_blocks3_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 By, int32 Bz, int32 Sx, int32 Sy, int32 Sz, int32 Nx, int32 Ny, int32 Nz',
-        '',
+        'raw T input, int32 Bx, int32 By, int32 Bz, int32 Sx, int32 Sy, int32 Sz, int32 Nx, int32 Ny, int32 Nz',
+        'raw T output',
         """
         const int ndim = input.ndim;
 
@@ -331,8 +340,8 @@ if config.cupy_enabled:
         name='_array_to_blocks3_cuda')
 
     _blocks_to_array1_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 Sx, int32 Nx',
-        '',
+        'raw T input, int32 Bx, int32 Sx, int32 Nx',
+        'raw T output',
         """
         const int ndim = output.ndim;
 
@@ -351,8 +360,8 @@ if config.cupy_enabled:
 
 
     _blocks_to_array1_cuda_complex = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 Sx, int32 Nx',
-        '',
+        'raw T input, int32 Bx, int32 Sx, int32 Nx',
+        'raw T output',
         """
         const int ndim = output.ndim;
 
@@ -372,8 +381,8 @@ if config.cupy_enabled:
     
 
     _blocks_to_array2_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 By, int32 Sx, int32 Sy, int32 Nx, int32 Ny',
-        '',
+        'raw T input, int32 Bx, int32 By, int32 Sx, int32 Sy, int32 Nx, int32 Ny',
+        'raw T output',
         """
         const int ndim = output.ndim;
 
@@ -397,8 +406,8 @@ if config.cupy_enabled:
     
 
     _blocks_to_array2_cuda_complex = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 By, int32 Sx, int32 Sy, int32 Nx, int32 Ny',
-        '',
+        'raw T input, int32 Bx, int32 By, int32 Sx, int32 Sy, int32 Nx, int32 Ny',
+        'raw T output',
         """
         const int ndim = output.ndim;
 
@@ -423,8 +432,8 @@ if config.cupy_enabled:
 
 
     _blocks_to_array3_cuda = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 By, int32 Bz, int32 Sx, int32 Sy, int32 Sz, int32 Nx, int32 Ny, int32 Nz',
-        '',
+        'raw T input, int32 Bx, int32 By, int32 Bz, int32 Sx, int32 Sy, int32 Sz, int32 Nx, int32 Ny, int32 Nz',
+        'raw T output',
         """
         const int ndim = output.ndim;
 
@@ -453,8 +462,8 @@ if config.cupy_enabled:
 
 
     _blocks_to_array3_cuda_complex = cp.ElementwiseKernel(
-        'raw T output, raw T input, int32 Bx, int32 By, int32 Bz, int32 Sx, int32 Sy, int32 Sz, int32 Nx, int32 Ny, int32 Nz',
-        '',
+        'raw T input, int32 Bx, int32 By, int32 Bz, int32 Sx, int32 Sy, int32 Sz, int32 Nx, int32 Ny, int32 Nz',
+        'raw T output',
         """
         const int ndim = output.ndim;
 
