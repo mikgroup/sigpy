@@ -6,6 +6,9 @@ if config.cupy_enabled:
 if config.mpi4py_enabled:
     from mpi4py import MPI
 
+    if config.nccl_enabled:
+        from cupy.cuda import nccl
+
 
 __all__ = ['Device', 'get_device', 'get_array_module', 'cpu_device',
            'to_device', 'copyto', 'Communicator']
@@ -190,7 +193,8 @@ class Communicator(object):
             self.size = self.mpi_comm.Get_size()
             self.rank = self.mpi_comm.Get_rank()
         else:
-            raise ValueError('Attempting to use Communicator, but mpi4py is not installed.')
+            raise ValueError('Attempting to use Communicator, ',
+                             'but mpi4py is not installed.')
 
     def allreduce(self, input):
         """All reduce operation in-place.
@@ -202,9 +206,19 @@ class Communicator(object):
 
         """
         if self.size > 1:
-            cpu_input = to_device(input, cpu_device)
-            self.mpi_comm.Allreduce(MPI.IN_PLACE, cpu_input)
-            copyto(input, cpu_input)
+            if self._use_nccl(input):
+                nccl_comm = self._get_nccl_comm(input)
+                nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
+                with get_device(input):
+                    nccl_comm.allReduce(input.data.ptr,
+                                        input.data.ptr,
+                                        nccl_size, nccl_dtype,
+                                        nccl.NCCL_SUM,
+                                        cp.cuda.Stream.null.ptr)
+            else:
+                cpu_input = to_device(input, cpu_device)
+                self.mpi_comm.Allreduce(MPI.IN_PLACE, cpu_input)
+                copyto(input, cpu_input)
 
     def reduce(self, input, root=0):
         """Reduce operation in-place.
@@ -250,3 +264,42 @@ class Communicator(object):
                 self.mpi_comm.Gatherv(cpu_input, [None, sizes], root=root)
         else:
             return input
+
+    def _use_nccl(self, input):
+        if config.nccl_enabled:
+            device = get_device(input)
+            devices = self.mpi_comm.allgather(device.id)
+            return all([d >= 0 for d in devices])
+        else:
+            return False
+
+    def _get_nccl_comm(self, input):
+        device = get_device(input)
+        if self.rank == 0:
+            nccl_comm_id = nccl.get_unique_id()
+        else:
+            nccl_comm_id = None
+
+        nccl_comm_id = self.mpi_comm.bcast(nccl_comm_id)
+
+        with device:
+            return nccl.NcclCommunicator(self.size, nccl_comm_id,
+                                         self.rank)
+
+    def _get_nccl_dtype_size(self, input):
+        if input.dtype == np.float32:
+            nccl_dtype = nccl.NCCL_FLOAT32
+            nccl_size = input.size
+        elif input.dtype == np.float64:
+            nccl_dtype = nccl.NCCL_FLOAT64
+            nccl_size = input.size
+        elif input.dtype == np.complex64:
+            nccl_dtype = nccl.NCCL_FLOAT32
+            nccl_size = input.size * 2
+        elif input.dtype == np.complex128:
+            nccl_dtype = nccl.NCCL_FLOAT64
+            nccl_size = input.size * 2
+        else:
+            raise ValueError('dtype not supported, got {dtype}.'.format(dtype=input.dtype))
+
+        return nccl_dtype, nccl_size
