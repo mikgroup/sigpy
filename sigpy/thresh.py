@@ -10,7 +10,7 @@ if config.cupy_enabled:
     import cupy as cp
 
 
-__all__ = ['soft_thresh', 'hard_thresh', 'l1_proj', 'l2_proj', 'elitist_thresh']
+__all__ = ['soft_thresh', 'hard_thresh', 'l1_proj', 'l2_proj']
 
 
 def soft_thresh(lamda, input):
@@ -125,61 +125,6 @@ def l2_proj(eps, input, axes=None):
     return output
 
 
-def elitist_thresh(lamda, input, axes=None):
-    """Elitist threshold.
-
-    Solves for
-
-    :math::
-        \text{argmin}_x \| x - y \|_2^2 + \lambda \| x \|_1^2
-
-    Args:
-        lamda (float, or array): Threshold parameter.
-        input (array): Input array.
-        axes (None or tuple of ints): Axes to perform threshold.
-
-    Returns:
-        array: Result.
-
-    References:
-        Kowalski, M. 2009. Sparse regression using mixed norms.
-
-    """
-    shape = input.shape
-    axes = util._normalize_axes(axes, input.ndim)
-    remain_axes = tuple(set(range(input.ndim)) - set(axes))
-
-    length = util.prod([shape[a] for a in axes])
-    batch = input.size // length
-
-    input = input.transpose(remain_axes + axes)
-    input = input.reshape([batch, length])
-
-    thresh = find_elitist_thresh(lamda, input)
-    output = soft_thresh(thresh, input)
-
-    output = output.reshape([shape[a] for a in remain_axes + axes])
-    output = output.transpose(np.argsort(remain_axes + axes))
-
-    return output
-
-
-def find_elitist_thresh(lamda, input):
-    device = backend.get_device(input)
-    xp = device.xp
-    batch = len(input)
-    with device:
-        sorted_input = xp.sort(xp.abs(input), axis=-1)[:, ::-1]
-        thresh = xp.empty([batch, 1], dtype=sorted_input.dtype)
-
-    if device == backend.cpu_device:
-        _find_elitist_thresh(thresh, lamda, sorted_input)
-    else:
-        _find_elitist_thresh_cuda(thresh, lamda, sorted_input, size=batch)
-
-    return thresh
-
-
 @nb.vectorize
 def _soft_thresh(lamda, input):
     abs_input = abs(input)
@@ -201,22 +146,6 @@ def _hard_thresh(lamda, input):
         return input
     else:
         return 0
-
-
-@nb.jit(nopython=True, cache=True)
-def _find_elitist_thresh(thresh, lamda, input):
-    batch, length = input.shape
-    for i in range(batch):
-        l1 = 0
-        for j in range(length):
-            l1 += input[i, j]
-            t = l1 * lamda / (1 + lamda * (j + 1))
-
-            if (j == length - 1):
-                thresh[i, 0] = t
-            elif (t > input[i, j + 1]):
-                thresh[i, 0] = t
-                break
 
 
 if config.cupy_enabled:
@@ -249,26 +178,3 @@ if config.cupy_enabled:
             output = 0;
         """,
         name='hard_thresh')
-
-    _find_elitist_thresh_cuda = cp.ElementwiseKernel(
-        'raw S thresh, S lamda, raw T input',
-        '',
-        """
-        const int length = input.shape()[1];
-        S l1 = 0;
-        for (int j = 0; j < length; j++) {
-            const int idx[] = {i, j};
-            l1 += input[idx];
-            S t = l1 * lamda / ((S) 1. + lamda * (S) (j + 1.));
-            
-            const int thresh_idx[] = {i, 0};
-            const int next_idx[] = {i, j + 1};
-            if (j == length - 1) {
-                thresh[thresh_idx] = t;
-            } else if (l1 * lamda > input[next_idx] * ((S) 1. + lamda * (S) (j + 1.))) {
-                thresh[thresh_idx] = t;
-                break;
-            }
-        }
-        """,
-        name='find_elitist_thresh', reduce_dims=False)
