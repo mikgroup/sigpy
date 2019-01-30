@@ -44,9 +44,6 @@ class ThreshSuite:
     def time_hard_thresh(self):
         y = sp.hard_thresh(1e-3, self.x)
 
-    def time_elitist_thresh(self):
-        y = sp.elitist_thresh(1e-3, self.x)
-
     def time_l1_proj(self):
         y = sp.l1_proj(1, self.x)
 
