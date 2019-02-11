@@ -187,9 +187,10 @@ def copyto(output, input):
 class Communicator(object):
     """Communicator for distributed computing using MPI.
 
-    All arrays are moved to CPU, then communicated through MPI, and moved back
-    to original device. When mpi4py is not installed,
-    the communicator basically does nothing.
+    When NCCL is not installed, arrays are moved to CPU,
+    then communicated through MPI, and moved back
+    to original device.
+    When mpi4py is not installed, the communicator errors.
 
     """
 
@@ -199,8 +200,8 @@ class Communicator(object):
             self.size = self.mpi_comm.Get_size()
             self.rank = self.mpi_comm.Get_rank()
         else:
-            raise ValueError('Attempting to use Communicator, ',
-                             'but mpi4py is not installed.')
+            self.size = 1
+            self.rank = 0
 
         # Keep nccl comms for reuse
         if config.nccl_enabled:
