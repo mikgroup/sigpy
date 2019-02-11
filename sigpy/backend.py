@@ -252,6 +252,19 @@ class Communicator(object):
             else:
                 self.mpi_comm.Reduce(cpu_input, None, root=root)
 
+    def bcast(self, input, root=0):
+        """Broadcast from root to other nodes.
+        
+        Args:
+            input (array): input array.
+            root (int): root node rank.
+
+        """
+        if self.size > 1:
+            cpu_input = to_device(input, cpu_device)
+            self.mpi_comm.Bcast(cpu_input, root=root)
+            copyto(input, cpu_input)
+
     def gatherv(self, input, root=0):
         """Gather with variable sizes operation.
 
