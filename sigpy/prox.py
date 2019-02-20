@@ -253,3 +253,30 @@ class L1L2Reg(Prox):
     
     def _prox(self, alpha, input):
         return thresh.elitist_thresh(self.lamda * alpha, input, axes=self.axes)
+
+
+class BoxConstraint(Prox):
+    r"""Box constraint proximal operator.
+
+    .. math::
+        \min_{x : l \leq x \leq u} \frac{1}{2} \| x - y \|_2^2
+
+    Args:
+        shape (tuple of ints): input shape.
+        lower (scalar or array): lower limit.
+        upper (scalar or array): upper limit.
+    
+    """
+    def __init__(self, shape, lower, upper):
+        self.lower = lower
+        self.upper = upper
+        super().__init__(shape)
+
+    def _prox(self, alpha, input):
+        device = backend.get_device(input)
+        xp = device.xp
+
+        with device:
+            return xp.clip(input, self.lower, self.upper)
+
+        
