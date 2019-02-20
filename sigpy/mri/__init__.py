@@ -5,12 +5,14 @@ It provides convenient simulation and sampling functions, such as poisson-disc s
 from sigpy.mri import app, linop
 
 from sigpy.mri import precond, samp, sim, util
+from sigpy.mri.espirit import *
 from sigpy.mri.precond import *
 from sigpy.mri.samp import *
 from sigpy.mri.sim import *
 from sigpy.mri.util import *
 
 __all__ = ['app', 'linop']
+__all__.extend(espirit.__all__)
 __all__.extend(precond.__all__)
 __all__.extend(samp.__all__)
 __all__.extend(sim.__all__)
