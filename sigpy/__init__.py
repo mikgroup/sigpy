@@ -14,6 +14,7 @@ from sigpy.block import *
 from sigpy.conv import *
 from sigpy.interp import *
 from sigpy.fourier import *
+from sigpy.sim import *
 from sigpy.thresh import *
 from sigpy.util import *
 

@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
 class TestLinop(unittest.TestCase):
 
-    def test_shepp_logan_sense_model(self):
+    def test_sense_model(self):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 
@@ -29,7 +29,7 @@ class TestLinop(unittest.TestCase):
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]),
                             A * img)
 
-    def test_shepp_logan_sense_model_batch(self):
+    def test_sense_model_batch(self):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 
@@ -44,7 +44,7 @@ class TestLinop(unittest.TestCase):
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]),
                             A * img)
 
-    def test_shepp_logan_noncart_sense_model(self):
+    def test_noncart_sense_model(self):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 
@@ -59,7 +59,7 @@ class TestLinop(unittest.TestCase):
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]).ravel(),
                             (A * img).ravel(), atol=0.1, rtol=0.1)
 
-    def test_shepp_logan_noncart_sense_model_batch(self):
+    def test_noncart_sense_model_batch(self):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 

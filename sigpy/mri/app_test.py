@@ -15,7 +15,7 @@ class TestApp(unittest.TestCase):
         img_shape = [6, 6]
         mps_shape = [4, 6, 6]
 
-        img = sim.shepp_logan(img_shape)
+        img = sp.shepp_logan(img_shape)
         mps = sim.birdcage_maps(mps_shape)
 
         mask = np.zeros(img_shape)
