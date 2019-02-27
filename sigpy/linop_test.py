@@ -62,6 +62,18 @@ class TestLinop(unittest.TestCase):
         check_linop_unitary(A)
         check_linop_pickleable(A)
 
+    def test_AsType(self):
+        shape = [5]
+        A = linop.AsType(shape, np.complex, np.float)
+        x = util.randn(shape)
+
+        npt.assert_allclose(A(x), x)
+        check_linop_linear(A)
+        check_linop_adjoint(A)
+        check_linop_unitary(A)
+        check_linop_pickleable(A)
+
+
     def test_ToDevice(self):
         shape = [5]
         odevice = backend.cpu_device
