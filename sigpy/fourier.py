@@ -43,7 +43,7 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
             output = xp.fft.fftn(input, s=oshape, axes=axes, norm=norm)
 
         if np.issubdtype(input.dtype, np.complexfloating) and input.dtype != output.dtype:
-            output = output.astype(input.dtype)
+            output = output.astype(input.dtype, copy=False)
 
         return output
 
@@ -102,7 +102,8 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         IEEE Transactions on Signal Processing, 51(2), 560-574.
 
         Beatty, P. J., Nishimura, D. G., & Pauly, J. M. (2005). 
-        Rapid gridding reconstruction with a minimal oversampling ratio. 
+        Rapid gridding reconstruction with a min
+imal oversampling ratio. 
         IEEE transactions on medical imaging, 24(6), 799-808.
 
     """
@@ -110,41 +111,24 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
     xp = device.xp
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
+    os_shape = _get_oversamp_shape(input.shape, ndim, oversamp)
 
     with device:
         output = input.copy()
-        os_shape = list(input.shape)
 
-        for a in range(-ndim, 0):
-            i = input.shape[a]
-            os_i = _get_ugly_number(oversamp * i)
-            os_shape[a] = os_i
-            idx = xp.arange(i, dtype=input.dtype)
+        # Apodize
+        _apodize(output, ndim, oversamp, width, beta)
 
-            # Calculate apodization
-            apod = (beta**2 - (np.pi * width * (idx - i // 2) / os_i)**2)**0.5
-            apod /= xp.sinh(apod)
+        # Zero-pad
+        output /= util.prod(input.shape)**0.5
+        output = util.resize(output, os_shape)
 
-            # Swap axes
-            output = output.swapaxes(a, -1)
-            os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
+        # FFT
+        output = fft(output, axes=range(-ndim, 0), norm=None)
 
-            # Apodize
-            output *= apod
-
-            # Oversampled FFT
-            output = util.resize(output, os_shape)
-            output = fft(output, axes=[-1], norm=None)
-            output /= i**0.5
-
-            # Swap back
-            output = output.swapaxes(a, -1)
-            os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
-
+        # Interpolate
         coord = _scale_coord(backend.to_device(coord, device), input.shape, oversamp)
-        kernel = backend.to_device(
-            _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, coord.dtype), device)
-
+        kernel = _get_kaiser_bessel_kernel(n, width, beta, coord.dtype, device)
         output = interp.interpolate(output, width, kernel, coord)
 
         return output
@@ -194,38 +178,23 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
     else:
         oshape = list(oshape)
 
+    os_shape = _get_oversamp_shape(oshape, ndim, oversamp)
+
     with device:
+        # Gridding
         coord = _scale_coord(backend.to_device(coord, device), oshape, oversamp)
-        kernel = backend.to_device(
-            _kb(np.arange(n, dtype=coord.dtype) / n, width, beta, coord.dtype), device)
-        os_shape = oshape[:-ndim] + [_get_ugly_number(oversamp * i) for i in oshape[-ndim:]]
+        kernel = _get_kaiser_bessel_kernel(n, width, beta, coord.dtype, device)
         output = interp.gridding(input, os_shape, width, kernel, coord)
 
-        for a in range(-ndim, 0):
-            i = oshape[a]
-            os_i = os_shape[a]
-            idx = xp.arange(i, dtype=input.dtype)
-            os_shape[a] = i
+        # IFFT
+        output = ifft(output, axes=range(-ndim, 0), norm=None)
 
-            # Swap axes
-            output = output.swapaxes(a, -1)
-            os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
+        # Crop
+        output = util.resize(output, oshape)
+        output *= util.prod(os_shape[-ndim:]) / util.prod(oshape[-ndim:])**0.5
 
-            # Oversampled IFFT
-            output = ifft(output, axes=[-1], norm=None)
-            output *= os_i / i**0.5
-            output = util.resize(output, os_shape)
-
-            # Calculate apodization
-            apod = (beta**2 - (np.pi * width * (idx - i // 2) / os_i)**2)**0.5
-            apod /= xp.sinh(apod)
-
-            # Apodize
-            output *= apod
-
-            # Swap back
-            output = output.swapaxes(a, -1)
-            os_shape[a], os_shape[-1] = os_shape[-1], os_shape[a]
+        # Apodize
+        _apodize(output, ndim, oversamp, width, beta)
 
         return output
 
@@ -265,8 +234,28 @@ def _ifftc(input, oshape=None, axes=None, norm='ortho'):
         return output
 
 
-def _kb(x, width, beta, dtype):
-    return 1 / width * np.i0(beta * (1 - x**2)**0.5).astype(dtype)
+def _get_kaiser_bessel_kernel(n, width, beta, dtype, device):
+    """Precompute Kaiser Bessel kernel.
+    
+    Precomputes Kaiser-Bessel kernel with n points.
+
+    Args:
+        n (int): number of sampling points.
+        width (float): kernel width.
+        beta (float): kaiser bessel parameter.
+        dtype (dtype): output data type.
+        device (Device): output device.
+
+    Returns:
+        array: Kaiser-Bessel kernel table.
+
+    """
+    device = backend.Device(device)
+    xp = device.xp
+    with device:
+        x = xp.arange(n, dtype=dtype) / n
+        kernel = 1 / width * xp.i0(beta * (1 - x**2)**0.5).astype(dtype)
+        return kernel
 
 
 def _scale_coord(coord, shape, oversamp):
@@ -311,3 +300,27 @@ def _get_ugly_number(n):
             i3 += 1
         elif ugly_num == ugly_nums[i5] * 5:
             i5 += 1
+
+
+def _get_oversamp_shape(shape, ndim, oversamp):
+    return list(shape)[:-ndim] + [_get_ugly_number(oversamp * i) for i in shape[-ndim:]]
+
+
+def _apodize(input, ndim, oversamp, width, beta):
+    device = backend.get_device(input)
+    xp = device.xp
+
+    output = input
+    with device:
+        for a in range(-ndim, 0):
+            i = output.shape[a]
+            os_i = _get_ugly_number(oversamp * i)
+            idx = xp.arange(i, dtype=output.dtype)
+
+            # Calculate apodization
+            apod = (beta**2 - (np.pi * width * (idx - i // 2) / os_i)**2)**0.5
+            apod /= xp.sinh(apod)
+            output *= apod.reshape([i] + [1] * (-a - 1))
+
+        return output
+
