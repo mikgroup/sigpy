@@ -120,7 +120,7 @@ imal oversampling ratio.
         _apodize(output, ndim, oversamp, width, beta)
 
         # Zero-pad
-        output /= util.prod(input.shape)**0.5
+        output /= util.prod(input.shape[-ndim:])**0.5
         output = util.resize(output, os_shape)
 
         # FFT
