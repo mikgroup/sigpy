@@ -196,6 +196,10 @@ class Communicator(object):
             raise ValueError('Attempting to use Communicator, ',
                              'but mpi4py is not installed.')
 
+        # Keep nccl comms for reuse
+        if config.nccl_enabled:
+            self.nccl_comms = {}
+
     def allreduce(self, input):
         """All reduce operation in-place.
 
@@ -206,15 +210,18 @@ class Communicator(object):
 
         """
         if self.size > 1:
-            if self._use_nccl(input):
-                nccl_comm = self._get_nccl_comm(input)
-                nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
-                with get_device(input):
-                    nccl_comm.allReduce(input.data.ptr,
-                                        input.data.ptr,
-                                        nccl_size, nccl_dtype,
-                                        nccl.NCCL_SUM,
-                                        cp.cuda.Stream.null.ptr)
+            if config.nccl_enabled:
+                device = get_device(input)
+                devices = self.mpi_comm.allgather(device.id)
+                if all([d >= 0 for d in devices]):
+                    nccl_comm = self._get_nccl_comm(device, devices)
+                    nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
+                    with device:
+                        nccl_comm.allReduce(input.data.ptr,
+                                            input.data.ptr,
+                                            nccl_size, nccl_dtype,
+                                            nccl.NCCL_SUM,
+                                            cp.cuda.Stream.null.ptr)
             else:
                 cpu_input = to_device(input, cpu_device)
                 self.mpi_comm.Allreduce(MPI.IN_PLACE, cpu_input)
@@ -265,16 +272,10 @@ class Communicator(object):
         else:
             return input
 
-    def _use_nccl(self, input):
-        if config.nccl_enabled:
-            device = get_device(input)
-            devices = self.mpi_comm.allgather(device.id)
-            return all([d >= 0 for d in devices])
-        else:
-            return False
-
-    def _get_nccl_comm(self, input):
-        device = get_device(input)
+    def _get_nccl_comm(self, device, devices):
+        if str(devices) in self.nccl_comms:
+            return self.nccl_comms[str(devices)]
+        
         if self.rank == 0:
             nccl_comm_id = nccl.get_unique_id()
         else:
@@ -283,8 +284,10 @@ class Communicator(object):
         nccl_comm_id = self.mpi_comm.bcast(nccl_comm_id)
 
         with device:
-            return nccl.NcclCommunicator(self.size, nccl_comm_id,
-                                         self.rank)
+            nccl_comm = nccl.NcclCommunicator(self.size, nccl_comm_id, self.rank)
+            self.nccl_comms[str(devices)] = nccl_comm
+
+        return nccl_comm
 
     def _get_nccl_dtype_size(self, input):
         if input.dtype == np.float32:
