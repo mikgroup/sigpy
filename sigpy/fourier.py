@@ -102,7 +102,6 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
 
     """
     device = backend.get_device(input)
-    xp = device.xp
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
     os_shape = _get_oversamp_shape(input.shape, ndim, oversamp)
@@ -166,7 +165,6 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
 
     """
     device = backend.get_device(input)
-    xp = device.xp
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
     if oshape is None:

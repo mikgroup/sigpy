@@ -683,7 +683,6 @@ def _get_matmul_oshape(ishape, mshape, adjoint):
     if adjoint:
         mshape_exp[-1], mshape_exp[-2] = mshape_exp[-2], mshape_exp[-1]
 
-    max_ndim = max(len(ishape), len(mshape))
     oshape = []
     for i, m in zip(ishape_exp[:-2], mshape_exp[:-2]):
         if not (i == m or i == 1 or m == 1):

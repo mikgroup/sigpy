@@ -363,8 +363,6 @@ class LinearLeastSquares(App):
                                             gradh=gradh, max_iter=self.max_iter)
 
     def objective(self):
-        device = self.y_device
-        xp = self.y_device.xp
         with self.y_device:
             r = self.A(self.x) - self.y
 

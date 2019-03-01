@@ -58,7 +58,6 @@ class TestFourier(unittest.TestCase):
     def test_nufft(self):
 
         # Check deltas
-        ishape = [3]
         input = np.array([0, 1, 0], np.complex)  # delta
         coord = np.array([[-1], [0], [1]], np.float)
 
@@ -66,7 +65,6 @@ class TestFourier(unittest.TestCase):
                             np.array([1.0, 1.0, 1.0]) / (3**0.5),
                             atol=0.01, rtol=0.01)
 
-        ishape = [4]
         input = np.array([0, 0, 1, 0], np.complex)  # delta
         coord = np.array([[-2], [-1], [0], [1]], np.float)
 
@@ -74,7 +72,6 @@ class TestFourier(unittest.TestCase):
                             np.array([1.0, 1.0, 1.0, 1.0]) / (4**0.5),
                             atol=0.01, rtol=0.01)
 
-        ishape = [5]
         input = np.array([0, 0, 1, 0, 0], np.complex)  # delta
         coord = np.array([[-2], [-1], [0], [1], [2]], np.float)
 
@@ -83,7 +80,6 @@ class TestFourier(unittest.TestCase):
                             atol=0.01, rtol=0.01)
 
         # Check shifted delta
-        ishape = [3]
         input = np.array([0, 0, 1], np.complex)  # shifted delta
         coord = np.array([[-1], [0], [1]], np.float)
 
@@ -92,7 +88,6 @@ class TestFourier(unittest.TestCase):
                             np.array([w.conjugate(), 1.0, w]) / (3**0.5),
                             atol=0.01, rtol=0.01)
 
-        ishape = [4]
         input = np.array([0, 0, 0, 1], np.complex)  # delta
         coord = np.array([[-2], [-1], [0], [1]], np.float)
 
@@ -105,8 +100,6 @@ class TestFourier(unittest.TestCase):
     def test_nufft_nd(self):
 
         for ndim in range(3):
-            ishape = [3, 1]
-
             input = np.array([[0], [1], [0]], np.complex)
             coord = np.array([[-1, 0],
                               [0, 0],

@@ -39,7 +39,6 @@ def kspace_precond(mps, weights=None, coord=None,
     img_shape = mps_shape[1:]
     img2_shape = [i * 2 for i in img_shape]
     ndim = len(img_shape)
-    num_coils = mps.shape[0]
 
     scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)
     with device:
@@ -125,7 +124,6 @@ def circulant_precond(mps, weights=None, coord=None,
     img_shape = mps_shape[1:]
     img2_shape = [i * 2 for i in img_shape]
     ndim = len(img_shape)
-    num_coils = mps.shape[0]
 
     scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)**2
     with device:

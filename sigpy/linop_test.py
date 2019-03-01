@@ -237,7 +237,6 @@ class TestLinop(unittest.TestCase):
         npt.assert_allclose(A * x, y)
 
         # Test simple
-        oshape = [2]
         ishape = [2]
         mult = np.array([1.0, 2.0])
 
@@ -251,7 +250,6 @@ class TestLinop(unittest.TestCase):
         npt.assert_allclose(A * x, y)
 
         # Test broadcasting
-        oshape = [2, 2]
         ishape = [2]
         mult = np.array([[1.0, 2.0],
                          [3.0, 4.0]])

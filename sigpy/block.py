@@ -183,8 +183,6 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
 
 @nb.jit(nopython=True, cache=True)
 def _array_to_blocks1(output, input, Bx, Sx, Nx):
-    ndim = input.ndim
-
     for nx in range(Nx):
         for bx in range(Bx):
             ix = nx * Sx + bx
@@ -194,8 +192,6 @@ def _array_to_blocks1(output, input, Bx, Sx, Nx):
 
 @nb.jit(nopython=True, cache=True)
 def _array_to_blocks2(output, input, Bx, By, Sx, Sy, Nx, Ny):
-    ndim = input.ndim
-
     for ny in range(Ny):
         for nx in range(Nx):
             for by in range(By):
@@ -208,8 +204,6 @@ def _array_to_blocks2(output, input, Bx, By, Sx, Sy, Nx, Ny):
 
 @nb.jit(nopython=True, cache=True)
 def _array_to_blocks3(output, input, Bx, By, Bz, Sx, Sy, Sz, Nx, Ny, Nz):
-    ndim = input.ndim
-
     for nz in range(Nz):
         for ny in range(Ny):
             for nx in range(Nx):
@@ -226,8 +220,6 @@ def _array_to_blocks3(output, input, Bx, By, Bz, Sx, Sy, Sz, Nx, Ny, Nz):
 
 @nb.jit(nopython=True, cache=True)
 def _blocks_to_array1(output, input, Bx, Sx, Nx):
-    ndim = output.ndim
-
     for nx in range(Nx):
         for bx in range(Bx):
             ix = nx * Sx + bx
@@ -237,8 +229,6 @@ def _blocks_to_array1(output, input, Bx, Sx, Nx):
 
 @nb.jit(nopython=True, cache=True)
 def _blocks_to_array2(output, input, Bx, By, Sx, Sy, Nx, Ny):
-    ndim = output.ndim
-
     for ny in range(Ny):
         for nx in range(Nx):
             for by in range(By):
@@ -251,8 +241,6 @@ def _blocks_to_array2(output, input, Bx, By, Sx, Sy, Nx, Ny):
 
 @nb.jit(nopython=True, cache=True)
 def _blocks_to_array3(output, input, Bx, By, Bz, Sx, Sy, Sz, Nx, Ny, Nz):
-    ndim = output.ndim
-
     for nz in range(Nz):
         for ny in range(Ny):
             for nx in range(Nx):
