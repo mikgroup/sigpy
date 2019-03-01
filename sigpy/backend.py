@@ -17,7 +17,7 @@ __all__ = ['Device', 'get_device', 'get_array_module', 'cpu_device',
 class Device(object):
     """Device class.
 
-    This class extends cupy.Device, with id > 0 representing the `id`th GPU,
+    This class extends cupy.Device, with id > 0 representing the id_th GPU,
     and id = -1 representing CPU. cupy must be installed to use GPUs.
 
     The array module for the corresponding device can be obtained via .xp.
@@ -35,7 +35,7 @@ class Device(object):
 
     Attributes:
         id (int): id = -1 represents CPU,
-            and others represents the `id`th GPUs.
+            and others represents the id_th GPUs.
 
     """
 
