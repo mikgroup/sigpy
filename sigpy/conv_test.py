@@ -35,8 +35,13 @@ class TestConv(unittest.TestCase):
 
                     x = util.dirac([1, 3], device=device, dtype=dtype)
                     W = xp.ones([2, 1, 3], dtype=dtype)
-                    y = backend.to_device(conv.convolve(x, W, mode=mode,
-                                                        output_multi_channel=True), backend.cpu_device)
+                    y = backend.to_device(
+                        conv.convolve(
+                            x,
+                            W,
+                            mode=mode,
+                            output_multi_channel=True),
+                        backend.cpu_device)
                     npt.assert_allclose(y, [[[1]],
                                             [[1]]], atol=1e-5)
 
@@ -65,8 +70,13 @@ class TestConv(unittest.TestCase):
 
                     x = util.dirac([1, 3], device=device, dtype=dtype)
                     W = xp.ones([2, 1, 3], dtype=dtype)
-                    y = backend.to_device(conv.convolve(x, W, mode=mode,
-                                                        output_multi_channel=True), backend.cpu_device)
+                    y = backend.to_device(
+                        conv.convolve(
+                            x,
+                            W,
+                            mode=mode,
+                            output_multi_channel=True),
+                        backend.cpu_device)
                     npt.assert_allclose(y, [[[0, 1, 1, 1, 0]],
                                             [[0, 1, 1, 1, 0]]], atol=1e-5)
 
@@ -95,8 +105,13 @@ class TestConv(unittest.TestCase):
 
                     y = xp.ones([2, 1, 1], dtype=dtype)
                     W = xp.ones([2, 1, 3], dtype=dtype)
-                    x = backend.to_device(conv.convolve_adjoint_input(W, y, mode=mode,
-                                                                      output_multi_channel=True), backend.cpu_device)
+                    x = backend.to_device(
+                        conv.convolve_adjoint_input(
+                            W,
+                            y,
+                            mode=mode,
+                            output_multi_channel=True),
+                        backend.cpu_device)
                     npt.assert_allclose(x, [[2, 2, 2]], atol=1e-5)
 
     def test_convolve_adjoint_input_full(self):
@@ -118,15 +133,20 @@ class TestConv(unittest.TestCase):
 
                     y = xp.ones([1, 4], dtype=dtype)
                     W = xp.ones([1, 2], dtype=dtype)
-                    x = backend.to_device(conv.convolve_adjoint_input(W, y, mode=mode),
-                                          backend.cpu_device)
+                    x = backend.to_device(
+                        conv.convolve_adjoint_input(
+                            W, y, mode=mode), backend.cpu_device)
                     npt.assert_allclose(x, [[2, 2, 2]], atol=1e-5)
 
                     y = xp.ones([2, 1, 5], dtype=dtype)
                     W = xp.ones([2, 1, 3], dtype=dtype)
-                    x = backend.to_device(conv.convolve_adjoint_input(W, y, mode=mode,
-                                                                      output_multi_channel=True),
-                                          backend.cpu_device)
+                    x = backend.to_device(
+                        conv.convolve_adjoint_input(
+                            W,
+                            y,
+                            mode=mode,
+                            output_multi_channel=True),
+                        backend.cpu_device)
                     npt.assert_allclose(x, [[6, 6, 6]], atol=1e-5)
 
     def test_convolve_adjoint_filter_valid(self):
@@ -143,21 +163,28 @@ class TestConv(unittest.TestCase):
                               np.complex64, np.complex128]:
                     x = xp.ones([1, 3], dtype=dtype)
                     y = xp.ones([1, 1], dtype=dtype)
-                    W = backend.to_device(conv.convolve_adjoint_filter(x, y, ndim, mode=mode),
-                                          backend.cpu_device)
+                    W = backend.to_device(
+                        conv.convolve_adjoint_filter(
+                            x, y, ndim, mode=mode), backend.cpu_device)
                     npt.assert_allclose(W, [[1, 1, 1]], atol=1e-5)
 
                     x = xp.ones([1, 3], dtype=dtype)
                     y = xp.ones([1, 2], dtype=dtype)
-                    W = backend.to_device(conv.convolve_adjoint_filter(x, y, ndim, mode=mode),
-                                          backend.cpu_device)
+                    W = backend.to_device(
+                        conv.convolve_adjoint_filter(
+                            x, y, ndim, mode=mode), backend.cpu_device)
                     npt.assert_allclose(W, [[2, 2]], atol=1e-5)
 
                     x = xp.ones([1, 1, 3], dtype=dtype)
                     y = xp.ones([2, 1, 1], dtype=dtype)
-                    W = backend.to_device(conv.convolve_adjoint_filter(x, y, ndim, mode=mode,
-                                                                       output_multi_channel=True),
-                                          backend.cpu_device)
+                    W = backend.to_device(
+                        conv.convolve_adjoint_filter(
+                            x,
+                            y,
+                            ndim,
+                            mode=mode,
+                            output_multi_channel=True),
+                        backend.cpu_device)
                     npt.assert_allclose(W, [[[1, 1, 1]],
                                             [[1, 1, 1]]], atol=1e-5)
 
@@ -175,20 +202,27 @@ class TestConv(unittest.TestCase):
                               np.complex64, np.complex128]:
                     x = xp.ones([1, 3], dtype=dtype)
                     y = xp.ones([1, 5], dtype=dtype)
-                    W = backend.to_device(conv.convolve_adjoint_filter(x, y, ndim, mode=mode),
-                                          backend.cpu_device)
+                    W = backend.to_device(
+                        conv.convolve_adjoint_filter(
+                            x, y, ndim, mode=mode), backend.cpu_device)
                     npt.assert_allclose(W, [[3, 3, 3]], atol=1e-5)
 
                     x = xp.ones([1, 3], dtype=dtype)
                     y = xp.ones([1, 4], dtype=dtype)
-                    W = backend.to_device(conv.convolve_adjoint_filter(x, y, ndim, mode=mode),
-                                          backend.cpu_device)
+                    W = backend.to_device(
+                        conv.convolve_adjoint_filter(
+                            x, y, ndim, mode=mode), backend.cpu_device)
                     npt.assert_allclose(W, [[3, 3]], atol=1e-5)
 
                     x = xp.ones([1, 1, 3], dtype=dtype)
                     y = xp.ones([2, 1, 5], dtype=dtype)
-                    W = backend.to_device(conv.convolve_adjoint_filter(x, y, ndim, mode=mode,
-                                                                       output_multi_channel=True),
-                                          backend.cpu_device)
+                    W = backend.to_device(
+                        conv.convolve_adjoint_filter(
+                            x,
+                            y,
+                            ndim,
+                            mode=mode,
+                            output_multi_channel=True),
+                        backend.cpu_device)
                     npt.assert_allclose(W, [[[3, 3, 3]],
                                             [[3, 3, 3]]], atol=1e-5)

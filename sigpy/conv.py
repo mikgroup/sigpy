@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Convolution functions.
 
-This module contains convolution functions that support multi-dimension, and multi-channel.
+This module contains convolution functions that support multi-dimension,
+and multi-channel.
 
 """
 import numpy as np
@@ -25,8 +26,8 @@ def convolve(x, W, input_multi_channel=False,
         W (array): filter array of shape filter_shape,
             [input_channel] + filter_shape, [output_channel] + filter_shape,
             or [output_channel, input_channel] + filter_shape.
-        input_multi_channel (bool): Specify whether input has multiple channels.
-        output_multi_channel (bool): Specify whether output has multiple channels.
+        input_multi_channel (bool): Specify if input has multiple channels.
+        output_multi_channel (bool): Specify if output has multiple channels.
         mode (str): {'full', 'valid'}.
 
     Returns:
@@ -71,8 +72,8 @@ def convolve_adjoint_input(W, y, input_multi_channel=False,
         y (array): output array with shape batch_shape + output_shape
             if output_multi_channel=False.
             Otherwise with shape batch_shape + [output_channel] + input_shape.
-        input_multi_channel (bool): Specify whether input has multiple channels.
-        output_multi_channel (bool): Specify whether output has multiple channels.
+        input_multi_channel (bool): Specify if input has multiple channels.
+        output_multi_channel (bool): Specify if output has multiple channels.
         mode (str): {'full', 'valid'}.
 
     Returns:
@@ -118,8 +119,8 @@ def convolve_adjoint_filter(x, y, ndim, input_multi_channel=False,
             if output_multi_channel=False.
             Otherwise with shape batch_shape + [output_channel] + input_shape.
         ndim (int): number of dimensions.
-        input_multi_channel (bool): Specify whether input has multiple channels.
-        output_multi_channel (bool): Specify whether output has multiple channels.
+        input_multi_channel (bool): Specify if input has multiple channels.
+        output_multi_channel (bool): Specify if output has multiple channels.
         mode (str): {'full', 'valid'}.
 
     Returns:
@@ -166,8 +167,8 @@ def _get_convolve_params(x, W, input_multi_channel, output_multi_channel):
         input_channel = 1
 
     if output_multi_channel:
-        output_channel = W.shape[-ndim -
-                                 input_multi_channel - output_multi_channel]
+        output_channel = W.shape[
+            -ndim - input_multi_channel - output_multi_channel]
     else:
         output_channel = 1
 
@@ -197,8 +198,8 @@ def _get_convolve_adjoint_input_params(
         batch_size, input_channel, output_channel
 
 
-def _get_convolve_adjoint_filter_params(x, y, ndim,
-                                        input_multi_channel, output_multi_channel):
+def _get_convolve_adjoint_filter_params(
+        x, y, ndim, input_multi_channel, output_multi_channel):
     output_shape = y.shape[-ndim:]
     input_shape = x.shape[-ndim:]
     batch_shape = y.shape[:-ndim - output_multi_channel]
@@ -260,8 +261,8 @@ def _fft_convolve(x, W, mode='full'):
         elif mode == 'valid':
             shift = [0, 0] + [n - 1 for n in filter_shape]
 
-        y = util.resize(y, (batch_size, output_channel) +
-                        output_shape, ishift=shift)
+        y = util.resize(y, (batch_size, output_channel) + output_shape,
+                        ishift=shift)
         y *= util.prod(pad_shape)**0.5
         return y
 
@@ -310,8 +311,8 @@ def _fft_convolve_adjoint_input(W, y, mode='full'):
         elif mode == 'valid':
             shift = [0] * x.ndim
 
-        x = util.resize(x, (batch_size, input_channel) +
-                        input_shape, ishift=shift)
+        x = util.resize(
+            x, (batch_size, input_channel) + input_shape, ishift=shift)
         x *= util.prod(pad_shape)**0.5
         return x
 
@@ -362,8 +363,8 @@ def _fft_convolve_adjoint_filter(x, y, mode='full'):
         elif mode == 'valid':
             shift = [0, 0] + [p - 1 for p in output_shape]
 
-        W = util.resize(W, (output_channel, input_channel) +
-                        filter_shape, ishift=shift)
+        W = util.resize(
+            W, (output_channel, input_channel) + filter_shape, ishift=shift)
         W *= util.prod(pad_shape)**0.5
         return W
 
@@ -387,8 +388,10 @@ def _cudnn_convolve(x, W, mode='full'):
             y = _cudnn_convolve(x, W, mode=mode)
 
             # Convert back to complex
-            return (y[:, :y.shape[1] // 2] + 1j *
-                    y[:, y.shape[1] // 2:]).astype(dtype)
+            y = y[:, :y.shape[1] // 2] + 1j * y[:, y.shape[1] // 2:]
+            y = y.astype(dtype)
+
+            return y
 
     ndim = x.ndim - 2
     batch_size = len(x)
@@ -438,8 +441,10 @@ def _cudnn_convolve_adjoint_input(W, y, mode='full'):
             x = _cudnn_convolve_adjoint_input(W, y, mode=mode)
 
             # Convert back to complex
-            return (x[:, :x.shape[1] // 2] + 1j *
-                    x[:, x.shape[1] // 2:]).astype(dtype)
+            x = x[:, :x.shape[1] // 2] + 1j * x[:, x.shape[1] // 2:]
+            x = x.astype(dtype)
+
+            return x
 
     ndim = y.ndim - 2
     batch_size = len(y)
@@ -518,8 +523,8 @@ def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
         pads = (0, ) * ndim
 
     with device:
-        W = xp.empty((output_channel, input_channel) +
-                     filter_shape, dtype=dtype)
+        W = xp.empty(
+            (output_channel, input_channel) + filter_shape, dtype=dtype)
         cudnn.convolution_backward_filter(x, y, W,
                                           pads, strides, dilations, groups,
                                           deterministic=deterministic,

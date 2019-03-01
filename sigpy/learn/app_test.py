@@ -41,7 +41,8 @@ class TestApp(unittest.TestCase):
         alpha = 1
 
         L, _ = app.ConvSparseCoding(y, num_atoms, filt_width, batch_size,
-                                    alpha=alpha, lamda=lamda, max_iter=100).run()
+                                    alpha=alpha, lamda=lamda,
+                                    max_iter=100).run()
 
         npt.assert_allclose(
             np.abs(L), [[1 / 2**0.5, 1 / 2**0.5]], atol=0.1, rtol=0.1)

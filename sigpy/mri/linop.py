@@ -2,7 +2,8 @@
 """MRI linear operators.
 
 This module mainly contains the Sense linear operator,
-which integrates multi-channel coil sensitivity maps and discrete Fourier transform.
+which integrates multi-channel coil sensitivity maps and
+ discrete Fourier transform.
 """
 import sigpy as sp
 
@@ -14,11 +15,14 @@ def Sense(mps, coord=None, weights=None, ishape=None,
     Args:
         mps (array): sensitivity maps of length = number of channels.
         coord (None or array): coordinates.
-        weights (None or array): k-space weights. Useful for soft-gating or density compensation.
+        weights (None or array): k-space weights.
+        Useful for soft-gating or density compensation.
         ishape (None or tuple): image shape.
         coil_batch_size (None or int): batch size for processing multi-channel.
-            When None, process all coils at the same time. Useful for saving memory.
-        comm (None or `sigpy.Communicator`): communicator for distributed computing.
+            When None, process all coils at the same time.
+            Useful for saving memory.
+        comm (None or `sigpy.Communicator`): communicator
+            for distributed computing.
 
     """
     # Get image shape and dimension.

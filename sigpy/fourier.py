@@ -53,7 +53,8 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
     Args:
         input (array): input array.
         oshape (None or array of ints): output shape.
-        axes (None or array of ints): Axes over which to compute the inverse FFT.
+        axes (None or array of ints): Axes over which to compute
+            the inverse FFT.
         norm (None or ``"ortho"``): Keyword to specify the normalization mode.
 
     Returns:
@@ -90,15 +91,20 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         coord (array): coordinate array of shape (..., ndim).
             ndim determines the number of dimension to apply nufft.
         oversamp (float): oversampling factor.
-        width (float): interpolation kernel full-width in terms of oversampled grid.
+        width (float): interpolation kernel full-width in terms of
+            oversampled grid.
         n (int): number of sampling points of interpolation kernel.
 
     Returns:
-        array: Fourier domain points of shape input.shape[:-ndim] + coord.shape[:-1]
+        array: Fourier points of shape input.shape[:-ndim] + coord.shape[:-1]
 
     References:
-        Fessler, J. A., & Sutton, B. P. (2003). Nonuniform fast Fourier transforms using min-max interpolation. IEEE Transactions on Signal Processing, 51(2), 560-574.
-        Beatty, P. J., Nishimura, D. G., & Pauly, J. M. (2005). Rapid gridding reconstruction with a minimal oversampling ratio. IEEE transactions on medical imaging, 24(6), 799-808.
+        Fessler, J. A., & Sutton, B. P. (2003).
+        Nonuniform fast Fourier transforms using min-max interpolation
+        IEEE Transactions on Signal Processing, 51(2), 560-574.
+        Beatty, P. J., Nishimura, D. G., & Pauly, J. M. (2005).
+        Rapid gridding reconstruction with a minimal oversampling ratio.
+        IEEE transactions on medical imaging, 24(6), 799-808.
 
     """
     device = backend.get_device(input)
@@ -154,7 +160,8 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
             ndim determines the number of dimension to apply nufft adjoint.
         oshape (tuple of ints): output shape.
         oversamp (float): oversampling factor.
-        width (float): interpolation kernel full-width in terms of oversampled grid.
+        width (float): interpolation kernel full-width in terms of
+            oversampled grid.
         n (int): number of sampling points of interpolation kernel.
 
     Returns:
@@ -270,7 +277,8 @@ def _scale_coord(coord, shape, oversamp):
 def _get_ugly_number(n):
     """Get closest ugly number greater than n.
 
-    An ugly number is defined as a positive integer that is a multiple of 2, 3, and 5.
+    An ugly number is defined as a positive integer that is a
+    multiple of 2 3 and 5.
 
     Args:
         n (int): Base number.

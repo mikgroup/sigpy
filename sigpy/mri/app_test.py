@@ -37,7 +37,11 @@ class TestApp(unittest.TestCase):
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
         img_rec = app.SenseRecon(
-            ksp, mps, lamda, alg_name='PrimalDualHybridGradient', max_iter=1000).run()
+            ksp,
+            mps,
+            lamda,
+            alg_name='PrimalDualHybridGradient',
+            max_iter=1000).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     if sp.config.mpi4py_enabled:
@@ -57,7 +61,11 @@ class TestApp(unittest.TestCase):
             npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
             img_rec = app.SenseRecon(
-                ksp, mps, lamda, alg_name='PrimalDualHybridGradient', max_iter=1000).run()
+                ksp,
+                mps,
+                lamda,
+                alg_name='PrimalDualHybridGradient',
+                max_iter=1000).run()
             npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_SenseConstrainedRecon(self):
@@ -75,8 +83,12 @@ class TestApp(unittest.TestCase):
             ksp, mps, lamda, alg_name='GradientMethod').run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
-        img_rec = app.L1WaveletRecon(ksp, mps, lamda, alg_name='PrimalDualHybridGradient',
-                                     max_iter=1000).run()
+        img_rec = app.L1WaveletRecon(
+            ksp,
+            mps,
+            lamda,
+            alg_name='PrimalDualHybridGradient',
+            max_iter=1000).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_L1WaveletConstrainedRecon(self):

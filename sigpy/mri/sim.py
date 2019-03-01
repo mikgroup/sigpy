@@ -11,7 +11,8 @@ def birdcage_maps(shape, r=1.5, nzz=8, dtype=np.complex):
     """Simulates birdcage coil sensitivies.
 
     Args:
-        shape (tuple of ints): sensitivity maps shape, can be of length 3, and 4.
+        shape (tuple of ints): sensitivity maps shape,
+            can be of length 3, and 4.
         r (float): relative radius of birdcage.
         nzz (int): number of coils per ring.
         dtype (Dtype): data type.

@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-"""This module contains plotting functions based on matplotlib for image, line, and scatter plots.
+"""This module contains plotting functions based on matplotlib
+for image, line, and scatter plots.
 
-A feature of these plotting functions is that they only need hotkeys to control them,
+A feature of these plotting functions is that
+they can be controlled using only hotkeys
 so the user does not need to move away from the keyboard.
 
 Given an array ``x``, an example usage is:
@@ -30,7 +32,8 @@ class ImagePlot(object):
         x/y: select current dimension as x and y dimension.
         t: swap between x and y axis.
         z: toggle current dimension as z dimension.
-        c: toggle current dimension as color channel. Only works if current dimension is of length 3.
+        c: toggle current dimension as color channel.
+            Only works if current dimension is of length 3.
         left/right: increment/decrement current dimension
         up/down: flip axis when current dimension is x or y.
             Otherwise increment/decrement slice at current dimension.
@@ -41,7 +44,8 @@ class ImagePlot(object):
         i: imaginary mode. Renormalizes when pressed each time.
         l: log mode. Renormalizes when pressed each time.
         [: decreases brightness. Shifts window level up by 10% of window width.
-        ]: increases brightness. Shifts window level down by 10% of window width.
+        ]: increases brightness.
+            Shifts window level down by 10% of window width.
         {: decreases contrast. Scale window width by 0.9.
         }: increases contrast. Scale window width by 1.1.
         s: save as png.
@@ -53,11 +57,24 @@ class ImagePlot(object):
 
     """
 
-    def __init__(self, im, x=-1, y=-2, z=None, c=None, hide=False, mode='m', title='',
-                 interpolation='lanczos', save_basename='Figure', fps=10, filename=None):
+    def __init__(
+            self,
+            im,
+            x=-1,
+            y=-2,
+            z=None,
+            c=None,
+            hide=False,
+            mode='m',
+            title='',
+            interpolation='lanczos',
+            save_basename='Figure',
+            fps=10,
+            filename=None):
         if im.ndim < 2:
-            raise TypeError('Image dimension must at least be two, got {im_ndim}'.format(
-                im_ndim=im.ndim))
+            raise TypeError(
+                'Image dimension must at least be two, got {im_ndim}'.format(
+                    im_ndim=im.ndim))
 
         self.axim = None
         self.im = im
@@ -239,13 +256,15 @@ class ImagePlot(object):
 
         elif event.key == 's':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %I.%M.%S %p.png')
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
 
         elif event.key == 'g':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %I.%M.%S %p.gif')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -258,15 +277,23 @@ class ImagePlot(object):
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
+            subprocess.run(['ffmpeg',
+                            '-f',
+                            'image2',
+                            '-s',
+                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                           int(bbox.height * self.fig.dpi)),
+                            '-r',
+                            str(self.fps),
+                            '-i',
+                            '{} %05d.png'.format(temp_basename),
+                            '-vf',
+                            'palettegen',
+                            '{} palette.png'.format(temp_basename)])
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
-                            '-i', '{} %05d.png'.format(temp_basename),
-                            '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
-            subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(
+                                int(bbox.width * self.fig.dpi),
+                                int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
@@ -278,7 +305,8 @@ class ImagePlot(object):
 
         elif event.key == 'v':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.mp4')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %I.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -291,18 +319,29 @@ class ImagePlot(object):
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
-            subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
-                            '-i', '{} %05d.png'.format(temp_basename),
-                            '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                            '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
+            subprocess.run(['ffmpeg',
+                            '-f',
+                            'image2',
+                            '-s',
+                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                           int(bbox.height * self.fig.dpi)),
+                            '-r',
+                            str(self.fps),
+                            '-i',
+                            '{} %05d.png'.format(temp_basename),
+                            '-vf',
+                            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                            '-vcodec',
+                            'libx264',
+                            '-pix_fmt',
+                            'yuv420p',
+                            filename])
 
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
 
-        elif (event.key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'backspace'] and
+        elif (event.key in ['0', '1', '2', '3', '4',
+                            '5', '6', '7', '8', '9', 'backspace'] and
               self.d not in [self.x, self.y, self.z, self.c]):
 
             if self.entering_slice:
@@ -376,11 +415,19 @@ class ImagePlot(object):
             self.vmax = imv.max()
 
         if self.axim is None:
-            self.axim = self.ax.imshow(imv,
-                                       vmin=self.vmin, vmax=self.vmax,
-                                       cmap='gray', origin='lower',
-                                       interpolation=self.interpolation, aspect=1.0,
-                                       extent=[0, imv.shape[1], 0, imv.shape[0]])
+            self.axim = self.ax.imshow(
+                imv,
+                vmin=self.vmin,
+                vmax=self.vmax,
+                cmap='gray',
+                origin='lower',
+                interpolation=self.interpolation,
+                aspect=1.0,
+                extent=[
+                    0,
+                    imv.shape[1],
+                    0,
+                    imv.shape[0]])
 
         else:
             self.axim.set_data(imv)
@@ -603,13 +650,15 @@ class LinePlot(object):
 
         elif event.key == 's':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %I.%M.%S %p.png')
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
 
         elif event.key == 'g':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %I.%M.%S %p.gif')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -622,15 +671,23 @@ class LinePlot(object):
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
+            subprocess.run(['ffmpeg',
+                            '-f',
+                            'image2',
+                            '-s',
+                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                           int(bbox.height * self.fig.dpi)),
+                            '-r',
+                            str(self.fps),
+                            '-i',
+                            '{} %05d.png'.format(temp_basename),
+                            '-vf',
+                            'palettegen',
+                            '{} palette.png'.format(temp_basename)])
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
-                            '-i', '{} %05d.png'.format(temp_basename),
-                            '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
-            subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(
+                                int(bbox.width * self.fig.dpi),
+                                int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
@@ -642,7 +699,8 @@ class LinePlot(object):
 
         elif event.key == 'v':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %h.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -655,13 +713,23 @@ class LinePlot(object):
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
-            subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
-                            '-i', '{} %05d.png'.format(temp_basename),
-                            '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                            '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
+            subprocess.run(['ffmpeg',
+                            '-f',
+                            'image2',
+                            '-s',
+                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                           int(bbox.height * self.fig.dpi)),
+                            '-r',
+                            str(self.fps),
+                            '-i',
+                            '{} %05d.png'.format(temp_basename),
+                            '-vf',
+                            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                            '-vcodec',
+                            'libx264',
+                            '-pix_fmt',
+                            'yuv420p',
+                            filename])
 
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
@@ -755,8 +823,16 @@ class ScatterPlot(object):
         l: log mode
     """
 
-    def __init__(self, coord, data=None, z=None, hide=False, mode='m', title='',
-                 save_basename='Figure', fps=10):
+    def __init__(
+            self,
+            coord,
+            data=None,
+            z=None,
+            hide=False,
+            mode='m',
+            title='',
+            save_basename='Figure',
+            fps=10):
 
         self.coord = coord
         assert coord.shape[-1] == 2
@@ -863,13 +939,15 @@ class ScatterPlot(object):
 
         elif event.key == 's':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %I.%M.%S %p.png')
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
 
         elif event.key == 'g':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %I.%M.%S %p.gif')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -882,15 +960,23 @@ class ScatterPlot(object):
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
+            subprocess.run(['ffmpeg',
+                            '-f',
+                            'image2',
+                            '-s',
+                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                           int(bbox.height * self.fig.dpi)),
+                            '-r',
+                            str(self.fps),
+                            '-i',
+                            '{} %05d.png'.format(temp_basename),
+                            '-vf',
+                            'palettegen',
+                            '{} palette.png'.format(temp_basename)])
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
-                            '-i', '{} %05d.png'.format(temp_basename),
-                            '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
-            subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(
+                                int(bbox.width * self.fig.dpi),
+                                int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
@@ -902,7 +988,8 @@ class ScatterPlot(object):
 
         elif event.key == 'v':
             filename = self.save_basename + \
-                datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
+                datetime.datetime.now().strftime(
+                    ' %Y-%m-%d at %h.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -915,18 +1002,29 @@ class ScatterPlot(object):
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
-            subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
-                            '-i', '{} %05d.png'.format(temp_basename),
-                            '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                            '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
+            subprocess.run(['ffmpeg',
+                            '-f',
+                            'image2',
+                            '-s',
+                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                           int(bbox.height * self.fig.dpi)),
+                            '-r',
+                            str(self.fps),
+                            '-i',
+                            '{} %05d.png'.format(temp_basename),
+                            '-vf',
+                            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                            '-vcodec',
+                            'libx264',
+                            '-pix_fmt',
+                            'yuv420p',
+                            filename])
 
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
 
-        elif (event.key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'backspace'] and
+        elif (event.key in ['0', '1', '2', '3', '4', '5',
+                            '6', '7', '8', '9', 'backspace'] and
               self.d != self.z):
 
             if self.entering_slice:

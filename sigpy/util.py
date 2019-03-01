@@ -44,8 +44,9 @@ def _check_same_dtype(*arrays):
     dtype = arrays[0].dtype
     for a in arrays:
         if a.dtype != dtype:
-            raise TypeError('inputs dtype mismatch, got {a_dtype}, and {dtype}.'.format(
-                a_dtype=a.dtype, dtype=dtype))
+            raise TypeError(
+                'inputs dtype mismatch, got {a_dtype}, and {dtype}.'.format(
+                    a_dtype=a.dtype, dtype=dtype))
 
 
 def asscalar(input):
@@ -154,8 +155,8 @@ def resize(input, oshape, ishift=None, oshift=None):
         oshift = [max(o // 2 - i // 2, 0)
                   for i, o in zip(ishape_exp, oshape_exp)]
 
-    copy_shape = [min(i - si, o - so) for i, si, o, so in zip(ishape_exp, ishift,
-                                                              oshape_exp, oshift)]
+    copy_shape = [min(i - si, o - so) for i, si, o,
+                  so in zip(ishape_exp, ishift, oshape_exp, oshift)]
     islice = tuple([slice(si, si + c) for si, c in zip(ishift, copy_shape)])
     oslice = tuple([slice(so, so + c) for so, c in zip(oshift, copy_shape)])
 
@@ -337,8 +338,8 @@ def triang(shape, dtype=np.float, device=backend.cpu_device):
     with device:
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
-            w = 1 - xp.abs(xp.arange(i, dtype=dtype) - i //
-                           2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
+            x = xp.arange(i, dtype=dtype)
+            w = 1 - xp.abs(x - i // 2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
             window *= w.reshape([i] + [1] * n)
 
     return window
@@ -362,9 +363,8 @@ def hanning(shape, dtype=np.float, device=backend.cpu_device):
     with device:
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
-            w = 0.5 - 0.5 * \
-                xp.cos(2 * np.pi * xp.arange(i, dtype=dtype) /
-                       max(1, (i - (i % 2))))
+            x = xp.arange(i, dtype=dtype)
+            w = 0.5 - 0.5 * xp.cos(2 * np.pi * x / max(1, (i - (i % 2))))
             window *= w.reshape([i] + [1] * n)
 
     return window
@@ -389,7 +389,7 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
     References:
         Ramani, S., Blu, T. and Unser, M. 2008.
         Monte-Carlo Sure: A Black-Box Optimization of Regularization Parameters
-        for General Denoising Algorithms. IEEE Transactions on Image Processing.
+        for General Denoising Algorithms. IEEE Transactions on Image Processing
         17, 9 (2008), 1540-1554.
     """
     device = backend.get_device(y)

@@ -461,8 +461,12 @@ class TestLinop(unittest.TestCase):
 
                 x_shape = [2, 3, 4]
                 W = util.randn([4, 2, 2, 3], device=device)
-                A = linop.ConvolveInput(x_shape, W, mode=mode,
-                                        input_multi_channel=True, output_multi_channel=True)
+                A = linop.ConvolveInput(
+                    x_shape,
+                    W,
+                    mode=mode,
+                    input_multi_channel=True,
+                    output_multi_channel=True)
                 check_linop_linear(A, device=device)
                 check_linop_adjoint(A, device=device)
                 check_linop_pickleable(A)
@@ -498,8 +502,12 @@ class TestLinop(unittest.TestCase):
 
                 W_shape = [4, 2, 2, 3]
                 x = util.randn([2, 3, 4], device=device)
-                A = linop.ConvolveFilter(W_shape, x, mode=mode,
-                                         input_multi_channel=True, output_multi_channel=True)
+                A = linop.ConvolveFilter(
+                    W_shape,
+                    x,
+                    mode=mode,
+                    input_multi_channel=True,
+                    output_multi_channel=True)
                 check_linop_linear(A, device=device)
                 check_linop_adjoint(A, device=device)
                 check_linop_pickleable(A)

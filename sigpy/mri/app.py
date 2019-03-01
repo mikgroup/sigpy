@@ -21,7 +21,8 @@ class SenseRecon(sp.app.LinearLeastSquares):
     Considers the problem
 
     .. math::
-        \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \frac{\lambda}{2} \| x \|_2^2
+        \min_x \frac{1}{2} \| P F S x - y \|_2^2 +
+        \frac{\lambda}{2} \| x \|_2^2
 
     where P is the sampling operator, F is the Fourier transform operator,
     S is the SENSE operator, x is the image, and y is the k-space measurements.
@@ -33,12 +34,14 @@ class SenseRecon(sp.app.LinearLeastSquares):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        coil_batch_size (int): batch size to process coils.
+            Only affects memory usage.
         comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
     References:
-        Pruessmann, K. P., Weiger, M., Scheidegger, M. B., & Boesiger, P. (1999).
+        Pruessmann, K. P., Weiger, M., Scheidegger, M. B., & Boesiger, P.
+        (1999).
         SENSE: sensitivity encoding for fast MRI.
         Magnetic resonance in medicine, 42(5), 952-962.
 
@@ -85,7 +88,8 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        coil_batch_size (int): batch size to process coils.
+        Only affects memory usage.
         comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
@@ -133,7 +137,8 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         coord (None or array): coordinates.
         wave_name (str): wavelet name.
         device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        coil_batch_size (int): batch size to process coils.
+        Only affects memory usage.
         comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
@@ -192,7 +197,8 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        coil_batch_size (int): batch size to process coils.
+        Only affects memory usage.
         comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
@@ -243,7 +249,8 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        coil_batch_size (int): batch size to process coils.
+        Only affects memory usage.
         comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
@@ -279,7 +286,8 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
 
-        super().__init__(A, y, proxg=proxg, g=g, G=G, show_pbar=show_pbar, **kwargs)
+        super().__init__(A, y, proxg=proxg, g=g, G=G, show_pbar=show_pbar,
+                         **kwargs)
 
 
 class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
@@ -302,7 +310,8 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils. Only affects memory usage.
+        coil_batch_size (int): batch size to process coils.
+        Only affects memory usage.
         comm (Communicator): communicator for distributed computing.
         **kwargs: Other optional arguments.
 
@@ -356,7 +365,8 @@ class JsenseRecon(sp.app.App):
 
     References:
         Ying, L., & Sheng, J. (2007).
-        Joint image reconstruction and sensitivity estimation in SENSE (JSENSE).
+        Joint image reconstruction and sensitivity estimation in SENSE
+        (JSENSE).
         Magnetic Resonance in Medicine, 57(6), 1196-1202.
 
         Uecker, M., Hohage, T., Block, K. T., & Frahm, J. (2008).
@@ -447,17 +457,31 @@ class JsenseRecon(sp.app.App):
 
     def _get_alg(self):
         def min_mps_ker():
-            self.A_mps_ker = linop.ConvImage(self.mps_ker.shape, self.img_ker,
-                                             coord=self.coord, weights=self.weights)
-            sp.app.LinearLeastSquares(self.A_mps_ker, self.y, self.mps_ker,
-                                      lamda=self.lamda, max_iter=self.max_inner_iter).run()
+            self.A_mps_ker = linop.ConvImage(
+                self.mps_ker.shape,
+                self.img_ker,
+                coord=self.coord,
+                weights=self.weights)
+            sp.app.LinearLeastSquares(
+                self.A_mps_ker,
+                self.y,
+                self.mps_ker,
+                lamda=self.lamda,
+                max_iter=self.max_inner_iter).run()
 
         def min_img_ker():
-            self.A_img_ker = linop.ConvSense(self.img_ker.shape, self.mps_ker,
-                                             coord=self.coord, weights=self.weights,
-                                             comm=self.comm)
-            sp.app.LinearLeastSquares(self.A_img_ker, self.y, self.img_ker,
-                                      lamda=self.lamda, max_iter=self.max_inner_iter).run()
+            self.A_img_ker = linop.ConvSense(
+                self.img_ker.shape,
+                self.mps_ker,
+                coord=self.coord,
+                weights=self.weights,
+                comm=self.comm)
+            sp.app.LinearLeastSquares(
+                self.A_img_ker,
+                self.y,
+                self.img_ker,
+                lamda=self.lamda,
+                max_iter=self.max_inner_iter).run()
 
         self.alg = sp.alg.AltMin(
             min_mps_ker, min_img_ker, max_iter=self.max_iter)

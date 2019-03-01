@@ -158,9 +158,9 @@ def _poisson(nx, ny, K, R, calib, seed):
                 done = True
                 for x in range(startx, endx):
                     for y in range(starty, endy):
-                        if (mask[y, x] == 1 and
-                            (((qx - x) / R[y, x]) ** 2 +
-                             ((qy - y) / (R[y, x] * f)) ** 2 < 1)):
+                        if (mask[y, x] == 1
+                            and (((qx - x) / R[y, x]) ** 2 +
+                                 ((qy - y) / (R[y, x] * f)) ** 2 < 1)):
                             done = False
                             break
 

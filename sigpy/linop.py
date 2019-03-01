@@ -19,7 +19,8 @@ def _check_shape_positive(shape):
 class Linop(object):
     """Abstraction for linear operator.
 
-    Linop can be called or multiplied to an array to perform a linear operation.
+    Linop can be called or multiplied to an array to
+    perform a linear operation.
     Given a Linop A, and an appropriately shaped input x, the following are
     both valid operations to compute x -> A(x):
 
@@ -28,7 +29,8 @@ class Linop(object):
 
     Its adjoint linear operator can be obtained using the .H attribute.
     Linops can be scaled, added, subtracted, stacked and composed.
-    Here are some example of valid operations on Linop A, Linop B, and a scalar a:
+    Here are some example of valid operations on Linop A, Linop B,
+    and a scalar a:
 
        >>> A.H
        >>> a * A + B
@@ -60,14 +62,16 @@ class Linop(object):
     def _check_domain(self, input):
         for i1, i2 in zip(input.shape, self.ishape):
             if i2 != -1 and i1 != i2:
-                raise ValueError('input shape mismatch for {s}, got {input_shape}'.format(
-                    s=self, input_shape=input.shape))
+                raise ValueError(
+                    'input shape mismatch for {s}, got {input_shape}'.format(
+                        s=self, input_shape=input.shape))
 
     def _check_codomain(self, output):
         for o1, o2 in zip(output.shape, self.oshape):
             if o2 != -1 and o1 != o2:
-                raise ValueError('output shape mismatch for {s}, got {output_shape}'.format(
-                    s=self, output_shape=output.shape))
+                raise ValueError(
+                    'output shape mismatch for {s}, got {output_shape}'.format(
+                        s=self, output_shape=output.shape))
 
     def _apply(self, input):
         raise NotImplementedError
@@ -266,8 +270,9 @@ class Add(Linop):
         oshape = linops[0].oshape
         ishape = linops[0].ishape
 
-        super().__init__(oshape, ishape,
-                         repr_str=' + '.join([linop.repr_str for linop in linops]))
+        super().__init__(
+            oshape, ishape,
+            repr_str=' + '.join([linop.repr_str for linop in linops]))
 
     def _apply(self, input):
         output = 0
@@ -314,8 +319,9 @@ class Compose(Linop):
         _check_compose_linops(linops)
         self.linops = _combine_compose_linops(linops)
 
-        super().__init__(self.linops[0].oshape, self.linops[-1].ishape,
-                         repr_str=' * '.join([linop.repr_str for linop in linops]))
+        super().__init__(
+            self.linops[0].oshape, self.linops[-1].ishape,
+            repr_str=' * '.join([linop.repr_str for linop in linops]))
 
     def _apply(self, input):
         output = input
@@ -331,15 +337,17 @@ class Compose(Linop):
 def _check_linops_same_ishape(linops):
     for linop in linops:
         if (linop.ishape != linops[0].ishape):
-            raise ValueError('Linops must have the same ishape, got {linops}.'.format(
-                linops=linops))
+            raise ValueError(
+                'Linops must have the same ishape, got {linops}.'.format(
+                    linops=linops))
 
 
 def _check_linops_same_oshape(linops):
     for linop in linops:
         if (linop.oshape != linops[0].oshape):
-            raise ValueError('Linops must have the same oshape, got {linops}.'.format(
-                linops=linops))
+            raise ValueError(
+                'Linops must have the same oshape, got {linops}.'.format(
+                    linops=linops))
 
 
 def _hstack_params(shapes, axis):
@@ -371,8 +379,10 @@ def _hstack_params(shapes, axis):
 class Hstack(Linop):
     """Horizontally stack linear operators.
 
-    Creates a Linop that splits the input, applies Linops independently, and sums outputs.
-    In matrix form, this is equivalant to given matrices {A1, ..., An}, returns [A1, ..., An].
+    Creates a Linop that splits the input, applies Linops independently,
+    and sums outputs.
+    In matrix form, this is equivalant to given matrices {A1, ..., An},
+    returns [A1, ..., An].
 
     Args:
         linops (list of Linops): list of linops with the same output shape.
@@ -455,7 +465,8 @@ def _vstack_params(shapes, axis):
 class Vstack(Linop):
     """Vertically stack linear operators.
 
-    Creates a Linop that applies linops independently, and concatenates outputs.
+    Creates a Linop that applies linops independently,
+    and concatenates outputs.
     In matrix form, this is equivalant to given matrices {A1, ..., An},
     returns [A1.T, ..., An.T].T.
 
@@ -513,12 +524,15 @@ class Vstack(Linop):
 class Diag(Linop):
     """Diagonally stack linear operators.
 
-    Create a Linop that splits input, applies linops independently, and concatenates outputs.
+    Create a Linop that splits input, applies linops independently,
+    and concatenates outputs.
     In matrix form, given matrices {A1, ..., An}, returns diag([A1, ..., An]).
 
     Args:
-        linops (list of Linops): list of linops with the same input and output shape.
-        axis (int or None): If None, inputs/outputs are vectorized and concatenated.
+        linops (list of Linops): list of linops with the same input and
+            output shape.
+        axis (int or None): If None, inputs/outputs are vectorized
+            and concatenated.
 
     """
 
@@ -635,7 +649,8 @@ class FFT(Linop):
 
     Args:
         ishape (tuple of int): Input shape
-        axes (None or tuple of int): Axes to perform FFT. If None, applies on all axes.
+        axes (None or tuple of int): Axes to perform FFT.
+            If None, applies on all axes.
         center (bool): Toggle center FFT.
 
     """
@@ -659,7 +674,8 @@ class IFFT(Linop):
 
     Args:
         ishape (tuple of int): Input shape
-        axes (None or tuple of int): Axes to perform FFT. If None, applies on all axes.
+        axes (None or tuple of int): Axes to perform FFT.
+            If None, applies on all axes.
         center (bool): Toggle center FFT.
 
     """
@@ -705,7 +721,8 @@ def _get_matmul_adjoint_sum_axes(oshape, ishape, mshape):
     max_ndim = max(len(ishape), len(mshape))
     sum_axes = []
     for i, m, o, d in zip(
-            ishape_exp[:-2], mshape_exp[:-2], oshape[:-2], range(max_ndim - 2)):
+            ishape_exp[:-2], mshape_exp[:-2], oshape[:-2],
+            range(max_ndim - 2)):
         if (i == 1 and (m != 1 or o != 1)):
             sum_axes.append(d)
 
@@ -716,9 +733,11 @@ class MatMul(Linop):
     """Linear operator that performs matrix multiplication.
 
     Args:
-        ishape (tuple of ints): Input shape. It must be able to broadcast with mat.shape.
+        ishape (tuple of ints): Input shape.
+            It must be able to broadcast with mat.shape.
         mat (array): Matrix of shape [..., m, n]
-        adjoint (bool): Toggle adjoint. If True, performs conj(mat).swapaxes(-1, -2)
+        adjoint (bool): Toggle adjoint.
+            If True, performs conj(mat).swapaxes(-1, -2)
             before performing matrix multiplication.
 
     """
@@ -778,9 +797,11 @@ class RightMatMul(Linop):
     """Linear operator that performs matrix multiplication on the right.
 
     Args:
-        ishape (tuple of ints): Input shape. It must be able to broadcast with mat.shape.
+        ishape (tuple of ints): Input shape.
+            It must be able to broadcast with mat.shape.
         mat (array): Matrix of shape [..., m, n]
-        adjoint (bool): Toggle adjoint. If True, performs conj(mat).swapaxes(-1, -2)
+        adjoint (bool): Toggle adjoint.
+            If True, performs conj(mat).swapaxes(-1, -2)
             before performing matrix multiplication.
 
     """
@@ -1129,7 +1150,10 @@ class Wavelet(Linop):
 
     def _adjoint_linop(self):
         return InverseWavelet(
-            self.ishape, axes=self.axes, wave_name=self.wave_name, level=self.level)
+            self.ishape,
+            axes=self.axes,
+            wave_name=self.wave_name,
+            level=self.level)
 
 
 class InverseWavelet(Linop):
@@ -1322,7 +1346,11 @@ class NUFFT(Linop):
     def _apply(self, input):
 
         return fourier.nufft(
-            input, self.coord, oversamp=self.oversamp, width=self.width, n=self.n)
+            input,
+            self.coord,
+            oversamp=self.oversamp,
+            width=self.width,
+            n=self.n)
 
     def _adjoint_linop(self):
 
@@ -1355,8 +1383,13 @@ class NUFFTAdjoint(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        return fourier.nufft_adjoint(input, self.coord, self.oshape,
-                                     oversamp=self.oversamp, width=self.width, n=self.n)
+        return fourier.nufft_adjoint(
+            input,
+            self.coord,
+            self.oshape,
+            oversamp=self.oversamp,
+            width=self.width,
+            n=self.n)
 
     def _adjoint_linop(self):
 
@@ -1395,9 +1428,12 @@ class ConvolveInput(Linop):
                              output_multi_channel=self.output_multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveAdjointInput(self.oshape, self.W, mode=self.mode,
-                                    input_multi_channel=self.input_multi_channel,
-                                    output_multi_channel=self.output_multi_channel)
+        return ConvolveAdjointInput(
+            self.oshape,
+            self.W,
+            mode=self.mode,
+            input_multi_channel=self.input_multi_channel,
+            output_multi_channel=self.output_multi_channel)
 
 
 class ConvolveAdjointInput(Linop):
@@ -1426,9 +1462,12 @@ class ConvolveAdjointInput(Linop):
         super().__init__(x_shape, y_shape)
 
     def _apply(self, input):
-        return conv.convolve_adjoint_input(self.W, input, mode=self.mode,
-                                           input_multi_channel=self.input_multi_channel,
-                                           output_multi_channel=self.output_multi_channel)
+        return conv.convolve_adjoint_input(
+            self.W,
+            input,
+            mode=self.mode,
+            input_multi_channel=self.input_multi_channel,
+            output_multi_channel=self.output_multi_channel)
 
     def _adjoint_linop(self):
         return ConvolveInput(self.oshape, self.W, mode=self.mode,
@@ -1468,9 +1507,13 @@ class ConvolveFilter(Linop):
                              output_multi_channel=self.output_multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveAdjointFilter(self.oshape, self.x, self.ndim, mode=self.mode,
-                                     input_multi_channel=self.input_multi_channel,
-                                     output_multi_channel=self.output_multi_channel)
+        return ConvolveAdjointFilter(
+            self.oshape,
+            self.x,
+            self.ndim,
+            mode=self.mode,
+            input_multi_channel=self.input_multi_channel,
+            output_multi_channel=self.output_multi_channel)
 
 
 class ConvolveAdjointFilter(Linop):

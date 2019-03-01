@@ -88,5 +88,5 @@ class TestLinop(unittest.TestCase):
 
             A = linop.Sense(mps[comm.rank::comm.size], comm=comm)
 
-            npt.assert_allclose(A.H(ksp[comm.rank::comm.size]),
-                                np.sum(sp.ifft(ksp, axes=[-1, -2]) * mps.conjugate(), 0))
+            npt.assert_allclose(A.H(ksp[comm.rank::comm.size]), np.sum(
+                sp.ifft(ksp, axes=[-1, -2]) * mps.conjugate(), 0))

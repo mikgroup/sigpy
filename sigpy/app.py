@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This module contains an abstract class App for iterative signal reconstruction applications,
+"""This module contains an abstract class App for iterative signal processing,
 and provides a few general Apps, including a linear least squares App,
 and a maximum eigenvalue estimation App.
 """
@@ -7,7 +7,8 @@ import numpy as np
 
 from tqdm import tqdm
 from sigpy import backend, linop, prox, util
-from sigpy.alg import PowerMethod, GradientMethod, ConjugateGradient, PrimalDualHybridGradient
+from sigpy.alg import (PowerMethod, GradientMethod,
+                       ConjugateGradient, PrimalDualHybridGradient)
 
 
 class App(object):
@@ -18,13 +19,13 @@ class App(object):
 
         >>> app.run()
 
-    Each App should have a core Alg object. The run() function runs the Alg object,
+    Each App should have a core Alg object. The run() function runs the Alg,
     with additional convenient features, such as a progress bar, which
     can be toggled with the show_pbar option.
 
     When creating a new App class, the user should supply an Alg object.
     The user can also optionally define a _pre_update and a _post_update
-    function to performs tasks before and after the Alg.update in each iteration.
+    function to performs tasks before and after the Alg.update.
 
     Similar to Alg, an App object is meant to be run once. Different from Alg,
     App is higher level can should use Linop and Prox whenever possible.
@@ -134,14 +135,16 @@ class LinearLeastSquares(App):
         R (None or Linop): l2 regularization linear operator.
         mu (float): l2 bias regularization parameter.
         z (float or array): Bias for l2 regularization.
-        alg_name (str): {`'ConjugateGradient'`, `'GradientMethod'`, `'PrimalDualHybridGradient'`}.
+        alg_name (str): {`'ConjugateGradient'`, `'GradientMethod'`,
+            `'PrimalDualHybridGradient'`}.
         max_iter (int): Maximum number of iterations.
         P (Linop): Preconditioner for ConjugateGradient.
         alpha (None or float): Step size for `GradientMethod`.
         accelerate (bool): Toggle Nesterov acceleration for `GradientMethod`.
         max_power_iter (int): Maximum number of iterations for power method.
             Used for `GradientMethod` when `alpha` is not specified,
-            and for `PrimalDualHybridGradient` when `tau` or `sigma` is not specified.
+            and for `PrimalDualHybridGradient` when `tau` or `sigma` is not
+            specified.
         tau (float): Primal step-size for `PrimalDualHybridGradient`.
         sigma (float): Dual step-size for `PrimalDualHybridGradient`.
         save_objective_values (bool): Toggle saving objective value.
@@ -284,8 +287,13 @@ class LinearLeastSquares(App):
         else:
             self.alpha = 1 / max_eig
 
-        self.alg = GradientMethod(gradf, self.x, self.alpha, proxg=self.proxg,
-                                  max_iter=self.max_iter, accelerate=self.accelerate)
+        self.alg = GradientMethod(
+            gradf,
+            self.x,
+            self.alpha,
+            proxg=self.proxg,
+            max_iter=self.max_iter,
+            accelerate=self.accelerate)
 
     def _get_PrimalDualHybridGradient(self):
         with self.y_device:
@@ -338,29 +346,43 @@ class LinearLeastSquares(App):
 
             S = linop.Multiply(A.oshape, self.sigma)
             AHA = A.H * S * A
-            max_eig = MaxEig(AHA, dtype=self.x.dtype,
-                             device=self.x_device, max_iter=self.max_power_iter,
-                             show_pbar=self.show_pbar).run()
+            max_eig = MaxEig(
+                AHA,
+                dtype=self.x.dtype,
+                device=self.x_device,
+                max_iter=self.max_power_iter,
+                show_pbar=self.show_pbar).run()
 
             self.tau = 1 / (max_eig + self.lamda + self.mu)
         else:
             T = linop.Multiply(A.ishape, self.tau)
             AAH = A * T * A.H
 
-            max_eig = MaxEig(AAH, dtype=self.x.dtype,
-                             device=self.x_device, max_iter=self.max_power_iter,
-                             show_pbar=self.show_pbar).run()
+            max_eig = MaxEig(
+                AAH,
+                dtype=self.x.dtype,
+                device=self.x_device,
+                max_iter=self.max_power_iter,
+                show_pbar=self.show_pbar).run()
 
             self.sigma = 1 / max_eig
 
         with self.y_device:
             u = self.y_device.xp.zeros(A.oshape, dtype=self.y.dtype)
 
-        self.alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, u,
-                                            self.tau, self.sigma,
-                                            gamma_primal=gamma_primal,
-                                            gamma_dual=gamma_dual,
-                                            gradh=gradh, max_iter=self.max_iter)
+        self.alg = PrimalDualHybridGradient(
+            proxfc,
+            proxg,
+            A,
+            A.H,
+            self.x,
+            u,
+            self.tau,
+            self.sigma,
+            gamma_primal=gamma_primal,
+            gamma_dual=gamma_dual,
+            gradh=gradh,
+            max_iter=self.max_iter)
 
     def objective(self):
         with self.y_device:
@@ -378,8 +400,9 @@ class LinearLeastSquares(App):
 
             if self.proxg is not None:
                 if self.g is None:
-                    raise ValueError('Cannot compute objective when proxg is specified,'
-                                     'but g is not.')
+                    raise ValueError(
+                        'Cannot compute objective when proxg is specified,'
+                        'but g is not.')
 
                 if self.G is None:
                     obj += self.g(self.x)

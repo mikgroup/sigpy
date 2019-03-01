@@ -8,10 +8,12 @@ from sigpy import backend, util, thresh
 class Prox(object):
     r"""Abstraction for proximal operator.
 
-    Prox can be called on a float (:math:`\alpha`) and an array (:math:`x`) to perform a proximal operation
+    Prox can be called on a float (:math:`\alpha`) and
+    an array (:math:`x`) to perform a proximal operation.
 
     .. math::
-        \text{prox}_{\alpha g} (y) = \text{argmin}_x \frac{1}{2} || x - y ||_2^2 + \alpha g(x)
+        \text{prox}_{\alpha g} (y) =
+        \text{argmin}_x \frac{1}{2} || x - y ||_2^2 + \alpha g(x)
 
     Prox can be stacked, and conjugated.
 
@@ -35,14 +37,16 @@ class Prox(object):
     def _check_input(self, input):
 
         if list(input.shape) != self.shape:
-            raise ValueError('input shape mismatch for {s}, got {input_shape}.'.format(
-                s=self, input_shape=input.shape))
+            raise ValueError(
+                'input shape mismatch for {s}, got {input_shape}.'.format(
+                    s=self, input_shape=input.shape))
 
     def _check_output(self, output):
 
         if list(output.shape) != self.shape:
-            raise ValueError('output shape mismatch, for {s}, got {output_shape}.'.format(
-                s=self, output_shape=output.shape))
+            raise ValueError(
+                'output shape mismatch, for {s}, got {output_shape}.'.format(
+                    s=self, output_shape=output.shape))
 
     def __call__(self, alpha, input):
         self._check_input(input)
@@ -58,10 +62,12 @@ class Prox(object):
 class Conj(Prox):
     r"""Returns the proximal operator for the convex conjugate function.
 
-    The proximal operator of the convex conjugate function :math:`g^*` is defined as:
+    The proximal operator of the convex conjugate function
+    :math:`g^*` is defined as:
 
     .. math::
-        \text{prox}_{\alpha g^*} (x) = x - \alpha \text{prox}_{\frac{1}{\alpha} g} (\frac{1}{\alpha} x)
+        \text{prox}_{\alpha g^*} (x) =
+        x - \alpha \text{prox}_{\frac{1}{\alpha} g} (\frac{1}{\alpha} x)
 
     """
 
@@ -195,8 +201,8 @@ class L2Proj(Prox):
 
     def _prox(self, alpha, input):
         with backend.get_device(input):
-            return thresh.l2_proj(self.epsilon, input -
-                                  self.y, self.axes) + self.y
+            return thresh.l2_proj(
+                self.epsilon, input - self.y, self.axes) + self.y
 
 
 class L1Reg(Prox):

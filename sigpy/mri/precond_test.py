@@ -39,8 +39,8 @@ class TestPrecond(unittest.TestCase):
                     p_expected_inv_ic = 0
                     for d in range(nc):
                         for j in range(n):
-                            p_expected_inv_ic += abs(AAH[c, i, d, j]
-                                                     )**2 / abs(AAH[c, i, c, i])
+                            p_expected_inv_ic += abs(
+                                AAH[c, i, d, j])**2 / abs(AAH[c, i, c, i])
 
                     p_expected[c, i] = 1 / p_expected_inv_ic
 

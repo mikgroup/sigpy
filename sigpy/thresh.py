@@ -48,11 +48,6 @@ def soft_thresh(lamda, input):
 def hard_thresh(lamda, input):
     """Hard threshold.
 
-    Performs:
-
-    .. math::
-        1\{|x| > \lambda\} x.
-
     Args:
         lamda (float, or array): Threshold parameter.
         input (array)

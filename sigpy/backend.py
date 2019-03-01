@@ -17,11 +17,11 @@ __all__ = ['Device', 'get_device', 'get_array_module', 'cpu_device',
 class Device(object):
     """Device class.
 
-    This class extends cupy.Device, with id > 0 representing the corresponding GPUs,
+    This class extends cupy.Device, with id > 0 representing the `id`th GPU,
     and id = -1 representing CPU. cupy must be installed to use GPUs.
 
-    The array module for the corresponding device can be obtained via .xp property.
-    Similar to cupy.Device, the Device object can be used as a context. For example:
+    The array module for the corresponding device can be obtained via .xp.
+    Similar to cupy.Device, the Device object can be used as a context:
 
         >>> device = Device(2)
         >>> xp = device.xp  # xp is cupy.
@@ -34,7 +34,8 @@ class Device(object):
             the corresponding GPUs, and id = -1 represents CPU.
 
     Attributes:
-        id (int): id = -1 represents CPU, and other ids represents corresponding GPUs.
+        id (int): id = -1 represents CPU,
+            and others represents the `id`th GPUs.
 
     """
 
@@ -46,8 +47,9 @@ class Device(object):
         elif config.cupy_enabled and isinstance(id_or_device, cp.cuda.Device):
             id = id_or_device.id
         else:
-            raise ValueError('Accepts int, Device or cupy.cuda.Device, got {id_or_device}'.format(
-                id_or_device=id_or_device))
+            raise ValueError(
+                'Accepts int, Device or cupy.cuda.Device, got {}'.format(
+                    id_or_device))
 
         if id != -1:
             if config.cupy_enabled:
@@ -186,7 +188,8 @@ class Communicator(object):
     """Communicator for distributed computing using MPI.
 
     All arrays are moved to CPU, then communicated through MPI, and moved back
-    to original device. When mpi4py is not installed, the communicator basically does nothing.
+    to original device. When mpi4py is not installed,
+    the communicator basically does nothing.
 
     """
 

@@ -9,12 +9,12 @@ __all__ = ['kspace_precond', 'circulant_precond']
 
 def kspace_precond(mps, weights=None, coord=None,
                    lamda=0, device=sp.cpu_device):
-    """Compute a diagonal preconditioner in k-space.
+    r"""Compute a diagonal preconditioner in k-space.
 
     Considers the optimization problem:
 
     .. math::
-        \min_P \| P A A^H - I \|_2^2
+        \min_P \| P A A^H - I \|_F^2
 
     where A is the Sense operator.
 
@@ -26,6 +26,7 @@ def kspace_precond(mps, weights=None, coord=None,
 
     Returns:
         array: k-space preconditioner of same shape as k-space.
+
     """
     dtype = mps.dtype
 
@@ -91,14 +92,15 @@ def kspace_precond(mps, weights=None, coord=None,
 
 def circulant_precond(mps, weights=None, coord=None,
                       lamda=0, device=sp.cpu_device):
-    """Compute circulant preconditioner.
+    r"""Compute circulant preconditioner.
 
     Considers the optimization problem:
 
     .. math::
         \min_P \| A^H A - F P F^H  \|_2^2
 
-    where A is the Sense operator, and F is a unitary Fourier transform operator.
+    where A is the Sense operator,
+    and F is a unitary Fourier transform operator.
 
     Args:
         mps (array): sensitivity maps of shape [num_coils] + image shape.
