@@ -28,4 +28,4 @@ setup(name='sigpy',
           "License :: OSI Approved :: BSD License",
           "Operating System :: OS Independent",
       ]
-)
+      )

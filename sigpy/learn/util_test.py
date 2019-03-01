@@ -24,7 +24,7 @@ class TestUtil(unittest.TestCase):
         scores = np.array([[1, 0, 0],
                            [0, 1, 0],
                            [0, 0, 1]])
-        
+
         labels = util.scores_to_labels(scores)
 
         npt.assert_allclose(labels, [0, 1, 2])

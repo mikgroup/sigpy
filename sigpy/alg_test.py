@@ -14,7 +14,8 @@ class TestAlg(unittest.TestCase):
         A = np.random.random([n, n])
         x = np.random.random([n])
 
-        alg_method = alg.PowerMethod(lambda x: np.matmul(A.T, np.matmul(A, x)), x)
+        alg_method = alg.PowerMethod(
+            lambda x: np.matmul(A.T, np.matmul(A, x)), x)
         while(not alg_method.done()):
             alg_method.update()
 
@@ -38,9 +39,16 @@ class TestAlg(unittest.TestCase):
 
         # Gradient method
         x = np.zeros([n])
-        alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, (np.matmul(A, x) - y)) +
-                                        lamda * x, x,
-                                        alpha, accelerate=False, max_iter=1000)
+        alg_method = alg.GradientMethod(
+            lambda x: np.matmul(
+                A.T,
+                (np.matmul(
+                    A,
+                    x) - y)) + lamda * x,
+            x,
+            alpha,
+            accelerate=False,
+            max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
@@ -48,9 +56,16 @@ class TestAlg(unittest.TestCase):
 
         # Accelerated gradient method
         x = np.zeros([n])
-        alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, np.matmul(A, x) - y) +
-                                        lamda * x, x,
-                                        alpha, accelerate=True, max_iter=1000)
+        alg_method = alg.GradientMethod(
+            lambda x: np.matmul(
+                A.T,
+                np.matmul(
+                    A,
+                    x) - y) + lamda * x,
+            x,
+            alpha,
+            accelerate=True,
+            max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
@@ -58,10 +73,11 @@ class TestAlg(unittest.TestCase):
 
         # Proximal gradient method
         x = np.zeros([n])
-        alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, np.matmul(A, x) - y), x,
-                                        alpha, accelerate=False,
-                                        proxg=lambda alpha, x: x / (1 + lamda * alpha),
-                                        max_iter=1000)
+        alg_method = alg.GradientMethod(
+            lambda x: np.matmul(
+                A.T, np.matmul(A, x) - y), x, alpha,
+            accelerate=False, proxg=lambda alpha, x: x / (
+                1 + lamda * alpha), max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
@@ -69,11 +85,11 @@ class TestAlg(unittest.TestCase):
 
         # Accelerated proximal gradient method
         x = np.zeros([n])
-        alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, np.matmul(A, x) - y), x,
-                                        alpha,
-                                        proxg=lambda alpha, x: x /
-                                        (1 + lamda * alpha),
-                                        accelerate=True, max_iter=1000)
+        alg_method = alg.GradientMethod(
+            lambda x: np.matmul(
+                A.T, np.matmul(
+                    A, x) - y), x, alpha, proxg=lambda alpha, x: x / (
+                1 + lamda * alpha), accelerate=True, max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
@@ -89,13 +105,23 @@ class TestAlg(unittest.TestCase):
             np.matmul(A.T, A) + lamda * np.eye(n), np.matmul(A.T, y))
         alpha = 1
         beta = 0.5
-        f = lambda x: 1 / 2 * np.linalg.norm(np.matmul(A, x) - y)**2 + lamda / 2 * np.linalg.norm(x)**2
+
+        def f(x): return 1 / 2 * np.linalg.norm(
+                np.matmul(A, x) - y)**2 + lamda / 2 * np.linalg.norm(x)**2
         # Gradient method
         x = np.zeros([n])
-        alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, (np.matmul(A, x) - y)) +
-                                        lamda * x, x,
-                                        alpha, beta=beta, f=f, accelerate=False,
-                                        max_iter=1000)
+        alg_method = alg.GradientMethod(
+            lambda x: np.matmul(
+                A.T,
+                (np.matmul(
+                    A,
+                    x) - y)) + lamda * x,
+            x,
+            alpha,
+            beta=beta,
+            f=f,
+            accelerate=False,
+            max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
@@ -103,22 +129,41 @@ class TestAlg(unittest.TestCase):
 
         # Accelerated gradient method
         x = np.zeros([n])
-        alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, np.matmul(A, x) - y) +
-                                        lamda * x, x,
-                                        alpha, beta=beta, f=f, accelerate=True,
-                                        max_iter=1000)
+        alg_method = alg.GradientMethod(
+            lambda x: np.matmul(
+                A.T,
+                np.matmul(
+                    A,
+                    x) - y) + lamda * x,
+            x,
+            alpha,
+            beta=beta,
+            f=f,
+            accelerate=True,
+            max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
         npt.assert_allclose(x, x_truth)
 
         # Proximal gradient method
-        f = lambda x: 1 / 2 * np.linalg.norm(np.matmul(A, x) - y)**2
+        def f(x): return 1 / 2 * np.linalg.norm(np.matmul(A, x) - y)**2
         x = np.zeros([n])
-        alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, np.matmul(A, x) - y), x,
-                                        alpha, accelerate=False, beta=beta, f=f,
-                                        proxg=lambda alpha, x: x / (1 + lamda * alpha),
-                                        max_iter=1000)
+        alg_method = alg.GradientMethod(
+            lambda x: np.matmul(
+                A.T,
+                np.matmul(
+                    A,
+                    x) - y),
+            x,
+            alpha,
+            accelerate=False,
+            beta=beta,
+            f=f,
+            proxg=lambda alpha,
+            x: x / (
+                1 + lamda * alpha),
+            max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
@@ -126,11 +171,11 @@ class TestAlg(unittest.TestCase):
 
         # Accelerated proximal gradient method
         x = np.zeros([n])
-        alg_method = alg.GradientMethod(lambda x: np.matmul(A.T, np.matmul(A, x) - y), x,
-                                        alpha, beta=beta, f=f,
-                                        proxg=lambda alpha, x: x /
-                                        (1 + lamda * alpha),
-                                        accelerate=True, max_iter=1000)
+        alg_method = alg.GradientMethod(
+            lambda x: np.matmul(
+                A.T, np.matmul(A, x) - y), x, alpha,
+            beta=beta, f=f, proxg=lambda alpha, x: x / (
+                1 + lamda * alpha), accelerate=True, max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
@@ -144,9 +189,11 @@ class TestAlg(unittest.TestCase):
         x_truth = np.linalg.solve(np.matmul(A.T, A), np.matmul(A.T, y))
 
         x = np.zeros([n])
-        alg_method = alg.ConjugateGradient(lambda x: np.matmul(A.T, np.matmul(A, x)),
-                                           np.matmul(A.T, y),
-                                           x, max_iter=1000)
+        alg_method = alg.ConjugateGradient(
+            lambda x: np.matmul(
+                A.T, np.matmul(
+                    A, x)), np.matmul(
+                A.T, y), x, max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 

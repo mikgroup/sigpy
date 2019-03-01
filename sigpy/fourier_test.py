@@ -1,4 +1,3 @@
-import pickle
 import unittest
 import numpy as np
 import numpy.testing as npt
@@ -59,7 +58,6 @@ class TestFourier(unittest.TestCase):
     def test_nufft(self):
 
         # Check deltas
-        ishape = [3]
         input = np.array([0, 1, 0], np.complex)  # delta
         coord = np.array([[-1], [0], [1]], np.float)
 
@@ -67,7 +65,6 @@ class TestFourier(unittest.TestCase):
                             np.array([1.0, 1.0, 1.0]) / (3**0.5),
                             atol=0.01, rtol=0.01)
 
-        ishape = [4]
         input = np.array([0, 0, 1, 0], np.complex)  # delta
         coord = np.array([[-2], [-1], [0], [1]], np.float)
 
@@ -75,7 +72,6 @@ class TestFourier(unittest.TestCase):
                             np.array([1.0, 1.0, 1.0, 1.0]) / (4**0.5),
                             atol=0.01, rtol=0.01)
 
-        ishape = [5]
         input = np.array([0, 0, 1, 0, 0], np.complex)  # delta
         coord = np.array([[-2], [-1], [0], [1], [2]], np.float)
 
@@ -84,7 +80,6 @@ class TestFourier(unittest.TestCase):
                             atol=0.01, rtol=0.01)
 
         # Check shifted delta
-        ishape = [3]
         input = np.array([0, 0, 1], np.complex)  # shifted delta
         coord = np.array([[-1], [0], [1]], np.float)
 
@@ -93,21 +88,19 @@ class TestFourier(unittest.TestCase):
                             np.array([w.conjugate(), 1.0, w]) / (3**0.5),
                             atol=0.01, rtol=0.01)
 
-        ishape = [4]
         input = np.array([0, 0, 0, 1], np.complex)  # delta
         coord = np.array([[-2], [-1], [0], [1]], np.float)
 
         w = np.exp(-1j * 2.0 * np.pi / 4.0)
-        npt.assert_allclose(fourier.nufft(input, coord),
-                            np.array(
-                                [w.conjugate()**2, w.conjugate(), 1.0, w]) / (4**0.5),
-                            atol=0.01, rtol=0.01)
+        npt.assert_allclose(
+            fourier.nufft(input, coord),
+            np.array(
+                [w.conjugate()**2, w.conjugate(), 1.0, w]) / (4**0.5),
+            atol=0.01, rtol=0.01)
 
     def test_nufft_nd(self):
 
         for ndim in range(3):
-            ishape = [3, 1]
-
             input = np.array([[0], [1], [0]], np.complex)
             coord = np.array([[-1, 0],
                               [0, 0],
@@ -183,19 +176,27 @@ class TestFourier(unittest.TestCase):
         input = np.array([0.0, 1.0, 0.0], dtype=np.complex)
         coord = np.array([[-1], [0], [1]], np.float)
 
-        npt.assert_allclose(fourier.nufft_adjoint(fourier.nufft(input, coord), coord, oshape),
-                            np.array([0, 1, 0]),
-                            atol=0.01, rtol=0.01)
+        npt.assert_allclose(
+            fourier.nufft_adjoint(fourier.nufft(
+                input, coord), coord, oshape), np.array([0, 1, 0]),
+            atol=0.01, rtol=0.01)
 
         # Check delta scale
         oshape = [3]
         input = np.array([0.0, 1.0, 0.0], dtype=np.complex)
         coord = np.array([[-1], [-0.5], [0], [0.5], [1]], np.float)
 
-        npt.assert_allclose(fourier.nufft_adjoint(fourier.nufft(input, coord),
-                                                  coord, oshape)[len(input) // 2],
-                            5 / 3,
-                            atol=0.01, rtol=0.01)
+        npt.assert_allclose(
+            fourier.nufft_adjoint(
+                fourier.nufft(
+                    input,
+                    coord),
+                coord,
+                oshape)[
+                len(input) // 2],
+            5 / 3,
+            atol=0.01,
+            rtol=0.01)
 
     def test_nufft_ndft(self):
 

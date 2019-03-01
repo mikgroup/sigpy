@@ -3,53 +3,53 @@ import sigpy as sp
 
 
 class FftSuite:
-        
+
     def setup(self):
         self.x = np.random.randn(100)
 
     def time_fft(self):
-        y = sp.fft(self.x)
+        sp.fft(self.x)
 
     def time_fft_non_centered(self):
-        y = sp.fft(self.x, center=False)
+        sp.fft(self.x, center=False)
 
     def time_ifft(self):
-        y = sp.ifft(self.x)
+        sp.ifft(self.x)
 
     def time_ifft_non_centered(self):
-        y = sp.ifft(self.x, center=False)
+        sp.ifft(self.x, center=False)
 
-        
+
 class NufftSuite:
-    
+
     def setup(self):
         self.x = np.random.randn(100)
         self.coord = np.random.randn(100, 1)
 
     def time_nufft(self):
-        y = sp.nufft(self.x, self.coord)
+        sp.nufft(self.x, self.coord)
 
     def time_nufft_adjoint(self):
-        y = sp.nufft_adjoint(self.x, self.coord)
+        sp.nufft_adjoint(self.x, self.coord)
 
 
 class ThreshSuite:
-    
+
     def setup(self):
         self.x = np.random.randn(100)
 
     def time_soft_thresh(self):
-        y = sp.soft_thresh(1e-3, self.x)
+        sp.soft_thresh(1e-3, self.x)
 
     def time_hard_thresh(self):
-        y = sp.hard_thresh(1e-3, self.x)
+        sp.hard_thresh(1e-3, self.x)
 
     def time_l1_proj(self):
-        y = sp.l1_proj(1, self.x)
+        sp.l1_proj(1, self.x)
 
 
 class AlgSuite:
-    
+
     def setup(self):
         x = np.random.randn(100)
         A = np.random.randn(100, 100)
@@ -58,7 +58,8 @@ class AlgSuite:
         self.x = np.zeros(100)
 
     def time_ConjugateGradient(self):
-        alg = sp.alg.ConjugateGradient(lambda x: self.AHA @ x, self.AHy, self.x, max_iter=100)
+        alg = sp.alg.ConjugateGradient(
+            lambda x: self.AHA @ x, self.AHy, self.x, max_iter=100)
         while not alg.done():
             alg.update()
 

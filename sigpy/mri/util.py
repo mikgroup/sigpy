@@ -9,10 +9,10 @@ __all__ = ['get_cov', 'whiten']
 
 def get_cov(noise):
     """Get covariance matrix from noise measurements.
-    
+
     Args:
         noise (array): Noise measurements of shape [num_coils, ...]
-    
+
     Returns:
         array: num_coils x num_coils covariance matrix.
 
@@ -27,11 +27,11 @@ def get_cov(noise):
 
 def whiten(ksp, cov):
     """Whitens k-space measurements.
-    
+
     Args:
         ksp (array): k-space measurements of shape [num_coils, ...]
         cov (array): num_coils x num_coils covariance matrix.
-    
+
     Returns:
         array: whitened k-space array.
 

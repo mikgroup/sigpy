@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from sigpy import util, interp, config
+from sigpy import interp, config
 
 if config.cupy_enabled:
     import cupy as cp
@@ -53,9 +53,11 @@ class TestInterp(unittest.TestCase):
 
         def test_lin_interpolate(self):
 
-            lin_interpolate = cp.ElementwiseKernel('raw S kernel, S x', 'S y',
-                                              'y = lin_interpolate(&kernel[0], kernel.size(), x)',
-                                              preamble=interp.lin_interpolate_cuda)
+            lin_interpolate = cp.ElementwiseKernel(
+                'raw S kernel, S x',
+                'S y',
+                'y = lin_interpolate(&kernel[0], kernel.size(), x)',
+                preamble=interp.lin_interpolate_cuda)
 
             kernel = cp.array([0.0, 2.0])
             x = cp.array([0.5])
@@ -97,6 +99,7 @@ class TestInterp(unittest.TestCase):
                     output = interp.gridding(
                         input, [batch] + shape, width, kernel, coord)
                     output_expected = cp.array(
-                        [[0, 0.9, 0.1]] * batch, dtype=dtype).reshape([batch] + shape)
+                        [[0, 0.9, 0.1]] * batch,
+                        dtype=dtype).reshape([batch] + shape)
                     cp.testing.assert_allclose(
                         output, output_expected, atol=1e-7)

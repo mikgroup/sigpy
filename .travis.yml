@@ -2,13 +2,14 @@ language: python
 python:
   - "3.5"
   - "3.6"
-# command to install dependencies
+
 install:
   - pip install -r requirements.txt
-  - pip install codecov pytest-cov
-# command to run tests
+  - pip install codecov pytest-cov flake8
+
 script:
   - pytest --cov=./
+  - flake8
 
 after_success:
   - codecov

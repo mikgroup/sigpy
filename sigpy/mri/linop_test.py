@@ -74,7 +74,6 @@ class TestLinop(unittest.TestCase):
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]).ravel(),
                             (A * img).ravel(), atol=0.1, rtol=0.1)
 
-
     if sp.config.mpi4py_enabled:
         def test_sense_model_with_comm(self):
             img_shape = [16, 16]
@@ -86,8 +85,8 @@ class TestLinop(unittest.TestCase):
             comm.allreduce(img)
             comm.allreduce(mps)
             ksp = sp.fft(img * mps, axes=[-1, -2])
-            
+
             A = linop.Sense(mps[comm.rank::comm.size], comm=comm)
-            
-            npt.assert_allclose(A.H(ksp[comm.rank::comm.size]),
-                                np.sum(sp.ifft(ksp, axes=[-1, -2]) * mps.conjugate(), 0))
+
+            npt.assert_allclose(A.H(ksp[comm.rank::comm.size]), np.sum(
+                sp.ifft(ksp, axes=[-1, -2]) * mps.conjugate(), 0))

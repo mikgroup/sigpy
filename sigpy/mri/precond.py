@@ -7,13 +7,14 @@ import sigpy as sp
 __all__ = ['kspace_precond', 'circulant_precond']
 
 
-def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device):
-    """Compute a diagonal preconditioner in k-space.
+def kspace_precond(mps, weights=None, coord=None,
+                   lamda=0, device=sp.cpu_device):
+    r"""Compute a diagonal preconditioner in k-space.
 
     Considers the optimization problem:
 
     .. math::
-        \min_P \| P A A^H - I \|_2^2
+        \min_P \| P A A^H - I \|_F^2
 
     where A is the Sense operator.
 
@@ -25,6 +26,7 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
 
     Returns:
         array: k-space preconditioner of same shape as k-space.
+
     """
     dtype = mps.dtype
 
@@ -38,7 +40,6 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
     img_shape = mps_shape[1:]
     img2_shape = [i * 2 for i in img_shape]
     ndim = len(img_shape)
-    num_coils = mps.shape[0]
 
     scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)
     with device:
@@ -67,7 +68,8 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
             xcorr_fourier = 0
             for mps_j in mps:
                 mps_j = sp.to_device(mps_j, device)
-                xcorr_fourier += xp.abs(sp.fft(mps_i * xp.conj(mps_j), img2_shape))**2
+                xcorr_fourier += xp.abs(sp.fft(mps_i *
+                                               xp.conj(mps_j), img2_shape))**2
 
             xcorr = sp.ifft(xcorr_fourier)
             xcorr *= psf
@@ -88,15 +90,17 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
         return p.astype(dtype)
 
 
-def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device):
-    """Compute circulant preconditioner.
+def circulant_precond(mps, weights=None, coord=None,
+                      lamda=0, device=sp.cpu_device):
+    r"""Compute circulant preconditioner.
 
     Considers the optimization problem:
 
     .. math::
         \min_P \| A^H A - F P F^H  \|_2^2
 
-    where A is the Sense operator, and F is a unitary Fourier transform operator.
+    where A is the Sense operator,
+    and F is a unitary Fourier transform operator.
 
     Args:
         mps (array): sensitivity maps of shape [num_coils] + image shape.
@@ -122,7 +126,6 @@ def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_devi
     img_shape = mps_shape[1:]
     img2_shape = [i * 2 for i in img_shape]
     ndim = len(img_shape)
-    num_coils = mps.shape[0]
 
     scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)**2
     with device:
