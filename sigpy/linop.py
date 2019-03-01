@@ -6,10 +6,7 @@ such as reshape, transpose, and resize.
 """
 import numpy as np
 
-from sigpy import backend, block, config, fourier, util, interp, conv, wavelet
-
-if config.cupy_enabled:
-    import cupy as cp
+from sigpy import backend, block, fourier, util, interp, conv, wavelet
 
 
 def _check_shape_positive(shape):

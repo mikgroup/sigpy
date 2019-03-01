@@ -1,7 +1,7 @@
 import numpy as np
 import numba as nb
 
-from sigpy import backend, config, util
+from sigpy import backend, config
 
 
 __all__ = ['array_to_blocks', 'blocks_to_array']

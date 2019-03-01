@@ -9,14 +9,14 @@ These classes can then be used to build an App as a final deliverable. An App si
 from sigpy import alg, app, config, linop, prox
 
 from sigpy import backend, block, conv, interp, fourier, sim, thresh, util
-from sigpy.backend import *
-from sigpy.block import *
-from sigpy.conv import *
-from sigpy.interp import *
-from sigpy.fourier import *
-from sigpy.sim import *
-from sigpy.thresh import *
-from sigpy.util import *
+from sigpy.backend import *  # noqa
+from sigpy.block import *  # noqa
+from sigpy.conv import *  # noqa
+from sigpy.interp import *  # noqa
+from sigpy.fourier import *  # noqa
+from sigpy.sim import *  # noqa
+from sigpy.thresh import *  # noqa
+from sigpy.util import *  # noqa
 
 __all__ = ['alg', 'app', 'config', 'linop', 'prox']
 __all__.extend(backend.__all__)

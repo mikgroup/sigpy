@@ -6,11 +6,8 @@ and a maximum eigenvalue estimation App.
 import numpy as np
 
 from tqdm import tqdm
-from sigpy import backend, linop, prox, util, config
+from sigpy import backend, linop, prox, util
 from sigpy.alg import PowerMethod, GradientMethod, ConjugateGradient, PrimalDualHybridGradient
-
-if config.cupy_enabled:
-    import cupy as cp
 
 
 class App(object):

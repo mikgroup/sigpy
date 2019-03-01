@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from sigpy import util, block, config
+from sigpy import block, config
 
 if config.cupy_enabled:
     import cupy as cp

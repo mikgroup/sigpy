@@ -1,7 +1,6 @@
 import unittest
 import numpy as np
 import sigpy as sp
-import numpy.testing as npt
 
 from sigpy.mri import espirit, sim
 

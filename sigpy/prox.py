@@ -2,10 +2,7 @@
 """Proximal operators.
 """
 import numpy as np
-from sigpy import backend, config, util, thresh
-
-if config.cupy_enabled:
-    import cupy as cp
+from sigpy import backend, util, thresh
 
 
 class Prox(object):

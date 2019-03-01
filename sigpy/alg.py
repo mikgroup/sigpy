@@ -3,7 +3,7 @@
 and implements commonly used methods.
 """
 import numpy as np
-from sigpy import backend, util, config
+from sigpy import backend, util
 
 
 class Alg(object):
