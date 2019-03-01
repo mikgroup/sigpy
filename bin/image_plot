@@ -7,7 +7,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot .npy file as image.')
     parser.add_argument("filename", type=str, help=".npy file name.")
     parser.add_argument("-z", type=int, default=None, help="set z dim")
-    parser.add_argument("-m", default='m', help="set mode ('m', 'p', 'r', 'i', 'l')")
+    parser.add_argument("-m", default='m',
+                        help="set mode ('m', 'p', 'r', 'i', 'l')")
 
     args = parser.parse_args()
 

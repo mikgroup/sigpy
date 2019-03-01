@@ -7,7 +7,8 @@ import sigpy as sp
 __all__ = ['kspace_precond', 'circulant_precond']
 
 
-def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device):
+def kspace_precond(mps, weights=None, coord=None,
+                   lamda=0, device=sp.cpu_device):
     """Compute a diagonal preconditioner in k-space.
 
     Considers the optimization problem:
@@ -67,7 +68,8 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
             xcorr_fourier = 0
             for mps_j in mps:
                 mps_j = sp.to_device(mps_j, device)
-                xcorr_fourier += xp.abs(sp.fft(mps_i * xp.conj(mps_j), img2_shape))**2
+                xcorr_fourier += xp.abs(sp.fft(mps_i *
+                                               xp.conj(mps_j), img2_shape))**2
 
             xcorr = sp.ifft(xcorr_fourier)
             xcorr *= psf
@@ -88,7 +90,8 @@ def kspace_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device)
         return p.astype(dtype)
 
 
-def circulant_precond(mps, weights=None, coord=None, lamda=0, device=sp.cpu_device):
+def circulant_precond(mps, weights=None, coord=None,
+                      lamda=0, device=sp.cpu_device):
     """Compute circulant preconditioner.
 
     Considers the optimization problem:

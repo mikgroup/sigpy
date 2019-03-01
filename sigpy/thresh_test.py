@@ -16,11 +16,11 @@ class TestThresh(unittest.TestCase):
         x = np.ones(5)
         y = np.full(5, 1 / 5**0.5)
         npt.assert_allclose(thresh.l2_proj(1, x), y)
-        
+
         x = np.ones(5)
         y = np.ones(5)
         npt.assert_allclose(thresh.l2_proj(5**0.5, x), y)
-        
+
         x = np.ones(5)
         y = np.ones(5)
         npt.assert_allclose(thresh.l2_proj(10, x), y)

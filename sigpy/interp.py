@@ -80,7 +80,8 @@ def gridding(input, shape, width, kernel, coord):
     with device:
         input = input.reshape([batch_size, npts])
         coord = coord.reshape([npts, ndim])
-        output = xp.zeros([batch_size] + list(shape[-ndim:]), dtype=input.dtype)
+        output = xp.zeros(
+            [batch_size] + list(shape[-ndim:]), dtype=input.dtype)
 
         _gridding = _select_gridding(ndim, npts, device, isreal)
         if device == backend.cpu_device:
@@ -334,7 +335,7 @@ if config.cupy_enabled:
            return 0;
         const int idx = x * n;
         const S frac = x * n - idx;
-        
+
         const S left = kernel[idx];
         S right = 0;
         if (idx != n - 1)

@@ -9,10 +9,10 @@ import sigpy as sp
 class ConvSparseDecom(sp.app.LinearLeastSquares):
     r"""Convolutional sparse decomposition app.
 
-    Considers the convolutional sparse linear model :math:`y = \sum_j L_j * R_j`, 
+    Considers the convolutional sparse linear model :math:`y = \sum_j L_j * R_j`,
     with :math:`L` fixed, and the problem,
 
-    .. math:: 
+    .. math::
         \min_{R} \frac{1}{2}\|y - \sum_j L_j * R_j\|_2^2 + \lambda \|R\|_1
 
     Args:
@@ -34,6 +34,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
         :func:`sigpy.app.LinearLeastSquares`
 
     """
+
     def __init__(self, y, L, lamda=0.005,
                  mode='full', multi_channel=False, device=sp.cpu_device, **kwargs):
         self.y = sp.to_device(y, device)
@@ -48,7 +49,7 @@ class ConvSparseDecom(sp.app.LinearLeastSquares):
                                           mode=self.mode,
                                           input_multi_channel=True,
                                           output_multi_channel=self.multi_channel)
-        
+
         proxg_R = sp.prox.L1Reg(self.R_shape, lamda)
         super().__init__(self.A_R, self.y, proxg=proxg_R, **kwargs)
 
@@ -74,10 +75,10 @@ class ConvSparseCoding(sp.app.App):
     Considers the convolutional sparse model :math:`y_t = \sum_j L_j * R_{tj}`,
     and the objective function
 
-    .. math:: 
+    .. math::
         f(L, R) = \sum_t \frac{1}{2} \|y_t - \sum_j L_j * R_{tj}\|_2^2 + \lambda \|R\|_1
 
-    where :math:`y_t` is the tth data, :math:`L_j` is the jth filter constrained to have unit norm, 
+    where :math:`y_t` is the tth data, :math:`L_j` is the jth filter constrained to have unit norm,
     and :math:`R_{tj}` is the jth coefficient for t th data.
 
     Args:
@@ -104,6 +105,7 @@ class ConvSparseCoding(sp.app.App):
         TODO
 
     """
+
     def __init__(self, y, num_filters, filt_width, batch_size,
                  lamda=0.001, alpha=0.5,
                  max_inner_iter=100,
@@ -159,13 +161,17 @@ class ConvSparseCoding(sp.app.App):
         self.t_idx = sp.ShuffledNumbers(self.num_batches)
         xp = self.device.xp
         with self.device:
-            self.y_t = xp.empty((self.batch_size, ) + self.y.shape[1:], dtype=self.dtype)
-            self.L = sp.randn(self.L_shape, dtype=self.dtype, device=self.device)
+            self.y_t = xp.empty((self.batch_size, ) +
+                                self.y.shape[1:], dtype=self.dtype)
+            self.L = sp.randn(self.L_shape, dtype=self.dtype,
+                              device=self.device)
             if self.multi_channel:
-                self.L /= xp.sum(xp.abs(self.L)**2, axis=(0, ) + tuple(range(-self.data_ndim, 0)), keepdims=True)**0.5
+                self.L /= xp.sum(xp.abs(self.L)**2, axis=(0, ) +
+                                 tuple(range(-self.data_ndim, 0)), keepdims=True)**0.5
             else:
-                self.L /= xp.sum(xp.abs(self.L)**2, axis=tuple(range(-self.data_ndim, 0)), keepdims=True)**0.5
-                
+                self.L /= xp.sum(xp.abs(self.L)**2,
+                                 axis=tuple(range(-self.data_ndim, 0)), keepdims=True)**0.5
+
             self.L_old = xp.empty(self.L_shape, dtype=self.dtype)
             self.R = ConvSparseCoefficients(self.y, self.L, lamda=self.lamda,
                                             multi_channel=self.multi_channel,
@@ -186,9 +192,11 @@ class ConvSparseCoding(sp.app.App):
 
             mu = (1 - self.alpha) / self.alpha
             if self.multi_channel:
-                proxg_L = sp.prox.L2Proj(self.L.shape, 1, axes=[0] + list(range(-self.data_ndim, 0)))
+                proxg_L = sp.prox.L2Proj(self.L.shape, 1, axes=[
+                                         0] + list(range(-self.data_ndim, 0)))
             else:
-                proxg_L = sp.prox.L2Proj(self.L.shape, 1, axes=range(-self.data_ndim, 0))
+                proxg_L = sp.prox.L2Proj(
+                    self.L.shape, 1, axes=range(-self.data_ndim, 0))
 
             sp.app.LinearLeastSquares(self.A_L, self.y_t, x=self.L,
                                       mu=mu, z=self.L_old,
@@ -224,7 +232,7 @@ class ConvSparseCoding(sp.app.App):
                                    max_power_iter=self.max_power_iter)
         return self.L, R
 
-    
+
 class LinearRegression(sp.app.App):
     r"""Performs linear regression to fit input to output.
 
@@ -248,11 +256,12 @@ class LinearRegression(sp.app.App):
        array: matrix of shape input.shape[1:] + output.shape[1:].
 
     References:
-        Needell, Deanna, Ran Zhao, and Anastasios Zouzias. 
+        Needell, Deanna, Ran Zhao, and Anastasios Zouzias.
         Randomized block Kaczmarz method with projection for solving least squares.
         Linear Algebra and its Applications 484 (2015): 322-343.
 
     """
+
     def __init__(self, input, output, batch_size, mu,
                  lamda=0,
                  max_iter=100, max_inner_iter=100, device=sp.cpu_device,
@@ -271,26 +280,31 @@ class LinearRegression(sp.app.App):
         self.device = sp.Device(device)
         xp = self.device.xp
         with self.device:
-            self.mat = xp.zeros(input.shape[1:] + output.shape[1:], dtype=dtype)
-            self.input_t = xp.empty((batch_size, ) + input.shape[1:], dtype=dtype)
-            self.output_t = xp.empty((batch_size, ) + output.shape[1:], dtype=dtype)
+            self.mat = xp.zeros(
+                input.shape[1:] + output.shape[1:], dtype=dtype)
+            self.input_t = xp.empty(
+                (batch_size, ) + input.shape[1:], dtype=dtype)
+            self.output_t = xp.empty(
+                (batch_size, ) + output.shape[1:], dtype=dtype)
             self.t_idx = sp.ShuffledNumbers(num_batches)
-        
+
         self._get_A()
+
         def proxf(mu, x):
             return sp.app.LinearLeastSquares(self.A, self.output_t, x=x,
                                              lamda=self.lamda / num_batches,
                                              mu=1 / mu, z=x,
                                              max_iter=max_inner_iter).run()
 
-        alg = sp.alg.ProximalPointMethod(proxf, mu, self.mat, max_iter=max_iter)
+        alg = sp.alg.ProximalPointMethod(
+            proxf, mu, self.mat, max_iter=max_iter)
         super().__init__(alg)
-        
+
     def _pre_update(self):
         t = self.t_idx.next()
         t_start = t * self.batch_size
         t_end = (t + 1) * self.batch_size
-        
+
         sp.copyto(self.input_t, self.input[t_start:t_end])
         sp.copyto(self.output_t, self.output[t_start:t_end])
 
@@ -301,7 +315,7 @@ class LinearRegression(sp.app.App):
 
     def _output(self):
         return self.mat
-    
+
     def _get_A(self):
         input_t_size = sp.prod(self.input_t.shape[1:])
         output_t_size = sp.prod(self.output_t.shape[1:])
@@ -309,7 +323,8 @@ class LinearRegression(sp.app.App):
         Ri = sp.linop.Reshape([input_t_size, output_t_size], self.mat.shape)
         M = sp.linop.MatMul([input_t_size, output_t_size],
                             self.input_t.reshape([self.batch_size, -1]))
-        Ro = sp.linop.Reshape(self.output_t.shape, [self.batch_size, output_t_size])
+        Ro = sp.linop.Reshape(self.output_t.shape, [
+                              self.batch_size, output_t_size])
         self.A = Ro * M * Ri
 
 
@@ -337,11 +352,12 @@ class ConvSparseCoefficients(object):
         dtype (Dtype): Data type.
 
     """
+
     def __init__(self, y, L,
                  lamda=1, multi_channel=False, mode='full',
                  max_iter=100, max_power_iter=10,
                  device=sp.cpu_device):
-        
+
         self.y = y
         self.L = L
         self.lamda = lamda
@@ -349,7 +365,7 @@ class ConvSparseCoefficients(object):
         self.mode = mode
         self.max_iter = max_iter
         self.max_power_iter = max_power_iter
-        
+
         self._get_params()
         self.ndim = len(self.shape)
         self.dtype = y.dtype
@@ -357,7 +373,7 @@ class ConvSparseCoefficients(object):
 
     def use_device(self, device):
         self.device = sp.Device(device)
-        
+
     def __getitem__(self, index):
         if isinstance(index, int):
             y_t = self.y[index:(index + 1)]
@@ -381,7 +397,7 @@ class ConvSparseCoefficients(object):
 
     def __len__(self):
         return self.num_data
-    
+
     def _get_params(self):
         self.num_data = len(self.y)
         if self.multi_channel:

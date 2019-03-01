@@ -179,7 +179,7 @@ def flip(input, axes=None):
     Returns:
         array: Flipped result.
     """
-    
+
     if axes is None:
         axes = range(input.ndim)
     else:
@@ -211,7 +211,7 @@ def circshift(input, shifts, axes=None):
     Returns:
         array: Result.
     """
-    
+
     if axes is None:
         axes = range(input.ndim)
 
@@ -337,7 +337,8 @@ def triang(shape, dtype=np.float, device=backend.cpu_device):
     with device:
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
-            w = 1 - xp.abs(xp.arange(i, dtype=dtype) - i // 2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
+            w = 1 - xp.abs(xp.arange(i, dtype=dtype) - i //
+                           2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
             window *= w.reshape([i] + [1] * n)
 
     return window
@@ -361,7 +362,9 @@ def hanning(shape, dtype=np.float, device=backend.cpu_device):
     with device:
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
-            w = 0.5 - 0.5 * xp.cos(2 * np.pi * xp.arange(i, dtype=dtype) / max(1, (i - (i % 2))))
+            w = 0.5 - 0.5 * \
+                xp.cos(2 * np.pi * xp.arange(i, dtype=dtype) /
+                       max(1, (i - (i % 2))))
             window *= w.reshape([i] + [1] * n)
 
     return window
@@ -385,7 +388,7 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
 
     References:
         Ramani, S., Blu, T. and Unser, M. 2008.
-        Monte-Carlo Sure: A Black-Box Optimization of Regularization Parameters 
+        Monte-Carlo Sure: A Black-Box Optimization of Regularization Parameters
         for General Denoising Algorithms. IEEE Transactions on Image Processing.
         17, 9 (2008), 1540-1554.
     """
@@ -397,7 +400,8 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
     b = randn(y.shape, dtype=y.dtype, device=device)
     with device:
         divf_y = xp.real(xp.vdot(b, (f(y + eps * b) - f_y))) / eps
-        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + 2 * sigma**2 * divf_y / n
+        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + \
+            2 * sigma**2 * divf_y / n
 
     return sure
 
@@ -407,8 +411,9 @@ class ShuffledNumbers(object):
 
     Args:
         Arguments to numpy.arange.
-    
+
     """
+
     def __init__(self, *args):
         self.numbers = np.arange(*args)
         np.random.shuffle(self.numbers)
@@ -419,7 +424,7 @@ class ShuffledNumbers(object):
 
     def __next__(self):
         return self.next()
-    
+
     def next(self):
         ret = self.numbers[self.i]
 
@@ -448,7 +453,7 @@ def axpy(y, a, x):
         if device == backend.cpu_device:
             _axpy(y, a, x, out=y)
         else:
-            _axpy_cuda( a, x, y )
+            _axpy_cuda(a, x, y)
 
 
 def xpay(y, a, x):
@@ -468,7 +473,7 @@ def xpay(y, a, x):
         if device == backend.cpu_device:
             _xpay(y, a, x, out=y)
         else:
-            _xpay_cuda( a, x, y)
+            _xpay_cuda(a, x, y)
 
 
 @nb.vectorize(nopython=True, cache=True)

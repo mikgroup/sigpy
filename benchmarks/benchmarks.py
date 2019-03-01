@@ -3,7 +3,7 @@ import sigpy as sp
 
 
 class FftSuite:
-        
+
     def setup(self):
         self.x = np.random.randn(100)
 
@@ -19,9 +19,9 @@ class FftSuite:
     def time_ifft_non_centered(self):
         y = sp.ifft(self.x, center=False)
 
-        
+
 class NufftSuite:
-    
+
     def setup(self):
         self.x = np.random.randn(100)
         self.coord = np.random.randn(100, 1)
@@ -34,7 +34,7 @@ class NufftSuite:
 
 
 class ThreshSuite:
-    
+
     def setup(self):
         self.x = np.random.randn(100)
 
@@ -49,7 +49,7 @@ class ThreshSuite:
 
 
 class AlgSuite:
-    
+
     def setup(self):
         x = np.random.randn(100)
         A = np.random.randn(100, 100)
@@ -58,7 +58,8 @@ class AlgSuite:
         self.x = np.zeros(100)
 
     def time_ConjugateGradient(self):
-        alg = sp.alg.ConjugateGradient(lambda x: self.AHA @ x, self.AHy, self.x, max_iter=100)
+        alg = sp.alg.ConjugateGradient(
+            lambda x: self.AHA @ x, self.AHy, self.x, max_iter=100)
         while not alg.done():
             alg.update()
 

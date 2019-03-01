@@ -83,7 +83,8 @@ class TestApp(unittest.TestCase):
         img, mps, ksp = self.shepp_logan_setup()
         std = 0
 
-        img_rec = app.L1WaveletConstrainedRecon(ksp, mps, std, max_iter=1000).run()
+        img_rec = app.L1WaveletConstrainedRecon(
+            ksp, mps, std, max_iter=1000).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_shepp_logan_TotalVariationRecon(self):
@@ -97,7 +98,8 @@ class TestApp(unittest.TestCase):
         img, mps, ksp = self.shepp_logan_setup()
         std = 0
 
-        img_rec = app.TotalVariationConstrainedRecon(ksp, mps, std, max_iter=2000).run()
+        img_rec = app.TotalVariationConstrainedRecon(
+            ksp, mps, std, max_iter=2000).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
     def test_ones_JsenseRecon(self):

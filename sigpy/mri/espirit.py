@@ -33,7 +33,7 @@ def espirit_calib(ksp, thresh=0.001, kernel_width=12, max_power_iter=30):
         kernel_strides = [1] * (img_ndim + 1)
         mat = sp.array_to_blocks(ksp, kernel_shape, kernel_strides)
         mat = mat.reshape([-1, sp.prod(kernel_shape)])
-        
+
         # Perform SVD on calibration matrix
         _, S, VH = xp.linalg.svd(mat, full_matrices=False)
         VH = VH[S > thresh * S.max(), :]

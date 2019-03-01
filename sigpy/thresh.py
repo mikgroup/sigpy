@@ -18,7 +18,7 @@ def soft_thresh(lamda, input):
 
     Performs:
 
-    .. math:: 
+    .. math::
         (| x | - \lambda)_+  \text{sgn}(x)
 
     Args:
@@ -43,14 +43,14 @@ def soft_thresh(lamda, input):
             output = xp.real(output)
 
     return output
-    
+
 
 def hard_thresh(lamda, input):
     """Hard threshold.
 
-    Performs: 
+    Performs:
 
-    .. math:: 
+    .. math::
         1\{|x| > \lambda\} x.
 
     Args:

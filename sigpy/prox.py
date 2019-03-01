@@ -26,6 +26,7 @@ class Prox(object):
         shape: Input/output shape.
 
     """
+
     def __init__(self, shape, repr_str=None):
         self.shape = list(shape)
 
@@ -53,7 +54,8 @@ class Prox(object):
         return output
 
     def __repr__(self):
-        return '<{shape} {repr_str} Prox>.'.format(shape=self.shape, repr_str=self.repr_str)
+        return '<{shape} {repr_str} Prox>.'.format(
+            shape=self.shape, repr_str=self.repr_str)
 
 
 class Conj(Prox):
@@ -65,6 +67,7 @@ class Conj(Prox):
         \text{prox}_{\alpha g^*} (x) = x - \alpha \text{prox}_{\frac{1}{\alpha} g} (\frac{1}{\alpha} x)
 
     """
+
     def __init__(self, prox):
 
         self.prox = prox
@@ -83,6 +86,7 @@ class NoOp(Prox):
        shape (tuple of ints): Input shape
 
     """
+
     def __init__(self, shape):
         super().__init__(shape)
 
@@ -97,6 +101,7 @@ class Stack(Prox):
        proxs (list of proxs): Prox of the same shape.
 
     """
+
     def __init__(self, proxs):
         self.nops = len(proxs)
         assert(self.nops > 0)
@@ -123,17 +128,18 @@ class Stack(Prox):
 
 class UnitaryTransform(Prox):
     r"""Unitary transform input space.
-    
+
     Returns a proximal operator that does
 
-    .. math:: 
+    .. math::
         A^H \text{prox}_{\alpha g}(A x)
-    
+
     Args:
         prox (Prox): Proximal operator.
         A (Linop): Unitary linear operator.
 
     """
+
     def __init__(self, prox, A):
         self.prox = prox
         self.A = A
@@ -157,6 +163,7 @@ class L2Reg(Prox):
         y (scalar or array): Bias term.
 
     """
+
     def __init__(self, shape, lamda, y=0):
         self.lamda = lamda
         self.y = y
@@ -165,7 +172,8 @@ class L2Reg(Prox):
 
     def _prox(self, alpha, input):
         with backend.get_device(input):
-            return (input + self.lamda * alpha * self.y) / (1 + self.lamda * alpha)
+            return (input + self.lamda * alpha * self.y) / \
+                (1 + self.lamda * alpha)
 
 
 class L2Proj(Prox):
@@ -180,6 +188,7 @@ class L2Proj(Prox):
         y (scalar or array): Bias term.
 
     """
+
     def __init__(self, shape, epsilon, y=0, axes=None):
         self.epsilon = epsilon
         self.y = y
@@ -189,7 +198,8 @@ class L2Proj(Prox):
 
     def _prox(self, alpha, input):
         with backend.get_device(input):
-            return thresh.l2_proj(self.epsilon, input - self.y, self.axes) + self.y
+            return thresh.l2_proj(self.epsilon, input -
+                                  self.y, self.axes) + self.y
 
 
 class L1Reg(Prox):
@@ -203,6 +213,7 @@ class L1Reg(Prox):
         lamda (float): regularization parameter
 
     """
+
     def __init__(self, shape, lamda):
         self.lamda = lamda
 
@@ -223,6 +234,7 @@ class L1Proj(Prox):
         epsilon (float): regularization parameter.
 
     """
+
     def __init__(self, shape, epsilon):
         self.epsilon = epsilon
 
@@ -245,12 +257,13 @@ class L1L2Reg(Prox):
         axes (None or tuple of ints): axes over which l1 norm is applied.
 
     """
+
     def __init__(self, shape, lamda, axes=None):
         self.lamda = lamda
         self.axes = axes
 
         super().__init__(shape)
-    
+
     def _prox(self, alpha, input):
         return thresh.elitist_thresh(self.lamda * alpha, input, axes=self.axes)
 
@@ -265,8 +278,9 @@ class BoxConstraint(Prox):
         shape (tuple of ints): input shape.
         lower (scalar or array): lower limit.
         upper (scalar or array): upper limit.
-    
+
     """
+
     def __init__(self, shape, lower, upper):
         self.lower = lower
         self.upper = upper
@@ -278,5 +292,3 @@ class BoxConstraint(Prox):
 
         with device:
             return xp.clip(input, self.lower, self.upper)
-
-        

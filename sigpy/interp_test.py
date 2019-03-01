@@ -54,8 +54,8 @@ class TestInterp(unittest.TestCase):
         def test_lin_interpolate(self):
 
             lin_interpolate = cp.ElementwiseKernel('raw S kernel, S x', 'S y',
-                                              'y = lin_interpolate(&kernel[0], kernel.size(), x)',
-                                              preamble=interp.lin_interpolate_cuda)
+                                                   'y = lin_interpolate(&kernel[0], kernel.size(), x)',
+                                                   preamble=interp.lin_interpolate_cuda)
 
             kernel = cp.array([0.0, 2.0])
             x = cp.array([0.5])

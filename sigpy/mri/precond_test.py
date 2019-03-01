@@ -39,12 +39,13 @@ class TestPrecond(unittest.TestCase):
                     p_expected_inv_ic = 0
                     for d in range(nc):
                         for j in range(n):
-                            p_expected_inv_ic += abs(AAH[c, i, d, j])**2 / abs(AAH[c, i, c, i])
+                            p_expected_inv_ic += abs(AAH[c, i, d, j]
+                                                     )**2 / abs(AAH[c, i, c, i])
 
                     p_expected[c, i] = 1 / p_expected_inv_ic
 
         p = precond.kspace_precond(mps, weights=weights)
-        npt.assert_allclose(p[:, weights==1], p_expected[:, weights==1])
+        npt.assert_allclose(p[:, weights == 1], p_expected[:, weights == 1])
 
     def test_kspace_precond_noncart(self):
         n = 10
@@ -72,7 +73,8 @@ class TestPrecond(unittest.TestCase):
                 p_expected_inv_ic = 0
                 for d in range(nc):
                     for j in range(n):
-                        p_expected_inv_ic += abs(AAH[c, i, d, j])**2 / abs(AAH[c, i, c, i])
+                        p_expected_inv_ic += abs(AAH[c, i, d, j]
+                                                 )**2 / abs(AAH[c, i, c, i])
 
                 p_expected[c, i] = 1 / p_expected_inv_ic
 

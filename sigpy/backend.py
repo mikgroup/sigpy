@@ -2,7 +2,7 @@ import numpy as np
 from sigpy import config
 if config.cupy_enabled:
     import cupy as cp
-    
+
 if config.mpi4py_enabled:
     from mpi4py import MPI
 
@@ -22,7 +22,7 @@ class Device(object):
 
     The array module for the corresponding device can be obtained via .xp property.
     Similar to cupy.Device, the Device object can be used as a context. For example:
-       
+
         >>> device = Device(2)
         >>> xp = device.xp  # xp is cupy.
         >>> with device:
@@ -37,6 +37,7 @@ class Device(object):
         id (int): id = -1 represents CPU, and other ids represents corresponding GPUs.
 
     """
+
     def __init__(self, id_or_device):
         if isinstance(id_or_device, int):
             id = id_or_device
@@ -52,7 +53,8 @@ class Device(object):
             if config.cupy_enabled:
                 self.cpdevice = cp.cuda.Device(id)
             else:
-                raise ValueError('cupy not installed, but set device {}.'.format(id))
+                raise ValueError(
+                    'cupy not installed, but set device {}.'.format(id))
 
         self.id = id
 
@@ -125,7 +127,7 @@ def get_device(array):
 
     Args:
         array (array): Array.
-    
+
     Returns:
         Device.
 
@@ -142,7 +144,7 @@ def to_device(input, device=cpu_device):
     Args:
         input (array): Input.
         device (int or Device or cupy.Device): Output device.
-    
+
     Returns:
         array: Output array placed in device.
     """
@@ -187,6 +189,7 @@ class Communicator(object):
     to original device. When mpi4py is not installed, the communicator basically does nothing.
 
     """
+
     def __init__(self):
         if config.mpi4py_enabled:
             self.mpi_comm = MPI.COMM_WORLD
@@ -249,7 +252,7 @@ class Communicator(object):
         """Gather with variable sizes operation.
 
         Gather inputs across all nodes to the root node,
-        and vectorizes them. 
+        and vectorizes them.
 
         Args:
             input (array): input array.
@@ -261,11 +264,12 @@ class Communicator(object):
         """
         if self.size > 1:
             cpu_input = to_device(input, cpu_device)
-            
+
             sizes = self.mpi_comm.gather(input.size, root=root)
             if self.rank == root:
                 cpu_output = np.empty(sum(sizes), dtype=input.dtype)
-                self.mpi_comm.Gatherv(cpu_input, [cpu_output, sizes], root=root)
+                self.mpi_comm.Gatherv(
+                    cpu_input, [cpu_output, sizes], root=root)
                 return to_device(cpu_output, get_device(input))
             else:
                 self.mpi_comm.Gatherv(cpu_input, [None, sizes], root=root)
@@ -275,7 +279,7 @@ class Communicator(object):
     def _get_nccl_comm(self, device, devices):
         if str(devices) in self.nccl_comms:
             return self.nccl_comms[str(devices)]
-        
+
         if self.rank == 0:
             nccl_comm_id = nccl.get_unique_id()
         else:
@@ -284,7 +288,8 @@ class Communicator(object):
         nccl_comm_id = self.mpi_comm.bcast(nccl_comm_id)
 
         with device:
-            nccl_comm = nccl.NcclCommunicator(self.size, nccl_comm_id, self.rank)
+            nccl_comm = nccl.NcclCommunicator(
+                self.size, nccl_comm_id, self.rank)
             self.nccl_comms[str(devices)] = nccl_comm
 
         return nccl_comm
@@ -303,6 +308,7 @@ class Communicator(object):
             nccl_dtype = nccl.NCCL_FLOAT64
             nccl_size = input.size * 2
         else:
-            raise ValueError('dtype not supported, got {dtype}.'.format(dtype=input.dtype))
+            raise ValueError(
+                'dtype not supported, got {dtype}.'.format(dtype=input.dtype))
 
         return nccl_dtype, nccl_size

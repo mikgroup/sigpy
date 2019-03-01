@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """This module contains an abstract class Linop for linear operators,
 and provides commonly used linear operators, including signal transforms
-such as FFT, NUFFT, and wavelet, and array manipulation operators, 
+such as FFT, NUFFT, and wavelet, and array manipulation operators,
 such as reshape, transpose, and resize.
 """
 import numpy as np
@@ -25,14 +25,14 @@ class Linop(object):
     Linop can be called or multiplied to an array to perform a linear operation.
     Given a Linop A, and an appropriately shaped input x, the following are
     both valid operations to compute x -> A(x):
-    
+
        >>> y = A * x
        >>> y = A(x)
 
     Its adjoint linear operator can be obtained using the .H attribute.
     Linops can be scaled, added, subtracted, stacked and composed.
     Here are some example of valid operations on Linop A, Linop B, and a scalar a:
-    
+
        >>> A.H
        >>> a * A + B
        >>> a * A * B
@@ -47,6 +47,7 @@ class Linop(object):
         ishape: input shape.
         H: adjoint linear operator.
     """
+
     def __init__(self, oshape, ishape, repr_str=None):
         self.oshape = list(oshape)
         self.ishape = list(ishape)
@@ -135,6 +136,7 @@ class Identity(Linop):
         shape (tuple of ints): Input shape
 
     """
+
     def __init__(self, shape):
         super().__init__(shape, shape)
 
@@ -175,6 +177,7 @@ class AllReduce(Linop):
         comm (Communicator): Communicator.
 
     """
+
     def __init__(self, shape, comm, in_place=False):
         self.comm = comm
         self.in_place = in_place
@@ -187,7 +190,7 @@ class AllReduce(Linop):
                 output = input
             else:
                 output = input.copy()
-                
+
             self.comm.allreduce(output)
             return output
 
@@ -203,6 +206,7 @@ class AllReduceAdjoint(Linop):
         comm (Communicator): Communicator.
 
     """
+
     def __init__(self, shape, comm, in_place=False):
         self.comm = comm
         self.in_place = in_place
@@ -223,6 +227,7 @@ class Conj(Linop):
         A (Linop): Input linear operator.
 
     """
+
     def __init__(self, A):
         self.A = A
 
@@ -251,10 +256,11 @@ class Add(Linop):
     Args:
         linops (list of Linops): Input linear operators.
 
-    Returns: 
+    Returns:
         Linop: linops[0] + linops[1] + ... + linops[n - 1]
 
     """
+
     def __init__(self, linops):
         _check_linops_same_ishape(linops)
         _check_linops_same_oshape(linops)
@@ -302,10 +308,11 @@ class Compose(Linop):
     Args:
         linops (list of Linops): Linear operators to be composed.
 
-    Returns: 
+    Returns:
         Linop: linops[0] * linops[1] * ... * linops[n - 1]
 
     """
+
     def __init__(self, linops):
         _check_compose_linops(linops)
         self.linops = _combine_compose_linops(linops)
@@ -358,7 +365,8 @@ def _hstack_params(shapes, axis):
                 indices.append(idx)
                 idx += shape[i]
             elif shape[i] != ishape[i]:
-                raise RuntimeError('Shapes not along axis must be the same to concatenate.')
+                raise RuntimeError(
+                    'Shapes not along axis must be the same to concatenate.')
 
     return ishape, indices
 
@@ -375,6 +383,7 @@ class Hstack(Linop):
             Otherwise, inputs are stacked along axis.
 
     """
+
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
         _check_linops_same_oshape(linops)
@@ -450,7 +459,7 @@ class Vstack(Linop):
     """Vertically stack linear operators.
 
     Creates a Linop that applies linops independently, and concatenates outputs.
-    In matrix form, this is equivalant to given matrices {A1, ..., An}, 
+    In matrix form, this is equivalant to given matrices {A1, ..., An},
     returns [A1.T, ..., An.T].T.
 
     Args:
@@ -458,6 +467,7 @@ class Vstack(Linop):
         axis (int or None): If None, outputs are vectorized and concatenated.
 
     """
+
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
         _check_linops_same_ishape(linops)
@@ -514,6 +524,7 @@ class Diag(Linop):
         axis (int or None): If None, inputs/outputs are vectorized and concatenated.
 
     """
+
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
 
@@ -576,6 +587,7 @@ class Reshape(Linop):
         ishape (tuple of ints): Input shape.
 
     """
+
     def __init__(self, oshape, ishape):
         super().__init__(oshape, ishape)
 
@@ -594,6 +606,7 @@ class Transpose(Linop):
         axes (None or tuple of ints): Axes to transpose input.
 
     """
+
     def __init__(self, ishape, axes=None):
         self.axes = axes
         if axes is None:
@@ -629,6 +642,7 @@ class FFT(Linop):
         center (bool): Toggle center FFT.
 
     """
+
     def __init__(self, shape, axes=None, center=True):
 
         self.axes = axes
@@ -652,6 +666,7 @@ class IFFT(Linop):
         center (bool): Toggle center FFT.
 
     """
+
     def __init__(self, shape, axes=None, center=True):
 
         self.axes = axes
@@ -693,7 +708,8 @@ def _get_matmul_adjoint_sum_axes(oshape, ishape, mshape):
     ishape_exp, mshape_exp = util._expand_shapes(ishape, mshape)
     max_ndim = max(len(ishape), len(mshape))
     sum_axes = []
-    for i, m, o, d in zip(ishape_exp[:-2], mshape_exp[:-2], oshape[:-2], range(max_ndim - 2)):
+    for i, m, o, d in zip(
+            ishape_exp[:-2], mshape_exp[:-2], oshape[:-2], range(max_ndim - 2)):
         if (i == 1 and (m != 1 or o != 1)):
             sum_axes.append(d)
 
@@ -710,6 +726,7 @@ class MatMul(Linop):
             before performing matrix multiplication.
 
     """
+
     def __init__(self, ishape, mat, adjoint=False):
         self.mat = mat
         self.adjoint = adjoint
@@ -771,6 +788,7 @@ class RightMatMul(Linop):
             before performing matrix multiplication.
 
     """
+
     def __init__(self, ishape, mat, adjoint=False):
         self.mat = mat
         self.adjoint = adjoint
@@ -832,6 +850,7 @@ class Multiply(Linop):
         mult (array): Array to multiply.
 
     """
+
     def __init__(self, ishape, mult, conj=False):
         self.mult = mult
         self.conj = conj
@@ -889,6 +908,7 @@ class Interpolate(Linop):
         shift (float): Shifting of coordinates.
 
     """
+
     def __init__(self, ishape, coord, width, kernel, scale=1, shift=0):
         ndim = coord.shape[-1]
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
@@ -910,7 +930,7 @@ class Interpolate(Linop):
 
         with device:
             return interp.interpolate(input, self.width, kernel,
-                                 coord * self.scale + shift)
+                                      coord * self.scale + shift)
 
     def _adjoint_linop(self):
         return Gridding(self.ishape, self.coord, self.width, self.kernel,
@@ -931,6 +951,7 @@ class Gridding(Linop):
             shift (float): Shifting of coordinates.
 
     """
+
     def __init__(self, oshape, coord, width, kernel, scale=1, shift=0):
         ndim = coord.shape[-1]
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
@@ -974,11 +995,13 @@ class Resize(Linop):
 
     def _apply(self, input):
 
-        return util.resize(input, self.oshape, ishift=self.ishift, oshift=self.oshift)
+        return util.resize(input, self.oshape,
+                           ishift=self.ishift, oshift=self.oshift)
 
     def _adjoint_linop(self):
 
-        return Resize(self.ishape, self.oshape, ishift=self.oshift, oshift=self.ishift)
+        return Resize(self.ishape, self.oshape,
+                      ishift=self.oshift, oshift=self.ishift)
 
 
 class Flip(Linop):
@@ -1037,6 +1060,7 @@ class Upsample(Linop):
         shift (None of tuple of ints): Shifts before up-sampling.
 
     """
+
     def __init__(self, oshape, factors, shift=None):
         self.factors = factors
 
@@ -1050,7 +1074,8 @@ class Upsample(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        return util.upsample(input, self.oshape, self.factors, shift=self.shift)
+        return util.upsample(input, self.oshape,
+                             self.factors, shift=self.shift)
 
     def _adjoint_linop(self):
         return Downsample(self.oshape, self.factors, shift=self.shift)
@@ -1058,13 +1083,14 @@ class Upsample(Linop):
 
 class Circshift(Linop):
     """Circular shift linear operator.
-    
+
     Args:
         shape (tuple of ints): Input/output shape.
         shift (tuple of ints): Shifts.
         axes (None or tuple of ints): Axes to perform circular shift.
 
     """
+
     def __init__(self, shape, shift, axes=None):
 
         self.axes = axes
@@ -1137,12 +1163,13 @@ class InverseWavelet(Linop):
             wave_name=self.wave_name, axes=self.axes, level=self.level)
 
     def _adjoint_linop(self):
-        return Wavelet(self.oshape, axes=self.axes, wave_name=self.wave_name, level=self.level)
+        return Wavelet(self.oshape, axes=self.axes,
+                       wave_name=self.wave_name, level=self.level)
 
 
 class Sum(Linop):
     """Sum linear operator. Accumulate axes by summing.
-    
+
     Args:
         ishape (tuple of ints): Input shape.
         axes (tuple of ints): Axes to sum over.
@@ -1167,12 +1194,13 @@ class Sum(Linop):
 
 class Tile(Linop):
     """Tile linear operator.
-    
+
     Args:
         oshape (tuple of ints): Output shape.
         axes (tuple of ints): Axes to tile.
 
     """
+
     def __init__(self, oshape, axes):
 
         self.axes = tuple(a % len(oshape) for a in axes)
@@ -1203,17 +1231,19 @@ class Tile(Linop):
 
 class ArrayToBlocks(Linop):
     """Extract blocks from array.
-    
+
     Args:
         ishape (tuple of ints): Input shape.
         blk_shape (tuple of ints): Block shape.
         blk_shape (tuple of ints): Block strides.
 
     """
+
     def __init__(self, ishape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
-        num_blks = [(i - b + s) // s for i, b, s in zip(ishape, blk_shape, blk_strides)]
+        num_blks = [(i - b + s) // s for i, b,
+                    s in zip(ishape, blk_shape, blk_strides)]
         oshape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1227,23 +1257,26 @@ class ArrayToBlocks(Linop):
 
 class BlocksToArray(Linop):
     """Average blocks to array.
-    
+
     Args:
         oshape (tuple of ints): Output shape.
         blk_shape (tuple of ints): Block shape.
         blk_shape (tuple of ints): Block strides.
 
     """
+
     def __init__(self, oshape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
-        num_blks = [(i - b + s) // s for i, b, s in zip(oshape, blk_shape, blk_strides)]
+        num_blks = [(i - b + s) // s for i, b,
+                    s in zip(oshape, blk_shape, blk_strides)]
         ishape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        return block.blocks_to_array(input, self.oshape, self.blk_shape, self.blk_strides)
+        return block.blocks_to_array(
+            input, self.oshape, self.blk_shape, self.blk_strides)
 
     def _adjoint_linop(self):
         return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides)
@@ -1277,6 +1310,7 @@ class NUFFT(Linop):
         n (int): Kernel sampling number.
 
     """
+
     def __init__(self, ishape, coord, oversamp=1.25, width=4.0, n=128):
         self.coord = coord
         self.oversamp = oversamp
@@ -1291,7 +1325,8 @@ class NUFFT(Linop):
 
     def _apply(self, input):
 
-        return fourier.nufft(input, self.coord, oversamp=self.oversamp, width=self.width, n=self.n)
+        return fourier.nufft(
+            input, self.coord, oversamp=self.oversamp, width=self.width, n=self.n)
 
     def _adjoint_linop(self):
 
@@ -1310,6 +1345,7 @@ class NUFFTAdjoint(Linop):
         n (int): Kernel sampling number.
 
     """
+
     def __init__(self, oshape, coord, oversamp=1.25, width=4.0, n=128):
         self.coord = coord
         self.oversamp = oversamp
@@ -1343,9 +1379,11 @@ class ConvolveInput(Linop):
 
         ndim = W.ndim - input_multi_channel - output_multi_channel
         if mode == 'full':
-            y_shape = [m + n - 1 for m, n in zip(x_shape[-ndim:], W.shape[-ndim:])]
+            y_shape = [m + n - 1 for m,
+                       n in zip(x_shape[-ndim:], W.shape[-ndim:])]
         elif mode == 'valid':
-            y_shape = [m - n + 1 for m, n in zip(x_shape[-ndim:], W.shape[-ndim:])]
+            y_shape = [m - n + 1 for m,
+                       n in zip(x_shape[-ndim:], W.shape[-ndim:])]
 
         if output_multi_channel:
             y_shape = [W.shape[0]] + y_shape
@@ -1377,9 +1415,11 @@ class ConvolveAdjointInput(Linop):
 
         ndim = W.ndim - input_multi_channel - output_multi_channel
         if mode == 'full':
-            x_shape = [p - n + 1 for p, n in zip(y_shape[-ndim:], W.shape[-ndim:])]
+            x_shape = [p - n + 1 for p,
+                       n in zip(y_shape[-ndim:], W.shape[-ndim:])]
         elif mode == 'valid':
-            x_shape = [p + n - 1 for p, n in zip(y_shape[-ndim:], W.shape[-ndim:])]
+            x_shape = [p + n - 1 for p,
+                       n in zip(y_shape[-ndim:], W.shape[-ndim:])]
 
         if input_multi_channel:
             x_shape = [W.shape[-ndim - 1]] + x_shape
@@ -1411,9 +1451,11 @@ class ConvolveFilter(Linop):
 
         ndim = len(W_shape) - input_multi_channel - output_multi_channel
         if mode == 'full':
-            y_shape = [m + n - 1 for m, n in zip(x.shape[-ndim:], W_shape[-ndim:])]
+            y_shape = [m + n - 1 for m,
+                       n in zip(x.shape[-ndim:], W_shape[-ndim:])]
         elif mode == 'valid':
-            y_shape = [m - n + 1 for m, n in zip(x.shape[-ndim:], W_shape[-ndim:])]
+            y_shape = [m - n + 1 for m,
+                       n in zip(x.shape[-ndim:], W_shape[-ndim:])]
 
         if output_multi_channel:
             y_shape = [W_shape[-ndim - input_multi_channel - 1]] + y_shape
@@ -1444,15 +1486,17 @@ class ConvolveAdjointFilter(Linop):
         self.input_multi_channel = input_multi_channel
         self.output_multi_channel = output_multi_channel
         self.ndim = ndim
-        
+
         if mode == 'full':
-            W_shape = [p - m + 1 for m, p in zip(x.shape[-ndim:], y_shape[-ndim:])]
+            W_shape = [p - m + 1 for m,
+                       p in zip(x.shape[-ndim:], y_shape[-ndim:])]
         elif mode == 'valid':
-            W_shape = [m - p + 1 for m, p in zip(x.shape[-ndim:], y_shape[-ndim:])]
+            W_shape = [m - p + 1 for m,
+                       p in zip(x.shape[-ndim:], y_shape[-ndim:])]
 
         if input_multi_channel:
             W_shape = [x.shape[-ndim - 1]] + W_shape
-            
+
         if output_multi_channel:
             W_shape = [y_shape[-ndim - 1]] + W_shape
 
@@ -1481,7 +1525,7 @@ class AsType(Linop):
     def _apply(self, input):
         with backend.get_device(input):
             if (np.issubdtype(self.idtype, np.complexfloating) and
-                not np.issubdtype(self.odtype, np.complexfloating)):
+                    not np.issubdtype(self.odtype, np.complexfloating)):
                 input = input.real
 
             return input.astype(self.odtype)

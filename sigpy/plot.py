@@ -52,6 +52,7 @@ class ImagePlot(object):
         enter: Set current dimension as slice number.
 
     """
+
     def __init__(self, im, x=-1, y=-2, z=None, c=None, hide=False, mode='m', title='',
                  interpolation='lanczos', save_basename='Figure', fps=10, filename=None):
         if im.ndim < 2:
@@ -226,7 +227,7 @@ class ImagePlot(object):
 
             self.update_image()
             self.fig.canvas.draw()
-            
+
         elif event.key in ['m', 'p', 'r', 'i', 'l']:
             self.vmin = None
             self.vmax = None
@@ -238,13 +239,13 @@ class ImagePlot(object):
 
         elif event.key == 's':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
-            
+
         elif event.key == 'g':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -256,7 +257,7 @@ class ImagePlot(object):
                 self.fig.canvas.draw()
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
-                
+
             subprocess.run(['ffmpeg', '-f', 'image2',
                             '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
                                                  int(bbox.height * self.fig.dpi)),
@@ -270,14 +271,14 @@ class ImagePlot(object):
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
                             '-lavfi', 'paletteuse', filename])
-            
+
             os.remove('{} palette.png'.format(temp_basename))
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
-            
+
         elif event.key == 'v':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.mp4')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -289,7 +290,7 @@ class ImagePlot(object):
                 self.fig.canvas.draw()
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
-                
+
             subprocess.run(['ffmpeg', '-f', 'image2',
                             '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
                                                  int(bbox.height * self.fig.dpi)),
@@ -297,7 +298,7 @@ class ImagePlot(object):
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
                             '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
-            
+
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
 
@@ -465,8 +466,9 @@ def array_to_image(arr, color=False):
         ndim = 3
     else:
         ndim = 2
-        
-    arr = sp.resize(arr, arr.shape[:-2] + (arr.shape[-2] + 2, arr.shape[-1] + 2))
+
+    arr = sp.resize(arr, arr.shape[:-2] +
+                    (arr.shape[-2] + 2, arr.shape[-1] + 2))
     shape = arr.shape
     batch = sp.prod(shape[:-ndim])
     mshape = mosaic_shape(batch)
@@ -598,16 +600,16 @@ class LinePlot(object):
             self.update_axes()
             self.update_line()
             self.fig.canvas.draw()
-            
+
         elif event.key == 's':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
-            
+
         elif event.key == 'g':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -619,26 +621,28 @@ class LinePlot(object):
                 self.fig.canvas.draw()
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
-                
+
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
                             '-lavfi', 'paletteuse', filename])
-            
+
             os.remove('{} palette.png'.format(temp_basename))
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
-            
+
         elif event.key == 'v':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -650,14 +654,15 @@ class LinePlot(object):
                 self.fig.canvas.draw()
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
-                
+
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
                             '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
-            
+
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
         else:
@@ -733,7 +738,7 @@ class LinePlot(object):
             self.ax.yaxis.set_visible(False)
             self.ax.title.set_visible(False)
 
-            
+
 class ScatterPlot(object):
     """Plot array as scatter.
 
@@ -855,16 +860,16 @@ class ScatterPlot(object):
             self.update_axes()
             self.update_data()
             self.fig.canvas.draw()
-            
+
         elif event.key == 's':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.png')
             self.fig.savefig(filename, transparent=True, format='png',
                              bbox_inches='tight', pad_inches=0)
-            
+
         elif event.key == 'g':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %I.%M.%S %p.gif')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -876,26 +881,28 @@ class ScatterPlot(object):
                 self.fig.canvas.draw()
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
-                
+
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-vf', 'palettegen', '{} palette.png'.format(temp_basename)])
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
                             '-lavfi', 'paletteuse', filename])
-            
+
             os.remove('{} palette.png'.format(temp_basename))
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
-            
+
         elif event.key == 'v':
             filename = self.save_basename + \
-                       datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
+                datetime.datetime.now().strftime(' %Y-%m-%d at %h.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -907,14 +914,15 @@ class ScatterPlot(object):
                 self.fig.canvas.draw()
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
                                  format='png', bbox_inches=bbox, pad_inches=0)
-                
+
             subprocess.run(['ffmpeg', '-f', 'image2',
-                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi), int(bbox.height * self.fig.dpi)),
+                            '-s', '{}x{}'.format(int(bbox.width * self.fig.dpi),
+                                                 int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",
                             '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', filename])
-            
+
             for i in range(self.shape[self.d]):
                 os.remove('{} {:05d}.png'.format(temp_basename, i))
 
@@ -1040,4 +1048,3 @@ class ScatterPlot(object):
             self.ax.xaxis.set_visible(False)
             self.ax.yaxis.set_visible(False)
             self.ax.title.set_visible(False)
-

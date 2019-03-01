@@ -45,8 +45,9 @@ class SenseRecon(sp.app.LinearLeastSquares):
         Pruessmann, K. P., Weiger, M., Bornert, P., & Boesiger, P. (2001).
         Advances in sensitivity encoding with arbitrary k-space trajectories.
         Magnetic resonance in medicine, 46(4), 638-651.
-       
+
     """
+
     def __init__(self, y, mps, lamda=0, weights=None,
                  coord=None, device=sp.cpu_device, coil_batch_size=None,
                  comm=None, show_pbar=True, **kwargs):
@@ -58,7 +59,7 @@ class SenseRecon(sp.app.LinearLeastSquares):
 
         A = linop.Sense(mps, coord=coord, weights=weights,
                         coil_batch_size=coil_batch_size, comm=comm)
-        
+
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
 
@@ -92,6 +93,7 @@ class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
        SenseRecon
 
     """
+
     def __init__(self, y, mps, eps,
                  weights=None, coord=None,
                  device=sp.cpu_device, coil_batch_size=None,
@@ -116,7 +118,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
 
     Considers the problem
 
-    .. math:: 
+    .. math::
         \min_x \frac{1}{2} \| P F S x - y \|_2^2 + \lambda \| W x \|_1
 
     where P is the sampling operator, F is the Fourier transform operator,
@@ -141,6 +143,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
         Magnetic Resonance in Medicine, 58(6), 1082-1195.
 
     """
+
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None,
                  wave_name='db4', device=sp.cpu_device,
@@ -178,7 +181,7 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
         \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
 
     where P is the sampling operator, F is the Fourier transform operator,
-    S is the SENSE operator, W is the wavelet operator, 
+    S is the SENSE operator, W is the wavelet operator,
     x is the image, and y is the k-space measurements.
 
     Args:
@@ -197,6 +200,7 @@ class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
        :func:`sigpy.mri.app.WaveletRecon`
 
     """
+
     def __init__(
             self, y, mps, eps,
             wave_name='db4', weights=None, coord=None,
@@ -250,6 +254,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         Magnetic Resonance in Medicine, 57(6), 1086-1098.
 
     """
+
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None, device=sp.cpu_device,
                  coil_batch_size=None, comm=None, show_pbar=True, **kwargs):
@@ -305,6 +310,7 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
        :func:`sigpy.mri.app.TotalVariationRecon`
 
     """
+
     def __init__(
             self, y, mps, eps,
             weights=None, coord=None, device=sp.cpu_device,
@@ -319,7 +325,7 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
                         comm=comm, coil_batch_size=coil_batch_size)
         G = sp.linop.Gradient(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, 1)
-        
+
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
 
@@ -329,10 +335,10 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
 class JsenseRecon(sp.app.App):
     r"""JSENSE reconstruction.
 
-    Considers the problem 
+    Considers the problem
 
-    .. math:: 
-        \min_{l, r} \frac{1}{2} \| l \ast r - y \|_2^2 + 
+    .. math::
+        \min_{l, r} \frac{1}{2} \| l \ast r - y \|_2^2 +
         \frac{\lambda}{2} (\| l \|_2^2 + \| r \|_2^2)
 
     where \ast is the convolution operator.
@@ -359,6 +365,7 @@ class JsenseRecon(sp.app.App):
         Magnetic Resonance in Medicine, 60(#), 674-682.
 
     """
+
     def __init__(self, y,
                  mps_ker_width=16, ksp_calib_width=24,
                  lamda=0, device=sp.cpu_device, comm=None,
@@ -394,11 +401,13 @@ class JsenseRecon(sp.app.App):
                 self.y, [self.num_coils] + ndim * [self.ksp_calib_width])
 
             if self.weights is not None:
-                self.weights = sp.resize(self.weights, ndim * [self.ksp_calib_width])
+                self.weights = sp.resize(
+                    self.weights, ndim * [self.ksp_calib_width])
 
         else:
             self.img_shape = sp.estimate_shape(self.coord)
-            calib_idx = np.amax(np.abs(self.coord), axis=-1) < self.ksp_calib_width / 2
+            calib_idx = np.amax(np.abs(self.coord), axis=-
+                                1) < self.ksp_calib_width / 2
 
             self.coord = self.coord[calib_idx]
             self.y = self.y[:, calib_idx]
@@ -409,7 +418,8 @@ class JsenseRecon(sp.app.App):
         if self.weights is None:
             self.y = sp.to_device(self.y / np.abs(self.y).max(), self.device)
         else:
-            self.y = sp.to_device(self.weights**0.5 * self.y / np.abs(self.y).max(), self.device)
+            self.y = sp.to_device(self.weights**0.5 *
+                                  self.y / np.abs(self.y).max(), self.device)
 
         if self.coord is not None:
             self.coord = sp.to_device(self.coord, self.device)
@@ -423,14 +433,17 @@ class JsenseRecon(sp.app.App):
 
         mps_ker_shape = [self.num_coils] + [self.mps_ker_width] * ndim
         if self.coord is None:
-            img_ker_shape = [i + self.mps_ker_width - 1 for i in self.y.shape[1:]]
+            img_ker_shape = [i + self.mps_ker_width -
+                             1 for i in self.y.shape[1:]]
         else:
             grd_shape = sp.estimate_shape(self.coord)
             img_ker_shape = [i + self.mps_ker_width - 1 for i in grd_shape]
 
-        self.img_ker = sp.dirac(img_ker_shape, dtype=self.dtype, device=self.device)
+        self.img_ker = sp.dirac(
+            img_ker_shape, dtype=self.dtype, device=self.device)
         with self.device:
-            self.mps_ker = self.device.xp.zeros(mps_ker_shape, dtype=self.dtype)
+            self.mps_ker = self.device.xp.zeros(
+                mps_ker_shape, dtype=self.dtype)
 
     def _get_alg(self):
         def min_mps_ker():
@@ -446,7 +459,8 @@ class JsenseRecon(sp.app.App):
             sp.app.LinearLeastSquares(self.A_img_ker, self.y, self.img_ker,
                                       lamda=self.lamda, max_iter=self.max_inner_iter).run()
 
-        self.alg = sp.alg.AltMin(min_mps_ker, min_img_ker, max_iter=self.max_iter)        
+        self.alg = sp.alg.AltMin(
+            min_mps_ker, min_img_ker, max_iter=self.max_iter)
 
     def _output(self):
         xp = self.device.xp
@@ -462,7 +476,7 @@ class JsenseRecon(sp.app.App):
             mps_rss = sp.to_device(mps_rss)
             if self.comm is not None:
                 self.comm.allreduce(mps_rss)
-                
+
             mps_rss = mps_rss**0.5
             mps /= mps_rss
             return mps
