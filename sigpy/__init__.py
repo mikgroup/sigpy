@@ -8,7 +8,7 @@ These classes can then be used to build an App as a final deliverable. An App si
 """
 from sigpy import alg, app, config, linop, prox
 
-from sigpy import backend, block, conv, interp, fourier, thresh, util
+from sigpy import backend, block, conv, interp, fourier, sim, thresh, util
 from sigpy.backend import *
 from sigpy.block import *
 from sigpy.conv import *
