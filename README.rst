@@ -1,3 +1,6 @@
+Overview
+========
+
 .. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
            :target: https://opensource.org/licenses/BSD-3-Clause
 	   
@@ -10,9 +13,6 @@
 .. image:: https://readthedocs.org/projects/sigpy/badge/?version=latest
 	   :target: https://sigpy.readthedocs.io/en/latest/?badge=latest
 	   :alt: Documentation Status
-
-Overview
-========
 
 `Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `Tutorial <https://github.com/mikgroup/sigpy-tutorials>`_
 
