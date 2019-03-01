@@ -6,9 +6,7 @@ This module contains FFT functions that support centered operation.
 """
 import numpy as np
 
-from sigpy import backend, config, interp, util
-if config.cupy_enabled:
-    import cupy as cp
+from sigpy import backend, interp, util
 
 
 __all__ = ['fft', 'ifft', 'nufft', 'nufft_adjoint', 'estimate_shape']
