@@ -1,3 +1,6 @@
+.. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
+           :target: https://opensource.org/licenses/BSD-3-Clause
+	   
 .. image:: https://travis-ci.com/mikgroup/sigpy.svg?branch=master
 	   :target: https://travis-ci.com/mikgroup/sigpy
 	
@@ -10,6 +13,8 @@
 
 Overview
 ========
+
+`Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `Tutorial <https://github.com/mikgroup/sigpy-tutorials>`_
 
 Introduction
 ------------
@@ -49,7 +54,3 @@ Alternatively, the package can be installed from source with the following requi
 * numpy
 * pywavelets
 * numba
-
-Documentation
--------------
-Our documentation is hosted on Read the Docs: https://sigpy.readthedocs.io
