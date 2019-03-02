@@ -10,7 +10,7 @@ install:
 script:
   - pytest --cov=./
   - flake8
-  - sphinx-build -nW doc doc_build/
+  - sphinx-build -W doc doc_build/
 
 after_success:
   - codecov
