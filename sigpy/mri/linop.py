@@ -3,7 +3,8 @@
 
 This module mainly contains the Sense linear operator,
 which integrates multi-channel coil sensitivity maps and
- discrete Fourier transform.
+discrete Fourier transform.
+
 """
 import sigpy as sp
 
