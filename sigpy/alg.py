@@ -135,8 +135,8 @@ class GradientMethod(Alg):
     until the following condition holds:
 
     .. math:: f(x_\text{new}) \leq f(x) +
-    \left< \Delta x, \nabla f(x) \right> +
-    \frac{1}{2 \alpha} \| \Delta x \|_2^2
+        \left< \Delta x, \nabla f(x) \right> +
+        \frac{1}{2 \alpha} \| \Delta x \|_2^2
 
     Args:
         gradf (function): function to compute :math:`\nabla f`.
