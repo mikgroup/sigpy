@@ -5,11 +5,12 @@ python:
 
 install:
   - pip install -r requirements.txt
-  - pip install codecov pytest-cov flake8
+  - pip install codecov pytest-cov flake8 sphinx
 
 script:
   - pytest --cov=./
   - flake8
+  - sphinx-build -nW doc doc_build/
 
 after_success:
   - codecov
