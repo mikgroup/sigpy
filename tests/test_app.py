@@ -96,7 +96,7 @@ class TestApp(unittest.TestCase):
         x_rec = app.LinearLeastSquares(A, y, show_pbar=False).run()
         npt.assert_allclose(x_rec, x_lstsq, atol=1e-3)
 
-        alpha = p / app.MaxEig(P * A.H * A).run()
+        alpha = p / app.MaxEig(P * A.H * A, show_pbar=False).run()
         x_rec = app.LinearLeastSquares(
             A,
             y,
