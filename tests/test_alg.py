@@ -8,176 +8,101 @@ if __name__ == '__main__':
 
 
 class TestAlg(unittest.TestCase):
+    def Ax_setup(self, n):
+        A = np.eye(n) + 0.1 * np.ones([n, n])
+        x = np.arange(n, dtype=np.float)
+        return A, x
+
+    def Ax_y_setup(self, n, lamda):
+        A, x = self.Ax_setup(n)
+        y = A @ x
+        x_numpy = np.linalg.solve(
+            A.T @ A + lamda * np.eye(n), A.T @ y)
+
+        return A, x_numpy, y
 
     def test_PowerMethod(self):
         n = 5
-        A = np.random.random([n, n])
-        x = np.random.random([n])
-
-        alg_method = alg.PowerMethod(
-            lambda x: np.matmul(A.T, np.matmul(A, x)), x)
+        A, x = self.Ax_setup(n)
+        x_hat = np.random.random([n, 1])
+        alg_method = alg.PowerMethod(lambda x: A.T @ A @ x, x_hat)
         while(not alg_method.done()):
             alg_method.update()
 
-        s = np.linalg.svd(A, compute_uv=False)
-
-        npt.assert_allclose(np.linalg.norm(np.matmul(A, x)), s[0], atol=1e-3)
+        s_numpy = np.linalg.svd(A, compute_uv=False)[0]
+        s_sigpy = np.linalg.norm(A @ x_hat)
+        npt.assert_allclose(s_numpy, s_sigpy, atol=1e-3)
 
     def test_GradientMethod(self):
         n = 5
-        A = np.random.random([n, n])
-        x_orig = np.random.random([n])
-        y = np.matmul(A, x_orig)
-        lamda = 1.0
-        x_truth = np.linalg.solve(
-            np.matmul(A.T, A) + lamda * np.eye(n), np.matmul(A.T, y))
+        lamda = 0.1
+        A, x_numpy, y = self.Ax_y_setup(n, lamda)
 
         # Compute step-size
         lipschitz = np.linalg.svd(
-            np.matmul(A.T, A) + lamda * np.eye(n), compute_uv=False)[0]
+            A.T @ A + lamda * np.eye(n), compute_uv=False)[0]
         alpha = 1.0 / lipschitz
 
-        for accelerate in [True, False]:
-            for prox in [True, False]:
-                with self.subTest(accelerate=accelerate, prox=prox):
-                    x = np.zeros([n])
-                    if prox:
+        for beta in [1, 0.5]:
+            for accelerate in [True, False]:
+                for proxg in [None, lambda alpha, x: x / (1 + lamda * alpha)]:
+                    with self.subTest(accelerate=accelerate,
+                                      proxg=proxg,
+                                      beta=beta):
+                        x_sigpy = np.zeros([n])
+
                         def gradf(x):
-                            return A.T @ (A @ x - y)
+                            gradf_x = A.T @ (A @ x - y)
+                            if proxg is None:
+                                gradf_x += lamda * x
 
-                        def proxg(alpha, x):
-                            return x / (1 + lamda * alpha)
-                    else:
-                        def gradf(x):
-                            return A.T @ (A @ x - y) + lamda * x
+                            return gradf_x
 
-                        proxg = None
+                        if beta == 1:
+                            alpha = 1 / lipschitz
+                            f = None
+                        else:
+                            alpha = 1
 
-                    alg_method = alg.GradientMethod(
-                        gradf,
-                        x,
-                        alpha,
-                        accelerate=accelerate,
-                        proxg=proxg,
-                        max_iter=1000)
+                            def f(x):
+                                f_x = 1 / 2 * np.linalg.norm(A @ x - y)**2
+                                if proxg is None:
+                                    f_x += lamda / 2 * np.linalg.norm(x)**2
 
-                    while(not alg_method.done()):
-                        alg_method.update()
+                                return f_x
 
-                    npt.assert_allclose(x, x_truth)
+                        alg_method = alg.GradientMethod(
+                            gradf,
+                            x_sigpy,
+                            alpha,
+                            beta=beta,
+                            f=f,
+                            accelerate=accelerate,
+                            proxg=proxg,
+                            max_iter=1000)
 
-    def test_GradientMethod_backtracking(self):
-        n = 5
-        A = np.random.random([n, n])
-        x_orig = np.random.random([n])
-        y = np.matmul(A, x_orig)
-        lamda = 1.0
-        x_truth = np.linalg.solve(
-            np.matmul(A.T, A) + lamda * np.eye(n), np.matmul(A.T, y))
-        alpha = 1
-        beta = 0.5
+                        while(not alg_method.done()):
+                            alg_method.update()
 
-        def f(x): return 1 / 2 * np.linalg.norm(
-                np.matmul(A, x) - y)**2 + lamda / 2 * np.linalg.norm(x)**2
-        # Gradient method
-        x = np.zeros([n])
-        alg_method = alg.GradientMethod(
-            lambda x: np.matmul(
-                A.T,
-                (np.matmul(
-                    A,
-                    x) - y)) + lamda * x,
-            x,
-            alpha,
-            beta=beta,
-            f=f,
-            accelerate=False,
-            max_iter=1000)
-        while(not alg_method.done()):
-            alg_method.update()
-
-        npt.assert_allclose(x, x_truth)
-
-        # Accelerated gradient method
-        x = np.zeros([n])
-        alg_method = alg.GradientMethod(
-            lambda x: np.matmul(
-                A.T,
-                np.matmul(
-                    A,
-                    x) - y) + lamda * x,
-            x,
-            alpha,
-            beta=beta,
-            f=f,
-            accelerate=True,
-            max_iter=1000)
-        while(not alg_method.done()):
-            alg_method.update()
-
-        npt.assert_allclose(x, x_truth)
-
-        # Proximal gradient method
-        def f(x): return 1 / 2 * np.linalg.norm(np.matmul(A, x) - y)**2
-        x = np.zeros([n])
-        alg_method = alg.GradientMethod(
-            lambda x: np.matmul(
-                A.T,
-                np.matmul(
-                    A,
-                    x) - y),
-            x,
-            alpha,
-            accelerate=False,
-            beta=beta,
-            f=f,
-            proxg=lambda alpha,
-            x: x / (
-                1 + lamda * alpha),
-            max_iter=1000)
-        while(not alg_method.done()):
-            alg_method.update()
-
-        npt.assert_allclose(x, x_truth)
-
-        # Accelerated proximal gradient method
-        x = np.zeros([n])
-        alg_method = alg.GradientMethod(
-            lambda x: np.matmul(
-                A.T, np.matmul(A, x) - y), x, alpha,
-            beta=beta, f=f, proxg=lambda alpha, x: x / (
-                1 + lamda * alpha), accelerate=True, max_iter=1000)
-        while(not alg_method.done()):
-            alg_method.update()
-
-        npt.assert_allclose(x, x_truth)
+                        npt.assert_allclose(x_sigpy, x_numpy)
 
     def test_ConjugateGradient(self):
         n = 5
-        A = np.random.random([n, n])
-        x_orig = np.random.random([n])
-        y = np.matmul(A, x_orig)
-        x_truth = np.linalg.solve(np.matmul(A.T, A), np.matmul(A.T, y))
-
+        lamda = 0.1
+        A, x_numpy, y = self.Ax_y_setup(n, lamda)
         x = np.zeros([n])
         alg_method = alg.ConjugateGradient(
-            lambda x: np.matmul(
-                A.T, np.matmul(
-                    A, x)), np.matmul(
-                A.T, y), x, max_iter=1000)
+            lambda x: A.T @ A @ x + lamda * x,
+            A.T @ y, x, max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
-        npt.assert_allclose(x, x_truth)
+        npt.assert_allclose(x, x_numpy)
 
     def test_PrimalDualHybridGradient(self):
         n = 5
-        A = np.random.random([n, n])
-        x_orig = np.random.random([n])
-        y = np.matmul(A, x_orig)
-        lamda = 1.0
-        x_truth = np.linalg.solve(
-            np.matmul(A.T, A) + lamda * np.eye(n), np.matmul(A.T, y))
+        lamda = 0.1
+        A, x_numpy, y = self.Ax_y_setup(n, lamda)
 
         # Compute step-size
         lipschitz = np.linalg.svd(np.matmul(A.T, A), compute_uv=False)[0]
@@ -189,10 +114,10 @@ class TestAlg(unittest.TestCase):
         alg_method = alg.PrimalDualHybridGradient(
             lambda alpha, u: (u - alpha * y) / (1 + alpha),
             lambda alpha, x: x / (1 + lamda * alpha),
-            lambda x: np.matmul(A, x),
-            lambda x: np.matmul(A.T, x),
+            lambda x: A @ x,
+            lambda x: A.T @ x,
             x, u, tau, sigma, max_iter=1000)
         while(not alg_method.done()):
             alg_method.update()
 
-        npt.assert_allclose(x, x_truth)
+        npt.assert_allclose(x, x_numpy)
