@@ -4,10 +4,23 @@ import sigpy as sp
 import numpy.testing as npt
 
 from sigpy.mri import linop
-from sigpy.linop_test import check_linop_adjoint
 
 if __name__ == '__main__':
     unittest.main()
+
+
+def check_linop_adjoint(A, dtype=np.float, device=sp.cpu_device):
+
+    device = sp.Device(device)
+    x = sp.randn(A.ishape, dtype=dtype, device=device)
+    y = sp.randn(A.oshape, dtype=dtype, device=device)
+
+    xp = device.xp
+    with device:
+        lhs = xp.vdot(A * x, y)
+        rhs = xp.vdot(x, A.H * y)
+
+        xp.testing.assert_allclose(lhs, rhs, atol=1e-5, rtol=1e-5)
 
 
 class TestLinop(unittest.TestCase):
