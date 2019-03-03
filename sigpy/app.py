@@ -456,7 +456,8 @@ class L2ConstrainedMinimization(App):
 
         if tau is None or sigma is None:
             max_eig = MaxEig(A.H * A, dtype=self.x.dtype,
-                             device=self.x_device).run()
+                             device=self.x_device,
+                             show_pbar=show_pbar).run()
             tau = 1
             sigma = 1 / max_eig
 

@@ -79,7 +79,8 @@ class TestApp(unittest.TestCase):
         def proxg(lamda, x):
             return x / (1 + lamda)
 
-        x_rec = app.L2ConstrainedMinimization(A, y, proxg, eps, show_pbar=False).run()
+        x_rec = app.L2ConstrainedMinimization(A, y, proxg, eps,
+                                              show_pbar=False).run()
         npt.assert_allclose(x_rec, x, atol=1e-3)
 
     def test_precond_LinearLeastSquares(self):
