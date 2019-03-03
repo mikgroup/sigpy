@@ -1423,7 +1423,12 @@ class ConvolveInput(Linop):
         super().__init__(y_shape, x_shape)
 
     def _apply(self, input):
-        return conv.convolve(input, self.W, mode=self.mode,
+        device = backend.get_device(input)
+        W = backend.to_device(self.W, backend.get_device(input))
+        with device:
+            W = W.astype(input.dtype, copy=False)
+
+        return conv.convolve(input, W, mode=self.mode,
                              input_multi_channel=self.input_multi_channel,
                              output_multi_channel=self.output_multi_channel)
 
@@ -1462,8 +1467,13 @@ class ConvolveAdjointInput(Linop):
         super().__init__(x_shape, y_shape)
 
     def _apply(self, input):
+        device = backend.get_device(input)
+        W = backend.to_device(self.W, backend.get_device(input))
+        with device:
+            W = W.astype(input.dtype, copy=False)
+
         return conv.convolve_adjoint_input(
-            self.W,
+            W,
             input,
             mode=self.mode,
             input_multi_channel=self.input_multi_channel,
@@ -1502,7 +1512,12 @@ class ConvolveFilter(Linop):
         super().__init__(y_shape, W_shape)
 
     def _apply(self, input):
-        return conv.convolve(self.x, input, mode=self.mode,
+        device = backend.get_device(input)
+        x = backend.to_device(self.x, backend.get_device(input))
+        with device:
+            x = x.astype(input.dtype, copy=False)
+
+        return conv.convolve(x, input, mode=self.mode,
                              input_multi_channel=self.input_multi_channel,
                              output_multi_channel=self.output_multi_channel)
 
@@ -1542,8 +1557,13 @@ class ConvolveAdjointFilter(Linop):
         super().__init__(W_shape, y_shape)
 
     def _apply(self, input):
+        device = backend.get_device(input)
+        x = backend.to_device(self.x, backend.get_device(input))
+        with device:
+            x = x.astype(input.dtype, copy=False)
+
         return conv.convolve_adjoint_filter(
-            self.x, input, self.ndim, mode=self.mode,
+            x, input, self.ndim, mode=self.mode,
             input_multi_channel=self.input_multi_channel,
             output_multi_channel=self.output_multi_channel)
 
