@@ -1,3 +1,3 @@
 coverage run -m unittest
 flake8
-sphinx-build -W doc doc/_build/html
+sphinx-build -W docs docs/_build/html
