@@ -37,63 +37,34 @@ class TestAlg(unittest.TestCase):
             np.matmul(A.T, A) + lamda * np.eye(n), compute_uv=False)[0]
         alpha = 1.0 / lipschitz
 
-        # Gradient method
-        x = np.zeros([n])
-        alg_method = alg.GradientMethod(
-            lambda x: np.matmul(
-                A.T,
-                (np.matmul(
-                    A,
-                    x) - y)) + lamda * x,
-            x,
-            alpha,
-            accelerate=False,
-            max_iter=1000)
-        while(not alg_method.done()):
-            alg_method.update()
+        for accelerate in [True, False]:
+            for prox in [True, False]:
+                with self.subTest(accelerate=accelerate, prox=prox):
+                    x = np.zeros([n])
+                    if prox:
+                        def gradf(x):
+                            return A.T @ (A @ x - y)
 
-        npt.assert_allclose(x, x_truth)
+                        def proxg(alpha, x):
+                            return x / (1 + lamda * alpha)
+                    else:
+                        def gradf(x):
+                            return A.T @ (A @ x - y) + lamda * x
 
-        # Accelerated gradient method
-        x = np.zeros([n])
-        alg_method = alg.GradientMethod(
-            lambda x: np.matmul(
-                A.T,
-                np.matmul(
-                    A,
-                    x) - y) + lamda * x,
-            x,
-            alpha,
-            accelerate=True,
-            max_iter=1000)
-        while(not alg_method.done()):
-            alg_method.update()
+                        proxg = None
 
-        npt.assert_allclose(x, x_truth)
+                    alg_method = alg.GradientMethod(
+                        gradf,
+                        x,
+                        alpha,
+                        accelerate=accelerate,
+                        proxg=proxg,
+                        max_iter=1000)
 
-        # Proximal gradient method
-        x = np.zeros([n])
-        alg_method = alg.GradientMethod(
-            lambda x: np.matmul(
-                A.T, np.matmul(A, x) - y), x, alpha,
-            accelerate=False, proxg=lambda alpha, x: x / (
-                1 + lamda * alpha), max_iter=1000)
-        while(not alg_method.done()):
-            alg_method.update()
+                    while(not alg_method.done()):
+                        alg_method.update()
 
-        npt.assert_allclose(x, x_truth)
-
-        # Accelerated proximal gradient method
-        x = np.zeros([n])
-        alg_method = alg.GradientMethod(
-            lambda x: np.matmul(
-                A.T, np.matmul(
-                    A, x) - y), x, alpha, proxg=lambda alpha, x: x / (
-                1 + lamda * alpha), accelerate=True, max_iter=1000)
-        while(not alg_method.done()):
-            alg_method.update()
-
-        npt.assert_allclose(x, x_truth)
+                    npt.assert_allclose(x, x_truth)
 
     def test_GradientMethod_backtracking(self):
         n = 5
