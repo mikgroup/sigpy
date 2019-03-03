@@ -461,13 +461,15 @@ class JsenseRecon(sp.app.App):
                 self.mps_ker.shape,
                 self.img_ker,
                 coord=self.coord,
-                weights=self.weights)
+                weights=self.weights,
+                show_pbar=self.show_pbar)
             sp.app.LinearLeastSquares(
                 self.A_mps_ker,
                 self.y,
                 self.mps_ker,
                 lamda=self.lamda,
-                max_iter=self.max_inner_iter).run()
+                max_iter=self.max_inner_iter,
+                show_pbar=self.show_pbar).run()
 
         def min_img_ker():
             self.A_img_ker = linop.ConvSense(
