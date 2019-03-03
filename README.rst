@@ -21,26 +21,29 @@ SigPy is a package for signal processing, with emphasis on iterative methods. It
 Installation
 ------------
 
-SigPy requires Python version >= 3.5. The core module depends on
+SigPy requires Python version >= 3.5. The core module depends on:
+
 * ``numba``
 * ``numpy``
 * ``PyWavelets``
 * ``tqdm``
 
-To enable the plotting functions, you will need to install `matplotlib`. To enable CUDA support, you will need to install `cupy`. And to enable MPI support, you will need to install `mpi4py`.
-
-For general users, we recommend installing SigPy through `conda`. SigPy can also be installed through `pip`.
+To enable the plotting functions, you will need to install ``matplotlib``. To enable CUDA support, you will need to install ``cupy``. And to enable MPI support, you will need to install ``mpi4py``.
 
 Via ``conda``
-***********
+*************
+
+For general users, we recommend installing SigPy through ``conda``::
 
 	conda install -c frankong sigpy
 	# (optional for plot support) conda install matplotlib     
 	# (optional for CUDA support) conda install cupy                                                                                       
         # (optional for MPI support) conda install mpi4py
 
-Via `pip`
-*********
+Via ``pip``
+***********
+
+SigPy can also be installed through ``pip``::
 
 	pip install sigpy
 	# (optional for plot support) pip install matplotlib     
@@ -50,7 +53,7 @@ Via `pip`
 Installation for Developers
 ***************************
 
-If you want to contribute to the SigPy source code, we recommend you install with `pip` in editable mode::
+If you want to contribute to the SigPy source code, we recommend you install with ``pip`` in editable mode::
 
 	cd /path/to/sigpy
 	pip install -e .
