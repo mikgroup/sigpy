@@ -16,41 +16,41 @@ Overview
 
 `Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `Tutorial <https://github.com/mikgroup/sigpy-tutorials>`_
 
-Introduction
-------------
-SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU. Its main features include:
-
-* A unified CPU/GPU interface to signal processing functions, including convolution, FFT, NUFFT, wavelet transform, and thresholding functions.
-* Linear operator classes (``Linop``) that can do adjoint, addition, composing, and stacking.
-* Proximal operator classes (``Prox``) that can do stacking, and conjugation.
-* Iterative algorithm classes (``Alg``), including conjugate gradient, (accelerated/proximal) gradient method, and primal dual hybrid gradient.
-* Application classes (``App``) that wrap ``Alg``, ``Linop``, and ``Prox`` to form a final deliverable for each application.
-
-SigPy also provides a submodule sigpy.mri for MRI iterative reconstruction methods. Its main features include:
-
-* Commonly used MRI reconstruction methods as an ``App``: SENSE reconstruction, l1-wavelet reconstruction, total-variation reconstruction, and JSENSE reconstruction
-* Convenient simulation and sampling functions, including poisson-disc sampling function, and shepp-logan phantom generation function.
-
-Finally, SigPy provides a preliminary submodule sigpy.learn that implements convolutional sparse coding, and linear regression, using the core module.
+SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU. SigPy also provides several submodules that build on top of the core module: sigpy.plot for multi-dimensional array plotting, sigpy.mri for MRI iterative reconstruction, and sigpy.learn for dictionary learning.
 
 Installation
 ------------
-The package can be installed via pip::
 
-	# (optional for CUDA support) pip install cupy
-	# (optional for MPI support) pip install mpi4py
-	pip install sigpy
+SigPy requires Python version >= 3.5. The core module depends on
+* ``numba``
+* ``numpy``
+* ``PyWavelets``
+* ``tqdm``
 
-	
-Or via conda::
+To enable the plotting functions, you will need to install `matplotlib`. To enable CUDA support, you will need to install `cupy`. And to enable MPI support, you will need to install `mpi4py`.
 
-	# (optional for CUDA support) conda install cupy
-	# (optional for MPI support) conda install mpi4py
+For general users, we recommend installing SigPy through `conda`. SigPy can also be installed through `pip`.
+
+Via ``conda``
+***********
+
 	conda install -c frankong sigpy
+	# (optional for plot support) conda install matplotlib     
+	# (optional for CUDA support) conda install cupy                                                                                       
+        # (optional for MPI support) conda install mpi4py
 
-Alternatively, the package can be installed from source with the following requirements:
+Via `pip`
+*********
 
-* python3
-* numpy
-* pywavelets
-* numba
+	pip install sigpy
+	# (optional for plot support) pip install matplotlib     
+	# (optional for CUDA support) pip install cupy                                                                                       
+        # (optional for MPI support) pip install mpi4py
+	
+Installation for Developers
+***************************
+
+If you want to contribute to the SigPy source code, we recommend you install with `pip` in editable mode::
+
+	cd /path/to/sigpy
+	pip install -e .
