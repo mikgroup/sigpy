@@ -59,5 +59,4 @@ Thumbs.db
 .pytest_cache
 *.tar.bz2
 
-.asv
 .coverage
