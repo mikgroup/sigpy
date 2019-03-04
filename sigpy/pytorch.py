@@ -7,7 +7,7 @@ from sigpy import backend, config
 
 __all__ = []
 if config.pytorch_enabled:
-    __all__ += ['to_pytorch', 'from_pytorch']
+    __all__ += ['to_pytorch', 'from_pytorch', 'to_pytorch_function']
 
     def to_pytorch(array, requires_grad=True):
         """Zero-copy conversion from numpy/cupy array to pytorch tensor.
@@ -80,3 +80,43 @@ if config.pytorch_enabled:
                     output = output.view(np.complex128)
 
         return output
+
+    def to_pytorch_function(linop,
+                            input_iscomplex=False,
+                            output_iscomplex=False):
+        """Convert SigPy Linop to PyTorch Function.
+
+        The returned function can be treated as a native
+        pytorch function performing the linop operator.
+        The function can be backpropagated, applied on GPU arrays,
+        and has minimal overhead as the underlying arrays
+        are shared without copying.
+        For complex valued input/output, the appropriate options
+        should be set when calling the function.
+
+        Args:
+            linop (Linop): linear operator to be converted.
+            input_iscomplex (bool): whether the PyTorch input
+                represents complex tensor.
+            output_iscomplex (bool): whether the PyTorch output
+                represents complex tensor.
+
+        Returns:
+            function: a function that is an alias of
+                the apply method of torch.autograd.Function.
+
+        """
+        import torch
+
+        class LinopFunction(torch.autograd.Function):
+            @staticmethod
+            def forward(ctx, input):
+                return to_pytorch(linop(from_pytorch(
+                    input, iscomplex=input_iscomplex)))
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                return to_pytorch(linop.H(from_pytorch(
+                    grad_output, iscomplex=output_iscomplex)))
+
+        return LinopFunction.apply

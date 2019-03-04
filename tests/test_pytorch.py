@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
-from sigpy import backend, config, pytorch
+import numpy.testing as npt
+from sigpy import backend, config, linop, pytorch
 
 
 if config.pytorch_enabled:
@@ -15,7 +16,7 @@ if config.pytorch_enabled:
 
     class TestPytorch(unittest.TestCase):
 
-        def test_to_torch(self):
+        def test_to_pytorch(self):
             for dtype in [np.float32, np.float64]:
                 for device in devices:
                     with self.subTest(device=device, dtype=dtype):
@@ -25,7 +26,7 @@ if config.pytorch_enabled:
                         tensor[0] = 0
                         xp.testing.assert_allclose(array, [0, 2, 3])
 
-        def test_to_torch_complex(self):
+        def test_to_pytorch_complex(self):
             for dtype in [np.complex64, np.complex128]:
                 for device in devices:
                     with self.subTest(device=device, dtype=dtype):
@@ -35,7 +36,7 @@ if config.pytorch_enabled:
                         tensor[0, 0] = 0
                         xp.testing.assert_allclose(array, [1j, 2 + 2j, 3 + 3j])
 
-        def test_from_torch(self):
+        def test_from_pytorch(self):
             for dtype in [torch.float32, torch.float64]:
                 for device in devices:
                     with self.subTest(device=device, dtype=dtype):
@@ -51,7 +52,7 @@ if config.pytorch_enabled:
                         np.testing.assert_allclose(tensor.cpu().numpy(),
                                                    [0, 2, 3])
 
-        def test_from_torch_complex(self):
+        def test_from_pytorch_complex(self):
             for dtype in [torch.float32, torch.float64]:
                 for device in devices:
                     with self.subTest(device=device, dtype=dtype):
@@ -66,3 +67,21 @@ if config.pytorch_enabled:
                         array[0] -= 1
                         np.testing.assert_allclose(tensor.cpu().numpy(),
                                                    [[0, 1], [2, 2], [3, 3]])
+
+        def test_to_pytorch_function(self):
+            A = linop.Resize([5], [3])
+            x = np.array([1, 2, 3], np.float)
+            y = np.ones([5])
+
+            with self.subTest('forward'):
+                f = pytorch.to_pytorch_function(A)
+                x_torch = pytorch.to_pytorch(x)
+                npt.assert_allclose(f(x_torch).detach().numpy(),
+                                    A(x))
+
+            with self.subTest('adjoint'):
+                y_torch = pytorch.to_pytorch(y)
+                loss = (f(x_torch) - y_torch).pow(2).sum() / 2
+                loss.backward()
+                npt.assert_allclose(x_torch.grad.detach().numpy(),
+                                    A.H(A(x) - y))
