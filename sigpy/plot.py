@@ -18,7 +18,6 @@ import uuid
 import subprocess
 import datetime
 import numpy as np
-import matplotlib.pyplot as plt
 import sigpy as sp
 
 
@@ -75,7 +74,7 @@ class ImagePlot(object):
             raise TypeError(
                 'Image dimension must at least be two, got {im_ndim}'.format(
                     im_ndim=im.ndim))
-
+        import matplotlib.pyplot as plt
         self.axim = None
         self.im = im
         self.fig = plt.figure()
@@ -559,6 +558,8 @@ class LinePlot(object):
 
     def __init__(self, arr, x=-1, hide=False, mode='m', title='',
                  save_basename='Figure', fps=10):
+        import matplotlib.pyplot as plt
+
         self.arr = arr
         self.axarr = None
 
@@ -833,6 +834,7 @@ class ScatterPlot(object):
             title='',
             save_basename='Figure',
             fps=10):
+        import matplotlib.pyplot as plt
 
         self.coord = coord
         assert coord.shape[-1] == 2
