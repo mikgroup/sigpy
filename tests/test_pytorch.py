@@ -64,6 +64,9 @@ if config.pytorch_enabled:
                         tensor = torch.tensor([[1, 1], [2, 2], [3, 3]],
                                               dtype=dtype, device=torch_device)
                         array = pytorch.from_pytorch(tensor, iscomplex=True)
+                        xp = device.xp
+                        xp.testing.assert_array_equal(array,
+                                                      [1 + 1j, 2 + 2j, 3 + 3j])
                         array[0] -= 1
                         np.testing.assert_allclose(tensor.cpu().numpy(),
                                                    [[0, 1], [2, 2], [3, 3]])
@@ -85,3 +88,23 @@ if config.pytorch_enabled:
                 loss.backward()
                 npt.assert_allclose(x_torch.grad.detach().numpy(),
                                     A.H(A(x) - y))
+
+        def test_to_pytorch_function_complex(self):
+            A = linop.FFT([3])
+            x = np.array([1 + 1j, 2 + 2j, 3 + 3j], np.complex)
+            y = np.ones([3], np.complex)
+
+            with self.subTest('forward'):
+                f = pytorch.to_pytorch_function(A,
+                                                input_iscomplex=True,
+                                                output_iscomplex=True)
+                x_torch = pytorch.to_pytorch(x)
+                npt.assert_allclose(f(x_torch).detach().numpy().ravel(),
+                                    A(x).view(np.float))
+
+            with self.subTest('adjoint'):
+                y_torch = pytorch.to_pytorch(y)
+                loss = (f(x_torch) - y_torch).pow(2).sum() / 2
+                loss.backward()
+                npt.assert_allclose(x_torch.grad.detach().numpy().ravel(),
+                                    A.H(A(x) - y).view(np.float))

@@ -79,6 +79,8 @@ if config.pytorch_enabled:
                 elif output.dtype == np.float64:
                     output = output.view(np.complex128)
 
+                output = output.reshape(output.shape[:-1])
+
         return output
 
     def to_pytorch_function(linop,
