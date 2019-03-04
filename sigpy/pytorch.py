@@ -9,7 +9,7 @@ __all__ = []
 if config.pytorch_enabled:
     __all__ += ['to_pytorch', 'from_pytorch']
 
-    def to_pytorch(array):
+    def to_pytorch(array, requires_grad=True):
         """Zero-copy conversion from numpy/cupy array to pytorch tensor.
 
         For complex array input, returns a tensor with shape + [2],
@@ -34,9 +34,12 @@ if config.pytorch_enabled:
                 array = array.reshape(shape + (2, ))
 
         if device == backend.cpu_device:
-            return torch.from_numpy(array)
+            tensor = torch.from_numpy(array)
         else:
-            return from_dlpack(array.toDlpack())
+            tensor = from_dlpack(array.toDlpack())
+
+        tensor.requires_grad = requires_grad
+        return tensor
 
     def from_pytorch(tensor, iscomplex=False):
         """Zero-copy conversion from pytorch tensor to numpy/cupy array.
@@ -56,7 +59,7 @@ if config.pytorch_enabled:
 
         device = tensor.device
         if device.type == 'cpu':
-            output = tensor.numpy()
+            output = tensor.detach().numpy()
         else:
             if config.cupy_enabled:
                 import cupy as cp
