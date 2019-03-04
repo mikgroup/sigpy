@@ -57,3 +57,8 @@ If you want to contribute to the SigPy source code, we recommend you install wit
 
 	cd /path/to/sigpy
 	pip install -e .
+	
+To run tests and contribute, please install the following packages::
+
+	pip install flake8 sphinx
+
