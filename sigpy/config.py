@@ -15,3 +15,5 @@ else:
     nccl_enabled = False
 
 mpi4py_enabled = util.find_spec("mpi4py") is not None
+
+pytorch_enabled = util.find_spec("torch") is not None
