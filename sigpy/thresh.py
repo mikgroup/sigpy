@@ -117,7 +117,7 @@ def l2_proj(eps, input, axes=None):
     return output
 
 
-@nb.vectorize
+@nb.vectorize  # pragma: no cover
 def _soft_thresh(lamda, input):
     abs_input = abs(input)
     if (abs_input == 0):
@@ -131,7 +131,7 @@ def _soft_thresh(lamda, input):
     return mag * sign
 
 
-@nb.vectorize
+@nb.vectorize  # pragma: no cover
 def _hard_thresh(lamda, input):
     abs_input = abs(input)
     if abs_input > lamda:

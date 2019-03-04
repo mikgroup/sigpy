@@ -206,7 +206,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
         return output
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _array_to_blocks1(output, input, Bx, Sx, Nx):
     for nx in range(Nx):
         for bx in range(Bx):
@@ -215,7 +215,7 @@ def _array_to_blocks1(output, input, Bx, Sx, Nx):
                 output[nx, bx] = input[ix]
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _array_to_blocks2(output, input, Bx, By, Sx, Sy, Nx, Ny):
     for ny in range(Ny):
         for nx in range(Nx):
@@ -227,7 +227,7 @@ def _array_to_blocks2(output, input, Bx, By, Sx, Sy, Nx, Ny):
                         output[ny, nx, by, bx] = input[iy, ix]
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _array_to_blocks3(output, input, Bx, By, Bz, Sx, Sy, Sz, Nx, Ny, Nz):
     for nz in range(Nz):
         for ny in range(Ny):
@@ -246,7 +246,7 @@ def _array_to_blocks3(output, input, Bx, By, Bz, Sx, Sy, Sz, Nx, Ny, Nz):
 
 
 @nb.jit(nopython=True, cache=True)
-def _blocks_to_array1(output, input, Bx, Sx, Nx):
+def _blocks_to_array1(output, input, Bx, Sx, Nx):  # pragma: no cover
     for nx in range(Nx):
         for bx in range(Bx):
             ix = nx * Sx + bx
@@ -254,7 +254,7 @@ def _blocks_to_array1(output, input, Bx, Sx, Nx):
                 output[ix] += input[nx, bx]
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _blocks_to_array2(output, input, Bx, By, Sx, Sy, Nx, Ny):
     for ny in range(Ny):
         for nx in range(Nx):
@@ -266,7 +266,7 @@ def _blocks_to_array2(output, input, Bx, By, Sx, Sy, Nx, Ny):
                         output[iy, ix] += input[ny, nx, by, bx]
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _blocks_to_array3(output, input, Bx, By, Bz, Sx, Sy, Sz, Nx, Ny, Nz):
     for nz in range(Nz):
         for ny in range(Ny):

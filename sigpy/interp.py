@@ -147,7 +147,7 @@ def _select_gridding(ndim, npts, device, isreal):
     return _gridding
 
 
-@nb.jit(nopython=True)
+@nb.jit(nopython=True)  # pragma: no cover
 def lin_interpolate(kernel, x):
     if x >= 1:
         return 0.0
@@ -163,7 +163,7 @@ def lin_interpolate(kernel, x):
     return (1.0 - frac) * left + frac * right
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _interpolate1(output, input, width, kernel, coord):
     batch_size, nx = input.shape
     npts = coord.shape[0]
@@ -185,7 +185,7 @@ def _interpolate1(output, input, width, kernel, coord):
     return output
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _gridding1(output, input, width, kernel, coord):
     batch_size, nx = output.shape
     npts = coord.shape[0]
@@ -207,7 +207,7 @@ def _gridding1(output, input, width, kernel, coord):
     return output
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _interpolate2(output, input, width, kernel, coord):
 
     batch_size, ny, nx = input.shape
@@ -235,7 +235,7 @@ def _interpolate2(output, input, width, kernel, coord):
     return output
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _gridding2(output, input, width, kernel, coord):
     batch_size, ny, nx = output.shape
     npts = coord.shape[0]
@@ -262,7 +262,7 @@ def _gridding2(output, input, width, kernel, coord):
     return output
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _interpolate3(output, input, width, kernel, coord):
     batch_size, nz, ny, nx = input.shape
     npts = coord.shape[0]
@@ -294,7 +294,7 @@ def _interpolate3(output, input, width, kernel, coord):
     return output
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _gridding3(output, input, width, kernel, coord):
     batch_size, nz, ny, nx = output.shape
     npts = coord.shape[0]

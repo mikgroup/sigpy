@@ -474,12 +474,12 @@ def xpay(y, a, x):
             _xpay_cuda(a, x, y)
 
 
-@nb.vectorize(nopython=True, cache=True)
+@nb.vectorize(nopython=True, cache=True)  # pragma: no cover
 def _axpy(y, a, x):
     return a * x + y
 
 
-@nb.vectorize(nopython=True, cache=True)
+@nb.vectorize(nopython=True, cache=True)  # pragma: no cover
 def _xpay(y, a, x):
     return x + a * y
 
