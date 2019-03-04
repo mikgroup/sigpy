@@ -47,7 +47,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                   blk_shape[-1],
                                   blk_strides[-1],
                                   num_blks[-1])
-            else:
+            else:  # pragma: no cover
                 _array_to_blocks1_cuda(input,
                                        blk_shape[-1],
                                        blk_strides[-1],
@@ -60,7 +60,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                   blk_shape[-1], blk_shape[-2],
                                   blk_strides[-1], blk_strides[-2],
                                   num_blks[-1], num_blks[-2])
-            else:
+            else:  # pragma: no cover
                 _array_to_blocks2_cuda(input,
                                        blk_shape[-1], blk_shape[-2],
                                        blk_strides[-1], blk_strides[-2],
@@ -81,7 +81,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                   num_blks[-1],
                                   num_blks[-2],
                                   num_blks[-3])
-            else:
+            else:  # pragma: no cover
                 _array_to_blocks3_cuda(input,
                                        blk_shape[-1], blk_shape[-2],
                                        blk_shape[-3],
@@ -128,7 +128,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   blk_shape[-1],
                                   blk_strides[-1],
                                   num_blks[-1])
-            else:
+            else:  # pragma: no cover
                 if np.issubdtype(input.dtype, np.floating):
                     _blocks_to_array1_cuda(input,
                                            blk_shape[-1],
@@ -150,7 +150,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   blk_shape[-1], blk_shape[-2],
                                   blk_strides[-1], blk_strides[-2],
                                   num_blks[-1], num_blks[-2])
-            else:
+            else:  # pragma: no cover
                 if np.issubdtype(input.dtype, np.floating):
                     _blocks_to_array2_cuda(input,
                                            blk_shape[-1], blk_shape[-2],
@@ -159,7 +159,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                            output,
                                            size=num_blks[-1] * num_blks[-2] *
                                            blk_shape[-1] * blk_shape[-2])
-                else:
+                else:  # pragma: no cover
                     _blocks_to_array2_cuda_complex(
                         input,
                         blk_shape[-1], blk_shape[-2],
@@ -181,7 +181,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                   num_blks[-1],
                                   num_blks[-2],
                                   num_blks[-3])
-            else:
+            else:  # pragma: no cover
                 if np.issubdtype(input.dtype, np.floating):
                     _blocks_to_array3_cuda(
                         input,
@@ -284,7 +284,7 @@ def _blocks_to_array3(output, input, Bx, By, Bz, Sx, Sy, Sz, Nx, Ny, Nz):
                                                             ny, nx, bz, by, bx]
 
 
-if config.cupy_enabled:
+if config.cupy_enabled:  # pragma: no cover
     import cupy as cp
 
     _array_to_blocks1_cuda = cp.ElementwiseKernel(

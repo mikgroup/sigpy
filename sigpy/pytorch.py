@@ -6,7 +6,7 @@ import numpy as np
 from sigpy import backend, config
 
 __all__ = []
-if config.pytorch_enabled:
+if config.pytorch_enabled:  # pragma: no cover
     __all__ += ['to_pytorch', 'from_pytorch', 'to_pytorch_function']
 
     def to_pytorch(array, requires_grad=True):

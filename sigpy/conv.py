@@ -8,9 +8,6 @@ and multi-channel.
 import numpy as np
 from sigpy import backend, fourier, util, config
 
-if config.cudnn_enabled:
-    from cupy import cudnn
-
 
 __all__ = ['convolve', 'convolve_adjoint_input', 'convolve_adjoint_filter']
 
@@ -48,7 +45,8 @@ def convolve(x, W, input_multi_channel=False,
         x = x.reshape((batch_size, input_channel) + input_shape)
         W = W.reshape((output_channel, input_channel) + filter_shape)
 
-    if device != backend.cpu_device and config.cudnn_enabled:
+    if (device != backend.cpu_device
+        and config.cudnn_enabled):  # pragma: no cover
         y = _cudnn_convolve(x, W, mode=mode)
     else:
         y = _fft_convolve(x, W, mode=mode)
@@ -94,7 +92,8 @@ def convolve_adjoint_input(W, y, input_multi_channel=False,
         y = y.reshape((batch_size, output_channel) + output_shape)
         W = W.reshape((output_channel, input_channel) + filter_shape)
 
-    if device != backend.cpu_device and config.cudnn_enabled:
+    if (device != backend.cpu_device
+        and config.cudnn_enabled):  # pragma: no cover
         x = _cudnn_convolve_adjoint_input(W, y, mode=mode)
     else:
         x = _fft_convolve_adjoint_input(W, y, mode=mode)
@@ -138,7 +137,8 @@ def convolve_adjoint_filter(x, y, ndim, input_multi_channel=False,
         x = x.reshape((batch_size, input_channel) + input_shape)
         y = y.reshape((batch_size, output_channel) + output_shape)
 
-    if device != backend.cpu_device and config.cudnn_enabled:
+    if (device != backend.cpu_device
+        and config.cudnn_enabled):  # pragma: no cover
         W = _cudnn_convolve_adjoint_filter(x, y, mode=mode)
     else:
         W = _fft_convolve_adjoint_filter(x, y, mode=mode)
@@ -399,167 +399,171 @@ def _fft_convolve_adjoint_filter(x, y, mode='full'):
         return W
 
 
-def _cudnn_convolve(x, W, mode='full'):
-    dtype = x.dtype
-    device = backend.get_device(x)
-    xp = device.xp
-    if np.issubdtype(dtype, np.complexfloating):
+if config.cudnn_enabled:  # pragma: no cover
+    from cupy import cudnn
+
+    def _cudnn_convolve(x, W, mode='full'):
+        dtype = x.dtype
+        device = backend.get_device(x)
+        xp = device.xp
+        if np.issubdtype(dtype, np.complexfloating):
+            with device:
+                xr = xp.real(x)
+                xi = xp.imag(x)
+                Wr = xp.real(W)
+                Wi = xp.imag(W)
+
+                # Concatenate real and imaginary to input/output channels
+                x = xp.concatenate([xr, xi], axis=1)
+                W = xp.concatenate([xp.concatenate([Wr, -Wi], axis=1),
+                                    xp.concatenate([Wi, Wr], axis=1)], axis=0)
+
+                y = _cudnn_convolve(x, W, mode=mode)
+
+                # Convert back to complex
+                y = y[:, :y.shape[1] // 2] + 1j * y[:, y.shape[1] // 2:]
+                y = y.astype(dtype)
+
+                return y
+
+        ndim = x.ndim - 2
+        batch_size = len(x)
+        output_channel = W.shape[0]
+        input_shape = x.shape[-ndim:]
+        filter_shape = W.shape[-ndim:]
+        strides = (1, ) * ndim
+        dilations = (1, ) * ndim
+        groups = 1
+        auto_tune = True
+        tensor_core = 'auto'
+        if mode == 'full':
+            output_shape = tuple(
+                m + n - 1 for m, n in zip(input_shape, filter_shape))
+            pads = tuple(n - 1 for n in W.shape[2:])
+        elif mode == 'valid':
+            output_shape = tuple(
+                m - n + 1 for m, n in zip(input_shape, filter_shape))
+            pads = (0, ) * ndim
+
         with device:
-            xr = xp.real(x)
-            xi = xp.imag(x)
-            Wr = xp.real(W)
-            Wi = xp.imag(W)
+            y = xp.empty((batch_size, output_channel) + output_shape,
+                         dtype=dtype)
+            W = util.flip(W, axes=range(-ndim, 0))
+            cudnn.convolution_forward(x, W, None, y,
+                                      pads, strides, dilations, groups,
+                                      auto_tune=auto_tune,
+                                      tensor_core=tensor_core)
 
-            # Concatenate real and imaginary to input/output channels
-            x = xp.concatenate([xr, xi], axis=1)
-            W = xp.concatenate([xp.concatenate([Wr, -Wi], axis=1),
-                                xp.concatenate([Wi, Wr], axis=1)], axis=0)
+        return y
 
-            y = _cudnn_convolve(x, W, mode=mode)
+    def _cudnn_convolve_adjoint_input(W, y, mode='full'):
+        dtype = y.dtype
+        device = backend.get_device(y)
+        xp = device.xp
+        if np.issubdtype(dtype, np.complexfloating):
+            with device:
+                Wr = xp.real(W)
+                Wi = xp.imag(W)
+                yr = xp.real(y)
+                yi = xp.imag(y)
 
-            # Convert back to complex
-            y = y[:, :y.shape[1] // 2] + 1j * y[:, y.shape[1] // 2:]
-            y = y.astype(dtype)
+                # Concatenate real and imaginary to input/output channels
+                y = xp.concatenate([yr, yi], axis=1)
+                W = xp.concatenate([xp.concatenate([Wr, -Wi], axis=1),
+                                    xp.concatenate([Wi, Wr], axis=1)], axis=0)
 
-            return y
+                x = _cudnn_convolve_adjoint_input(W, y, mode=mode)
 
-    ndim = x.ndim - 2
-    batch_size = len(x)
-    output_channel = W.shape[0]
-    input_shape = x.shape[-ndim:]
-    filter_shape = W.shape[-ndim:]
-    strides = (1, ) * ndim
-    dilations = (1, ) * ndim
-    groups = 1
-    auto_tune = True
-    tensor_core = 'auto'
-    if mode == 'full':
-        output_shape = tuple(
-            m + n - 1 for m, n in zip(input_shape, filter_shape))
-        pads = tuple(n - 1 for n in W.shape[2:])
-    elif mode == 'valid':
-        output_shape = tuple(
-            m - n + 1 for m, n in zip(input_shape, filter_shape))
-        pads = (0, ) * ndim
+                # Convert back to complex
+                x = x[:, :x.shape[1] // 2] + 1j * x[:, x.shape[1] // 2:]
+                x = x.astype(dtype)
 
-    with device:
-        y = xp.empty((batch_size, output_channel) + output_shape, dtype=dtype)
-        W = util.flip(W, axes=range(-ndim, 0))
-        cudnn.convolution_forward(x, W, None, y,
-                                  pads, strides, dilations, groups,
-                                  auto_tune=auto_tune, tensor_core=tensor_core)
+                return x
 
-    return y
+        ndim = y.ndim - 2
+        batch_size = len(y)
+        input_channel = W.shape[1]
+        output_shape = y.shape[-ndim:]
+        filter_shape = W.shape[-ndim:]
+        strides = (1, ) * ndim
+        dilations = (1, ) * ndim
+        groups = 1
+        auto_tune = True
+        tensor_core = 'auto'
+        deterministic = False
+        if mode == 'full':
+            input_shape = tuple(
+                p - n + 1 for p, n in zip(output_shape, filter_shape))
+            pads = tuple(n - 1 for n in W.shape[2:])
+        elif mode == 'valid':
+            input_shape = tuple(
+                p + n - 1 for p, n in zip(output_shape, filter_shape))
+            pads = (0, ) * ndim
 
-
-def _cudnn_convolve_adjoint_input(W, y, mode='full'):
-    dtype = y.dtype
-    device = backend.get_device(y)
-    xp = device.xp
-    if np.issubdtype(dtype, np.complexfloating):
         with device:
-            Wr = xp.real(W)
-            Wi = xp.imag(W)
-            yr = xp.real(y)
-            yi = xp.imag(y)
+            x = xp.empty((batch_size, input_channel) + input_shape,
+                         dtype=dtype)
+            W = util.flip(W, axes=range(-ndim, 0))
+            cudnn.convolution_backward_data(W, y, None, x,
+                                            pads, strides, dilations, groups,
+                                            deterministic=deterministic,
+                                            auto_tune=auto_tune,
+                                            tensor_core=tensor_core)
 
-            # Concatenate real and imaginary to input/output channels
-            y = xp.concatenate([yr, yi], axis=1)
-            W = xp.concatenate([xp.concatenate([Wr, -Wi], axis=1),
-                                xp.concatenate([Wi, Wr], axis=1)], axis=0)
+        return x
 
-            x = _cudnn_convolve_adjoint_input(W, y, mode=mode)
+    def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
+        dtype = y.dtype
+        device = backend.get_device(y)
+        xp = device.xp
+        if np.issubdtype(dtype, np.complexfloating):
+            with device:
+                xr = xp.real(x)
+                xi = xp.imag(x)
+                yr = xp.real(y)
+                yi = xp.imag(y)
 
-            # Convert back to complex
-            x = x[:, :x.shape[1] // 2] + 1j * x[:, x.shape[1] // 2:]
-            x = x.astype(dtype)
+                # Concatenate real and imaginary to input/output channels
+                x = xp.concatenate([xr, xi], axis=1)
+                y = xp.concatenate([yr, yi], axis=1)
 
-            return x
+                W = _cudnn_convolve_adjoint_filter(x, y, mode=mode)
 
-    ndim = y.ndim - 2
-    batch_size = len(y)
-    input_channel = W.shape[1]
-    output_shape = y.shape[-ndim:]
-    filter_shape = W.shape[-ndim:]
-    strides = (1, ) * ndim
-    dilations = (1, ) * ndim
-    groups = 1
-    auto_tune = True
-    tensor_core = 'auto'
-    deterministic = False
-    if mode == 'full':
-        input_shape = tuple(
-            p - n + 1 for p, n in zip(output_shape, filter_shape))
-        pads = tuple(n - 1 for n in W.shape[2:])
-    elif mode == 'valid':
-        input_shape = tuple(
-            p + n - 1 for p, n in zip(output_shape, filter_shape))
-        pads = (0, ) * ndim
+                # Convert back to complex
+                Wr = W[:W.shape[0] // 2, :W.shape[1] // 2]
+                Wr += W[W.shape[0] // 2:, W.shape[1] // 2:]
+                Wi = W[W.shape[0] // 2:, :W.shape[1] // 2]
+                Wi -= W[:W.shape[0] // 2, W.shape[1] // 2:]
+                return (Wr + 1j * Wi).astype(dtype)
 
-    with device:
-        x = xp.empty((batch_size, input_channel) + input_shape, dtype=dtype)
-        W = util.flip(W, axes=range(-ndim, 0))
-        cudnn.convolution_backward_data(W, y, None, x,
-                                        pads, strides, dilations, groups,
-                                        deterministic=deterministic,
-                                        auto_tune=auto_tune,
-                                        tensor_core=tensor_core)
+        ndim = y.ndim - 2
+        input_channel = x.shape[1]
+        output_channel = y.shape[1]
+        input_shape = x.shape[-ndim:]
+        output_shape = y.shape[-ndim:]
+        strides = (1, ) * ndim
+        dilations = (1, ) * ndim
+        groups = 1
+        auto_tune = True
+        tensor_core = 'auto'
+        deterministic = False
+        if mode == 'full':
+            filter_shape = tuple(
+                p - m + 1 for m, p in zip(input_shape, output_shape))
+            pads = tuple(n - 1 for n in filter_shape)
+        elif mode == 'valid':
+            filter_shape = tuple(
+                m - p + 1 for m, p in zip(input_shape, output_shape))
+            pads = (0, ) * ndim
 
-    return x
-
-
-def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
-    dtype = y.dtype
-    device = backend.get_device(y)
-    xp = device.xp
-    if np.issubdtype(dtype, np.complexfloating):
         with device:
-            xr = xp.real(x)
-            xi = xp.imag(x)
-            yr = xp.real(y)
-            yi = xp.imag(y)
+            W = xp.empty(
+                (output_channel, input_channel) + filter_shape, dtype=dtype)
+            cudnn.convolution_backward_filter(x, y, W,
+                                              pads, strides, dilations, groups,
+                                              deterministic=deterministic,
+                                              auto_tune=auto_tune,
+                                              tensor_core=tensor_core)
+            W = util.flip(W, axes=range(-ndim, 0))
 
-            # Concatenate real and imaginary to input/output channels
-            x = xp.concatenate([xr, xi], axis=1)
-            y = xp.concatenate([yr, yi], axis=1)
-
-            W = _cudnn_convolve_adjoint_filter(x, y, mode=mode)
-
-            # Convert back to complex
-            Wr = W[:W.shape[0] // 2, :W.shape[1] // 2]
-            Wr += W[W.shape[0] // 2:, W.shape[1] // 2:]
-            Wi = W[W.shape[0] // 2:, :W.shape[1] // 2]
-            Wi -= W[:W.shape[0] // 2, W.shape[1] // 2:]
-            return (Wr + 1j * Wi).astype(dtype)
-
-    ndim = y.ndim - 2
-    input_channel = x.shape[1]
-    output_channel = y.shape[1]
-    input_shape = x.shape[-ndim:]
-    output_shape = y.shape[-ndim:]
-    strides = (1, ) * ndim
-    dilations = (1, ) * ndim
-    groups = 1
-    auto_tune = True
-    tensor_core = 'auto'
-    deterministic = False
-    if mode == 'full':
-        filter_shape = tuple(
-            p - m + 1 for m, p in zip(input_shape, output_shape))
-        pads = tuple(n - 1 for n in filter_shape)
-    elif mode == 'valid':
-        filter_shape = tuple(
-            m - p + 1 for m, p in zip(input_shape, output_shape))
-        pads = (0, ) * ndim
-
-    with device:
-        W = xp.empty(
-            (output_channel, input_channel) + filter_shape, dtype=dtype)
-        cudnn.convolution_backward_filter(x, y, W,
-                                          pads, strides, dilations, groups,
-                                          deterministic=deterministic,
-                                          auto_tune=auto_tune,
-                                          tensor_core=tensor_core)
-        W = util.flip(W, axes=range(-ndim, 0))
-
-    return W
+        return W

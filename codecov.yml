@@ -1,5 +1,8 @@
 comment: false
 
+ignore:
+  - sigpy/backend.py
+
 coverage:
   status:
     # Enable coverage measurement for diff introduced in the pull-request,

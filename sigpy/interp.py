@@ -45,7 +45,7 @@ def interpolate(input, width, kernel, coord):
         _interpolate = _select_interpolate(ndim, npts, device, isreal)
         if device == backend.cpu_device:
             _interpolate(output, input, width, kernel, coord)
-        else:
+        else:  # pragma: no cover
             _interpolate(input, width, kernel, coord, output, size=npts)
 
         return output.reshape(batch_shape + pts_shape)
@@ -86,7 +86,7 @@ def gridding(input, shape, width, kernel, coord):
         _gridding = _select_gridding(ndim, npts, device, isreal)
         if device == backend.cpu_device:
             _gridding(output, input, width, kernel, coord)
-        else:
+        else:  # pragma: no cover
             _gridding(input, width, kernel, coord, output, size=npts)
 
         return output.reshape(shape)
@@ -96,17 +96,17 @@ def _select_interpolate(ndim, npts, device, isreal):
     if ndim == 1:
         if device == backend.cpu_device:
             _interpolate = _interpolate1
-        else:
+        else:  # pragma: no cover
             _interpolate = _interpolate1_cuda
     elif ndim == 2:
         if device == backend.cpu_device:
             _interpolate = _interpolate2
-        else:
+        else:  # pragma: no cover
             _interpolate = _interpolate2_cuda
     elif ndim == 3:
         if device == backend.cpu_device:
             _interpolate = _interpolate3
-        else:
+        else:  # pragma: no cover
             _interpolate = _interpolate3_cuda
     else:
         raise ValueError(
@@ -119,7 +119,7 @@ def _select_gridding(ndim, npts, device, isreal):
     if ndim == 1:
         if device == backend.cpu_device:
             _gridding = _gridding1
-        else:
+        else:  # pragma: no cover
             if isreal:
                 _gridding = _gridding1_cuda
             else:
@@ -127,7 +127,7 @@ def _select_gridding(ndim, npts, device, isreal):
     elif ndim == 2:
         if device == backend.cpu_device:
             _gridding = _gridding2
-        else:
+        else:  # pragma: no cover
             if isreal:
                 _gridding = _gridding2_cuda
             else:
@@ -135,7 +135,7 @@ def _select_gridding(ndim, npts, device, isreal):
     elif ndim == 3:
         if device == backend.cpu_device:
             _gridding = _gridding3
-        else:
+        else:  # pragma: no cover
             if isreal:
                 _gridding = _gridding3_cuda
             else:
@@ -326,7 +326,7 @@ def _gridding3(output, input, width, kernel, coord):
     return output
 
 
-if config.cupy_enabled:
+if config.cupy_enabled:  # pragma: no cover
     import cupy as cp
 
     lin_interpolate_cuda = """

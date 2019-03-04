@@ -5,8 +5,6 @@ import numpy as np
 import numba as nb
 
 from sigpy import backend, config
-if config.cupy_enabled:
-    import cupy as cp
 
 
 __all__ = ['asscalar', 'prod', 'vec', 'split', 'rss', 'resize',
@@ -486,7 +484,8 @@ def _xpay(y, a, x):
     return x + a * y
 
 
-if config.cupy_enabled:
+if config.cupy_enabled:  # pragma: no cover
+    import cupy as cp
 
     _axpy_cuda = cp.ElementwiseKernel(
         'S a, T x',
