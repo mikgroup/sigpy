@@ -443,7 +443,8 @@ class L2ConstrainedMinimization(App):
         self.x_device = backend.get_device(self.x)
         if G is None:
             self.max_eig_app = MaxEig(
-                A.H * A, dtype=self.x.dtype, device=self.x_device)
+                A.H * A, dtype=self.x.dtype, device=self.x_device,
+                show_pbar=show_pbar)
 
             proxfc = prox.Conj(prox.L2Proj(A.oshape, eps, y=y))
         else:
@@ -455,7 +456,8 @@ class L2ConstrainedMinimization(App):
 
         if tau is None or sigma is None:
             max_eig = MaxEig(A.H * A, dtype=self.x.dtype,
-                             device=self.x_device).run()
+                             device=self.x_device,
+                             show_pbar=show_pbar).run()
             tau = 1
             sigma = 1 / max_eig
 

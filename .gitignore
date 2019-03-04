@@ -60,3 +60,4 @@ Thumbs.db
 *.tar.bz2
 
 .asv
+.coverage

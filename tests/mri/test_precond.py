@@ -15,7 +15,7 @@ class TestPrecond(unittest.TestCase):
         nc = 4
         n = 10
         shape = (nc, n)
-        mps = sp.randn(shape)
+        mps = sp.randn(shape, dtype=np.complex)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
         weights = sp.randn([n]) >= 0
 
@@ -51,7 +51,7 @@ class TestPrecond(unittest.TestCase):
         n = 10
         nc = 3
         shape = [nc, n]
-        mps = sp.randn(shape)
+        mps = sp.randn(shape, dtype=np.complex)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
         coord = sp.randn([n, 1], dtype=np.float)
 
@@ -127,7 +127,7 @@ class TestPrecond(unittest.TestCase):
         nc = 4
         n = 10
         shape = (nc, n)
-        mps = sp.randn(shape)
+        mps = sp.randn(shape, dtype=np.complex)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
         weights = sp.randn([n]) >= 0
 

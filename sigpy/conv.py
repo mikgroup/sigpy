@@ -161,6 +161,16 @@ def _get_convolve_params(x, W, input_multi_channel, output_multi_channel):
     batch_shape = x.shape[:-ndim - input_multi_channel]
     batch_size = util.prod(batch_shape)
 
+    if x.dtype != W.dtype:
+        raise TypeError(
+            'x and W must have the same dtype, got {} and {}.'.format(
+                x.dtype, W.dtype))
+
+    if backend.get_device(x) != backend.get_device(W):
+        raise TypeError(
+            'x and W must be on the same device, got {} and {}.'.format(
+                backend.get_device(x), backend.get_device(W)))
+
     if input_multi_channel:
         input_channel = x.shape[-ndim - 1]
     else:
@@ -184,6 +194,16 @@ def _get_convolve_adjoint_input_params(
     batch_shape = y.shape[:-ndim - output_multi_channel]
     batch_size = util.prod(batch_shape)
 
+    if y.dtype != W.dtype:
+        raise TypeError(
+            'y and W must have the same dtype, got {} and {}.'.format(
+                y.dtype, W.dtype))
+
+    if backend.get_device(y) != backend.get_device(W):
+        raise TypeError(
+            'y and W must be on the same device, got {} and {}.'.format(
+                backend.get_device(y), backend.get_device(W)))
+
     if input_multi_channel:
         input_channel = W.shape[-ndim - 1]
     else:
@@ -204,6 +224,16 @@ def _get_convolve_adjoint_filter_params(
     input_shape = x.shape[-ndim:]
     batch_shape = y.shape[:-ndim - output_multi_channel]
     batch_size = util.prod(batch_shape)
+
+    if x.dtype != y.dtype:
+        raise TypeError(
+            'x and y must have the same dtype, got {} and {}.'.format(
+                x.dtype, y.dtype))
+
+    if backend.get_device(y) != backend.get_device(x):
+        raise TypeError(
+            'y and x must be on the same device, got {} and {}.'.format(
+                backend.get_device(y), backend.get_device(x)))
 
     if input_multi_channel:
         input_channel = x.shape[-ndim - 1]

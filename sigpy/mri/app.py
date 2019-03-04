@@ -467,7 +467,8 @@ class JsenseRecon(sp.app.App):
                 self.y,
                 self.mps_ker,
                 lamda=self.lamda,
-                max_iter=self.max_inner_iter).run()
+                max_iter=self.max_inner_iter,
+                show_pbar=self.show_pbar).run()
 
         def min_img_ker():
             self.A_img_ker = linop.ConvSense(
@@ -481,7 +482,8 @@ class JsenseRecon(sp.app.App):
                 self.y,
                 self.img_ker,
                 lamda=self.lamda,
-                max_iter=self.max_inner_iter).run()
+                max_iter=self.max_inner_iter,
+                show_pbar=self.show_pbar).run()
 
         self.alg = sp.alg.AltMin(
             min_mps_ker, min_img_ker, max_iter=self.max_iter)
