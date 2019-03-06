@@ -87,7 +87,12 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
     """Non-uniform Fast Fourier Transform.
 
     Args:
-        input (array): input array.
+        input (array): input array. The input should be of shape
+            that can be split in to batch_shape + data_shape,
+            where data_shape is the shape over which the nufft is
+            performed and has length ndim,
+            and batch_shape is the shape over which the nufft is.
+            looped, and can have arbitrary length.
         coord (array): coordinate array of shape (..., ndim).
             ndim determines the number of dimension to apply nufft.
         oversamp (float): oversampling factor.
