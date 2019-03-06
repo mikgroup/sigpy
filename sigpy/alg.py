@@ -442,3 +442,46 @@ class AltMin(Alg):
     def _update(self):
         self.min1()
         self.min2()
+
+
+class AugmentedLagrangianMethod(Alg):
+    r"""Augmented Lagrangian method for constrained optimization.
+
+    Consider the problem:
+
+    .. math:: \min_{x: c(x) = 0} f(x)
+
+    and reformulate it as:
+
+    .. math::
+        \min_{x, u} L(x, u, \mu) = f(x) - <c(x), u> + \mu / 2 \| c(x) \|_2^2
+
+    Perform the following update steps:
+
+    .. math::
+        &x \in \text{argmin}_{x} L(x, u, \mu)
+        &u = u - \mu c(x)
+
+    Args:
+        min_lagrangian (function): a function that takes :math:`x`, :math:`u`,
+            and :math:`\mu` as inputs, and minimizes the Lagrangian over `x`.
+        constraints (function): a function that takes :math:`x` as input,
+            and outputs :math:`c(x)`.
+        x (array): primal variable.
+        u (array): dual variable.
+        mu (scalar): step size.
+        max_iter (int): maximum number of iterations.
+
+    """
+    def __init__(self, min_lagrangian, constraints, x, u, mu,
+                 max_iter=30):
+        self.min_lagrangian = min_lagrangian
+        self.constraints = constraints
+        self.x = x
+        self.u = u
+        self.mu = mu
+        super().__init__(max_iter)
+
+    def _update(self):
+        self.min_lagrangian(self.x, self.u, self.mu)
+        util.axpy(self.u, -self.mu, self.constraints(self.x))

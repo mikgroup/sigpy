@@ -121,3 +121,33 @@ class TestAlg(unittest.TestCase):
             alg_method.update()
 
         npt.assert_allclose(x, x_numpy)
+
+    def test_AugmentedLagrangianMethod(self):
+        n = 5
+        lamda = 0.1
+        A, x_numpy, y = self.Ax_y_setup(n, lamda)
+
+        # Solve 1 / 2 \| A x - y \|_2^2 + lamda * \| z \|_2^2 s.t. x = z
+        mu = 1
+        x_z = np.zeros([2 * n])
+        u = np.zeros([n])
+
+        def min_lagrangian(x_z, u, mu):
+            x = x_z[:n]
+            z = x_z[n:]
+            x[:] = np.linalg.solve(
+                A.T @ A + mu * np.eye(n), A.T @ y + u + mu * z)
+            z[:] = (mu * x - u) / (mu + lamda)
+
+        def constraints(x_z):
+            x = x_z[:n]
+            z = x_z[n:]
+            return x - z
+
+        alg_method = alg.AugmentedLagrangianMethod(
+            min_lagrangian, constraints, x_z, u, mu)
+        while(not alg_method.done()):
+            alg_method.update()
+
+        x = x_z[:n]
+        npt.assert_allclose(x, x_numpy)
