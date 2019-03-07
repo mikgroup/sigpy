@@ -31,6 +31,7 @@ SigPy requires Python version >= 3.5. The core module depends on:
 * ``PyWavelets``
 * ``tqdm``
 
+Additional features can be unlocked by installing the appropriate packages.
 To enable the plotting functions, you will need to install ``matplotlib``. To enable CUDA support, you will need to install ``cupy``. And to enable MPI support, you will need to install ``mpi4py``.
 
 Via ``conda``
