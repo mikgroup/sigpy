@@ -102,7 +102,8 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         n (int): number of sampling points of the interpolation kernel.
 
     Returns:
-        array: Fourier domain data of shape input.shape[:-ndim] + coord.shape[:-1].
+        array: Fourier domain data of shape
+            input.shape[:-ndim] + coord.shape[:-1].
 
     References:
         Fessler, J. A., & Sutton, B. P. (2003).

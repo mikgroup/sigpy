@@ -254,7 +254,7 @@ class Communicator(object):
 
     def bcast(self, input, root=0):
         """Broadcast from root to other nodes.
-        
+
         Args:
             input (array): input array.
             root (int): root node rank.
