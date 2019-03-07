@@ -18,7 +18,7 @@ class TestInterp(unittest.TestCase):
 
         for xp in xps:
             for dtype in [np.float32, np.complex64]:
-                for ndim in [1, 2, 3]:
+                for ndim in [1, 2, 3, 4]:
                     with self.subTest(xp=xp, dtype=dtype, ndim=ndim):
                         input = xp.array(
                             [0, 1, 2, 3, 4, 5], dtype=dtype).reshape(
@@ -69,7 +69,7 @@ class TestInterp(unittest.TestCase):
 
         for xp in xps:
             for dtype in [np.float32, np.complex64]:
-                for ndim in [1, 2, 3]:
+                for ndim in [1, 2, 3, 4]:
                     with self.subTest(xp=xp, dtype=dtype, ndim=ndim):
                         shape = [6] + [1] * (ndim - 1)
 
