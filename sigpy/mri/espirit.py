@@ -67,7 +67,7 @@ def espirit_maps(ksp, calib_width=24,
         AHA = AH @ xp.conj(AH.swapaxes(-1, -2))
 
         # Power Iteration
-        mps = sp.randn(ksp.shape[::-1] + (1, ), dtype=ksp.dtype, device=device)
+        mps = xp.ones(ksp.shape[::-1] + (1, ), dtype=ksp.dtype)
         for _ in range(max_power_iter):
             sp.copyto(mps, AHA @ mps)
             eig_value = xp.sum(xp.abs(mps)**2, axis=-2, keepdims=True)**0.5

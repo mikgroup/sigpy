@@ -18,4 +18,4 @@ class TestEspirit(unittest.TestCase):
 
         np.testing.assert_allclose(np.abs(mps)[:, 8:24, 8:24],
                                    np.abs(mps_rec[:, 8:24, 8:24]),
-                                   rtol=0.2, atol=0.2)
+                                   rtol=1e-3, atol=1e-3)
