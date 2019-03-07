@@ -58,7 +58,7 @@ def espirit_maps(ksp, calib_width=24,
         num_kernels = len(VH)
         kernels = VH.reshape([num_kernels] + kernel_shape)
         img_kernels = sp.ifft(sp.resize(kernels, (num_kernels, ) + ksp.shape),
-                              axes=[-1, -2])
+                              axes=range(-img_ndim, 0))
         img_kernels *= (sp.prod(ksp.shape[1:]) /
                         kernel_width**img_ndim)**0.5
 
