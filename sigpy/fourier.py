@@ -87,21 +87,22 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
     """Non-uniform Fast Fourier Transform.
 
     Args:
-        input (array): input array. The input should be of shape
-            that can be split in to batch_shape + data_shape,
-            where data_shape is the shape over which the nufft is
-            performed and has length ndim,
-            and batch_shape is the shape over which the nufft is.
-            looped, and can have arbitrary length.
-        coord (array): coordinate array of shape (..., ndim).
-            ndim determines the number of dimension to apply nufft.
+        input (array): input signal domain array of shape
+            (..., n_{ndim - 1}, ..., n_1, n_0),
+            where ndim is specified by coord.shape[-1]. The nufft
+            is applied on the last ndim axes, and looped over
+            the remaining axes.
+        coord (array): Fourier domain coordinate array of shape (..., ndim).
+            ndim determines the number of dimensions to apply the nufft.
+            coord[..., i] should be scaled to have its range between
+            -n_i // 2, and n_i // 2.
         oversamp (float): oversampling factor.
         width (float): interpolation kernel full-width in terms of
             oversampled grid.
-        n (int): number of sampling points of interpolation kernel.
+        n (int): number of sampling points of the interpolation kernel.
 
     Returns:
-        array: Fourier points of shape input.shape[:-ndim] + coord.shape[:-1]
+        array: Fourier domain data of shape input.shape[:-ndim] + coord.shape[:-1].
 
     References:
         Fessler, J. A., & Sutton, B. P. (2003).
@@ -160,17 +161,24 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
     """Adjoint non-uniform Fast Fourier Transform.
 
     Args:
-        input (array): Input Fourier domain array.
-        coord (array): coordinate array of shape (..., ndim).
+        input (array): input Fourier domain array of shape
+            (...) + coord.shape[:-1]. That is, the last dimensions
+            of input must match the first dimensions of coord.
+            The nufft_adjoint is applied on the last coord.ndim - 1 axes,
+            and looped over the remaining axes.
+        coord (array): Fourier domain coordinate array of shape (..., ndim).
             ndim determines the number of dimension to apply nufft adjoint.
-        oshape (tuple of ints): output shape.
+            coord[..., i] should be scaled to have its range between
+            -n_i // 2, and n_i // 2.
+        oshape (tuple of ints): output shape of the form
+            (..., n_{ndim - 1}, ..., n_1, n_0).
         oversamp (float): oversampling factor.
         width (float): interpolation kernel full-width in terms of
             oversampled grid.
-        n (int): number of sampling points of interpolation kernel.
+        n (int): number of sampling points of the interpolation kernel.
 
     Returns:
-        array: Transformed array.
+        array: signal domain array with shape specified by oshape.
 
     See Also:
         :func:`sigpy.nufft.nufft`
