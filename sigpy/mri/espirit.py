@@ -5,8 +5,8 @@ __all__ = ['espirit_maps']
 
 
 def espirit_maps(ksp, calib_width=24,
-                 thresh=0.001, kernel_width=12,
-                 crop=0.9,
+                 thresh=0.001, kernel_width=6,
+                 crop=0.8,
                  max_power_iter=30, device=sp.cpu_device,
                  output_eigenvalue=False):
     """Generate ESPIRiT maps from k-space.
