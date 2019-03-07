@@ -459,8 +459,8 @@ class AugmentedLagrangianMethod(Alg):
     Perform the following update steps:
 
     .. math::
-        &x \in \text{argmin}_{x} L(x, u, \mu)
-        &u = u - \mu c(x)
+        x \in \text{argmin}_{x} L(x, u, \mu)\\
+        u = u - \mu c(x)
 
     Args:
         min_lagrangian (function): a function that takes :math:`x`, :math:`u`,
