@@ -94,6 +94,9 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                        num_blks[-3] *
                                        blk_shape[-1] * blk_shape[-2] *
                                        blk_shape[-3])
+        else:
+            raise ValueError('Only support input.ndim <= 3'
+                             ', got {}'.format(ndim))
 
         return output
 
@@ -202,6 +205,9 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                         output,
                         size=num_blks[-1] * num_blks[-2] * num_blks[-3] *
                         blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
+        else:
+            raise ValueError('Only support input.ndim <= 3'
+                             ', got {}'.format(ndim))
 
         return output
 
