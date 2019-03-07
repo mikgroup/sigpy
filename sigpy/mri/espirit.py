@@ -1,16 +1,26 @@
 import sigpy as sp
 
 
-__all__ = ['espirit_calib']
+__all__ = ['espirit_maps']
 
 
-def espirit_calib(ksp, thresh=0.001, kernel_width=12, max_power_iter=30):
+def espirit_maps(ksp, calib_width=24,
+                 thresh=0.001, kernel_width=12,
+                 crop=0.9,
+                 max_power_iter=30, device=sp.cpu_device,
+                 output_eigenvalue=False):
     """Generate ESPIRiT maps from k-space.
 
     Currently only supports outputting one set of maps.
 
     Args:
-        ksp (array): k-space array of shape [num_coils] + calib_shape.
+        ksp (array): k-space array of shape [num_coils, n_ndim, ..., n_1]
+        calib (tuple of ints): length-2 image shape.
+        thresh (float): threshold for the calibration matrix.
+        kernel_width (int): kernel width for the calibration matrix.
+        max_power_iter (int): maximum number of power iterations.
+        device (Device): computing device.
+        crop (int): cropping threshold.
 
     Returns:
         array: ESPIRiT maps of the same shape as ksp.
@@ -25,13 +35,19 @@ def espirit_calib(ksp, thresh=0.001, kernel_width=12, max_power_iter=30):
     """
     img_ndim = ksp.ndim - 1
     num_coils = len(ksp)
-    device = sp.get_device(ksp)
+    with sp.get_device(ksp):
+        # Get calibration region
+        calib_shape = [num_coils] + [calib_width] * img_ndim
+        calib = sp.resize(ksp, calib_shape)
+        calib = sp.to_device(calib, device)
+
+    device = sp.Device(device)
     xp = device.xp
     with device:
         # Get calibration matrix
         kernel_shape = [num_coils] + [kernel_width] * img_ndim
         kernel_strides = [1] * (img_ndim + 1)
-        mat = sp.array_to_blocks(ksp, kernel_shape, kernel_strides)
+        mat = sp.array_to_blocks(calib, kernel_shape, kernel_strides)
         mat = mat.reshape([-1, sp.prod(kernel_shape)])
 
         # Perform SVD on calibration matrix
@@ -43,10 +59,14 @@ def espirit_calib(ksp, thresh=0.001, kernel_width=12, max_power_iter=30):
         kernels = VH.reshape([num_kernels] + kernel_shape)
         img_kernels = sp.ifft(sp.resize(kernels, (num_kernels, ) + ksp.shape),
                               axes=[-1, -2])
+        img_kernels *= (sp.prod(ksp.shape[1:]) /
+                        kernel_width**img_ndim)**0.5
 
         # Eigenvalue decomposition
         AH = img_kernels.T.reshape(ksp.shape[::-1] + (num_kernels, ))
-        AHA = AH @ AH.swapaxes(-1, -2).conjugate()
+        AHA = AH @ xp.conj(AH.swapaxes(-1, -2))
+
+        # Power Iteration
         mps = sp.randn(ksp.shape[::-1] + (1, ), dtype=ksp.dtype, device=device)
         for _ in range(max_power_iter):
             sp.copyto(mps, AHA @ mps)
@@ -57,4 +77,11 @@ def espirit_calib(ksp, thresh=0.001, kernel_width=12, max_power_iter=30):
         mps = mps.T[0]
         mps *= xp.conj(mps[0] / xp.abs(mps[0]))
 
-        return mps
+        # Crop maps by thresholding eigenvalue
+        eig_value = eig_value.T[0]
+        mps *= eig_value > crop
+
+        if output_eigenvalue:
+            return mps, eig_value
+        else:
+            return mps

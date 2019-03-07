@@ -10,11 +10,11 @@ if __name__ == '__main__':
 
 class TestEspirit(unittest.TestCase):
 
-    def test_espirit_calib(self):
+    def test_espirit_maps(self):
         mps_shape = [8, 16, 16]
         mps = sim.birdcage_maps(mps_shape)
         ksp = sp.fft(mps, axes=[-1, -2])
-        mps_rec = espirit.espirit_calib(ksp)
+        mps_rec = espirit.espirit_maps(ksp)
 
         np.testing.assert_allclose(np.abs(mps), np.abs(mps_rec),
                                    rtol=0.2, atol=0.2)
