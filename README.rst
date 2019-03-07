@@ -57,7 +57,7 @@ SigPy can also be installed through ``pip``::
 Installation for Developers
 ***************************
 
-If you want to contribute to the SigPy source code, we recommend you install with ``pip`` in editable mode::
+If you want to contribute to the SigPy source code, we recommend you install it with ``pip`` in editable mode::
 
 	cd /path/to/sigpy
 	pip install -e .
