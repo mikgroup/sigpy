@@ -247,30 +247,6 @@ class L1Proj(Prox):
         return thresh.l1_proj(self.epsilon, input)
 
 
-class L1L2Reg(Prox):
-    r"""
-    Proximal operator for mixed l1 l2 norm regularization.
-
-    .. math::
-        \min_x \frac{1}{2} \| x - y \|_2^2 + \lambda \sum_j \| x_j \|_1^2
-
-    Args:
-        shape (tuple of ints): input shape.
-        lamda (float): regularization parameter.
-        axes (None or tuple of ints): axes over which l1 norm is applied.
-
-    """
-
-    def __init__(self, shape, lamda, axes=None):
-        self.lamda = lamda
-        self.axes = axes
-
-        super().__init__(shape)
-
-    def _prox(self, alpha, input):
-        return thresh.elitist_thresh(self.lamda * alpha, input, axes=self.axes)
-
-
 class BoxConstraint(Prox):
     r"""Box constraint proximal operator.
 
