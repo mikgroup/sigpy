@@ -57,16 +57,21 @@ def espirit_maps(ksp, calib_width=24,
         # Get kernels
         num_kernels = len(VH)
         kernels = VH.reshape([num_kernels] + kernel_shape)
-        img_kernels = sp.ifft(sp.resize(kernels, (num_kernels, ) + ksp.shape),
-                              axes=range(-img_ndim, 0))
-        img_kernels *= (sp.prod(ksp.shape[1:]) /
-                        kernel_width**img_ndim)**0.5
+        img_shape = ksp.shape[1:]
 
-        # Eigenvalue decomposition
-        AH = img_kernels.T.reshape(ksp.shape[::-1] + (num_kernels, ))
-        AHA = AH @ xp.conj(AH.swapaxes(-1, -2))
+        # Get covariance matrix in image domain
+        AHA = xp.zeros(img_shape[::-1] + (num_coils, num_coils),
+                       dtype=ksp.dtype)
+        for kernel in kernels:
+            img_kernel = sp.ifft(sp.resize(kernel, ksp.shape),
+                                 axes=range(-img_ndim, 0))
+            aH = xp.expand_dims(img_kernel.T, axis=-1)
+            a = xp.conj(aH.swapaxes(-1, -2))
+            AHA += aH @ a
 
-        # Power Iteration
+        AHA *= (sp.prod(img_shape) / kernel_width**img_ndim)
+
+        # Power Iteration to compute top eigenvector
         mps = xp.ones(ksp.shape[::-1] + (1, ), dtype=ksp.dtype)
         for _ in range(max_power_iter):
             sp.copyto(mps, AHA @ mps)
