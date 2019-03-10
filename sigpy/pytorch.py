@@ -104,8 +104,7 @@ if config.pytorch_enabled:  # pragma: no cover
                 represents complex tensor.
 
         Returns:
-            function: a function that is an alias of
-                the apply method of torch.autograd.Function.
+            torch.autograd.Function: equivalent PyTorch Function.
 
         """
         import torch
@@ -121,4 +120,4 @@ if config.pytorch_enabled:  # pragma: no cover
                 return to_pytorch(linop.H(from_pytorch(
                     grad_output, iscomplex=output_iscomplex)))
 
-        return LinopFunction.apply
+        return LinopFunction

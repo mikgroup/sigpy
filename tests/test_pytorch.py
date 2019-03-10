@@ -77,7 +77,7 @@ if config.pytorch_enabled:
             y = np.ones([5])
 
             with self.subTest('forward'):
-                f = pytorch.to_pytorch_function(A)
+                f = pytorch.to_pytorch_function(A).apply
                 x_torch = pytorch.to_pytorch(x)
                 npt.assert_allclose(f(x_torch).detach().numpy(),
                                     A(x))
@@ -95,9 +95,10 @@ if config.pytorch_enabled:
             y = np.ones([3], np.complex)
 
             with self.subTest('forward'):
-                f = pytorch.to_pytorch_function(A,
-                                                input_iscomplex=True,
-                                                output_iscomplex=True)
+                f = pytorch.to_pytorch_function(
+                    A,
+                    input_iscomplex=True,
+                    output_iscomplex=True).apply
                 x_torch = pytorch.to_pytorch(x)
                 npt.assert_allclose(f(x_torch).detach().numpy().ravel(),
                                     A(x).view(np.float))
