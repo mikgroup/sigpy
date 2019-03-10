@@ -100,7 +100,7 @@ html_theme = 'sphinx_rtd_theme'
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
-
+pygments_style = 'default'
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
