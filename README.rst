@@ -106,3 +106,8 @@ To run tests and contribute, we recommend installing the following packages::
 	pip install coverage flake8 sphinx
 
 and run the script ``run_tests.sh``.
+
+.. toctree::
+   :hidden:
+
+   Home <self>

@@ -1,9 +1,8 @@
-Welcome to SigPy's documentation!
-=================================
+.. include:: ../README.rst
 
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
-   Overview <intro>
    guide
    api
