@@ -133,8 +133,6 @@ class GradientMethod(Alg):
         proxg (Prox, function or None): Prox or function to compute
             proximal operator of :math:`g`.
         accelerate (bool): toggle Nesterov acceleration.
-        P (Linop, function or None): Linop or function to precondition input,
-            assumes proxg has already incorporated P.
         max_iter (int): maximum number of iterations.
 
     References:
@@ -190,8 +188,10 @@ class GradientMethod(Alg):
             # Backtracking line search
             if self.beta < 1:
                 fx = self.f(self.x)
-                while self.f(x_new) > fx + xp.vdot(delta_x, gradf_x) + \
-                        1 / (2 * alpha) * xp.linalg.norm(delta_x)**2:
+                while self.f(x_new) > fx + util.asscalar(
+                        xp.real(xp.vdot(delta_x, gradf_x))) + \
+                        1 / (2 * alpha) * xp.asscalar(
+                            xp.linalg.norm(delta_x))**2:
                     alpha *= self.beta
 
                     x_new = self.x - alpha * gradf_x
@@ -468,3 +468,55 @@ class AugmentedLagrangianMethod(Alg):
     def _update(self):
         self.min_lagrangian(self.x, self.u, self.mu)
         util.axpy(self.u, -self.mu, self.constraints(self.x))
+
+
+class NewtonsMethod(Alg):
+    """Newton's Method.
+
+    Args:
+        gradf (function) - A function gradf(x): x -> gradient of f at x.
+        inv_hessf (function) - A function H(x): x -> inverse Hessian of f at x,
+            which is another function: y -> inverse Hessian of f at x times y.
+        x (function) - solution.
+        beta (scalar): backtracking linesearch factor.
+             Enables backtracking when beta < 1.
+        f (function or None): function to compute :math:`f`
+             for backtracking line-search.
+        max_iter (int): maximum number of iterations.
+
+    """
+    def __init__(self, gradf, inv_hessf, x,
+                 beta=1, f=None, max_iter=10):
+        if beta < 1 and f is None:
+            raise TypeError(
+                "Cannot do backtracking linesearch without specifying f.")
+
+        self.gradf = gradf
+        self.inv_hessf = inv_hessf
+        self.x = x
+        self.lamda = np.infty
+        self.beta = beta
+        self.f = f
+
+        super().__init__(max_iter)
+
+    def _update(self):
+        device = backend.get_device(self.x)
+        xp = device.xp
+        with device:
+            gradf_x = self.gradf(self.x)
+            p = -self.inv_hessf(self.x)(gradf_x)
+            x_new = self.x + p
+            self.lamda = util.asscalar(xp.real(xp.vdot(p, gradf_x)))**0.5
+
+            if self.beta < 1:
+                fx = self.f(self.x)
+                alpha = 1
+                while self.f(x_new) > fx - alpha / 2 * self.lamda**2:
+                    alpha *= self.beta
+                    x_new = self.x + alpha * p
+
+            backend.copyto(self.x, x_new)
+
+    def _done(self):
+        return self.iter >= self.max_iter or self.lamda == 0

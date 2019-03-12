@@ -151,3 +151,36 @@ class TestAlg(unittest.TestCase):
 
         x = x_z[:n]
         npt.assert_allclose(x, x_numpy)
+
+    def test_NewtonsMethod(self):
+        n = 5
+        lamda = 0.1
+        A, x_numpy, y = self.Ax_y_setup(n, lamda)
+
+        def gradf(x):
+            gradf_x = A.T @ (A @ x - y)
+            gradf_x += lamda * x
+
+            return gradf_x
+
+        def inv_hessf(x):
+            return lambda x: np.linalg.pinv(A.T @ A) @ x
+        for beta in [1, 0.5]:
+            with self.subTest(beta=beta):
+                if beta < 1:
+                    def f(x):
+                        f_x = 1 / 2 * np.linalg.norm(A @ x - y)**2
+                        f_x += lamda / 2 * np.linalg.norm(x)**2
+
+                        return f_x
+                else:
+                    f = None
+
+                x = np.zeros(n)
+                alg_method = alg.NewtonsMethod(
+                    gradf, inv_hessf, x,
+                    beta=beta, f=f)
+                while (not alg_method.done()):
+                    alg_method.update()
+
+                npt.assert_allclose(x, x_numpy)
