@@ -88,23 +88,6 @@ class PowerMethod(Alg):
         return self.iter >= self.max_iter or self.max_eig == 0
 
 
-class ProximalPointMethod(Alg):
-    """Proximal point method.
-
-    """
-
-    def __init__(self, proxf, alpha, x, max_iter=100,
-                 device=backend.cpu_device):
-        self.proxf = proxf
-        self.alpha = alpha
-        self.x = x
-
-        super().__init__(max_iter)
-
-    def _update(self):
-        backend.copyto(self.x, self.proxf(self.alpha, self.x))
-
-
 class GradientMethod(Alg):
     r"""First order gradient method.
 
