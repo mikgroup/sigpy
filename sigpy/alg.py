@@ -523,9 +523,8 @@ class NewtonsMethod(Alg):
 
             if self.lamda2 < 0:
                 raise ValueError(
-                    'Hessian is not positive semi-definite.'
-                    'One reason might be inv_hessf is not defined'
-                    'correctly.')
+                    'Hessian is not positive semi-definite. '
+                    'inv_hessf might not be defined correctly.')
 
             x_new = self.x + p
             if self.beta < 1:
