@@ -58,8 +58,12 @@ class App(object):
 
     def run(self):
         if self.show_pbar:
-            self.pbar = tqdm(total=self.alg.max_iter,
-                             desc=self.__class__.__name__)
+            if self.__class__.__name__ == 'App':
+                name = self.alg.__class__.__name__
+            else:
+                name = self.__class__.__name__
+
+            self.pbar = tqdm(total=self.alg.max_iter, desc=name)
 
         while(not self.alg.done()):
             self._pre_update()
