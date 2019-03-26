@@ -507,7 +507,7 @@ class NewtonsMethod(Alg):
             gradf_x = self.gradf(self.x)
             p = -self.inv_hessf(self.x)(gradf_x)
             x_new = self.x + p
-            self.lamda = util.asscalar(xp.real(xp.vdot(p, gradf_x)))**0.5
+            self.lamda = util.asscalar(-xp.real(xp.vdot(p, gradf_x)))**0.5
 
             if self.beta < 1:
                 fx = self.f(self.x)
