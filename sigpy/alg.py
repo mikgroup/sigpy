@@ -134,6 +134,7 @@ class GradientMethod(Alg):
             proximal operator of :math:`g`.
         accelerate (bool): toggle Nesterov acceleration.
         max_iter (int): maximum number of iterations.
+        tol (float): Tolerance for stopping condition.
 
     References:
         Nesterov, Y. E. (1983).
@@ -149,7 +150,8 @@ class GradientMethod(Alg):
     """
 
     def __init__(self, gradf, x, alpha, proxg=None,
-                 f=None, beta=1, accelerate=False, max_iter=100):
+                 f=None, beta=1, accelerate=False, max_iter=100,
+                 tol=0):
         if beta < 1 and f is None:
             raise TypeError(
                 "Cannot do backtracking linesearch without specifying f.")
@@ -161,6 +163,7 @@ class GradientMethod(Alg):
         self.accelerate = accelerate
         self.proxg = proxg
         self.x = x
+        self.tol = tol
 
         self.device = backend.get_device(x)
         with self.device:
@@ -210,7 +213,7 @@ class GradientMethod(Alg):
             self.resid = util.asscalar(xp.linalg.norm(delta_x / alpha))
 
     def _done(self):
-        return (self.iter >= self.max_iter) or self.resid == 0
+        return (self.iter >= self.max_iter) or self.resid <= self.tol
 
 
 class ConjugateGradient(Alg):
@@ -226,13 +229,15 @@ class ConjugateGradient(Alg):
         x (array): Variable.
         P (function or None): Preconditioner.
         max_iter (int): Maximum number of iterations.
+        tol (float): Tolerance for stopping condition.
 
     """
 
-    def __init__(self, A, b, x, P=None, max_iter=100):
+    def __init__(self, A, b, x, P=None, max_iter=100, tol=0):
         self.A = A
         self.P = P
         self.x = x
+        self.tol = tol
         self.device = backend.get_device(x)
         with self.device:
             xp = self.device.xp
@@ -281,7 +286,7 @@ class ConjugateGradient(Alg):
 
     def _done(self):
         return (self.iter >= self.max_iter or
-                self.zero_gradient or self.resid == 0)
+                self.zero_gradient or self.resid <= self.tol)
 
 
 class PrimalDualHybridGradient(Alg):
@@ -309,6 +314,7 @@ class PrimalDualHybridGradient(Alg):
         gamma_primal (float): Strong convexity parameter of g.
         gamma_dual (float): Strong convexity parameter of f^*.
         max_iter (int): Maximum number of iterations.
+        tol (float): Tolerance for stopping condition.
 
     References:
        Chambolle, A., & Pock, T. (2011).
@@ -321,10 +327,11 @@ class PrimalDualHybridGradient(Alg):
     def __init__(self, proxfc, proxg, A, AH, x, u,
                  tau, sigma, theta=1, gradh=None,
                  gamma_primal=0, gamma_dual=0,
-                 max_iter=100):
+                 max_iter=100, tol=0):
         self.proxfc = proxfc
         self.proxg = proxg
         self.gradh = gradh
+        self.tol = tol
 
         self.A = A
         self.AH = AH
@@ -406,6 +413,9 @@ class PrimalDualHybridGradient(Alg):
 
         self.resid = util.asscalar(x_diff_norm**2 + u_diff_norm**2)
 
+    def _done(self):
+        return self.iter >= self.max_iter or self.resid <= self.tol
+
 
 class AltMin(Alg):
     """Alternating Minimization.
@@ -483,10 +493,11 @@ class NewtonsMethod(Alg):
         f (function or None): function to compute :math:`f`
              for backtracking line-search.
         max_iter (int): maximum number of iterations.
+        tol (float): Tolerance for stopping condition.
 
     """
     def __init__(self, gradf, inv_hessf, x,
-                 beta=1, f=None, max_iter=10):
+                 beta=1, f=None, max_iter=10, tol=0):
         if beta < 1 and f is None:
             raise TypeError(
                 "Cannot do backtracking linesearch without specifying f.")
@@ -497,6 +508,7 @@ class NewtonsMethod(Alg):
         self.lamda = np.infty
         self.beta = beta
         self.f = f
+        self.tol = tol
 
         super().__init__(max_iter)
 
@@ -519,4 +531,4 @@ class NewtonsMethod(Alg):
             backend.copyto(self.x, x_new)
 
     def _done(self):
-        return self.iter >= self.max_iter or self.lamda == 0
+        return self.iter >= self.max_iter or self.lamda <= self.tol
