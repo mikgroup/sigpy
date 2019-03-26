@@ -253,7 +253,7 @@ class ConjugateGradient(Alg):
             else:
                 self.p = z
 
-            self.zero_gradient = False
+            self.not_positive_definite = False
             self.rzold = xp.real(xp.vdot(self.r, z))
             self.resid = util.asscalar(self.rzold)**0.5
 
@@ -263,9 +263,9 @@ class ConjugateGradient(Alg):
         with self.device:
             xp = self.device.xp
             Ap = self.A(self.p)
-            pAp = xp.real(xp.vdot(self.p, Ap))
-            if pAp == 0:
-                self.zero_gradient = True
+            pAp = util.asscalar(xp.real(xp.vdot(self.p, Ap)))
+            if pAp <= 0:
+                self.not_positive_definite = True
                 return
 
             self.alpha = self.rzold / pAp
@@ -286,7 +286,7 @@ class ConjugateGradient(Alg):
 
     def _done(self):
         return (self.iter >= self.max_iter or
-                self.zero_gradient or self.resid <= self.tol)
+                self.not_positive_definite or self.resid <= self.tol)
 
 
 class PrimalDualHybridGradient(Alg):
