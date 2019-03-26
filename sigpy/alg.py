@@ -190,7 +190,7 @@ class GradientMethod(Alg):
                 fx = self.f(self.x)
                 while self.f(x_new) > fx + util.asscalar(
                         xp.real(xp.vdot(delta_x, gradf_x))) + \
-                        1 / (2 * alpha) * xp.asscalar(
+                        1 / (2 * alpha) * util.asscalar(
                             xp.linalg.norm(delta_x))**2:
                     alpha *= self.beta
 
