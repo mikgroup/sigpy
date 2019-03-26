@@ -72,6 +72,7 @@ class App(object):
             self._summarize()
             if self.show_pbar:
                 self.pbar.update()
+                self.pbar.refresh()
 
         if self.show_pbar:
             self.pbar.close()
