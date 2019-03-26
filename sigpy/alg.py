@@ -508,6 +508,7 @@ class NewtonsMethod(Alg):
         self.lamda = np.infty
         self.beta = beta
         self.f = f
+        self.residual = np.infty
         self.tol = tol
 
         super().__init__(max_iter)
@@ -518,17 +519,24 @@ class NewtonsMethod(Alg):
         with device:
             gradf_x = self.gradf(self.x)
             p = -self.inv_hessf(self.x)(gradf_x)
-            x_new = self.x + p
-            self.lamda = util.asscalar(-xp.real(xp.vdot(p, gradf_x)))**0.5
+            self.lamda2 = util.asscalar(-xp.real(xp.vdot(p, gradf_x)))
 
+            if self.lamda2 < 0:
+                raise ValueError(
+                    'Hessian is not positive semi-definite.'
+                    'One reason might be inv_hessf is not defined'
+                    'correctly.')
+
+            x_new = self.x + p
             if self.beta < 1:
                 fx = self.f(self.x)
                 alpha = 1
-                while self.f(x_new) > fx - alpha / 2 * self.lamda**2:
+                while self.f(x_new) > fx - alpha / 2 * self.lamda2:
                     alpha *= self.beta
                     x_new = self.x + alpha * p
 
             backend.copyto(self.x, x_new)
+            self.residual = self.lamda2**0.5
 
     def _done(self):
-        return self.iter >= self.max_iter or self.lamda <= self.tol
+        return self.iter >= self.max_iter or self.residual <= self.tol
