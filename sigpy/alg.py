@@ -440,44 +440,58 @@ class AltMin(Alg):
 class AugmentedLagrangianMethod(Alg):
     r"""Augmented Lagrangian method for constrained optimization.
 
-    Consider the problem:
+    Consider the equality and inequality constrained problem:
 
-    .. math:: \min_{x: c(x) = 0} f(x)
+    .. math:: \min_{x: g(x) \leq 0, h(x) = 0} f(x)
 
-    and reformulate it as:
-
-    .. math::
-        \min_{x, u} L(x, u, \mu) = f(x) - <c(x), u> + \mu / 2 \| c(x) \|_2^2
-
-    Perform the following update steps:
+    And perform the following update steps:
 
     .. math::
-        x \in \text{argmin}_{x} L(x, u, \mu)\\
-        u = u - \mu c(x)
+        x \in \text{argmin}_{x} L(x, u, v, \mu)\\
+        u = [u + \mu g(x)]_+
+        v = v + \mu h(x)
+
+    where :math:`L(x, u, v, \mu)`: is the augmented Lagrangian function:
+
+    .. math::
+        L(x, u, v, \mu) = f(x) + \frac{\mu}{2}(
+        \|[g(x) + \frac{u}{\mu}]_+\|_2^2 + \|h(x) + \frac{v}{\mu}\|_2^2)
 
     Args:
-        min_lagrangian (function): a function that takes :math:`x`, :math:`u`,
-            and :math:`\mu` as inputs, and minimizes the Lagrangian over `x`.
-        constraints (function): a function that takes :math:`x` as input,
-            and outputs :math:`c(x)`.
+        minL (function): a function that takes :math:`\mu` as input,
+            and minimizes the augmented Lagrangian over `x`.
+        g (None or function): a function that takes :math:`x` as input,
+            and outputs :math:`g(x)`, the inequality constraints.
+        h (None or function): a function that takes :math:`x` as input,
+            and outputs :math:`h(x)`, the equality constraints.
         x (array): primal variable.
-        u (array): dual variable.
+        u (array): dual variable for inequality constraints.
+        v (array): dual variable for equality constraints.
         mu (scalar): step size.
         max_iter (int): maximum number of iterations.
 
     """
-    def __init__(self, min_lagrangian, constraints, x, u, mu,
-                 max_iter=30):
-        self.min_lagrangian = min_lagrangian
-        self.constraints = constraints
+    def __init__(self, minL, g, h, x, u, v, mu, max_iter=30):
+        self.minL = minL
+        self.g = g
+        self.h = h
         self.x = x
         self.u = u
+        self.v = v
         self.mu = mu
         super().__init__(max_iter)
 
     def _update(self):
-        self.min_lagrangian(self.x, self.u, self.mu)
-        util.axpy(self.u, -self.mu, self.constraints(self.x))
+        self.minL(self.mu)
+        if self.g is not None:
+            device = backend.get_device(self.u)
+            xp = device.xp
+            with device:
+                util.axpy(self.u, self.mu, self.g(self.x))
+                backend.copyto(self.u, xp.clip(self.u, 0, np.infty))
+
+        if self.h is not None:
+            util.axpy(self.v, self.mu, self.h(self.x))
 
 
 class NewtonsMethod(Alg):

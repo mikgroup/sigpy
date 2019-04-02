@@ -130,22 +130,22 @@ class TestAlg(unittest.TestCase):
         # Solve 1 / 2 \| A x - y \|_2^2 + lamda * \| z \|_2^2 s.t. x = z
         mu = 1
         x_z = np.zeros([2 * n])
-        u = np.zeros([n])
+        v = np.zeros([n])
 
-        def min_lagrangian(x_z, u, mu):
+        def minL(mu):
             x = x_z[:n]
             z = x_z[n:]
             x[:] = np.linalg.solve(
-                A.T @ A + mu * np.eye(n), A.T @ y + u + mu * z)
-            z[:] = (mu * x - u) / (mu + lamda)
+                A.T @ A + mu * np.eye(n), A.T @ y - v + mu * z)
+            z[:] = (mu * x + v) / (mu + lamda)
 
-        def constraints(x_z):
+        def h(x_z):
             x = x_z[:n]
             z = x_z[n:]
             return x - z
 
         alg_method = alg.AugmentedLagrangianMethod(
-            min_lagrangian, constraints, x_z, u, mu)
+            minL, None, h, x_z, None, v, mu)
         while(not alg_method.done()):
             alg_method.update()
 
