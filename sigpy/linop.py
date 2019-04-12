@@ -1303,7 +1303,7 @@ class BlocksToArray(Linop):
 
 
 def Gradient(ishape, axes=None):
-    """Linear operator that computes numerical gradient.
+    """Linear operator that computes finite difference gradient.
 
     Args:
        ishape (tuple of ints): Input shape.
@@ -1312,9 +1312,13 @@ def Gradient(ishape, axes=None):
     I = Identity(ishape)
     axes = util._normalize_axes(axes, len(ishape))
     ndim = len(ishape)
-    G = Vstack([I - Circshift(ishape, [0] * i + [1] + [0] * (ndim - i - 1))
-                for i in range(ndim)])
-    G.repr_str = 'Gradient'
+    linops = []
+    for i in range(ndim):
+        D = I - Circshift(ishape, [0] * i + [1] + [0] * (ndim - i - 1))
+        R = Reshape([1] + list(ishape), ishape)
+        linops.append(R * D)
+
+    G = Vstack(linops, axis=0)
 
     return G
 
