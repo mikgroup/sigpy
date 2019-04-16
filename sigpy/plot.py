@@ -24,38 +24,46 @@ import sigpy as sp
 __all__ = ['ImagePlot', 'LinePlot', 'ScatterPlot']
 
 
+image_plot_help_str = r"""
+$\bf{Hotkeys:}$
+    $\bf{h:}$ show/hide hotkey menu.
+    $\bf{x/y/z:}$ set current axis as x/y/z.
+    $\bf{t:}$ swap between x and y.
+    $\bf{c:}$ select current axis as color.
+    $\bf{left/right:}$ change current axis.
+    $\bf{up/down:}$ change slice along current axis.
+    $\bf{a:}$ toggle hide all labels, titles and axes.
+    $\bf{m/p/r/i/l:}$  magnitude/phase/real/imaginary/log mode.
+    $\bf{[/]:}$ change brightness.
+    $\bf{\{/\}:}$ change contrast.
+    $\bf{s:}$ save as png.
+    $\bf{g/v:}$ save as gif/mp4 by along current axis.
+    $\bf{q:}$ refresh.
+    $\bf{0-9:}$ enter slice number.
+    $\bf{enter:}$ set current axis as slice number.
+"""
+
+
 class ImagePlot(object):
     """Plot array as image.
 
-    Keyword Args:
-        x/y: select current dimension as x and y dimension.
-        t: swap between x and y axis.
-        z: toggle current dimension as z dimension.
-        c: toggle current dimension as color channel.
-            Only works if current dimension is of length 3.
-        left/right: increment/decrement current dimension
-        up/down: flip axis when current dimension is x or y.
-            Otherwise increment/decrement slice at current dimension.
-        h: toggle hide all labels, titles and axes.
-        m: magnitude mode. Renormalizes when pressed each time.
-        p: phase mode. Renormalizes when pressed each time.
-        r: real mode. Renormalizes when pressed each time.
-        i: imaginary mode. Renormalizes when pressed each time.
-        l: log mode. Renormalizes when pressed each time.
-        [: decreases brightness. Shifts window level up by 10% of window width.
-        ]: increases brightness.
-            Shifts window level down by 10% of window width.
-        {: decreases contrast. Scale window width by 0.9.
-        }: increases contrast. Scale window width by 1.1.
-        s: save as png.
-        g: save as gif by traversing current dimension.
-        v: save as mp4 by traversing current dimension.
-        q: refresh if file given.
-        0-9: enter slice number.
-        enter: Set current dimension as slice number.
+    Press 'h' for a menu for hotkeys.
+
+    Args:
+        im (array): image numpy/cupy array.
+        x (int): x axis.
+        y (int): y axis.
+        z (None or int): z axis.
+        c (None or int): color axis.
+        axis_hide (bool): toggle hiding axes, labels and title.
+        mode (str): specify magnitude, phase, real, imaginary,
+            and log mode. {'m', 'p', 'r', 'i', 'l'}.
+        title (str): title.
+        interpolation (str): plot interpolation.
+        save_basename (str): saved png, gif, and mp4 base name.
+        fps (int): frame per seconds for gif and mp4.
 
     """
-
     def __init__(
             self,
             im,
@@ -63,13 +71,12 @@ class ImagePlot(object):
             y=-2,
             z=None,
             c=None,
-            hide=False,
+            axes_hide=False,
             mode='m',
             title='',
             interpolation='lanczos',
             save_basename='Figure',
-            fps=10,
-            filename=None):
+            fps=10):
         if im.ndim < 2:
             raise TypeError(
                 'Image dimension must at least be two, got {im_ndim}'.format(
@@ -88,7 +95,8 @@ class ImagePlot(object):
         self.z = z % self.ndim if z is not None else None
         self.c = c % self.ndim if c is not None else None
         self.d = max(self.ndim - 3, 0)
-        self.hide = hide
+        self.axes_hide = axes_hide
+        self.show_help = False
         self.title = title
         self.interpolation = interpolation
         self.mode = mode
@@ -97,7 +105,7 @@ class ImagePlot(object):
         self.vmax = None
         self.save_basename = save_basename
         self.fps = fps
-        self.filename = filename
+        self.help_text = None
 
         self.fig.canvas.mpl_disconnect(
             self.fig.canvas.manager.key_press_handler_id)
@@ -192,8 +200,8 @@ class ImagePlot(object):
             self.update_image()
             self.fig.canvas.draw()
 
-        elif event.key == 'h':
-            self.hide = not self.hide
+        elif event.key == 'a':
+            self.axes_hide = not self.axes_hide
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -202,8 +210,6 @@ class ImagePlot(object):
             self.fig.canvas.manager.full_screen_toggle()
 
         elif event.key == 'q':
-            if self.filename:
-                self.im = np.load(self.filename)
             self.vmin = None
             self.vmax = None
             self.update_axes()
@@ -352,7 +358,7 @@ class ImagePlot(object):
                 else:
                     self.entered_slice = self.entered_slice * \
                         10 + int(event.key)
-            else:
+            elif event.key != 'backspace':
                 self.entering_slice = True
                 self.entered_slice = int(event.key)
 
@@ -369,6 +375,11 @@ class ImagePlot(object):
             self.update_axes()
             self.fig.canvas.draw()
 
+        elif event.key == 'h':
+            self.show_help = not self.show_help
+
+            self.update_image()
+            self.fig.canvas.draw()
         else:
             return
 
@@ -433,8 +444,21 @@ class ImagePlot(object):
             self.axim.set_extent([0, imv.shape[1], 0, imv.shape[0]])
             self.axim.set_clim(self.vmin, self.vmax)
 
+        if self.help_text is None:
+            bbox_props = dict(boxstyle="round",
+                              pad=1, fc="white", alpha=0.95, lw=0)
+            l, b, w, h = self.ax.get_position().bounds
+            self.help_text = self.ax.text(imv.shape[0] / 2, imv.shape[1] / 2,
+                                          image_plot_help_str,
+                                          ha='center', va='center',
+                                          linespacing=1.5,
+                                          ma='left', size=8, bbox=bbox_props)
+
+        self.help_text.set_visible(self.show_help)
+
     def update_axes(self):
-        if not self.hide:
+
+        if not self.axes_hide:
             caption = '['
             for i in range(self.ndim):
 
@@ -556,7 +580,7 @@ class LinePlot(object):
         v: save as mp4 by traversing current dimension.
     """
 
-    def __init__(self, arr, x=-1, hide=False, mode='m', title='',
+    def __init__(self, arr, x=-1, axes_hide=False, mode='m', title='',
                  save_basename='Figure', fps=10):
         import matplotlib.pyplot as plt
 
@@ -571,7 +595,7 @@ class LinePlot(object):
         self.flips = [1] * self.ndim
         self.x = x % self.ndim
         self.d = max(self.ndim - 3, 0)
-        self.hide = hide
+        self.axes_hide = axes_hide
         self.title = title
         self.mode = mode
         self.save_basename = save_basename
@@ -631,8 +655,8 @@ class LinePlot(object):
             self.update_line()
             self.fig.canvas.draw()
 
-        elif event.key == 'h':
-            self.hide = not self.hide
+        elif event.key == 'a':
+            self.axes_hide = not self.axes_hide
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -771,7 +795,7 @@ class LinePlot(object):
 
     def update_axes(self):
 
-        if not self.hide:
+        if not self.axes_hide:
             caption = 'Slice: ['
             for i in range(self.ndim):
 
@@ -829,7 +853,7 @@ class ScatterPlot(object):
             coord,
             data=None,
             z=None,
-            hide=False,
+            axes_hide=False,
             mode='m',
             title='',
             save_basename='Figure',
@@ -857,7 +881,7 @@ class ScatterPlot(object):
         self.flips = [1] * self.ndim
         self.z = z % self.ndim if z is not None else None
         self.d = 0
-        self.hide = hide
+        self.axes_hide = axes_hide
         self.title = title
         self.mode = mode
         self.axsc = None
@@ -920,8 +944,8 @@ class ScatterPlot(object):
         #     self.update_data()
         #     self.fig.canvas.draw()
 
-        elif event.key == 'h':
-            self.hide = not self.hide
+        elif event.key == 'a':
+            self.axes_hide = not self.axes_hide
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -1112,7 +1136,7 @@ class ScatterPlot(object):
 
     def update_axes(self):
 
-        if not self.hide:
+        if not self.axes_hide:
             caption = '['
             for i in range(self.ndim):
 
