@@ -229,10 +229,11 @@ class Communicator(object):
                                             nccl_size, nccl_dtype,
                                             nccl.NCCL_SUM,
                                             cp.cuda.Stream.null.ptr)
-            else:
-                cpu_input = to_device(input, cpu_device)
-                self.mpi_comm.Allreduce(MPI.IN_PLACE, cpu_input)
-                copyto(input, cpu_input)
+                        return
+
+            cpu_input = to_device(input, cpu_device)
+            self.mpi_comm.Allreduce(MPI.IN_PLACE, cpu_input)
+            copyto(input, cpu_input)
 
     def reduce(self, input, root=0):
         """Reduce operation in-place.
