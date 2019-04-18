@@ -11,15 +11,13 @@ and JSENSE reconstruction.
 """
 from sigpy.mri import app, linop
 
-from sigpy.mri import espirit, precond, samp, sim, util
-from sigpy.mri.espirit import *  # noqa
+from sigpy.mri import precond, samp, sim, util
 from sigpy.mri.precond import *  # noqa
 from sigpy.mri.samp import *  # noqa
 from sigpy.mri.sim import *  # noqa
 from sigpy.mri.util import *  # noqa
 
 __all__ = ['app', 'linop']
-__all__.extend(espirit.__all__)
 __all__.extend(precond.__all__)
 __all__.extend(samp.__all__)
 __all__.extend(sim.__all__)
