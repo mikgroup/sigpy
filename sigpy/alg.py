@@ -70,10 +70,11 @@ class PowerMethod(Alg):
 
     """
 
-    def __init__(self, A, x, max_iter=30):
+    def __init__(self, A, x, norm_func=None, max_iter=30):
         self.A = A
         self.x = x
         self.max_eig = np.infty
+        self.norm_func = norm_func
         super().__init__(max_iter)
 
     def _update(self):
@@ -81,11 +82,15 @@ class PowerMethod(Alg):
         device = backend.get_device(y)
         xp = device.xp
         with device:
-            self.max_eig = util.asscalar(xp.linalg.norm(y))
+            if self.norm_func is None:
+                self.max_eig = util.asscalar(xp.linalg.norm(y))
+            else:
+                self.max_eig = self.norm_func(y)
+
             backend.copyto(self.x, y / self.max_eig)
 
     def _done(self):
-        return self.iter >= self.max_iter or self.max_eig == 0
+        return self.iter >= self.max_iter
 
 
 class GradientMethod(Alg):
