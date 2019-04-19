@@ -5,8 +5,6 @@ import numpy as np
 import numba as nb
 
 from sigpy import backend, config
-if config.cupy_enabled:
-    import cupy as cp
 
 
 __all__ = ['asscalar', 'prod', 'vec', 'split', 'rss', 'resize',
@@ -44,8 +42,9 @@ def _check_same_dtype(*arrays):
     dtype = arrays[0].dtype
     for a in arrays:
         if a.dtype != dtype:
-            raise TypeError('inputs dtype mismatch, got {a_dtype}, and {dtype}.'.format(
-                a_dtype=a.dtype, dtype=dtype))
+            raise TypeError(
+                'inputs dtype mismatch, got {a_dtype}, and {dtype}.'.format(
+                    a_dtype=a.dtype, dtype=dtype))
 
 
 def asscalar(input):
@@ -154,8 +153,8 @@ def resize(input, oshape, ishift=None, oshift=None):
         oshift = [max(o // 2 - i // 2, 0)
                   for i, o in zip(ishape_exp, oshape_exp)]
 
-    copy_shape = [min(i - si, o - so) for i, si, o, so in zip(ishape_exp, ishift,
-                                                              oshape_exp, oshift)]
+    copy_shape = [min(i - si, o - so) for i, si, o,
+                  so in zip(ishape_exp, ishift, oshape_exp, oshift)]
     islice = tuple([slice(si, si + c) for si, c in zip(ishift, copy_shape)])
     oslice = tuple([slice(so, so + c) for so, c in zip(oshift, copy_shape)])
 
@@ -179,7 +178,7 @@ def flip(input, axes=None):
     Returns:
         array: Flipped result.
     """
-    
+
     if axes is None:
         axes = range(input.ndim)
     else:
@@ -211,7 +210,7 @@ def circshift(input, shifts, axes=None):
     Returns:
         array: Result.
     """
-    
+
     if axes is None:
         axes = range(input.ndim)
 
@@ -337,7 +336,8 @@ def triang(shape, dtype=np.float, device=backend.cpu_device):
     with device:
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
-            w = 1 - xp.abs(xp.arange(i, dtype=dtype) - i // 2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
+            x = xp.arange(i, dtype=dtype)
+            w = 1 - xp.abs(x - i // 2 + ((i + 1) % 2) / 2) / ((i + 1) // 2)
             window *= w.reshape([i] + [1] * n)
 
     return window
@@ -361,7 +361,8 @@ def hanning(shape, dtype=np.float, device=backend.cpu_device):
     with device:
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
-            w = 0.5 - 0.5 * xp.cos(2 * np.pi * xp.arange(i, dtype=dtype) / max(1, (i - (i % 2))))
+            x = xp.arange(i, dtype=dtype)
+            w = 0.5 - 0.5 * xp.cos(2 * np.pi * x / max(1, (i - (i % 2))))
             window *= w.reshape([i] + [1] * n)
 
     return window
@@ -385,8 +386,8 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
 
     References:
         Ramani, S., Blu, T. and Unser, M. 2008.
-        Monte-Carlo Sure: A Black-Box Optimization of Regularization Parameters 
-        for General Denoising Algorithms. IEEE Transactions on Image Processing.
+        Monte-Carlo Sure: A Black-Box Optimization of Regularization Parameters
+        for General Denoising Algorithms. IEEE Transactions on Image Processing
         17, 9 (2008), 1540-1554.
     """
     device = backend.get_device(y)
@@ -397,7 +398,8 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
     b = randn(y.shape, dtype=y.dtype, device=device)
     with device:
         divf_y = xp.real(xp.vdot(b, (f(y + eps * b) - f_y))) / eps
-        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + 2 * sigma**2 * divf_y / n
+        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + \
+            2 * sigma**2 * divf_y / n
 
     return sure
 
@@ -407,8 +409,9 @@ class ShuffledNumbers(object):
 
     Args:
         Arguments to numpy.arange.
-    
+
     """
+
     def __init__(self, *args):
         self.numbers = np.arange(*args)
         np.random.shuffle(self.numbers)
@@ -419,7 +422,7 @@ class ShuffledNumbers(object):
 
     def __next__(self):
         return self.next()
-    
+
     def next(self):
         ret = self.numbers[self.i]
 
@@ -448,7 +451,7 @@ def axpy(y, a, x):
         if device == backend.cpu_device:
             _axpy(y, a, x, out=y)
         else:
-            _axpy_cuda( a, x, y )
+            _axpy_cuda(a, x, y)
 
 
 def xpay(y, a, x):
@@ -468,20 +471,21 @@ def xpay(y, a, x):
         if device == backend.cpu_device:
             _xpay(y, a, x, out=y)
         else:
-            _xpay_cuda( a, x, y)
+            _xpay_cuda(a, x, y)
 
 
-@nb.vectorize(nopython=True, cache=True)
+@nb.vectorize(nopython=True, cache=True)  # pragma: no cover
 def _axpy(y, a, x):
     return a * x + y
 
 
-@nb.vectorize(nopython=True, cache=True)
+@nb.vectorize(nopython=True, cache=True)  # pragma: no cover
 def _xpay(y, a, x):
     return x + a * y
 
 
-if config.cupy_enabled:
+if config.cupy_enabled:  # pragma: no cover
+    import cupy as cp
 
     _axpy_cuda = cp.ElementwiseKernel(
         'S a, T x',

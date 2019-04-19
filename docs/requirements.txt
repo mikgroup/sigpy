@@ -1,4 +1,6 @@
+matplotlib
 numba
 numpy
 PyWavelets
 tqdm
+

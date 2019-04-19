@@ -70,7 +70,7 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
         img_shape (tuple of ints): image shape.
         golden (bool): golden angle ordering.
         dtype (Dtype): data type.
-    
+
     Returns:
         array: radial coordinates.
 
@@ -115,9 +115,9 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
     return (coord * img_shape[-ndim:]).astype(dtype)
 
 
-@nb.jit(nopython=True, cache=True)
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
 def _poisson(nx, ny, K, R, calib, seed):
-    
+
     mask = np.zeros((ny, nx))
     f = ny / nx
 
@@ -158,9 +158,9 @@ def _poisson(nx, ny, K, R, calib, seed):
                 done = True
                 for x in range(startx, endx):
                     for y in range(starty, endy):
-                        if (mask[y, x] == 1 and
-                            (((qx - x) / R[y, x]) ** 2 +
-                             ((qy - y) / (R[y, x] * f)) ** 2 < 1)):
+                        if (mask[y, x] == 1
+                            and (((qx - x) / R[y, x]) ** 2 +
+                                 ((qy - y) / (R[y, x] * f)) ** 2 < 1)):
                             done = False
                             break
 

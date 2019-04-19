@@ -57,3 +57,15 @@ class TestProx(unittest.TestCase):
         x = util.randn(shape)
         y = P(1.0, x)
         npt.assert_allclose(y, x / np.linalg.norm(x.ravel()))
+
+    def test_BoxConstraint(self):
+        shape = [5]
+        P = prox.BoxConstraint(shape, -1, 1)
+        x = np.array([-2, -1, 0, 1, 2])
+        y = P(None, x)
+        npt.assert_allclose(y, [-1, -1, 0, 1, 1])
+
+        P = prox.BoxConstraint(shape, [-1, 0, -1, -1, -1], [1, 1, 1, 0, 1])
+        x = np.array([-2, -1, 0, 1, 2])
+        y = P(None, x)
+        npt.assert_allclose(y, [-1, 0, 0, 0, 1])

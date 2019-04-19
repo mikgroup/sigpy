@@ -10,22 +10,19 @@ with open("README.rst", "r") as f:
     long_description = f.read()
 
 setup(name='sigpy',
-      version='0.0.8',
+      version='0.1.8',
       description='Python package for signal reconstruction.',
       long_description=long_description,
-      long_description_content_type="text/markdown",
+      long_description_content_type="text/x-rst",
       url='http://github.com/mikgroup/sigpy',
       author='Frank Ong',
       author_email='frankong@berkeley.edu',
       license='BSD',
       packages=find_packages(),
       install_requires=REQUIRED_PACKAGES,
-      scripts=['bin/image_plot',
-               'bin/line_plot',
-               'bin/scatter_plot'],
       classifiers=[
           "Programming Language :: Python :: 3",
           "License :: OSI Approved :: BSD License",
           "Operating System :: OS Independent",
       ]
-)
+      )

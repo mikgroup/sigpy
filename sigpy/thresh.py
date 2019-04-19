@@ -6,9 +6,6 @@ import numba as nb
 
 from sigpy import backend, config, util
 
-if config.cupy_enabled:
-    import cupy as cp
-
 
 __all__ = ['soft_thresh', 'hard_thresh', 'l1_proj', 'l2_proj']
 
@@ -18,7 +15,7 @@ def soft_thresh(lamda, input):
 
     Performs:
 
-    .. math:: 
+    .. math::
         (| x | - \lambda)_+  \text{sgn}(x)
 
     Args:
@@ -36,22 +33,17 @@ def soft_thresh(lamda, input):
     with device:
         if device == backend.cpu_device:
             output = _soft_thresh(lamda, input)
-        else:
+        else:  # pragma: no cover
             output = _soft_thresh_cuda(lamda, input)
 
         if np.issubdtype(input.dtype, np.floating):
             output = xp.real(output)
 
     return output
-    
+
 
 def hard_thresh(lamda, input):
     """Hard threshold.
-
-    Performs: 
-
-    .. math:: 
-        1\{|x| > \lambda\} x.
 
     Args:
         lamda (float, or array): Threshold parameter.
@@ -65,7 +57,7 @@ def hard_thresh(lamda, input):
 
     if device == backend.cpu_device:
         return _hard_thresh(lamda, input)
-    else:
+    else:  # pragma: no cover
         with device:
             return _hard_thresh_cuda(lamda, input)
 
@@ -125,7 +117,7 @@ def l2_proj(eps, input, axes=None):
     return output
 
 
-@nb.vectorize
+@nb.vectorize  # pragma: no cover
 def _soft_thresh(lamda, input):
     abs_input = abs(input)
     if (abs_input == 0):
@@ -139,7 +131,7 @@ def _soft_thresh(lamda, input):
     return mag * sign
 
 
-@nb.vectorize
+@nb.vectorize  # pragma: no cover
 def _hard_thresh(lamda, input):
     abs_input = abs(input)
     if abs_input > lamda:
@@ -148,7 +140,8 @@ def _hard_thresh(lamda, input):
         return 0
 
 
-if config.cupy_enabled:
+if config.cupy_enabled:  # pragma: no cover
+    import cupy as cp
 
     _soft_thresh_cuda = cp.ElementwiseKernel(
         'S lamda, T input',

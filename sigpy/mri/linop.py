@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """MRI linear operators.
 
-This module mainly contains the Sense linear operator, 
-which integrates multi-channel coil sensitivity maps and discrete Fourier transform.
+This module mainly contains the Sense linear operator,
+which integrates multi-channel coil sensitivity maps and
+discrete Fourier transform.
+
 """
 import sigpy as sp
 
@@ -10,15 +12,18 @@ import sigpy as sp
 def Sense(mps, coord=None, weights=None, ishape=None,
           coil_batch_size=None, comm=None):
     """Sense linear operator.
-    
+
     Args:
         mps (array): sensitivity maps of length = number of channels.
         coord (None or array): coordinates.
-        weights (None or array): k-space weights. Useful for soft-gating or density compensation.
+        weights (None or array): k-space weights.
+        Useful for soft-gating or density compensation.
         ishape (None or tuple): image shape.
         coil_batch_size (None or int): batch size for processing multi-channel.
-            When None, process all coils at the same time. Useful for saving memory.
-        comm (None or `sigpy.Communicator`): communicator for distributed computing.
+            When None, process all coils at the same time.
+            Useful for saving memory.
+        comm (None or `sigpy.Communicator`): communicator
+            for distributed computing.
 
     """
     # Get image shape and dimension.
@@ -64,14 +69,14 @@ def Sense(mps, coord=None, weights=None, ishape=None,
     if comm is not None:
         C = sp.linop.AllReduceAdjoint(ishape, comm, in_place=True)
         A = A * C
-        
+
     A.repr_str = 'Sense'
     return A
 
 
 def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
     """Convolution linear operator with sensitivity maps kernel in k-space.
-    
+
     Args:
         img_ker_shape (tuple of ints): image kernel shape.
         mps_ker (array): sensitivity maps kernel.
@@ -79,7 +84,8 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
 
     """
     ndim = len(img_ker_shape)
-    A = sp.linop.ConvolveInput(img_ker_shape, mps_ker, mode='valid', output_multi_channel=True)
+    A = sp.linop.ConvolveInput(
+        img_ker_shape, mps_ker, mode='valid', output_multi_channel=True)
 
     if coord is not None:
         num_coils = mps_ker.shape[0]
@@ -87,11 +93,11 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
         A = N * iF * A
-        
+
     if weights is not None:
         with sp.get_device(weights):
             P = sp.linop.Multiply(A.oshape, weights**0.5)
-            
+
         A = P * A
 
     if comm is not None:
@@ -103,7 +109,7 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
 
 def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None):
     """Convolution linear operator with image kernel in k-space.
-    
+
     Args:
         mps_ker_shape (tuple of ints): sensitivity maps kernel shape.
         img_ker (array): image kernel.
@@ -121,7 +127,7 @@ def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None):
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
         A = N * iF * A
-        
+
     if weights is not None:
         with sp.get_device(weights):
             P = sp.linop.Multiply(A.oshape, weights**0.5)

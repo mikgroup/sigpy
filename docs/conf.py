@@ -26,7 +26,7 @@ author = 'Frank Ong'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.0.8'
+release = '0.1.8'
 
 
 # -- General configuration ---------------------------------------------------
@@ -100,7 +100,7 @@ html_theme = 'sphinx_rtd_theme'
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
-
+pygments_style = 'default'
 
 # -- Options for HTMLHelp output ---------------------------------------------
 

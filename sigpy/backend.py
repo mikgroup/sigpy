@@ -2,7 +2,7 @@ import numpy as np
 from sigpy import config
 if config.cupy_enabled:
     import cupy as cp
-    
+
 if config.mpi4py_enabled:
     from mpi4py import MPI
 
@@ -17,12 +17,12 @@ __all__ = ['Device', 'get_device', 'get_array_module', 'cpu_device',
 class Device(object):
     """Device class.
 
-    This class extends cupy.Device, with id > 0 representing the corresponding GPUs,
+    This class extends cupy.Device, with id > 0 representing the id_th GPU,
     and id = -1 representing CPU. cupy must be installed to use GPUs.
 
-    The array module for the corresponding device can be obtained via .xp property.
-    Similar to cupy.Device, the Device object can be used as a context. For example:
-       
+    The array module for the corresponding device can be obtained via .xp.
+    Similar to cupy.Device, the Device object can be used as a context:
+
         >>> device = Device(2)
         >>> xp = device.xp  # xp is cupy.
         >>> with device:
@@ -34,9 +34,11 @@ class Device(object):
             the corresponding GPUs, and id = -1 represents CPU.
 
     Attributes:
-        id (int): id = -1 represents CPU, and other ids represents corresponding GPUs.
+        id (int): id = -1 represents CPU,
+            and others represents the id_th GPUs.
 
     """
+
     def __init__(self, id_or_device):
         if isinstance(id_or_device, int):
             id = id_or_device
@@ -45,14 +47,16 @@ class Device(object):
         elif config.cupy_enabled and isinstance(id_or_device, cp.cuda.Device):
             id = id_or_device.id
         else:
-            raise ValueError('Accepts int, Device or cupy.cuda.Device, got {id_or_device}'.format(
-                id_or_device=id_or_device))
+            raise ValueError(
+                'Accepts int, Device or cupy.cuda.Device, got {}'.format(
+                    id_or_device))
 
         if id != -1:
             if config.cupy_enabled:
                 self.cpdevice = cp.cuda.Device(id)
             else:
-                raise ValueError('cupy not installed, but set device {}.'.format(id))
+                raise ValueError(
+                    'cupy not installed, but set device {}.'.format(id))
 
         self.id = id
 
@@ -125,7 +129,7 @@ def get_device(array):
 
     Args:
         array (array): Array.
-    
+
     Returns:
         Device.
 
@@ -142,7 +146,7 @@ def to_device(input, device=cpu_device):
     Args:
         input (array): Input.
         device (int or Device or cupy.Device): Output device.
-    
+
     Returns:
         array: Output array placed in device.
     """
@@ -183,18 +187,25 @@ def copyto(output, input):
 class Communicator(object):
     """Communicator for distributed computing using MPI.
 
-    All arrays are moved to CPU, then communicated through MPI, and moved back
-    to original device. When mpi4py is not installed, the communicator basically does nothing.
+    When NCCL is not installed, arrays are moved to CPU,
+    then communicated through MPI, and moved back
+    to original device.
+    When mpi4py is not installed, the communicator errors.
 
     """
+
     def __init__(self):
         if config.mpi4py_enabled:
             self.mpi_comm = MPI.COMM_WORLD
             self.size = self.mpi_comm.Get_size()
             self.rank = self.mpi_comm.Get_rank()
         else:
-            raise ValueError('Attempting to use Communicator, ',
-                             'but mpi4py is not installed.')
+            self.size = 1
+            self.rank = 0
+
+        # Keep nccl comms for reuse
+        if config.nccl_enabled:
+            self.nccl_comms = {}
 
     def allreduce(self, input):
         """All reduce operation in-place.
@@ -206,19 +217,23 @@ class Communicator(object):
 
         """
         if self.size > 1:
-            if self._use_nccl(input):
-                nccl_comm = self._get_nccl_comm(input)
-                nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
-                with get_device(input):
-                    nccl_comm.allReduce(input.data.ptr,
-                                        input.data.ptr,
-                                        nccl_size, nccl_dtype,
-                                        nccl.NCCL_SUM,
-                                        cp.cuda.Stream.null.ptr)
-            else:
-                cpu_input = to_device(input, cpu_device)
-                self.mpi_comm.Allreduce(MPI.IN_PLACE, cpu_input)
-                copyto(input, cpu_input)
+            if config.nccl_enabled:
+                device = get_device(input)
+                devices = self.mpi_comm.allgather(device.id)
+                if all([d >= 0 for d in devices]):
+                    nccl_comm = self._get_nccl_comm(device, devices)
+                    nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
+                    with device:
+                        nccl_comm.allReduce(input.data.ptr,
+                                            input.data.ptr,
+                                            nccl_size, nccl_dtype,
+                                            nccl.NCCL_SUM,
+                                            cp.cuda.Stream.null.ptr)
+                        return
+
+            cpu_input = to_device(input, cpu_device)
+            self.mpi_comm.Allreduce(MPI.IN_PLACE, cpu_input)
+            copyto(input, cpu_input)
 
     def reduce(self, input, root=0):
         """Reduce operation in-place.
@@ -238,11 +253,24 @@ class Communicator(object):
             else:
                 self.mpi_comm.Reduce(cpu_input, None, root=root)
 
+    def bcast(self, input, root=0):
+        """Broadcast from root to other nodes.
+
+        Args:
+            input (array): input array.
+            root (int): root node rank.
+
+        """
+        if self.size > 1:
+            cpu_input = to_device(input, cpu_device)
+            self.mpi_comm.Bcast(cpu_input, root=root)
+            copyto(input, cpu_input)
+
     def gatherv(self, input, root=0):
         """Gather with variable sizes operation.
 
         Gather inputs across all nodes to the root node,
-        and vectorizes them. 
+        and vectorizes them.
 
         Args:
             input (array): input array.
@@ -254,27 +282,22 @@ class Communicator(object):
         """
         if self.size > 1:
             cpu_input = to_device(input, cpu_device)
-            
+
             sizes = self.mpi_comm.gather(input.size, root=root)
             if self.rank == root:
                 cpu_output = np.empty(sum(sizes), dtype=input.dtype)
-                self.mpi_comm.Gatherv(cpu_input, [cpu_output, sizes], root=root)
+                self.mpi_comm.Gatherv(
+                    cpu_input, [cpu_output, sizes], root=root)
                 return to_device(cpu_output, get_device(input))
             else:
                 self.mpi_comm.Gatherv(cpu_input, [None, sizes], root=root)
         else:
             return input
 
-    def _use_nccl(self, input):
-        if config.nccl_enabled:
-            device = get_device(input)
-            devices = self.mpi_comm.allgather(device.id)
-            return all([d >= 0 for d in devices])
-        else:
-            return False
+    def _get_nccl_comm(self, device, devices):
+        if str(devices) in self.nccl_comms:
+            return self.nccl_comms[str(devices)]
 
-    def _get_nccl_comm(self, input):
-        device = get_device(input)
         if self.rank == 0:
             nccl_comm_id = nccl.get_unique_id()
         else:
@@ -283,8 +306,11 @@ class Communicator(object):
         nccl_comm_id = self.mpi_comm.bcast(nccl_comm_id)
 
         with device:
-            return nccl.NcclCommunicator(self.size, nccl_comm_id,
-                                         self.rank)
+            nccl_comm = nccl.NcclCommunicator(
+                self.size, nccl_comm_id, self.rank)
+            self.nccl_comms[str(devices)] = nccl_comm
+
+        return nccl_comm
 
     def _get_nccl_dtype_size(self, input):
         if input.dtype == np.float32:
@@ -300,6 +326,7 @@ class Communicator(object):
             nccl_dtype = nccl.NCCL_FLOAT64
             nccl_size = input.size * 2
         else:
-            raise ValueError('dtype not supported, got {dtype}.'.format(dtype=input.dtype))
+            raise ValueError(
+                'dtype not supported, got {dtype}.'.format(dtype=input.dtype))
 
         return nccl_dtype, nccl_size

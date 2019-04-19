@@ -2,13 +2,13 @@ language: python
 python:
   - "3.5"
   - "3.6"
-# command to install dependencies
+
 install:
   - pip install -r requirements.txt
-  - pip install codecov pytest-cov
-# command to run tests
+  - pip install codecov flake8 sphinx sphinx_rtd_theme matplotlib
+
 script:
-  - pytest --cov=./
+  - bash run_tests.sh
 
 after_success:
   - codecov
