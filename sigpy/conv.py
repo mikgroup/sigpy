@@ -45,7 +45,7 @@ def convolve(data, filt,
     if device == backend.cpu_device:
         output = _convolve(data, filt, mode=mode, strides=strides,
                            multi_channel=multi_channel)
-    else:
+    else:  # pragma: no cover
         if config.cudnn_enabled:
             if np.issubdtype(data.dtype, np.floating):
                 output = _convolve_cuda(data, filt,
@@ -100,7 +100,7 @@ def convolve_adjoint_data(output, filt, data_shape,
         data = _convolve_adjoint_data(output, filt, data_shape,
                                       mode=mode, strides=strides,
                                       multi_channel=multi_channel)
-    else:
+    else:  # pragma: no cover
         if config.cudnn_enabled:
             if np.issubdtype(output.dtype, np.floating):
                 data = _convolve_adjoint_data_cuda(
@@ -155,7 +155,7 @@ def convolve_adjoint_filter(output, data, filt_shape,
         filt = _convolve_adjoint_filter(output, data, filt_shape,
                                         mode=mode, strides=strides,
                                         multi_channel=multi_channel)
-    else:
+    else:  # pragma: no cover
         if config.cudnn_enabled:
             if np.issubdtype(output.dtype, np.floating):
                 filt = _convolve_adjoint_filter_cuda(
