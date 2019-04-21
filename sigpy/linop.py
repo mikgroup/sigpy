@@ -1401,180 +1401,188 @@ class NUFFTAdjoint(Linop):
                             oversamp=self.oversamp, width=self.width, n=self.n)
 
 
-class ConvolveInput(Linop):
+class ConvolveData(Linop):
+    r"""Convolution operator for data arrays.
 
-    def __init__(self, x_shape, W, mode='full',
-                 input_multi_channel=False, output_multi_channel=False):
-        self.W = W
+    Args:
+        data_shape (tuple of ints): data array shape:
+            :math:`[\ldots, m_1, \ldots, m_D]` if multi_channel is False,
+            :math:`[\ldots, c_i, m_1, \ldots, m_D]` otherwise.
+        filt (array): filter array of shape:
+            :math:`[n_1, \ldots, n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, \ldots, n_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    """
+    def __init__(self, data_shape, filt, mode='full', strides=None,
+                 multi_channel=False):
+        self.filt = filt
         self.mode = mode
-        self.input_multi_channel = input_multi_channel
-        self.output_multi_channel = output_multi_channel
+        self.strides = strides
+        self.multi_channel = multi_channel
 
-        ndim = W.ndim - input_multi_channel - output_multi_channel
-        if mode == 'full':
-            y_shape = [m + n - 1 for m,
-                       n in zip(x_shape[-ndim:], W.shape[-ndim:])]
-        elif mode == 'valid':
-            y_shape = [m - n + 1 for m,
-                       n in zip(x_shape[-ndim:], W.shape[-ndim:])]
+        D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
+            data_shape, filt.shape,
+            mode, strides, multi_channel)
 
-        if output_multi_channel:
-            y_shape = [W.shape[0]] + y_shape
+        if multi_channel:
+            output_shape = b + (c_o, ) + p
+        else:
+            output_shape = b + p
 
-        batch_shape = list(x_shape[:-ndim - input_multi_channel])
-        y_shape = batch_shape + y_shape
-
-        super().__init__(y_shape, x_shape)
+        super().__init__(output_shape, data_shape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        W = backend.to_device(self.W, backend.get_device(input))
-        with device:
-            W = W.astype(input.dtype, copy=False)
-
-        return conv.convolve(input, W, mode=self.mode,
-                             input_multi_channel=self.input_multi_channel,
-                             output_multi_channel=self.output_multi_channel)
+        return conv.convolve(input, self.filt, mode=self.mode,
+                             strides=self.strides,
+                             multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveAdjointInput(
-            self.oshape,
-            self.W,
+        return ConvolveAdjointData(
+            self.ishape, self.filt,
             mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+            multi_channel=self.multi_channel)
 
 
-class ConvolveAdjointInput(Linop):
+class ConvolveAdjointData(Linop):
+    r"""Adjoint convolution operator for data arrays.
 
-    def __init__(self, y_shape, W, mode='full',
-                 input_multi_channel=False, output_multi_channel=False):
-        self.W = W
+    Args:
+        data_shape (tuple of ints): data array shape:
+            :math:`[\ldots, m_1, \ldots, m_D]` if multi_channel is False,
+            :math:`[\ldots, c_i, m_1, \ldots, m_D]` otherwise.
+        filt (array): filter array of shape:
+            :math:`[n_1, \ldots, n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, \ldots, n_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    """
+    def __init__(self, data_shape, filt,
+                 mode='full', strides=None, multi_channel=False):
+        self.filt = filt
         self.mode = mode
-        self.input_multi_channel = input_multi_channel
-        self.output_multi_channel = output_multi_channel
+        self.strides = strides
+        self.multi_channel = multi_channel
 
-        ndim = W.ndim - input_multi_channel - output_multi_channel
-        if mode == 'full':
-            x_shape = [p - n + 1 for p,
-                       n in zip(y_shape[-ndim:], W.shape[-ndim:])]
-        elif mode == 'valid':
-            x_shape = [p + n - 1 for p,
-                       n in zip(y_shape[-ndim:], W.shape[-ndim:])]
+        D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
+            data_shape, filt.shape,
+            mode, strides, multi_channel)
 
-        if input_multi_channel:
-            x_shape = [W.shape[-ndim - 1]] + x_shape
+        if multi_channel:
+            output_shape = b + (c_o, ) + p
+        else:
+            output_shape = b + p
 
-        batch_shape = list(y_shape[:-ndim - output_multi_channel])
-        x_shape = batch_shape + x_shape
-
-        super().__init__(x_shape, y_shape)
+        super().__init__(data_shape, output_shape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        W = backend.to_device(self.W, backend.get_device(input))
-        with device:
-            W = W.astype(input.dtype, copy=False)
-
-        return conv.convolve_adjoint_input(
-            W,
-            input,
+        return conv.convolve_adjoint_data(
+            input, self.filt, self.oshape,
             mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+            strides=self.strides,
+            multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveInput(self.oshape, self.W, mode=self.mode,
-                             input_multi_channel=self.input_multi_channel,
-                             output_multi_channel=self.output_multi_channel)
+        return ConvolveData(self.oshape, self.filt,
+                            mode=self.mode, strides=self.strides,
+                            multi_channel=self.multi_channel)
 
 
 class ConvolveFilter(Linop):
+    r"""Convolution operator for filter arrays.
 
-    def __init__(self, W_shape, x, mode='full',
-                 input_multi_channel=False, output_multi_channel=False):
-        self.x = x
+    Args:
+        filt_shape (tuple of ints): filter array shape:
+            :math:`[n_1, \ldots, n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, \ldots, n_D]` otherwise.
+        data (array): data array of shape:
+            :math:`[\ldots, m_1, \ldots, m_D]` if multi_channel is False,
+            :math:`[\ldots, c_i, m_1, \ldots, m_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    """
+    def __init__(self, filt_shape, data,
+                 mode='full', strides=None,
+                 multi_channel=False):
+        self.data = data
         self.mode = mode
-        self.input_multi_channel = input_multi_channel
-        self.output_multi_channel = output_multi_channel
+        self.strides = strides
+        self.multi_channel = multi_channel
 
-        ndim = len(W_shape) - input_multi_channel - output_multi_channel
-        if mode == 'full':
-            y_shape = [m + n - 1 for m,
-                       n in zip(x.shape[-ndim:], W_shape[-ndim:])]
-        elif mode == 'valid':
-            y_shape = [m - n + 1 for m,
-                       n in zip(x.shape[-ndim:], W_shape[-ndim:])]
+        D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
+            data.shape, filt_shape,
+            mode, strides, multi_channel)
 
-        if output_multi_channel:
-            y_shape = [W_shape[-ndim - input_multi_channel - 1]] + y_shape
+        if multi_channel:
+            output_shape = b + (c_o, ) + p
+        else:
+            output_shape = b + p
 
-        batch_shape = list(x.shape[:-ndim - input_multi_channel])
-        y_shape = batch_shape + y_shape
-
-        self.ndim = ndim
-        super().__init__(y_shape, W_shape)
+        super().__init__(output_shape, filt_shape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        x = backend.to_device(self.x, backend.get_device(input))
-        with device:
-            x = x.astype(input.dtype, copy=False)
-
-        return conv.convolve(x, input, mode=self.mode,
-                             input_multi_channel=self.input_multi_channel,
-                             output_multi_channel=self.output_multi_channel)
+        data = backend.to_device(self.data, backend.get_device(input))
+        return conv.convolve(data, input,
+                             mode=self.mode, strides=self.strides,
+                             multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
         return ConvolveAdjointFilter(
-            self.oshape,
-            self.x,
-            self.ndim,
-            mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+            self.ishape, self.data,
+            mode=self.mode, strides=self.strides,
+            multi_channel=self.multi_channel)
 
 
 class ConvolveAdjointFilter(Linop):
+    r"""Adjoint convolution operator for filter arrays.
 
-    def __init__(self, y_shape, x, ndim, mode='full',
-                 input_multi_channel=False, output_multi_channel=False):
-        self.x = x
+    Args:
+        filt_shape (tuple of ints): filter array shape:
+            :math:`[n_1, \ldots, n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, \ldots, n_D]` otherwise.
+        data (array): data array of shape:
+            :math:`[\ldots, m_1, \ldots, m_D]` if multi_channel is False,
+            :math:`[\ldots, c_i, m_1, \ldots, m_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    """
+    def __init__(self, filt_shape, data,
+                 mode='full', strides=None,
+                 multi_channel=False):
+        self.data = data
         self.mode = mode
-        self.input_multi_channel = input_multi_channel
-        self.output_multi_channel = output_multi_channel
-        self.ndim = ndim
+        self.strides = strides
+        self.multi_channel = multi_channel
 
-        if mode == 'full':
-            W_shape = [p - m + 1 for m,
-                       p in zip(x.shape[-ndim:], y_shape[-ndim:])]
-        elif mode == 'valid':
-            W_shape = [m - p + 1 for m,
-                       p in zip(x.shape[-ndim:], y_shape[-ndim:])]
+        D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
+            data.shape, filt_shape,
+            mode, strides, multi_channel)
 
-        if input_multi_channel:
-            W_shape = [x.shape[-ndim - 1]] + W_shape
+        if multi_channel:
+            output_shape = b + (c_o, ) + p
+        else:
+            output_shape = b + p
 
-        if output_multi_channel:
-            W_shape = [y_shape[-ndim - 1]] + W_shape
-
-        super().__init__(W_shape, y_shape)
+        super().__init__(filt_shape, output_shape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        x = backend.to_device(self.x, backend.get_device(input))
-        with device:
-            x = x.astype(input.dtype, copy=False)
-
         return conv.convolve_adjoint_filter(
-            x, input, self.ndim, mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+            input, self.data, self.oshape,
+            mode=self.mode, strides=self.strides,
+            multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveFilter(self.oshape, self.x, mode=self.mode,
-                              input_multi_channel=self.input_multi_channel,
-                              output_multi_channel=self.output_multi_channel)
+        return ConvolveFilter(self.ishape, self.data,
+                              mode=self.mode, strides=self.strides,
+                              multi_channel=self.multi_channel)
 
 
 class AsType(Linop):
@@ -1588,7 +1596,7 @@ class AsType(Linop):
     def _apply(self, input):
         with backend.get_device(input):
             if (np.issubdtype(self.idtype, np.complexfloating) and
-                    not np.issubdtype(self.odtype, np.complexfloating)):
+                not np.issubdtype(self.odtype, np.complexfloating)):
                 input = input.real
 
             return input.astype(self.odtype)
