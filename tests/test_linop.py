@@ -469,6 +469,17 @@ class TestLinop(unittest.TestCase):
                         self.check_linop_adjoint(A, dtype=dtype, device=device)
                         self.check_linop_pickleable(A)
 
+                        data_shape = [2, 3, 4]
+                        filt = util.randn([4, 2, 2, 3], dtype=dtype)
+                        strides = [2, 2]
+                        A = linop.ConvolveData(
+                            data_shape, filt,
+                            mode=mode, strides=strides,
+                            multi_channel=True)
+                        self.check_linop_linear(A, dtype=dtype, device=device)
+                        self.check_linop_adjoint(A, dtype=dtype, device=device)
+                        self.check_linop_pickleable(A)
+
     def test_ConvolveFilter(self):
         for device in devices:
             for dtype in dtypes:
@@ -502,6 +513,17 @@ class TestLinop(unittest.TestCase):
                         A = linop.ConvolveFilter(
                             filt_shape, data,
                             mode=mode,
+                            multi_channel=True)
+                        self.check_linop_linear(A, dtype=dtype, device=device)
+                        self.check_linop_adjoint(A, dtype=dtype, device=device)
+                        self.check_linop_pickleable(A)
+
+                        filt_shape = [4, 2, 2, 3]
+                        strides = [2, 2]
+                        data = util.randn([2, 3, 4], dtype=dtype)
+                        A = linop.ConvolveFilter(
+                            filt_shape, data,
+                            mode=mode, strides=strides,
                             multi_channel=True)
                         self.check_linop_linear(A, dtype=dtype, device=device)
                         self.check_linop_adjoint(A, dtype=dtype, device=device)
