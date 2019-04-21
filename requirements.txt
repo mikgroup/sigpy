@@ -2,3 +2,4 @@ numba
 numpy
 PyWavelets
 tqdm
+scipy
