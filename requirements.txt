@@ -1,5 +1,5 @@
 numba
 numpy
 PyWavelets
-tqdm
 scipy
+tqdm
