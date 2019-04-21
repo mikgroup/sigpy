@@ -1442,7 +1442,7 @@ class ConvolveData(Linop):
     def _adjoint_linop(self):
         return ConvolveAdjointData(
             self.ishape, self.filt,
-            mode=self.mode,
+            mode=self.mode, strides=self.strides,
             multi_channel=self.multi_channel)
 
 
