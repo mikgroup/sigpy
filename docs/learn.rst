@@ -1,10 +1,17 @@
-sigpy.learn
-===========
+ML Functions (`sigpy.learn`)
+============================
 
-.. toctree::
-   :maxdepth: 2
-	 
-   learn_app
-   
-.. automodule:: sigpy.learn
-   :members:
+.. automodule::
+   sigpy.learn
+
+Utility Functions
+-----------------
+.. automodule::
+   sigpy.learn.util
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+
+   sigpy.learn.labels_to_scores
+   sigpy.learn.scores_to_labels
