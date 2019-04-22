@@ -21,6 +21,47 @@ SigPy
 
 SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU. SigPy also provides several domain-specific submodules: ``sigpy.plot`` for multi-dimensional array plotting, ``sigpy.mri`` for MRI iterative reconstruction, and ``sigpy.learn`` for dictionary learning.
 
+Installation
+------------
+
+SigPy requires Python version >= 3.5. The core module depends on ``numba``, ``numpy``, ``PyWavelets``, ``scipy``, and ``tqdm``.
+
+Additional features can be unlocked by installing the appropriate packages. To enable the plotting functions, you will need to install ``matplotlib``. To enable CUDA support, you will need to install ``cupy``. And to enable MPI support, you will need to install ``mpi4py``.
+
+Via ``conda``
+*************
+
+For general users, we recommend installing SigPy through ``conda``::
+
+	conda install -c frankong sigpy
+	# (optional for plot support) conda install matplotlib
+	# (optional for CUDA support) conda install cupy
+        # (optional for MPI support) conda install mpi4py
+
+Via ``pip``
+***********
+
+SigPy can also be installed through ``pip``::
+
+	pip install sigpy
+	# (optional for plot support) pip install matplotlib
+	# (optional for CUDA support) pip install cupy
+        # (optional for MPI support) pip install mpi4py
+	
+Installation for Developers
+***************************
+
+If you want to contribute to the SigPy source code, we recommend you install it with ``pip`` in editable mode::
+
+	cd /path/to/sigpy
+	pip install -e .
+	
+To run tests and contribute, we recommend installing the following packages::
+
+	pip install coverage flake8 sphinx
+
+and run the script ``run_tests.sh``.
+
 Features
 --------
 
@@ -66,43 +107,3 @@ Want to do machine learning without giving up signal processing? SigPy has conve
 
 The conversion has no copying, and the resulting Tensor and Function can be backpropagated. Users can easily mix wavelet transforms and Fourier transforms with neural networks.
 
-Installation
-------------
-
-SigPy requires Python version >= 3.5. The core module depends on ``numba``, ``numpy``, ``PyWavelets``, ``scipy``, and ``tqdm``.
-
-Additional features can be unlocked by installing the appropriate packages. To enable the plotting functions, you will need to install ``matplotlib``. To enable CUDA support, you will need to install ``cupy``. And to enable MPI support, you will need to install ``mpi4py``.
-
-Via ``conda``
-*************
-
-For general users, we recommend installing SigPy through ``conda``::
-
-	conda install -c frankong sigpy
-	# (optional for plot support) conda install matplotlib
-	# (optional for CUDA support) conda install cupy
-        # (optional for MPI support) conda install mpi4py
-
-Via ``pip``
-***********
-
-SigPy can also be installed through ``pip``::
-
-	pip install sigpy
-	# (optional for plot support) pip install matplotlib
-	# (optional for CUDA support) pip install cupy
-        # (optional for MPI support) pip install mpi4py
-	
-Installation for Developers
-***************************
-
-If you want to contribute to the SigPy source code, we recommend you install it with ``pip`` in editable mode::
-
-	cd /path/to/sigpy
-	pip install -e .
-	
-To run tests and contribute, we recommend installing the following packages::
-
-	pip install coverage flake8 sphinx
-
-and run the script ``run_tests.sh``.
