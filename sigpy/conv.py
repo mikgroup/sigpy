@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Convolution functions.
-
-This module contains convolution functions that support multi-dimension,
-and multi-channel.
+"""Convolution functions with  multi-dimension, and multi-channel support.
 
 """
 import numpy as np

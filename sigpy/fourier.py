@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FFT functions.
-
-This module contains FFT functions that support centered operation.
+"""FFT and non-uniform FFT (NUFFT) functions.
 
 """
 import numpy as np

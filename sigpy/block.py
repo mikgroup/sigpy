@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""Block reshape functions.
+
+"""
 import numpy as np
 import numba as nb
 

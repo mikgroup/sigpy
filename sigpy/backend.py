@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""Functions and classes for getting and setting computing devices.
+
+"""
 import numpy as np
 from sigpy import config
 if config.cupy_enabled:
