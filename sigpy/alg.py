@@ -196,10 +196,9 @@ class GradientMethod(Alg):
             # Backtracking line search
             if self.beta < 1:
                 fx = self.f(self.x)
-                while self.f(x_new) > fx + util.asscalar(
-                        xp.real(xp.vdot(delta_x, gradf_x))) + \
-                        1 / (2 * alpha) * util.asscalar(
-                            xp.linalg.norm(delta_x))**2:
+                while self.f(x_new) > fx + \
+                      xp.real(xp.vdot(delta_x, gradf_x)).item() + \
+                      1 / (2 * alpha) * xp.linalg.norm(delta_x).item()**2:
                     alpha *= self.beta
 
                     x_new = self.x - alpha * gradf_x
@@ -215,7 +214,7 @@ class GradientMethod(Alg):
                 backend.copyto(self.z, x_new +
                                ((t_old - 1) / self.t) * delta_x)
 
-            self.resid = util.asscalar(xp.linalg.norm(delta_x / alpha))
+            self.resid = xp.linalg.norm(delta_x).item() / alpha
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.resid <= self.tol
