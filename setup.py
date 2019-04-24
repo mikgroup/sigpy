@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 if sys.version_info < (3, 5):
     sys.exit('Sorry, Python < 3.5 is not supported')
 
-REQUIRED_PACKAGES = ['numpy', 'pywavelets', 'numba', 'tqdm']
+REQUIRED_PACKAGES = ['numpy', 'pywavelets', 'numba', 'scipy', 'tqdm']
 
 with open("README.rst", "r") as f:
     long_description = f.read()
