@@ -197,8 +197,8 @@ class GradientMethod(Alg):
             if self.beta < 1:
                 fx = self.f(self.x)
                 while self.f(x_new) > fx + \
-                      xp.real(xp.vdot(delta_x, gradf_x)).item() + \
-                      1 / (2 * alpha) * xp.linalg.norm(delta_x).item()**2:
+                    xp.real(xp.vdot(delta_x, gradf_x)).item() + \
+                    1 / (2 * alpha) * xp.linalg.norm(delta_x).item()**2:
                     alpha *= self.beta
 
                     x_new = self.x - alpha * gradf_x
