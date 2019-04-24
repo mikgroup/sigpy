@@ -69,10 +69,10 @@ def convolve_adjoint_data(output, filt, data_shape,
     """Adjoint convolution operation with respect to data.
 
     Args:
-        output (array): output array of shape:
-            :math:`[..., n_1, ..., n_D]` if multi_channel is False,
-            :math:`[..., c_o, n_1, ..., n_D]` otherwise.
-        filt (array): filter array of shape:
+        output (array): output array of shape
+            :math:`[..., p_1, ..., p_D]` if multi_channel is False,
+            :math:`[..., c_o, p_1, ..., p_D]` otherwise.
+        filt (array): filter array of shape
             :math:`[n_1, ..., n_D]` if multi_channel is False
             :math:`[c_o, c_i, n_1, ..., n_D]` otherwise.
         mode (str): {'full', 'valid'}.
@@ -82,7 +82,7 @@ def convolve_adjoint_data(output, filt, data_shape,
         mode (str): {'full', 'valid'}.
 
     Returns:
-        array: data array of shape:
+        array: data array of shape
             :math:`[..., m_1, ..., m_D]` if multi_channel is False,
             :math:`[..., c_i, m_1, ..., m_D]` otherwise.
 
@@ -127,8 +127,8 @@ def convolve_adjoint_filter(output, data, filt_shape,
 
     Args:
         output (array): output array of shape:
-            :math:`[..., n_1, ..., n_D]` if multi_channel is False,
-            :math:`[..., c_o, n_1, ..., n_D]` otherwise.
+            :math:`[..., p_1, ..., p_D]` if multi_channel is False,
+            :math:`[..., c_o, p_1, ..., p_D]` otherwise.
         data (array): data array of shape:
             :math:`[..., m_1, ..., m_D]` if multi_channel is False,
             :math:`[..., c_i, m_1, ..., m_D]` otherwise.
