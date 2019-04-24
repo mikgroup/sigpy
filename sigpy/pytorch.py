@@ -8,7 +8,7 @@ from sigpy import backend, config
 __all__ = ['to_pytorch', 'from_pytorch', 'to_pytorch_function']
 
 
-def to_pytorch(array, requires_grad=True): # pragma: no cover
+def to_pytorch(array, requires_grad=True):  # pragma: no cover
     """Zero-copy conversion from numpy/cupy array to pytorch tensor.
 
     For complex array input, returns a tensor with shape + [2],
@@ -40,7 +40,8 @@ def to_pytorch(array, requires_grad=True): # pragma: no cover
     tensor.requires_grad = requires_grad
     return tensor
 
-def from_pytorch(tensor, iscomplex=False): # pragma: no cover
+
+def from_pytorch(tensor, iscomplex=False):  # pragma: no cover
     """Zero-copy conversion from pytorch tensor to numpy/cupy array.
 
     If iscomplex, then tensor must have the last dimension as 2,
@@ -82,9 +83,10 @@ def from_pytorch(tensor, iscomplex=False): # pragma: no cover
 
     return output
 
+
 def to_pytorch_function(linop,
                         input_iscomplex=False,
-                        output_iscomplex=False): # pragma: no cover
+                        output_iscomplex=False):  # pragma: no cover
     """Convert SigPy Linop to PyTorch Function.
 
     The returned function can be treated as a native
