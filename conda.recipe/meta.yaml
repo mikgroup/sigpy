@@ -15,12 +15,14 @@ requirements:
     - numpy
     - pywavelets
     - numba
+    - scipy
     - tqdm
   run:
     - python
     - numpy
     - pywavelets
     - numba
+    - scipy
     - tqdm
 
 test:
