@@ -1397,8 +1397,8 @@ class NUFFTAdjoint(Linop):
 
     def _adjoint_linop(self):
 
-        return NUFFTAdjoint(self.ishape, self.coord,
-                            oversamp=self.oversamp, width=self.width, n=self.n)
+        return NUFFT(self.ishape, self.coord,
+                     oversamp=self.oversamp, width=self.width, n=self.n)
 
 
 class ConvolveData(Linop):
