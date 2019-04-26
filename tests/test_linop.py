@@ -46,8 +46,11 @@ class TestLinop(unittest.TestCase):
         xp = device.xp
         with device:
             lhs = xp.vdot(A * x, y)
-            rhs = xp.vdot(x, A.H * y)
+            rhs = xp.vdot(A.H.H * x, y)
+            xp.testing.assert_allclose(lhs, rhs,
+                                       atol=1e-5, rtol=1e-5)
 
+            rhs = xp.vdot(x, A.H * y)
             xp.testing.assert_allclose(lhs, rhs,
                                        atol=1e-5, rtol=1e-5)
 
