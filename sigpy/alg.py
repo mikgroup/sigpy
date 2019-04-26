@@ -37,6 +37,10 @@ class Alg(object):
     Args:
         max_iter (int): Maximum number of iterations.
 
+    Attributes:
+        max_iter (int): Maximum number of iterations.
+        iter (int): Current iteration.
+
     """
 
     def __init__(self, max_iter):
@@ -50,10 +54,18 @@ class Alg(object):
         return self.iter >= self.max_iter
 
     def update(self):
+        """Perform one update step.
+
+        Call the user-defined _update() function and increment iter.
+        """
         self._update()
         self.iter += 1
 
     def done(self):
+        """Return whether the algorithm is done.
+
+        Call the user-defined _done() function.
+        """
         return self._done()
 
 
