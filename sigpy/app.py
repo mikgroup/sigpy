@@ -19,7 +19,7 @@ class App(object):
 
         >>> app.run()
 
-    Each App should have a core Alg object. The run() function runs the Alg,
+    Each App must have a core Alg object. The run() function runs the Alg,
     with additional convenient features, such as a progress bar, which
     can be toggled with the show_pbar option.
 
@@ -57,6 +57,9 @@ class App(object):
         return
 
     def run(self):
+        """Run the App.
+
+        """
         if self.show_pbar:
             if self.__class__.__name__ == 'App':
                 name = self.alg.__class__.__name__
