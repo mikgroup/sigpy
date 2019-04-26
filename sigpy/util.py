@@ -7,7 +7,7 @@ import numba as nb
 from sigpy import backend, config
 
 
-__all__ = ['asscalar', 'prod', 'vec', 'split', 'rss', 'resize',
+__all__ = ['prod', 'vec', 'split', 'rss', 'resize',
            'flip', 'circshift', 'downsample', 'upsample', 'dirac', 'randn',
            'triang', 'hanning', 'monte_carlo_sure', 'axpy', 'xpay',
            'ShuffledNumbers']
@@ -45,19 +45,6 @@ def _check_same_dtype(*arrays):
             raise TypeError(
                 'inputs dtype mismatch, got {a_dtype}, and {dtype}.'.format(
                     a_dtype=a.dtype, dtype=dtype))
-
-
-def asscalar(input):
-    """Returns input array as scalar.
-
-    Args:
-        input (array): Input array
-
-    Returns:
-        scalar.
-
-    """
-    return np.asscalar(backend.to_device(input, backend.cpu_device))
 
 
 def prod(shape):

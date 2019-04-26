@@ -83,7 +83,7 @@ class PowerMethod(Alg):
         xp = device.xp
         with device:
             if self.norm_func is None:
-                self.max_eig = util.asscalar(xp.linalg.norm(y))
+                self.max_eig = xp.linalg.norm(y).item()
             else:
                 self.max_eig = self.norm_func(y)
 
@@ -196,9 +196,9 @@ class GradientMethod(Alg):
             # Backtracking line search
             if self.beta < 1:
                 fx = self.f(self.x)
-                while self.f(x_new) > fx + \
-                    xp.real(xp.vdot(delta_x, gradf_x)).item() + \
-                    1 / (2 * alpha) * xp.linalg.norm(delta_x).item()**2:
+                while (self.f(x_new) > fx +
+                       xp.real(xp.vdot(delta_x, gradf_x)).item() +
+                       1 / (2 * alpha) * xp.linalg.norm(delta_x).item()**2):
                     alpha *= self.beta
 
                     x_new = self.x - alpha * gradf_x
@@ -259,7 +259,7 @@ class ConjugateGradient(Alg):
 
             self.not_positive_definite = False
             self.rzold = xp.real(xp.vdot(self.r, z))
-            self.resid = util.asscalar(self.rzold)**0.5
+            self.resid = self.rzold.item()**0.5
 
         super().__init__(max_iter)
 
@@ -267,7 +267,7 @@ class ConjugateGradient(Alg):
         with self.device:
             xp = self.device.xp
             Ap = self.A(self.p)
-            pAp = util.asscalar(xp.real(xp.vdot(self.p, Ap)))
+            pAp = xp.real(xp.vdot(self.p, Ap)).item()
             if pAp <= 0:
                 self.not_positive_definite = True
                 return
@@ -286,7 +286,7 @@ class ConjugateGradient(Alg):
                 util.xpay(self.p, beta, z)
                 self.rzold = rznew
 
-            self.resid = util.asscalar(self.rzold)**0.5
+            self.resid = self.rzold.item()**0.5
 
     def _done(self):
         return (self.iter >= self.max_iter or
@@ -408,14 +408,14 @@ class PrimalDualHybridGradient(Alg):
             xp = self.x_device.xp
             x_diff = self.x - self.x_old
             backend.copyto(self.x_ext, self.x + theta * x_diff)
-            x_diff_norm = xp.linalg.norm(x_diff / self.tau**0.5)
+            x_diff_norm = xp.linalg.norm(x_diff / self.tau**0.5).item()
 
         with self.u_device:
             xp = self.u_device.xp
             u_diff = self.u - self.u_old
-            u_diff_norm = xp.linalg.norm(u_diff / self.sigma**0.5)
+            u_diff_norm = xp.linalg.norm(u_diff / self.sigma**0.5).item()
 
-        self.resid = util.asscalar(x_diff_norm**2 + u_diff_norm**2)
+        self.resid = x_diff_norm**2 + u_diff_norm**2
 
     def _done(self):
         return self.iter >= self.max_iter or self.resid <= self.tol
@@ -537,7 +537,7 @@ class NewtonsMethod(Alg):
         with device:
             gradf_x = self.gradf(self.x)
             p = -self.inv_hessf(self.x)(gradf_x)
-            self.lamda2 = util.asscalar(-xp.real(xp.vdot(p, gradf_x)))
+            self.lamda2 = -xp.real(xp.vdot(p, gradf_x)).item()
 
             if self.lamda2 < 0:
                 raise ValueError(
