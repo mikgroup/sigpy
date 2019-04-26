@@ -383,9 +383,9 @@ class TestLinop(unittest.TestCase):
         self.check_linop_unitary(A)
         self.check_linop_pickleable(A)
 
-    def test_Gradient(self):
+    def test_FiniteDifference(self):
         shape = [8]
-        A = linop.Gradient(shape)
+        A = linop.FiniteDifference(shape)
         self.check_linop_adjoint(A)
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)

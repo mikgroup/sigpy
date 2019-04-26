@@ -1327,6 +1327,16 @@ class BlocksToArray(Linop):
 
 
 def Gradient(ishape, axes=None):
+    import warnings
+
+    warnings.warn('Gradient Linop is renamed to FiniteDifference, '
+                  'Please switch to use FiniteDifference.',
+                  category=DeprecationWarning)
+
+    return FiniteDifference(ishape, axes=axes)
+
+
+def FiniteDifference(ishape, axes=None):
     """Linear operator that computes finite difference gradient.
 
     Args:
