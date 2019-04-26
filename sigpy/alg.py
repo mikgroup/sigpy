@@ -310,7 +310,7 @@ class PrimalDualHybridGradient(Alg):
 
     Considers the problem:
 
-    .. math:: \min_x \max_u - f^*(u) + g(x) + h(x) + <Ax, u>
+    .. math:: \min_x \max_u - f^*(u) + g(x) + h(x) + \left<Ax, u\right>
 
     Or equivalently:
 
