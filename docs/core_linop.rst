@@ -4,8 +4,8 @@ Linear Operators (`sigpy.linop`)
 .. automodule::
    sigpy.linop
 
-Linear Operator Abstraction
----------------------------
+The Linear Operator Class
+-------------------------
 .. autosummary::
    :toctree: generated
    :nosignatures:
@@ -14,6 +14,9 @@ Linear Operator Abstraction
 
 Linop Manipulation
 ------------------
+
+The following are classes that take in Linops and compose them to form a new Linop.
+
 .. autosummary::
    :toctree: generated
    :nosignatures:   
