@@ -45,8 +45,8 @@ class Linop(object):
         oshape: output shape.
         ishape: input shape.
         H: adjoint linear operator.
-    """
 
+    """
     def __init__(self, oshape, ishape, repr_str=None):
         self.oshape = list(oshape)
         self.ishape = list(ishape)
@@ -77,6 +77,18 @@ class Linop(object):
         raise NotImplementedError
 
     def apply(self, input):
+        """Apply linear operation on input.
+
+        This function checks for the input/output shapes,
+        and calls the internal user-defined _apply() method.
+
+        Args:
+            input (array): input array of shape `ishape`.
+
+        Returns:
+            array: output array of shape `oshape`.
+
+        """
         self._check_domain(input)
         with backend.get_device(input):
             output = self._apply(input)
@@ -89,6 +101,18 @@ class Linop(object):
 
     @property
     def H(self):
+        r"""Returns adjoint linear operator.
+
+        An adjoint linear operator :math:`A^H` for
+        a linear operator :math:`A` is defined as:
+
+        .. math:
+            \left< A x, y \right> = \left< x, A^H, y \right>
+
+        Returns:
+            Linop: adjoint linear operator.
+
+        """
         return self._adjoint_linop()
 
     def __call__(self, input):
