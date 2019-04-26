@@ -7,7 +7,7 @@ import scipy.signal as signal
 from sigpy import backend, util, config
 
 
-__all__ = ['convolve', 'convolve_adjoint_data', 'convolve_adjoint_filter']
+__all__ = ['convolve', 'convolve_data_adjoint', 'convolve_filter_adjoint']
 
 
 def convolve(data, filt,
@@ -55,7 +55,7 @@ def convolve(data, filt,
         else:
             data = backend.to_device(data)
             filt = backend.to_device(filt)
-            output = _convolve_adjoint_data(data, output,
+            output = _convolve_data_adjoint(data, output,
                                             mode=mode, strides=strides,
                                             multi_channel=multi_channel)
             output = backend.to_device(output, device)
@@ -63,7 +63,7 @@ def convolve(data, filt,
     return output
 
 
-def convolve_adjoint_data(output, filt, data_shape,
+def convolve_data_adjoint(output, filt, data_shape,
                           mode='full', strides=None,
                           multi_channel=False):
     """Adjoint convolution operation with respect to data.
@@ -94,25 +94,25 @@ def convolve_adjoint_data(output, filt, data_shape,
         filt = filt.astype(output.dtype, copy=False)
 
     if device == backend.cpu_device:
-        data = _convolve_adjoint_data(output, filt, data_shape,
+        data = _convolve_data_adjoint(output, filt, data_shape,
                                       mode=mode, strides=strides,
                                       multi_channel=multi_channel)
     else:  # pragma: no cover
         if config.cudnn_enabled:
             if np.issubdtype(output.dtype, np.floating):
-                data = _convolve_adjoint_data_cuda(
+                data = _convolve_data_adjoint_cuda(
                     output, filt, data_shape,
                     mode=mode, strides=strides,
                     multi_channel=multi_channel)
             else:
-                data = _complex(_convolve_adjoint_data_cuda,
+                data = _complex(_convolve_data_adjoint_cuda,
                                 output, filt.conj(), data_shape,
                                 mode=mode, strides=strides,
                                 multi_channel=multi_channel)
         else:
             filt = backend.to_device(filt)
             output = backend.to_device(output)
-            data = _convolve_adjoint_data(output, filt, data_shape,
+            data = _convolve_data_adjoint(output, filt, data_shape,
                                           mode=mode, strides=strides,
                                           multi_channel=multi_channel)
             data = backend.to_device(output, device)
@@ -120,7 +120,7 @@ def convolve_adjoint_data(output, filt, data_shape,
     return data
 
 
-def convolve_adjoint_filter(output, data, filt_shape,
+def convolve_filter_adjoint(output, data, filt_shape,
                             mode='full', strides=None,
                             multi_channel=False):
     """Adjoint convolution operation with respect to filter.
@@ -149,25 +149,25 @@ def convolve_adjoint_filter(output, data, filt_shape,
         data = data.astype(output.dtype, copy=False)
 
     if device == backend.cpu_device:
-        filt = _convolve_adjoint_filter(output, data, filt_shape,
+        filt = _convolve_filter_adjoint(output, data, filt_shape,
                                         mode=mode, strides=strides,
                                         multi_channel=multi_channel)
     else:  # pragma: no cover
         if config.cudnn_enabled:
             if np.issubdtype(output.dtype, np.floating):
-                filt = _convolve_adjoint_filter_cuda(
+                filt = _convolve_filter_adjoint_cuda(
                     output, data, filt_shape,
                     mode=mode, strides=strides,
                     multi_channel=multi_channel)
             else:
-                filt = _complex(_convolve_adjoint_filter_cuda,
+                filt = _complex(_convolve_filter_adjoint_cuda,
                                 output, data.conj(), filt_shape,
                                 mode=mode, strides=strides,
                                 multi_channel=multi_channel)
         else:
             data = backend.to_device(data)
             output = backend.to_device(output)
-            filt = _convolve_adjoint_filter(output, data, filt_shape,
+            filt = _convolve_filter_adjoint(output, data, filt_shape,
                                             mode=mode, strides=strides,
                                             multi_channel=multi_channel)
             filt = backend.to_device(filt, device)
@@ -248,7 +248,7 @@ def _convolve(data, filt,
     return output
 
 
-def _convolve_adjoint_data(output, filt, data_shape,
+def _convolve_data_adjoint(output, filt, data_shape,
                            mode='full', strides=None,
                            multi_channel=False):
     D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
@@ -286,7 +286,7 @@ def _convolve_adjoint_data(output, filt, data_shape,
     return data
 
 
-def _convolve_adjoint_filter(output, data, filt_shape,
+def _convolve_filter_adjoint(output, data, filt_shape,
                              mode='full', strides=None,
                              multi_channel=False):
     D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
@@ -382,7 +382,7 @@ if config.cudnn_enabled:  # pragma: no cover
 
         return output
 
-    def _convolve_adjoint_data_cuda(output, filt, data_shape,
+    def _convolve_data_adjoint_cuda(output, filt, data_shape,
                                     mode='full', strides=None,
                                     multi_channel=False):
         device = backend.get_device(output)
@@ -417,7 +417,7 @@ if config.cudnn_enabled:  # pragma: no cover
 
         return data
 
-    def _convolve_adjoint_filter_cuda(output, data, filt_shape,
+    def _convolve_filter_adjoint_cuda(output, data, filt_shape,
                                       mode='full', strides=None,
                                       multi_channel=False):
         device = backend.get_device(data)

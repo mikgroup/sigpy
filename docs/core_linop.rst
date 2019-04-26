@@ -39,9 +39,9 @@ Convolution Linops
    :nosignatures:
 
    sigpy.linop.ConvolveData
-   sigpy.linop.ConvolveAdjointData
+   sigpy.linop.ConvolveDataAdjoint
    sigpy.linop.ConvolveFilter
-   sigpy.linop.ConvolveAdjointFilter
+   sigpy.linop.ConvolveFilterAdjoint
 
 Linop Manipulation
 ------------------

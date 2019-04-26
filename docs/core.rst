@@ -42,8 +42,8 @@ Convolution Functions
    :nosignatures:
 
    sigpy.convolve
-   sigpy.convolve_adjoint_data
-   sigpy.convolve_adjoint_filter
+   sigpy.convolve_data_adjoint
+   sigpy.convolve_filter_adjoint
 
 Fourier Functions
 -----------------

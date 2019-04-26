@@ -1462,13 +1462,13 @@ class ConvolveData(Linop):
                              multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveAdjointData(
+        return ConvolveDataAdjoint(
             self.ishape, self.filt,
             mode=self.mode, strides=self.strides,
             multi_channel=self.multi_channel)
 
 
-class ConvolveAdjointData(Linop):
+class ConvolveDataAdjoint(Linop):
     r"""Adjoint convolution operator for data arrays.
 
     Args:
@@ -1502,7 +1502,7 @@ class ConvolveAdjointData(Linop):
         super().__init__(data_shape, output_shape)
 
     def _apply(self, input):
-        return conv.convolve_adjoint_data(
+        return conv.convolve_data_adjoint(
             input, self.filt, self.oshape,
             mode=self.mode,
             strides=self.strides,
@@ -1555,13 +1555,13 @@ class ConvolveFilter(Linop):
                              multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveAdjointFilter(
+        return ConvolveFilterAdjoint(
             self.ishape, self.data,
             mode=self.mode, strides=self.strides,
             multi_channel=self.multi_channel)
 
 
-class ConvolveAdjointFilter(Linop):
+class ConvolveFilterAdjoint(Linop):
     r"""Adjoint convolution operator for filter arrays.
 
     Args:
@@ -1596,7 +1596,7 @@ class ConvolveAdjointFilter(Linop):
         super().__init__(filt_shape, output_shape)
 
     def _apply(self, input):
-        return conv.convolve_adjoint_filter(
+        return conv.convolve_filter_adjoint(
             input, self.data, self.oshape,
             mode=self.mode, strides=self.strides,
             multi_channel=self.multi_channel)

@@ -109,7 +109,7 @@ class TestConv(unittest.TestCase):
                         npt.assert_allclose(output, [[[0, 1, 0]],
                                                      [[0, 1, 0]]], atol=1e-5)
 
-    def test_convolve_adjoint_data_valid(self):
+    def test_convolve_data_adjoint_valid(self):
         mode = 'valid'
         devices = [backend.cpu_device]
         if config.cupy_enabled:
@@ -123,14 +123,14 @@ class TestConv(unittest.TestCase):
                         output = xp.ones([1, 1], dtype=dtype)
                         filt = xp.ones([1, 3], dtype=dtype)
                         data_shape = [1, 3]
-                        data = backend.to_device(conv.convolve_adjoint_data(
+                        data = backend.to_device(conv.convolve_data_adjoint(
                             output, filt, data_shape, mode=mode))
                         npt.assert_allclose(data, [[1, 1, 1]], atol=1e-5)
 
                         output = xp.ones([1, 2], dtype=dtype)
                         filt = xp.ones([1, 2], dtype=dtype)
                         data_shape = [1, 3]
-                        data = backend.to_device(conv.convolve_adjoint_data(
+                        data = backend.to_device(conv.convolve_data_adjoint(
                             output, filt, data_shape, mode=mode))
                         npt.assert_allclose(data, [[1, 2, 1]], atol=1e-5)
 
@@ -138,7 +138,7 @@ class TestConv(unittest.TestCase):
                         filt = xp.ones([2, 1, 1, 3], dtype=dtype)
                         data_shape = [1, 1, 3]
                         data = backend.to_device(
-                            conv.convolve_adjoint_data(
+                            conv.convolve_data_adjoint(
                                 output, filt, data_shape,
                                 mode=mode,
                                 multi_channel=True),
@@ -150,14 +150,14 @@ class TestConv(unittest.TestCase):
                         data_shape = [1, 1, 4]
                         strides = [1, 2]
                         data = backend.to_device(
-                            conv.convolve_adjoint_data(
+                            conv.convolve_data_adjoint(
                                 output, filt, data_shape,
                                 mode=mode, strides=strides,
                                 multi_channel=True),
                             backend.cpu_device)
                         npt.assert_allclose(data, [[[2, 2, 2, 0]]], atol=1e-5)
 
-    def test_convolve_adjoint_data_full(self):
+    def test_convolve_data_adjoint_full(self):
         mode = 'full'
         devices = [backend.cpu_device]
         if config.cupy_enabled:
@@ -171,7 +171,7 @@ class TestConv(unittest.TestCase):
                         output = xp.ones([1, 5], dtype=dtype)
                         filt = xp.ones([1, 3], dtype=dtype)
                         data_shape = [1, 3]
-                        data = backend.to_device(conv.convolve_adjoint_data(
+                        data = backend.to_device(conv.convolve_data_adjoint(
                             output, filt, data_shape, mode=mode))
                         npt.assert_allclose(data, [[3, 3, 3]], atol=1e-5)
 
@@ -179,7 +179,7 @@ class TestConv(unittest.TestCase):
                         filt = xp.ones([1, 2], dtype=dtype)
                         data_shape = [1, 3]
                         data = backend.to_device(
-                            conv.convolve_adjoint_data(
+                            conv.convolve_data_adjoint(
                                 output, filt, data_shape, mode=mode))
                         npt.assert_allclose(data, [[2, 2, 2]], atol=1e-5)
 
@@ -187,7 +187,7 @@ class TestConv(unittest.TestCase):
                         filt = xp.ones([2, 1, 1, 3], dtype=dtype)
                         data_shape = [1, 1, 3]
                         data = backend.to_device(
-                            conv.convolve_adjoint_data(
+                            conv.convolve_data_adjoint(
                                 output, filt, data_shape,
                                 mode=mode,
                                 multi_channel=True),
@@ -199,7 +199,7 @@ class TestConv(unittest.TestCase):
                         data_shape = [1, 1, 8]
                         strides = [1, 2]
                         data = backend.to_device(
-                            conv.convolve_adjoint_data(
+                            conv.convolve_data_adjoint(
                                 output, filt, data_shape,
                                 mode=mode, strides=strides,
                                 multi_channel=True),
@@ -207,7 +207,7 @@ class TestConv(unittest.TestCase):
                         npt.assert_allclose(data, [[[4, 2, 4, 2, 4, 2, 4, 2]]],
                                             atol=1e-5)
 
-    def test_convolve_adjoint_filter_valid(self):
+    def test_convolve_filter_adjoint_valid(self):
         mode = 'valid'
         devices = [backend.cpu_device]
         if config.cupy_enabled:
@@ -222,7 +222,7 @@ class TestConv(unittest.TestCase):
                         output = xp.ones([1, 1], dtype=dtype)
                         filt_shape = [1, 3]
                         filt = backend.to_device(
-                            conv.convolve_adjoint_filter(
+                            conv.convolve_filter_adjoint(
                                 output, data, filt_shape, mode=mode))
                         npt.assert_allclose(filt, [[1, 1, 1]], atol=1e-5)
 
@@ -230,7 +230,7 @@ class TestConv(unittest.TestCase):
                         output = xp.ones([1, 2], dtype=dtype)
                         filt_shape = [1, 2]
                         filt = backend.to_device(
-                            conv.convolve_adjoint_filter(
+                            conv.convolve_filter_adjoint(
                                 output, data, filt_shape, mode=mode))
                         npt.assert_allclose(filt, [[2, 2]], atol=1e-5)
 
@@ -238,7 +238,7 @@ class TestConv(unittest.TestCase):
                         output = xp.ones([2, 1, 1], dtype=dtype)
                         filt_shape = [2, 1, 1, 3]
                         filt = backend.to_device(
-                            conv.convolve_adjoint_filter(
+                            conv.convolve_filter_adjoint(
                                 output, data, filt_shape,
                                 mode=mode,
                                 multi_channel=True),
@@ -251,7 +251,7 @@ class TestConv(unittest.TestCase):
                         filt_shape = [2, 1, 1, 3]
                         strides = [1, 2]
                         filt = backend.to_device(
-                            conv.convolve_adjoint_filter(
+                            conv.convolve_filter_adjoint(
                                 output, data, filt_shape,
                                 mode=mode, strides=strides,
                                 multi_channel=True),
@@ -259,7 +259,7 @@ class TestConv(unittest.TestCase):
                         npt.assert_allclose(filt, [[[[1, 1, 1]]],
                                                    [[[1, 1, 1]]]], atol=1e-5)
 
-    def test_convolve_adjoint_filter_full(self):
+    def test_convolve_filter_adjoint_full(self):
         mode = 'full'
         devices = [backend.cpu_device]
         if config.cupy_enabled:
@@ -274,7 +274,7 @@ class TestConv(unittest.TestCase):
                         output = xp.ones([1, 5], dtype=dtype)
                         filt_shape = [1, 3]
                         filt = backend.to_device(
-                            conv.convolve_adjoint_filter(
+                            conv.convolve_filter_adjoint(
                                 output, data, filt_shape, mode=mode))
                         npt.assert_allclose(filt, [[3, 3, 3]], atol=1e-5)
 
@@ -282,7 +282,7 @@ class TestConv(unittest.TestCase):
                         output = xp.ones([1, 4], dtype=dtype)
                         filt_shape = [1, 2]
                         filt = backend.to_device(
-                            conv.convolve_adjoint_filter(
+                            conv.convolve_filter_adjoint(
                                 output, data, filt_shape, mode=mode))
                         npt.assert_allclose(filt, [[3, 3]], atol=1e-5)
 
@@ -290,7 +290,7 @@ class TestConv(unittest.TestCase):
                         output = xp.ones([2, 1, 5], dtype=dtype)
                         filt_shape = [2, 1, 1, 3]
                         filt = backend.to_device(
-                            conv.convolve_adjoint_filter(
+                            conv.convolve_filter_adjoint(
                                 output, data, filt_shape,
                                 mode=mode,
                                 multi_channel=True),
@@ -303,7 +303,7 @@ class TestConv(unittest.TestCase):
                         filt_shape = [2, 1, 1, 3]
                         strides = [1, 2]
                         filt = backend.to_device(
-                            conv.convolve_adjoint_filter(
+                            conv.convolve_filter_adjoint(
                                 output, data, filt_shape,
                                 mode=mode, strides=strides,
                                 multi_channel=True),
