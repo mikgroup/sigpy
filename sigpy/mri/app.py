@@ -274,7 +274,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         A = linop.Sense(mps, coord=coord, weights=weights,
                         comm=comm, coil_batch_size=coil_batch_size)
 
-        G = sp.linop.Gradient(A.ishape)
+        G = sp.linop.FiniteDifference(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, lamda)
 
         def g(x):
@@ -332,7 +332,7 @@ class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
 
         A = linop.Sense(mps, coord=coord, weights=weights,
                         comm=comm, coil_batch_size=coil_batch_size)
-        G = sp.linop.Gradient(A.ishape)
+        G = sp.linop.FiniteDifference(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, 1)
 
         if comm is not None:
@@ -350,7 +350,7 @@ class JsenseRecon(sp.app.App):
         \min_{l, r} \frac{1}{2} \| l \ast r - y \|_2^2 +
         \frac{\lambda}{2} (\| l \|_2^2 + \| r \|_2^2)
 
-    where \ast is the convolution operator.
+    where :math:`\ast` is the convolution operator.
 
     Args:
         y (array): k-space measurements.

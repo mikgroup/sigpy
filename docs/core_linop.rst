@@ -12,6 +12,19 @@ Linear Operator Abstraction
 
    sigpy.linop.Linop
 
+Linop Manipulation
+------------------
+.. autosummary::
+   :toctree: generated
+   :nosignatures:   
+   
+   sigpy.linop.Conj
+   sigpy.linop.Add
+   sigpy.linop.Compose
+   sigpy.linop.Hstack
+   sigpy.linop.Vstack
+   sigpy.linop.Diag
+
 Basic Linops
 ------------
 .. autosummary::
@@ -42,19 +55,6 @@ Convolution Linops
    sigpy.linop.ConvolveDataAdjoint
    sigpy.linop.ConvolveFilter
    sigpy.linop.ConvolveFilterAdjoint
-
-Linop Manipulation
-------------------
-.. autosummary::
-   :toctree: generated
-   :nosignatures:   
-   
-   sigpy.linop.Conj
-   sigpy.linop.Add
-   sigpy.linop.Compose
-   sigpy.linop.Hstack
-   sigpy.linop.Vstack
-   sigpy.linop.Diag
 
 Fourier Linops
 --------------
@@ -99,7 +99,7 @@ Array Manipulation Linops
    sigpy.linop.Circshift
    sigpy.linop.Sum
    sigpy.linop.Tile
-   sigpy.linop.Gradient
+   sigpy.linop.FiniteDifference
 
 Wavelet Transform Linops
 ------------------------
