@@ -1334,7 +1334,6 @@ class NUFFT(Linop):
         n (int): Kernel sampling number.
 
     """
-
     def __init__(self, ishape, coord, oversamp=1.25, width=4.0, n=128):
         self.coord = coord
         self.oversamp = oversamp
@@ -1373,7 +1372,6 @@ class NUFFTAdjoint(Linop):
         n (int): Kernel sampling number.
 
     """
-
     def __init__(self, oshape, coord, oversamp=1.25, width=4.0, n=128):
         self.coord = coord
         self.oversamp = oversamp
@@ -1397,7 +1395,7 @@ class NUFFTAdjoint(Linop):
 
     def _adjoint_linop(self):
 
-        return NUFFT(self.ishape, self.coord,
+        return NUFFT(self.oshape, self.coord,
                      oversamp=self.oversamp, width=self.width, n=self.n)
 
 
@@ -1580,7 +1578,7 @@ class ConvolveAdjointFilter(Linop):
             multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveFilter(self.ishape, self.data,
+        return ConvolveFilter(self.oshape, self.data,
                               mode=self.mode, strides=self.strides,
                               multi_channel=self.multi_channel)
 
