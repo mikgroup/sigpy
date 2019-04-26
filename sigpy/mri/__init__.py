@@ -1,12 +1,8 @@
-"""The module contains functions and classes for building iterative
-reconstruction applications for MRI.
+"""The module contains functions and classes for MRI reconstruction.
 
 It provides convenient simulation and sampling functions,
-such as poisson-disc sampling function, and shepp-logan
-phantom generation function. It also implements common
-MRI reconstruction applications, including SENSE reconstruction,
-l1-wavelet reconstruction, total-variation reconstruction,
-and JSENSE reconstruction.
+such as the poisson-disc sampling function. It also
+provides functions to compute preconditioners.
 
 """
 from sigpy.mri import app, linop
