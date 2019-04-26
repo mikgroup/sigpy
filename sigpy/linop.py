@@ -1605,23 +1605,3 @@ class ConvolveAdjointFilter(Linop):
         return ConvolveFilter(self.oshape, self.data,
                               mode=self.mode, strides=self.strides,
                               multi_channel=self.multi_channel)
-
-
-class AsType(Linop):
-
-    def __init__(self, shape, odtype, idtype):
-        self.odtype = odtype
-        self.idtype = idtype
-
-        super().__init__(shape, shape)
-
-    def _apply(self, input):
-        with backend.get_device(input):
-            if (np.issubdtype(self.idtype, np.complexfloating) and
-                not np.issubdtype(self.odtype, np.complexfloating)):
-                input = input.real
-
-            return input.astype(self.odtype)
-
-    def _adjoint_linop(self):
-        return AsType(self.oshape, self.idtype, self.odtype)

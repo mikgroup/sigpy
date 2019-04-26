@@ -21,7 +21,6 @@ Basic Linops
    sigpy.linop.Identity
    sigpy.linop.Reshape
    sigpy.linop.Transpose
-   sigpy.linop.AsType
 
 Computing Related Linops
 ------------------------
