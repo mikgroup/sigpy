@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Proximal operators.
+"""This module contains an abstraction class Prox for proximal operators,
+and provides commonly used proximal operators, including soft-thresholding,
+l1 ball projection, and box constraints.
 """
 import numpy as np
 from sigpy import backend, util, thresh
