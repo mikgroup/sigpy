@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """This module provides an abstract class Alg for iterative algorithms,
-and implements commonly used methods.
+and implements commonly used methods, such as gradient methods,
+Newton's method, and the augmented Lagrangian method.
 """
 import numpy as np
 from sigpy import backend, util
@@ -233,11 +234,13 @@ class GradientMethod(Alg):
 
 
 class ConjugateGradient(Alg):
-    r"""Conjugate Gradient Method. Solves for:
+    r"""Conjugate gradient method.
+
+    Solves for:
 
     .. math:: A x = b
 
-    where A is hermitian.
+    where A is a Hermitian linear operator.
 
     Args:
         A (Linop or function): Linop or function to compute A.
@@ -434,7 +437,7 @@ class PrimalDualHybridGradient(Alg):
 
 
 class AltMin(Alg):
-    """Alternating Minimization.
+    """Alternating minimization.
 
     Args:
         min1 (function): Function to minimize over variable 1.
