@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This module contains an abstract class Linop for linear operators,
+"""This module contains an abstraction class Linop for linear operators,
 and provides commonly used linear operators, including signal transforms
 such as FFT, NUFFT, and wavelet, and array manipulation operators,
 such as reshape, transpose, and resize.
@@ -101,7 +101,7 @@ class Linop(object):
 
     @property
     def H(self):
-        r"""Returns adjoint linear operator.
+        r"""Return adjoint linear operator.
 
         An adjoint linear operator :math:`A^H` for
         a linear operator :math:`A` is defined as:
@@ -246,7 +246,7 @@ class AllReduceAdjoint(Linop):
 
 
 class Conj(Linop):
-    """Returns complex conjugate of linear operator.
+    """Complex conjugate of linear operator.
 
     Args:
         A (Linop): Input linear operator.
@@ -615,7 +615,7 @@ class Diag(Linop):
 
 
 class Reshape(Linop):
-    """Linear operator that reshapes input to given output shape.
+    """Reshape input to given output shape.
 
     Args:
         oshape (tuple of ints): Output shape.
@@ -634,7 +634,7 @@ class Reshape(Linop):
 
 
 class Transpose(Linop):
-    """Linear operator that transposes input with the given axes.
+    """Tranpose input with the given axes.
 
     Args:
         ishape (tuple of ints): Input shape.
@@ -754,7 +754,7 @@ def _get_matmul_adjoint_sum_axes(oshape, ishape, mshape):
 
 
 class MatMul(Linop):
-    """Linear operator that performs matrix multiplication.
+    """Matrix multiplication.
 
     Args:
         ishape (tuple of ints): Input shape.
@@ -818,7 +818,7 @@ def _get_right_matmul_oshape(ishape, mshape, adjoint):
 
 
 class RightMatMul(Linop):
-    """Linear operator that performs matrix multiplication on the right.
+    """Matrix multiplication on the right.
 
     Args:
         ishape (tuple of ints): Input shape.
@@ -1181,7 +1181,7 @@ class Wavelet(Linop):
 
 
 class InverseWavelet(Linop):
-    """Wavelet transform linear operator.
+    """Inverse wavelet transform linear operator.
 
     Currently only has CPU implementation. GPU inputs will be copied to CPU,
     and back to compute on CPU.
