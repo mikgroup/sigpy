@@ -4,6 +4,9 @@ SigPy provides simple interfaces to commonly used signal processing functions,
 including convolution, FFT, NUFFT, wavelet transform, and thresholdings.
 All functions, except wavelet transform, can run on both CPU and GPU.
 
+These functions are wrapped into higher level classes (Linop and Prox)
+that can be used in conjuction with Alg to form an App.
+
 """
 from sigpy import alg, app, config, linop, prox
 
