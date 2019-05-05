@@ -55,7 +55,7 @@ class ImagePlot(object):
         y (int): y axis.
         z (None or int): z axis.
         c (None or int): color axis.
-        axis_hide (bool): toggle hiding axes, labels and title.
+        hide_axes (bool): toggle hiding axes, labels and title.
         mode (str): specify magnitude, phase, real, imaginary,
             and log mode. {'m', 'p', 'r', 'i', 'l'}.
         title (str): title.
@@ -71,7 +71,7 @@ class ImagePlot(object):
             y=-2,
             z=None,
             c=None,
-            axes_hide=False,
+            hide_axes=False,
             mode='m',
             title='',
             interpolation='lanczos',
@@ -95,7 +95,7 @@ class ImagePlot(object):
         self.z = z % self.ndim if z is not None else None
         self.c = c % self.ndim if c is not None else None
         self.d = max(self.ndim - 3, 0)
-        self.axes_hide = axes_hide
+        self.hide_axes = hide_axes
         self.show_help = False
         self.title = title
         self.interpolation = interpolation
@@ -201,7 +201,7 @@ class ImagePlot(object):
             self.fig.canvas.draw()
 
         elif event.key == 'a':
-            self.axes_hide = not self.axes_hide
+            self.hide_axes = not self.hide_axes
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -458,7 +458,7 @@ class ImagePlot(object):
 
     def update_axes(self):
 
-        if not self.axes_hide:
+        if not self.hide_axes:
             caption = '['
             for i in range(self.ndim):
 
@@ -580,7 +580,7 @@ class LinePlot(object):
         v: save as mp4 by traversing current dimension.
     """
 
-    def __init__(self, arr, x=-1, axes_hide=False, mode='m', title='',
+    def __init__(self, arr, x=-1, hide_axes=False, mode='m', title='',
                  save_basename='Figure', fps=10):
         import matplotlib.pyplot as plt
 
@@ -595,7 +595,7 @@ class LinePlot(object):
         self.flips = [1] * self.ndim
         self.x = x % self.ndim
         self.d = max(self.ndim - 3, 0)
-        self.axes_hide = axes_hide
+        self.hide_axes = hide_axes
         self.title = title
         self.mode = mode
         self.save_basename = save_basename
@@ -656,7 +656,7 @@ class LinePlot(object):
             self.fig.canvas.draw()
 
         elif event.key == 'a':
-            self.axes_hide = not self.axes_hide
+            self.hide_axes = not self.hide_axes
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -795,7 +795,7 @@ class LinePlot(object):
 
     def update_axes(self):
 
-        if not self.axes_hide:
+        if not self.hide_axes:
             caption = 'Slice: ['
             for i in range(self.ndim):
 
@@ -853,7 +853,7 @@ class ScatterPlot(object):
             coord,
             data=None,
             z=None,
-            axes_hide=False,
+            hide_axes=False,
             mode='m',
             title='',
             save_basename='Figure',
@@ -882,7 +882,7 @@ class ScatterPlot(object):
         self.flips = [1] * self.ndim
         self.z = z % self.ndim if z is not None else None
         self.d = 0
-        self.axes_hide = axes_hide
+        self.hide_axes = hide_axes
         self.title = title
         self.mode = mode
         self.axsc = None
@@ -946,7 +946,7 @@ class ScatterPlot(object):
         #     self.fig.canvas.draw()
 
         elif event.key == 'a':
-            self.axes_hide = not self.axes_hide
+            self.hide_axes = not self.hide_axes
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -1137,7 +1137,7 @@ class ScatterPlot(object):
 
     def update_axes(self):
 
-        if not self.axes_hide:
+        if not self.hide_axes:
             caption = '['
             for i in range(self.ndim):
 
