@@ -1,5 +1,5 @@
-Core Functions (`sigpy`)
-========================
+Functions (`sigpy`)
+===================
 .. automodule::
    sigpy
 		
