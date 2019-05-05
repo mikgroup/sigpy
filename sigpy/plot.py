@@ -870,6 +870,7 @@ class ScatterPlot(object):
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111)
         self.ax.set_facecolor('k')
+        self.ax.axis('equal')
 
         for c, d in zip(coord.shape[:-1], self.data.shape[-coord.ndim + 1:]):
             assert c == d
