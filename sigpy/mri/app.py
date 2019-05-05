@@ -534,8 +534,8 @@ class EspiritCalib(sp.app.App):
 
     """
     def __init__(self, ksp, calib_width=24,
-                 thresh=0.001, kernel_width=6, crop=0,
-                 max_iter=1000, device=sp.cpu_device,
+                 thresh=0.01, kernel_width=6, crop=0.8,
+                 max_iter=100, device=sp.cpu_device,
                  output_eigenvalue=False, show_pbar=True):
         self.device = sp.Device(device)
         self.output_eigenvalue = output_eigenvalue
