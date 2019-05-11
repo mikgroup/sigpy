@@ -17,7 +17,7 @@ SigPy
 .. image:: https://codecov.io/gh/mikgroup/sigpy/branch/master/graph/badge.svg
 	:target: https://codecov.io/gh/mikgroup/sigpy
 
-`Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `Tutorial <https://github.com/mikgroup/sigpy-tutorials>`_
+`Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `Tutorial for MRI Reconstruction <https://github.com/mikgroup/sigpy-mri-tutorials>`_
 
 SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on numpy arrays on CPU and cupy arrays on GPU. SigPy also provides several domain-specific submodules: ``sigpy.plot`` for multi-dimensional array plotting, ``sigpy.mri`` for MRI iterative reconstruction, and ``sigpy.learn`` for dictionary learning.
 
