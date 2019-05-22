@@ -1,4 +1,4 @@
-r"""Functions for calculating the Bloch equation for spin-:math:`\frac{1}{2}` particles.
+r"""Bloch equation functions for spin-:math:`\frac{1}{2}` particles.
 
 The functions consider both Bloch vector and density
 matrix representations. In particular, a Bloch vector :math:`M`
