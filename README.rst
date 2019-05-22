@@ -32,7 +32,7 @@ Additional features can be unlocked by installing the appropriate packages. To e
 Via ``conda``
 *************
 
-For general users, we recommend installing SigPy through ``conda``::
+We recommend installing SigPy through ``conda``::
 
 	conda install -c frankong sigpy
 	# (optional for plot support) conda install matplotlib
@@ -82,8 +82,6 @@ SigPy provides signal processing functions with a unified CPU/GPU interface. For
 	  y = cupy.array([1, 1, 1])
 	  z = sigpy.convolve(x, y)
 
-In addition, the function interfaces are geared towards signal processing applications. For example, ``sigpy.convolve`` supports ``mode={'valid', 'full'}`` options and actually performs convolution instead of cross-correlation like in all machine learning packages.
-
 Iterative Algorithms
 ********************
 SigPy also provides convenient abstractions and classes for iterative algorithms. A compressed sensing experiment can be implemented in four lines using SigPy:
@@ -95,8 +93,6 @@ SigPy also provides convenient abstractions and classes for iterative algorithms
 	  proxg = sigpy.prox.L1Reg([n, 1], lamda=0.001)  # define proximal operator
 	  x_hat = sigpy.app.LinearLeastSquares(A, y, proxg=proxg).run()  # run iterative algorithm
 
-Users can easily define their own linear operator ``Linop`` and proximal operator ``Prox``. Different iterative algorithm ``Alg`` can be selected and extended as well.
-
 PyTorch Interoperability
 ************************
 Want to do machine learning without giving up signal processing? SigPy has convenient functions to convert arrays and linear operators into PyTorch Tensors and Functions. For example, given a cupy array ``x``, and a ``Linop`` ``A``, we can convert them to Pytorch:
@@ -105,6 +101,4 @@ Want to do machine learning without giving up signal processing? SigPy has conve
 
 	  x_torch = sigpy.to_pytorch(x)
 	  A_torch = sigpy.to_pytorch_function(A)
-
-The conversion has no copying, and the resulting Tensor and Function can be backpropagated. Users can easily mix wavelet transforms and Fourier transforms with neural networks.
 
