@@ -252,10 +252,10 @@ def bloch_forward(input, b1, f0, t1, t2, dt):
     Args:
         input (array): magnetization array.
         b1 (array): complex B1 array in radian.
-        f0 (array): off resonance frequency array in unit 1 / s.
-        t1 (array): T1 recovery array in unit 1 / s.
-        t2 (array): T2 relaxation array in unit 1 / s.
-        dt (scalar): time duration for free induction decay in unit 1 / s.
+        f0 (array): off resonance frequency array.
+        t1 (array): T1 recovery array.
+        t2 (array): T2 relaxation array.
+        dt (scalar): time duration for free induction decay.
 
     Returns:
         array: resulting magnetization array.
