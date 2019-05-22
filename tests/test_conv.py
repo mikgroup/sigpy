@@ -64,8 +64,6 @@ class TestConv(unittest.TestCase):
         devices = [backend.cpu_device]
         if config.cupy_enabled:
             devices.append(backend.Device(0))
-            dtypes = [np.float32, np.float64,
-                      np.complex64, np.complex128]
 
         for device in devices:
             xp = device.xp
