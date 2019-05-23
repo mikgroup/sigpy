@@ -4,7 +4,6 @@
    :hidden:
    :caption: User Guide
 
-   Quick Start<self>
    guide_basic
    guide_multi_devices
    guide_iter
