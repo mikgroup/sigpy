@@ -249,16 +249,43 @@ def bloch_forward(input, b1, f0, t1, t2, dt):
     B1 complex amplitudes, it simulates a sequence of free induction decay
     followed by a hard pulse rotation.
 
+    The units of ``f0``, ``t1``, ``t2``, and ``dt`` must be consistent.
+
     Args:
-        input (array): magnetization array.
+        input (array): magnetization array either in Bloch vector
+            representation with shape [..., 3] or in density matrix
+            representation with [..., 2, 2].
         b1 (array): complex B1 array in radian.
-        f0 (array): off resonance frequency array in unit 1 / s.
-        t1 (array): T1 recovery array in unit 1 / s.
-        t2 (array): T2 relaxation array in unit 1 / s.
-        dt (scalar): time duration for free induction decay in unit 1 / s.
+        f0 (array): off resonance frequency array.
+        t1 (array): T1 recovery array.
+        t2 (array): T2 relaxation array.
+        dt (scalar): time duration for free induction decay.
 
     Returns:
-        array: resulting magnetization array.
+        array: resulting magnetization array with the same shape as input.
+
+    Examples:
+        Simulating an on-resonant spin under 90 degree pulse.
+        The 90 degree pulse is discretized into 1000 time points.
+
+        >>> input = np.array([0, 0, 1])
+        >>> b1 = np.pi / 2 * np.ones(1000) / 1000
+        >>> dt = 1
+        >>> f0 = 0
+        >>> t1 = np.infty
+        >>> t2 = np.infty
+        >>> output = bloch_forward(input, b1, f0, t1, t2, dt)
+
+        Simulating spins under 90 degree pulse across frequencies.
+        Off-resonance frequencies are discretized into 100 values.
+
+        >>> input = np.repeat([[0, 0, 1]], 100, axis=0)
+        >>> b1 = np.pi / 2 * np.ones(1000) / 1000
+        >>> dt = 1
+        >>> f0 = np.linspace(-np.pi, np.pi, 100)
+        >>> t1 = np.full(100, np.infty)
+        >>> t2 = np.full(100, np.infty)
+        >>> output = bloch_forward(input, b1, f0, t1, t2, dt)
 
     """
     p = to_density_matrix(input)
