@@ -3,9 +3,6 @@ SigPy
 
 .. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
 	:target: https://opensource.org/licenses/BSD-3-Clause
-
-.. image:: https://img.shields.io/pypi/dm/sigpy.svg
-	:target: https://pypistats.org/packages/sigpy
 	   
 .. image:: https://travis-ci.com/mikgroup/sigpy.svg?branch=master
 	:target: https://travis-ci.com/mikgroup/sigpy
