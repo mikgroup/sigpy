@@ -55,9 +55,9 @@ def convolve(data, filt,
         else:
             data = backend.to_device(data)
             filt = backend.to_device(filt)
-            output = _convolve_data_adjoint(data, output,
-                                            mode=mode, strides=strides,
-                                            multi_channel=multi_channel)
+            output = _convolve(data, filt,
+                               mode=mode, strides=strides,
+                               multi_channel=multi_channel)
             output = backend.to_device(output, device)
 
     return output
@@ -115,7 +115,7 @@ def convolve_data_adjoint(output, filt, data_shape,
             data = _convolve_data_adjoint(output, filt, data_shape,
                                           mode=mode, strides=strides,
                                           multi_channel=multi_channel)
-            data = backend.to_device(output, device)
+            data = backend.to_device(data, device)
 
     return data
 
