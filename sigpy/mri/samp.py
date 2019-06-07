@@ -77,11 +77,11 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
         array: radial coordinates.
 
     References:
-        - An Optimal Radial Profile Order Based on the Golden
+        1. An Optimal Radial Profile Order Based on the Golden
         Ratio for Time-Resolved MRI
         Stefanie Winkelmann, Tobias Schaeffter, Thomas Koehler,
         Holger Eggers, and Olaf Doessel. TMI 2007.
-        - Temporal stability of adaptive 3D radial MRI using
+        2. Temporal stability of adaptive 3D radial MRI using
         multidimensional golden means
         Rachel W. Chan, Elizabeth A. Ramsay, Charles H. Cunningham,
         and Donald B. Plewes. MRM 2009.
