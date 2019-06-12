@@ -168,7 +168,7 @@ class LinearLeastSquares(App):
                  P=None, alpha=None, max_power_iter=30, accelerate=True,
                  tau=None, sigma=None,
                  save_objective_values=False,
-                 show_pbar=True, leave_pbar=False):
+                 show_pbar=True, leave_pbar=True):
         self.A = A
         self.y = y
         self.x = x
