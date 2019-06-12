@@ -5,7 +5,7 @@ and a maximum eigenvalue estimation App.
 """
 import numpy as np
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from sigpy import backend, linop, prox, util
 from sigpy.alg import (PowerMethod, GradientMethod,
                        ConjugateGradient, PrimalDualHybridGradient)
