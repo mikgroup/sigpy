@@ -394,15 +394,18 @@ class LinearLeastSquares(App):
         with self.y_device:
             r = self.A(self.x) - self.y
 
-            obj = 1 / 2 * util.norm2(r)
+            obj = 1 / 2 * self.y_device.xp.linalg.norm(r).item()**2
             if self.lamda > 0:
                 if self.R is None:
-                    obj += self.lamda / 2 * util.norm2(self.x)
+                    obj += self.lamda / 2 * self.x_device.xp.linalg.norm(
+                        self.x).item()**2
                 else:
-                    obj += self.lamda / 2 * util.norm2(self.R(self.x))
+                    obj += self.lamda / 2 * self.x_device.xp.linalg.norm(
+                        self.R(self.x)).item()**2
 
             if self.mu != 0:
-                obj += self.mu / 2 * util.norm2(self.x - self.z)
+                obj += self.mu / 2 * self.x_device.xp.linalg.norm(
+                    self.x - self.z).item()**2
 
             if self.proxg is not None:
                 if self.g is None:
@@ -415,7 +418,6 @@ class LinearLeastSquares(App):
                 else:
                     obj += self.g(self.G(self.x))
 
-            obj = util.asscalar(obj)
             return obj
 
 
