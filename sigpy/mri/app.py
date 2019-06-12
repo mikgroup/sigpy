@@ -175,7 +175,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             device = sp.get_device(input)
             xp = device.xp
             with device:
-                return lamda * xp.sum(xp.abs(W(input)))
+                return lamda * xp.sum(xp.abs(W(input))).item()
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
 
@@ -287,7 +287,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
             device = sp.get_device(x)
             xp = device.xp
             with device:
-                return lamda * xp.sum(xp.abs(x))
+                return lamda * xp.sum(xp.abs(x)).item()
 
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
