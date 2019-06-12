@@ -104,10 +104,10 @@ class MaxEig(App):
     """
 
     def __init__(self, A, dtype=np.float, device=backend.cpu_device,
-                 max_iter=30, show_pbar=True):
+                 max_iter=30, show_pbar=True, leave_pbar=True):
         self.x = util.randn(A.ishape, dtype=dtype, device=device)
         alg = PowerMethod(A, self.x, max_iter=max_iter)
-        super().__init__(alg, show_pbar=show_pbar)
+        super().__init__(alg, show_pbar=show_pbar, leave_pbar=leave_pbar)
 
     def _summarize(self):
         if self.show_pbar:
@@ -167,7 +167,8 @@ class LinearLeastSquares(App):
                  alg_name=None, max_iter=100,
                  P=None, alpha=None, max_power_iter=30, accelerate=True,
                  tau=None, sigma=None,
-                 save_objective_values=False, show_pbar=True):
+                 save_objective_values=False,
+                 show_pbar=True, leave_pbar=False):
         self.A = A
         self.y = y
         self.x = x
@@ -188,6 +189,7 @@ class LinearLeastSquares(App):
         self.sigma = sigma
         self.save_objective_values = save_objective_values
         self.show_pbar = show_pbar
+        self.leave_pbar = leave_pbar
 
         self.y_device = backend.get_device(y)
         if self.x is None:
@@ -198,8 +200,6 @@ class LinearLeastSquares(App):
         self._get_alg()
         if self.save_objective_values:
             self.objective_values = []
-
-        super().__init__(self.alg, show_pbar=show_pbar)
 
     def _summarize(self):
         if self.save_objective_values:
