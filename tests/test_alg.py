@@ -43,48 +43,31 @@ class TestAlg(unittest.TestCase):
             A.T @ A + lamda * np.eye(n), compute_uv=False)[0]
         alpha = 1.0 / lipschitz
 
-        for beta in [1, 0.5]:
-            for accelerate in [True, False]:
-                for proxg in [None, lambda alpha, x: x / (1 + lamda * alpha)]:
-                    with self.subTest(accelerate=accelerate,
-                                      proxg=proxg,
-                                      beta=beta):
-                        x_sigpy = np.zeros([n])
+        for accelerate in [True, False]:
+            for proxg in [None, lambda alpha, x: x / (1 + lamda * alpha)]:
+                with self.subTest(accelerate=accelerate,
+                                  proxg=proxg):
+                    x_sigpy = np.zeros([n])
 
-                        def gradf(x):
-                            gradf_x = A.T @ (A @ x - y)
-                            if proxg is None:
-                                gradf_x += lamda * x
+                    def gradf(x):
+                        gradf_x = A.T @ (A @ x - y)
+                        if proxg is None:
+                            gradf_x += lamda * x
 
-                            return gradf_x
+                        return gradf_x
 
-                        if beta == 1:
-                            alpha = 1 / lipschitz
-                            f = None
-                        else:
-                            alpha = 1
+                    alg_method = alg.GradientMethod(
+                        gradf,
+                        x_sigpy,
+                        alpha,
+                        accelerate=accelerate,
+                        proxg=proxg,
+                        max_iter=1000)
 
-                            def f(x):
-                                f_x = 1 / 2 * np.linalg.norm(A @ x - y)**2
-                                if proxg is None:
-                                    f_x += lamda / 2 * np.linalg.norm(x)**2
+                    while(not alg_method.done()):
+                        alg_method.update()
 
-                                return f_x
-
-                        alg_method = alg.GradientMethod(
-                            gradf,
-                            x_sigpy,
-                            alpha,
-                            beta=beta,
-                            f=f,
-                            accelerate=accelerate,
-                            proxg=proxg,
-                            max_iter=1000)
-
-                        while(not alg_method.done()):
-                            alg_method.update()
-
-                        npt.assert_allclose(x_sigpy, x_numpy)
+                    npt.assert_allclose(x_sigpy, x_numpy)
 
     def test_ConjugateGradient(self):
         n = 5
