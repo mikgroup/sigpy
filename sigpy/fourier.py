@@ -276,9 +276,9 @@ def _scale_coord(coord, shape, oversamp):
     ndim = coord.shape[-1]
     device = backend.get_device(coord)
     scale = backend.to_device(
-        [_get_ugly_number(oversamp * i) / i for i in shape[-ndim:]], device)
+        [int(oversamp * i) / i for i in shape[-ndim:]], device)
     shift = backend.to_device(
-        [_get_ugly_number(oversamp * i) // 2 for i in shape[-ndim:]], device)
+        [int(oversamp * i) // 2 for i in shape[-ndim:]], device)
 
     with device:
         coord = scale * coord + shift
@@ -286,42 +286,8 @@ def _scale_coord(coord, shape, oversamp):
     return coord
 
 
-def _get_ugly_number(n):
-    """Get closest ugly number greater than n.
-
-    An ugly number is defined as a positive integer that is a
-    multiple of 2 3 and 5.
-
-    Args:
-        n (int): Base number.
-
-    """
-    if n <= 1:
-        return n
-
-    ugly_nums = [1]
-    i2, i3, i5 = 0, 0, 0
-    while(True):
-
-        ugly_num = min(ugly_nums[i2] * 2,
-                       ugly_nums[i3] * 3,
-                       ugly_nums[i5] * 5)
-
-        if ugly_num >= n:
-            return ugly_num
-
-        ugly_nums.append(ugly_num)
-        if ugly_num == ugly_nums[i2] * 2:
-            i2 += 1
-        elif ugly_num == ugly_nums[i3] * 3:
-            i3 += 1
-        elif ugly_num == ugly_nums[i5] * 5:
-            i5 += 1
-
-
 def _get_oversamp_shape(shape, ndim, oversamp):
-    return list(shape)[:-ndim] + [_get_ugly_number(oversamp * i)
-                                  for i in shape[-ndim:]]
+    return list(shape)[:-ndim] + [int(oversamp * i) for i in shape[-ndim:]]
 
 
 def _apodize(input, ndim, oversamp, width, beta):
@@ -332,7 +298,7 @@ def _apodize(input, ndim, oversamp, width, beta):
     with device:
         for a in range(-ndim, 0):
             i = output.shape[a]
-            os_i = _get_ugly_number(oversamp * i)
+            os_i = int(oversamp * i)
             idx = xp.arange(i, dtype=output.dtype)
 
             # Calculate apodization
