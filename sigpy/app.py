@@ -33,16 +33,19 @@ class App(object):
     Args:
         alg (Alg): Alg object.
         show_pbar (bool): toggle whether show progress bar.
+        leave_pbar (bool): toggle whether to leave progress bar after finished.
 
     Attributes:
         alg (Alg)
         show_pbar (bool)
+        leave_pbar (bool)
 
     """
 
-    def __init__(self, alg, show_pbar=True):
+    def __init__(self, alg, show_pbar=True, leave_pbar=True):
         self.alg = alg
         self.show_pbar = show_pbar
+        self.leave_pbar = leave_pbar
 
     def _pre_update(self):
         return
@@ -66,7 +69,8 @@ class App(object):
             else:
                 name = self.__class__.__name__
 
-            self.pbar = tqdm(total=self.alg.max_iter, desc=name)
+            self.pbar = tqdm(
+                total=self.alg.max_iter, desc=name, leave=self.leave_pbar)
 
         while(not self.alg.done()):
             self._pre_update()
@@ -194,6 +198,8 @@ class LinearLeastSquares(App):
         self._get_alg()
         if self.save_objective_values:
             self.objective_values = []
+
+        super().__init__(self.alg, show_pbar=show_pbar)
 
     def _summarize(self):
         if self.save_objective_values:
