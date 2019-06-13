@@ -72,6 +72,14 @@ class Device(object):
 
         return cp
 
+    def use(self):
+        """Use computing device.
+
+        All operations after use() will use the device.
+        """
+        if self.id > 0:
+            self.cpdevice.use()
+
     def __int__(self):
         return self.id
 
