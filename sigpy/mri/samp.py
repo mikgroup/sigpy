@@ -5,7 +5,7 @@ import numpy as np
 import numba as nb
 
 
-__all__ = ['poisson', 'radial']
+__all__ = ['poisson', 'radial', 'spiral']
 
 
 def poisson(img_shape, accel, K=30, calib=[0, 0], dtype=np.complex,
@@ -199,3 +199,71 @@ def _poisson(nx, ny, K, R, calib, seed):
          int(nx / 2 - calib[-1] / 2):int(nx / 2 + calib[-1] / 2)] = 1
 
     return mask
+
+def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
+    """Generate variable density spiral trajectory.
+
+    Args:
+        fov (float): field of view in meters.
+        img_shape (tuple of ints): image shape.
+        f_sampling (float): undersampling factor along frequency encoding direction.
+        R (float): undersampling factor.
+        ninterleaves (int): number of spiral interleaves
+        alpha (float): variable density factor
+        gm (float): maximum gradient amplitude (T/m)
+        sm (float): maximum slew rate (T/m/s)
+
+    Returns:
+        array: spiral coordinates.
+
+    References:
+        Simple Analytic Variable Density Spiral Design
+        Dong-hyun Kim, Elfar Adalsteinsson, and Daniel M. Spielman. MRM 2003.
+
+    """
+    res = fov/img_shape[0]
+
+    gamma = 2.678e8  # in rad/T/s
+    lam = .5 / res  # in m**(-1)
+    n = 1 / (1 - (1 - ninterleaves * R / fov / lam) ** (1 / alpha))
+    w = 2 * np.pi * n
+    Tea = lam * w / gamma / gm / (alpha + 1)  # in s
+    Tes = np.sqrt(lam * w ** 2 / sm / gamma) / (alpha / 2 + 1)  # in s
+    Ts2a = (Tes ** ((alpha + 1) / (alpha / 2 + 1)) * (alpha / 2 + 1) / Tea / (alpha + 1)) ** (1 + 2 / alpha)  # in s
+
+    if Ts2a < Tes:
+        tautrans = (Ts2a / Tes) ** (1 / (alpha / 2 + 1))
+        tau = lambda t: (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Ts2a) + (
+                    (t - Ts2a) / Tea + tautrans ** (alpha + 1)) ** (1 / (alpha + 1)) * (t > Ts2a) * (t <= Tea) * (
+                                    Tes >= Ts2a)
+        Tend = Tea
+    else:
+        tau = lambda t: (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Tes)
+        Tend = Tes
+
+    k = lambda t: lam * tau(t) ** alpha * np.exp(w * tau(t) * 1j)
+    dt = Tea * 1E-4  # in s
+
+    Dt = dt * f_sampling / fov / abs(k(Tea) - k(Tea - dt))  # in s
+
+    t = np.linspace(0, Tend, int(Tend / Dt))
+    kt = k(t)  # in rad
+
+    # generating cloned interleaves
+    k = kt
+    for i in range(1, ninterleaves):  # -1? not sure
+        k = np.hstack((k, kt[0:] * np.exp(2 * np.pi * 1j * i / ninterleaves)))
+
+    # check for trajectories that are too long
+    if (img_shape[0] ** 2) <= len(np.real(k)):
+        raise ValueError(
+            'Trajectory length ({}) exceeds allowable length ({}). '
+            'Reduce trajectory length.'.format(len(np.real(k)), img_shape[0] ** 2))
+
+    #pad trajectory with 0's to reach img_shape[0]*img_shape[0] long trajectory
+    k = np.pad(k, (0, img_shape[0] ** 2 - len(np.real(k))), 'constant', constant_values=(0, 0))
+    k = k.reshape(img_shape[0], img_shape[0])
+
+    traj = np.stack((np.real(k), np.imag(k)), axis=2)
+
+    return traj

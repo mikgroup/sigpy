@@ -56,3 +56,32 @@ class TestRf(unittest.TestCase):
         pulses = rf.stspa(target,sens,fullmask,coord=traj,max_iter=25,tol=1E-3)
 
         npt.assert_array_almost_equal(A*pulses,target,1E-3)
+
+    def test_stspa_spiral(self):
+
+        img_shape = [64, 64]
+        sens_shape = [8, 64, 64]
+
+        target = sp.shepp_logan(img_shape)
+
+        sens = sim.birdcage_maps(sens_shape)
+
+        traj = sp.mri.spiral(fov=1, img_shape=img_shape, f_sampling=1, R=1, ninterleaves=5, alpha=1.5, gm=0.03, sm=200)
+
+        mask = np.zeros(img_shape)
+
+        x,y = 0,0
+        for i in range(img_shape[1]):
+            for j in range(img_shape[1]):
+                x = traj[i, j, 0] + img_shape[1] / 2
+                y = traj[i, j, 1] + img_shape[1] / 2
+
+                mask[int(y), int(x)] = 1
+
+        fullmask = np.repeat(mask[np.newaxis, :, :], 8, axis=0)
+
+        A = linop.Sense(sens, coord=traj, weights=fullmask, ishape=target.shape).H
+
+        pulses = rf.stspa(target,sens,fullmask,coord=traj,max_iter=25,tol=1E-3)
+
+        npt.assert_array_almost_equal(A*pulses,target,1E-3)
