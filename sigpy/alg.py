@@ -131,23 +131,11 @@ class GradientMethod(Alg):
     Nesterov's acceleration is supported by toggling the `accelerate`
     input option.
 
-    Backtracking line search is supported by setting :math:`\beta < 1`,
-    which keeps scaling the step-size :math:`\alpha` by :math:`\beta`
-    until the following condition holds:
-
-    .. math:: f(x_\text{new}) \leq f(x) +
-        \left< \Delta x, \nabla f(x) \right> +
-        \frac{1}{2 \alpha} \| \Delta x \|_2^2
-
     Args:
         gradf (function): function to compute :math:`\nabla f`.
         x (array): variable to optimize over.
         alpha (float or None): step size, or initial step size
              if backtracking line-search is on.
-        beta (scalar): backtracking linesearch factor.
-             Enables backtracking when beta < 1.
-        f (function or None): function to compute :math:`f`
-             for backtracking line-search.
         proxg (Prox, function or None): Prox or function to compute
             proximal operator of :math:`g`.
         accelerate (bool): toggle Nesterov acceleration.
@@ -168,16 +156,10 @@ class GradientMethod(Alg):
     """
 
     def __init__(self, gradf, x, alpha, proxg=None,
-                 f=None, beta=1, accelerate=False, max_iter=100,
+                 accelerate=False, max_iter=100,
                  tol=0):
-        if beta < 1 and f is None:
-            raise TypeError(
-                "Cannot do backtracking linesearch without specifying f.")
-
         self.gradf = gradf
         self.alpha = alpha
-        self.f = f
-        self.beta = beta
         self.accelerate = accelerate
         self.proxg = proxg
         self.x = x
@@ -195,39 +177,23 @@ class GradientMethod(Alg):
     def _update(self):
         xp = self.device.xp
         with self.device:
+            x_old = self.x.copy()
+
             if self.accelerate:
                 backend.copyto(self.x, self.z)
 
             # Perform update
-            gradf_x = self.gradf(self.x)
-            alpha = self.alpha
-            x_new = self.x - alpha * gradf_x
+            util.axpy(self.x, -self.alpha, self.gradf(self.x))
             if self.proxg is not None:
-                x_new = self.proxg(alpha, x_new)
+                backend.copyto(self.x, self.proxg(self.alpha, self.x))
 
-            delta_x = x_new - self.x
-            # Backtracking line search
-            if self.beta < 1:
-                fx = self.f(self.x)
-                while (self.f(x_new) > fx +
-                       xp.real(xp.vdot(delta_x, gradf_x)).item() +
-                       1 / (2 * alpha) * xp.linalg.norm(delta_x).item()**2):
-                    alpha *= self.beta
-
-                    x_new = self.x - alpha * gradf_x
-                    if self.proxg is not None:
-                        x_new = self.proxg(alpha, x_new)
-
-                    delta_x = x_new - self.x
-
-            backend.copyto(self.x, x_new)
             if self.accelerate:
                 t_old = self.t
                 self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
-                backend.copyto(self.z, x_new +
-                               ((t_old - 1) / self.t) * delta_x)
+                backend.copyto(self.z, self.x +
+                               ((t_old - 1) / self.t) * (self.x - x_old))
 
-            self.resid = xp.linalg.norm(delta_x).item() / alpha
+            self.resid = xp.linalg.norm(self.x - x_old).item() / self.alpha
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.resid <= self.tol

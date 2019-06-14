@@ -175,7 +175,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             device = sp.get_device(input)
             xp = device.xp
             with device:
-                return lamda * xp.sum(xp.abs(W(input)))
+                return lamda * xp.sum(xp.abs(W(input))).item()
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
 
@@ -287,7 +287,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
             device = sp.get_device(x)
             xp = device.xp
             with device:
-                return lamda * xp.sum(xp.abs(x))
+                return lamda * xp.sum(xp.abs(x)).item()
 
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
@@ -474,7 +474,8 @@ class JsenseRecon(sp.app.App):
                 self.mps_ker,
                 lamda=self.lamda,
                 max_iter=self.max_inner_iter,
-                show_pbar=self.show_pbar).run()
+                show_pbar=self.show_pbar,
+                leave_pbar=False).run()
 
         def min_img_ker():
             self.A_img_ker = linop.ConvSense(
@@ -489,7 +490,8 @@ class JsenseRecon(sp.app.App):
                 self.img_ker,
                 lamda=self.lamda,
                 max_iter=self.max_inner_iter,
-                show_pbar=self.show_pbar).run()
+                show_pbar=self.show_pbar,
+                leave_pbar=False).run()
 
         self.alg = sp.alg.AltMin(
             min_mps_ker, min_img_ker, max_iter=self.max_iter)

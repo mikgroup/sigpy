@@ -228,4 +228,4 @@ class TestFourier(unittest.TestCase):
             input = np.zeros(n, np.complex)
             input[i] = 1
             npt.assert_allclose(A[:, i], fourier.nufft(
-                input, coord), atol=0.01, rtol=0.01)
+                input, coord), atol=0.1, rtol=0.1)

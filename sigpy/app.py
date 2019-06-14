@@ -5,7 +5,7 @@ and a maximum eigenvalue estimation App.
 """
 import numpy as np
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from sigpy import backend, linop, prox, util
 from sigpy.alg import (PowerMethod, GradientMethod,
                        ConjugateGradient, PrimalDualHybridGradient)
@@ -33,16 +33,19 @@ class App(object):
     Args:
         alg (Alg): Alg object.
         show_pbar (bool): toggle whether show progress bar.
+        leave_pbar (bool): toggle whether to leave progress bar after finished.
 
     Attributes:
         alg (Alg)
         show_pbar (bool)
+        leave_pbar (bool)
 
     """
 
-    def __init__(self, alg, show_pbar=True):
+    def __init__(self, alg, show_pbar=True, leave_pbar=True):
         self.alg = alg
         self.show_pbar = show_pbar
+        self.leave_pbar = leave_pbar
 
     def _pre_update(self):
         return
@@ -66,7 +69,8 @@ class App(object):
             else:
                 name = self.__class__.__name__
 
-            self.pbar = tqdm(total=self.alg.max_iter, desc=name)
+            self.pbar = tqdm(
+                total=self.alg.max_iter, desc=name, leave=self.leave_pbar)
 
         while(not self.alg.done()):
             self._pre_update()
@@ -100,10 +104,10 @@ class MaxEig(App):
     """
 
     def __init__(self, A, dtype=np.float, device=backend.cpu_device,
-                 max_iter=30, show_pbar=True):
+                 max_iter=30, show_pbar=True, leave_pbar=True):
         self.x = util.randn(A.ishape, dtype=dtype, device=device)
         alg = PowerMethod(A, self.x, max_iter=max_iter)
-        super().__init__(alg, show_pbar=show_pbar)
+        super().__init__(alg, show_pbar=show_pbar, leave_pbar=leave_pbar)
 
     def _summarize(self):
         if self.show_pbar:
@@ -163,7 +167,8 @@ class LinearLeastSquares(App):
                  alg_name=None, max_iter=100,
                  P=None, alpha=None, max_power_iter=30, accelerate=True,
                  tau=None, sigma=None,
-                 save_objective_values=False, show_pbar=True):
+                 save_objective_values=False,
+                 show_pbar=True, leave_pbar=True):
         self.A = A
         self.y = y
         self.x = x
@@ -184,6 +189,7 @@ class LinearLeastSquares(App):
         self.sigma = sigma
         self.save_objective_values = save_objective_values
         self.show_pbar = show_pbar
+        self.leave_pbar = leave_pbar
 
         self.y_device = backend.get_device(y)
         if self.x is None:
@@ -394,15 +400,18 @@ class LinearLeastSquares(App):
         with self.y_device:
             r = self.A(self.x) - self.y
 
-            obj = 1 / 2 * util.norm2(r)
+            obj = 1 / 2 * self.y_device.xp.linalg.norm(r).item()**2
             if self.lamda > 0:
                 if self.R is None:
-                    obj += self.lamda / 2 * util.norm2(self.x)
+                    obj += self.lamda / 2 * self.x_device.xp.linalg.norm(
+                        self.x).item()**2
                 else:
-                    obj += self.lamda / 2 * util.norm2(self.R(self.x))
+                    obj += self.lamda / 2 * self.x_device.xp.linalg.norm(
+                        self.R(self.x)).item()**2
 
             if self.mu != 0:
-                obj += self.mu / 2 * util.norm2(self.x - self.z)
+                obj += self.mu / 2 * self.x_device.xp.linalg.norm(
+                    self.x - self.z).item()**2
 
             if self.proxg is not None:
                 if self.g is None:
@@ -415,7 +424,6 @@ class LinearLeastSquares(App):
                 else:
                     obj += self.g(self.G(self.x))
 
-            obj = util.asscalar(obj)
             return obj
 
 
