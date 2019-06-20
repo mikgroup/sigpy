@@ -237,16 +237,19 @@ def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
         tautrans = (Ts2a / Tes) ** (1 / (alpha / 2 + 1))
 
         def tau(t):
-            (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Ts2a) + (
-            (t - Ts2a) / Tea + tautrans ** (alpha + 1)) ** (1 / (alpha + 1))\
-            * (t > Ts2a) * (t <= Tea) * (Tes >= Ts2a)
+            return (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * \
+                (t <= Ts2a) + ((t - Ts2a) / Tea +
+                               tautrans ** (alpha + 1)) ** (1 / (alpha + 1))\
+                * (t > Ts2a) * (t <= Tea) * (Tes >= Ts2a)
         Tend = Tea
     else:
 
-        def tau(t): (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Tes)
+        def tau(t):
+            return (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Tes)
         Tend = Tes
 
-    k = lambda t: lam * tau(t) ** alpha * np.exp(w * tau(t) * 1j)
+    def k(t):
+        return lam * tau(t) ** alpha * np.exp(w * tau(t) * 1j)
     dt = Tea * 1E-4  # in s
 
     Dt = dt * f_sampling / fov / abs(k(Tea) - k(Tea - dt))  # in s

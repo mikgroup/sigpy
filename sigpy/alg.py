@@ -570,7 +570,8 @@ class BarrierMethod(Alg):
             'inverse-barrier'
 
     """
-    def __init__(self, minL, g, x, c, beta, tol, max_iter=30, method='log-barrier'):
+    def __init__(self, minL, g, x, c, beta, tol,
+                 max_iter=30, method='log-barrier'):
         self.minL = minL
         self.g = g
         self.x = x
@@ -587,12 +588,13 @@ class BarrierMethod(Alg):
             self.B = (1. / self.c) * (np.sum(1./self.g(self.x)))
             # g(x) <= 0
         else:
-            raise Exception('The method ("{}") cannot be identified.'.format(self.method))
+            raise Exception('The method ("{}") '
+                            'cannot be identified.'.format(self.method))
 
     def _update(self):
         self.minL(self.B, self.tol)
         if self.g is not None:
-                self.c *= self.beta
+            self.c *= self.beta
 
     def _done(self):
         return self.iter >= self.max_iter

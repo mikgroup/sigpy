@@ -8,6 +8,7 @@ from sigpy.mri import linop
 
 __all__ = ['stspa']
 
+
 def stspa(target, sens, mask, coord=None, max_iter=50, tol=1E-3):
     """Small tip spatial domain method for multicoil parallel excitation
 
@@ -31,7 +32,7 @@ def stspa(target, sens, mask, coord=None, max_iter=50, tol=1E-3):
     pulses = np.zeros(sens.shape, np.complex)
 
     alg_method = sp.alg.ConjugateGradient(A.H*A, A.H*target, pulses,
-        P=None, max_iter=max_iter, tol=tol)
+                                          P=None, max_iter=max_iter, tol=tol)
 
     while not alg_method.done():
         alg_method.update()

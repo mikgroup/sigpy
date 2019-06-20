@@ -8,6 +8,7 @@ from sigpy.mri import rf, linop, sim
 if __name__ == '__main__':
     unittest.main()
 
+
 class TestRf(unittest.TestCase):
 
     def test_stspa_cartesian(self):
@@ -16,7 +17,7 @@ class TestRf(unittest.TestCase):
         sens_shape = [8, 32, 32]
 
         x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
-               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+                        -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
         circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
         target = np.zeros(img_shape, np.complex)
         target[circle] = 1
@@ -39,7 +40,7 @@ class TestRf(unittest.TestCase):
         sens_shape = [8, 32, 32]
 
         x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
-               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+                        -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
         circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
         target = np.zeros(img_shape, np.complex)
         target[circle] = 1
@@ -51,7 +52,7 @@ class TestRf(unittest.TestCase):
 
         mask = np.zeros(img_shape)
 
-        x,y = 0,0
+        x, y = 0, 0
         for i in range(img_shape[1]):
             for j in range(img_shape[1]):
                 x = traj[i, j, 0] + img_shape[1] / 2
@@ -75,7 +76,7 @@ class TestRf(unittest.TestCase):
         sens_shape = [8, 32, 32]
 
         x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
-               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+                        -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
         circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
         target = np.zeros(img_shape, np.complex)
         target[circle] = 1
@@ -87,7 +88,7 @@ class TestRf(unittest.TestCase):
 
         mask = np.zeros(img_shape)
 
-        x,y = 0,0
+        x, y = 0, 0
         for i in range(img_shape[1]):
             for j in range(img_shape[1]):
                 x = traj[i, j, 0] + img_shape[1] / 2
