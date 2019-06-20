@@ -539,3 +539,55 @@ class NewtonsMethod(Alg):
 
     def _done(self):
         return self.iter >= self.max_iter or self.residual <= self.tol
+
+class BarrierMethod(Alg):
+    r"""Barrier method for constrained optimization.
+
+    Consider the equality and inequality constrained problem:
+
+    .. math:: \min_{x: x \geq b, } f(x)
+
+    The problem is re-formulated as:
+
+    .. math::
+        \min_{x: } f(x) + B(x)
+        B(x) = \infty \iff x \leq b
+
+    and B(x) is zero otherwise
+
+    Args:
+        minL (function): a function that takes the barrier function B as input,
+            and minimizes the reformulated constrained f(x) + b(x) problem over `x`.
+        g (None or function): a function that takes :math:`x` as input,
+            and outputs :math:`g(x)`, the inequality constraints.
+        x (array): primal variable.
+        c (scalar): initial constraint weight
+        beta (scalar): >=1, the factor by which c grows after each iteration.
+        max_iter (int): maximum number of iterations.
+        method (string): barrier method to be used, either 'log-barrier' or 'inverse-barrier'
+
+    """
+    def __init__(self, minL, g, x, c, beta, tol, max_iter=30, method='log-barrier'):
+        self.minL = minL
+        self.g = g
+        self.x = x
+        self.c = c
+        self.beta = beta
+        self.tol = tol
+        super().__init__(max_iter)
+        self.method = method
+
+        if self.method == 'log-barrier':
+            self.B = (1./self.c) * (-np.sum([np.log(-self.g(self.x))])) # g(x) <= 0
+        elif self.method == 'inverse-barrier':
+            self.B = (1. / self.c) * (np.sum(1./self.g(self.x)))  # g(x) <= 0
+        else:
+            raise Exception('The method ("{}") cannot be identified.'.format(self.method))
+
+    def _update(self):
+        self.minL(self.B, self.tol)
+        if self.g is not None:
+                self.c *= self.beta
+
+    def _done(self):
+        return self.iter >= self.max_iter

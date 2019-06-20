@@ -15,7 +15,11 @@ class TestRf(unittest.TestCase):
         img_shape = [32, 32]
         sens_shape = [8, 32, 32]
 
-        target = sp.shepp_logan(img_shape)
+        x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
+               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+        circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
+        target = np.zeros(img_shape, np.complex)
+        target[circle] = 1
 
         sens = sim.birdcage_maps(sens_shape)
 
@@ -30,10 +34,14 @@ class TestRf(unittest.TestCase):
 
     def test_stspa_radial(self):
 
-        img_shape = [64, 64]
-        sens_shape = [8, 64, 64]
+        img_shape = [32, 32]
+        sens_shape = [8, 32, 32]
 
-        target = sp.shepp_logan(img_shape)
+        x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
+               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+        circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
+        target = np.zeros(img_shape, np.complex)
+        target[circle] = 1
 
         sens = sim.birdcage_maps(sens_shape)
 
@@ -59,10 +67,14 @@ class TestRf(unittest.TestCase):
 
     def test_stspa_spiral(self):
 
-        img_shape = [64, 64]
-        sens_shape = [8, 64, 64]
+        img_shape = [32, 32]
+        sens_shape = [8, 32, 32]
 
-        target = sp.shepp_logan(img_shape)
+        x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
+               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+        circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
+        target = np.zeros(img_shape, np.complex)
+        target[circle] = 1
 
         sens = sim.birdcage_maps(sens_shape)
 

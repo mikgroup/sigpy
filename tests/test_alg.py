@@ -129,6 +129,7 @@ class TestAlg(unittest.TestCase):
 
         alg_method = alg.AugmentedLagrangianMethod(
             minL, None, h, x_z, None, v, mu)
+
         while(not alg_method.done()):
             alg_method.update()
 
@@ -168,3 +169,31 @@ class TestAlg(unittest.TestCase):
                     alg_method.update()
 
                 npt.assert_allclose(x, x_numpy)
+
+    def test_BarrierMethod(self):
+
+        n = 5
+        lamda = 0.1
+        A, x_numpy, y = self.Ax_y_setup(n, lamda)
+
+        c = 1
+        beta = 1
+        x = np.ones([n])
+        tol = 1E-3
+
+        def minL(B, tol):
+            x[:] = np.linalg.solve(
+                A.T @ A, A.T @ y + B)
+
+        def g(x):
+            b = np.max(x_numpy) - 1
+            return x - b
+
+        i = 0
+        alg_method = alg.BarrierMethod(
+            minL, g, x, c, beta, tol, max_iter=5, method='log-barrier')
+
+        while (not alg_method.done()):
+            alg_method.update()
+
+        npt.assert_almost_equal(x, x_numpy - 1, decimal=0)
