@@ -10,7 +10,7 @@ from sigpy.mri import app, linop
 from sigpy.mri import bloch, precond, samp, sim, util
 from sigpy.mri.bloch import *  # noqa
 from sigpy.mri.precond import *  # noqa
-from sigpy.mri.rf import * # noqa
+from sigpy.mri.rf import *  # noqa
 from sigpy.mri.samp import *  # noqa
 from sigpy.mri.sim import *  # noqa
 from sigpy.mri.util import *  # noqa

@@ -189,7 +189,6 @@ class TestAlg(unittest.TestCase):
             b = np.max(x_numpy) - 1
             return x - b
 
-        i = 0
         alg_method = alg.BarrierMethod(
             minL, g, x, c, beta, tol, max_iter=5, method='log-barrier')
 

@@ -28,9 +28,10 @@ class TestRf(unittest.TestCase):
 
         A = linop.Sense(sens, coord=None, weights=mask, ishape=target.shape).H
 
-        pulses = rf.stspa(target,sens,mask,coord=None,max_iter=50,tol=1E-3)
+        pulses = rf.stspa(target, sens, mask, coord=None,
+                          max_iter=50, tol=1E-3)
 
-        npt.assert_array_almost_equal(A*pulses,target,1E-3)
+        npt.assert_array_almost_equal(A*pulses, target, 1E-3)
 
     def test_stspa_radial(self):
 
@@ -45,7 +46,8 @@ class TestRf(unittest.TestCase):
 
         sens = sim.birdcage_maps(sens_shape)
 
-        traj = sp.mri.radial((sens.shape[1],sens.shape[1],2),img_shape,golden=True,dtype=np.float)
+        traj = sp.mri.radial((sens.shape[1], sens.shape[1], 2),
+                             img_shape, golden=True, dtype=np.float)
 
         mask = np.zeros(img_shape)
 
@@ -59,11 +61,13 @@ class TestRf(unittest.TestCase):
 
         fullmask = np.repeat(mask[np.newaxis, :, :], 8, axis=0)
 
-        A = linop.Sense(sens, coord=traj, weights=fullmask, ishape=target.shape).H
+        A = linop.Sense(sens, coord=traj, weights=fullmask,
+                        ishape=target.shape).H
 
-        pulses = rf.stspa(target,sens,fullmask,coord=traj,max_iter=25,tol=1E-3)
+        pulses = rf.stspa(target, sens, fullmask, coord=traj,
+                          max_iter=25, tol=1E-3)
 
-        npt.assert_array_almost_equal(A*pulses,target,1E-3)
+        npt.assert_array_almost_equal(A*pulses, target, 1E-3)
 
     def test_stspa_spiral(self):
 
@@ -78,7 +82,8 @@ class TestRf(unittest.TestCase):
 
         sens = sim.birdcage_maps(sens_shape)
 
-        traj = sp.mri.spiral(fov=1, img_shape=img_shape, f_sampling=1, R=1, ninterleaves=5, alpha=1.5, gm=0.03, sm=200)
+        traj = sp.mri.spiral(fov=1, img_shape=img_shape, f_sampling=1,
+                             R=1, ninterleaves=5, alpha=1.5, gm=0.03, sm=200)
 
         mask = np.zeros(img_shape)
 
@@ -92,8 +97,10 @@ class TestRf(unittest.TestCase):
 
         fullmask = np.repeat(mask[np.newaxis, :, :], 8, axis=0)
 
-        A = linop.Sense(sens, coord=traj, weights=fullmask, ishape=target.shape).H
+        A = linop.Sense(sens, coord=traj, weights=fullmask,
+                        ishape=target.shape).H
 
-        pulses = rf.stspa(target,sens,fullmask,coord=traj,max_iter=25,tol=1E-3)
+        pulses = rf.stspa(target, sens, fullmask, coord=traj,
+                          max_iter=25, tol=1E-3)
 
-        npt.assert_array_almost_equal(A*pulses,target,1E-3)
+        npt.assert_array_almost_equal(A*pulses, target, 1E-3)

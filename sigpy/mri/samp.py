@@ -200,13 +200,14 @@ def _poisson(nx, ny, K, R, calib, seed):
 
     return mask
 
+
 def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
     """Generate variable density spiral trajectory.
 
     Args:
         fov (float): field of view in meters.
         img_shape (tuple of ints): image shape.
-        f_sampling (float): undersampling factor along frequency encoding direction.
+        f_sampling (float): undersampling factor in freq encoding direction.
         R (float): undersampling factor.
         ninterleaves (int): number of spiral interleaves
         alpha (float): variable density factor
@@ -229,16 +230,20 @@ def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
     w = 2 * np.pi * n
     Tea = lam * w / gamma / gm / (alpha + 1)  # in s
     Tes = np.sqrt(lam * w ** 2 / sm / gamma) / (alpha / 2 + 1)  # in s
-    Ts2a = (Tes ** ((alpha + 1) / (alpha / 2 + 1)) * (alpha / 2 + 1) / Tea / (alpha + 1)) ** (1 + 2 / alpha)  # in s
+    Ts2a = (Tes ** ((alpha + 1) / (alpha / 2 + 1)) *
+            (alpha / 2 + 1) / Tea / (alpha + 1)) ** (1 + 2 / alpha)  # in s
 
     if Ts2a < Tes:
         tautrans = (Ts2a / Tes) ** (1 / (alpha / 2 + 1))
-        tau = lambda t: (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Ts2a) + (
-                    (t - Ts2a) / Tea + tautrans ** (alpha + 1)) ** (1 / (alpha + 1)) * (t > Ts2a) * (t <= Tea) * (
-                                    Tes >= Ts2a)
+
+        def tau(t):
+            (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Ts2a) + (
+            (t - Ts2a) / Tea + tautrans ** (alpha + 1)) ** (1 / (alpha + 1))\
+            * (t > Ts2a) * (t <= Tea) * (Tes >= Ts2a)
         Tend = Tea
     else:
-        tau = lambda t: (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Tes)
+
+        def tau(t): (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Tes)
         Tend = Tes
 
     k = lambda t: lam * tau(t) ** alpha * np.exp(w * tau(t) * 1j)
@@ -251,17 +256,19 @@ def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
 
     # generating cloned interleaves
     k = kt
-    for i in range(1, ninterleaves):  # -1? not sure
+    for i in range(1, ninterleaves):
         k = np.hstack((k, kt[0:] * np.exp(2 * np.pi * 1j * i / ninterleaves)))
 
     # check for trajectories that are too long
     if (img_shape[0] ** 2) <= len(np.real(k)):
         raise ValueError(
             'Trajectory length ({}) exceeds allowable length ({}). '
-            'Reduce trajectory length.'.format(len(np.real(k)), img_shape[0] ** 2))
+            'Reduce trajectory length.'.format(len(np.real(k)),
+                                               img_shape[0] ** 2))
 
-    #pad trajectory with 0's to reach img_shape[0]*img_shape[0] long trajectory
-    k = np.pad(k, (0, img_shape[0] ** 2 - len(np.real(k))), 'constant', constant_values=(0, 0))
+    # pad trajectory with 0's to reach img_shape[0]*img_shape[0] long traj
+    k = np.pad(k, (0, img_shape[0] ** 2 - len(np.real(k))),
+               'constant', constant_values=(0, 0))
     k = k.reshape(img_shape[0], img_shape[0])
 
     traj = np.stack((np.real(k), np.imag(k)), axis=2)
