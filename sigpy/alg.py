@@ -519,7 +519,6 @@ class NewtonsMethod(Alg):
             gradf_x = self.gradf(self.x)
             p = -self.inv_hessf(self.x)(gradf_x)
             self.lamda2 = -xp.real(xp.vdot(p, gradf_x)).item()
-
             if self.lamda2 < 0:
                 raise ValueError(
                     'Direction is not descending. Got lamda2={}. '
@@ -544,7 +543,7 @@ class NewtonsMethod(Alg):
 class BarrierMethod(Alg):
     r"""Barrier method for constrained optimization.
 
-    Consider the equality and inequality constrained problem:
+    Consider the inequality constrained problem:
 
     .. math:: \min_{x: x \geq b, } f(x)
 
@@ -562,7 +561,7 @@ class BarrierMethod(Alg):
         over `x`.
         g (None or function): a function that takes :math:`x` as input,
             and outputs :math:`g(x)`, the inequality constraints.
-        x (array): primal variable.
+        x (array): value to be optimized
         c (scalar): initial constraint weight
         beta (scalar): >=1, the factor by which c grows after each iteration.
         max_iter (int): maximum number of iterations.
@@ -570,7 +569,7 @@ class BarrierMethod(Alg):
             'inverse-barrier'
 
     """
-    def __init__(self, minL, g, x, c, beta, tol,
+    def __init__(self, minL, g, x, c, beta, tol=1e-6,
                  max_iter=30, method='log-barrier'):
         self.minL = minL
         self.g = g
@@ -582,19 +581,29 @@ class BarrierMethod(Alg):
         self.method = method
 
         if self.method == 'log-barrier':
-            self.B = (1./self.c) * (-np.sum([np.log(-self.g(self.x))]))
+            self.B = (1./self.c) * (-(np.log(-self.g(self.x))))
             # g(x) <= 0
         elif self.method == 'inverse-barrier':
-            self.B = (1. / self.c) * (np.sum(1./self.g(self.x)))
+            self.B = (1. / self.c) * ((1./self.g(self.x)))
             # g(x) <= 0
         else:
             raise Exception('The method ("{}") '
                             'cannot be identified.'.format(self.method))
 
     def _update(self):
-        self.minL(self.B, self.tol)
-        if self.g is not None:
-            self.c *= self.beta
+        if self.method == 'log-barrier':
+            self.B = (1./self.c) * (-(np.log(-self.g(self.x))))
+            # g(x) <= 0
+        elif self.method == 'inverse-barrier':
+            self.B = (1. / self.c) * ((1./self.g(self.x)))
+            # g(x) <= 0
+        self.minL(self.B, self.x) #minimize the fun + barrier using the desired unconstrained optimization method
+
+        #TODO : perform checking of tolerance
+        self.chck = (1. / self.c) * self.B
+
+        #update c with beta, g with new value of x
+        self.c *= self.beta
 
     def _done(self):
-        return self.iter >= self.max_iter
+        return self.iter >= self.max_iter or self.chck <= self.tol
