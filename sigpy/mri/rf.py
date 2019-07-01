@@ -41,10 +41,19 @@ def stspa(target, sens, mask, coord=None,pinst=float('inf'),pavg=float('inf'), m
     sigma = 0.1
     lamda = 0.1
 
+    #build proxg, includes all constraints
+    def proxg(alpha, pulses):
+        #instantaneous power constraint
+        func = (pulses / (1 + lamda * alpha)) * np.minimum(pinst/np.abs(pulses ) ** 2 , 1)
+        #avg power constraint for each of Nc channels
+        for i in range(pulses.shape[0]):
+            func *= np.minimum(pavg/((np.linalg.norm(np.concatenate(pulses[i]) / (1 + lamda * alpha),2, axis=0) ** 2)/len(pulses[i])) , 1)
+
+        return func
+
     alg_method = sp.alg.PrimalDualHybridGradient(
         lambda alpha, u: (u - alpha * target) / (1 + alpha),
-        lambda alpha, pulses: (pulses / (1 + lamda * alpha)) * np.minimum(pinst/np.abs(pulses ) ** 2 , 1)
-                              * np.minimum(pavg/((np.linalg.norm(np.concatenate(np.concatenate(pulses)) / (1 + lamda * alpha),2, axis=0) ** 2)/len(pulses)) , 1),
+        lambda alpha, pulses: proxg(alpha,pulses),
         lambda pulses: A * pulses,
         lambda pulses: A.H * pulses,
         pulses, u, tau, sigma, max_iter=max_iter, tol=tol)
