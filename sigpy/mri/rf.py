@@ -27,7 +27,7 @@ def stspa(target, sens, mask, coord=None,pinst=float('inf'),pavg=float('inf'), m
         Grissom, W., Yip, C., Zhang, Z., Stenger, V. A., Fessler, J. A.
         & Noll, D. C.(2006).
         Spatial Domain Method for the Design of RF Pulses in Multicoil
-        Parallel Excitation.cMagnetic resonance in medicine, 56, 620-629.
+        Parallel Excitation.Magnetic resonance in medicine, 56, 620-629.
     """
 
     A = linop.Sense(sens, coord, weights=mask, ishape=target.shape).H
@@ -44,7 +44,7 @@ def stspa(target, sens, mask, coord=None,pinst=float('inf'),pavg=float('inf'), m
     alg_method = sp.alg.PrimalDualHybridGradient(
         lambda alpha, u: (u - alpha * target) / (1 + alpha),
         lambda alpha, pulses: (pulses / (1 + lamda * alpha)) * np.minimum(pinst/np.abs(pulses ) ** 2 , 1)
-                              * np.minimum(pavg/np.linalg.norm(pulses / (1 + lamda * alpha),2, axis=0) , 1),
+                              * np.minimum(pavg/((np.linalg.norm(np.concatenate(np.concatenate(pulses)) / (1 + lamda * alpha),2, axis=0) ** 2)/len(pulses)) , 1),
         lambda pulses: A * pulses,
         lambda pulses: A.H * pulses,
         pulses, u, tau, sigma, max_iter=max_iter, tol=tol)
