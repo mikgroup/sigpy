@@ -30,24 +30,23 @@ def stspa(target, sens, mask, coord=None,pinst=float('inf'),pavg=float('inf'), m
         Parallel Excitation.Magnetic resonance in medicine, 56, 620-629.
     """
 
-    A = linop.Sense(sens, coord, weights=mask, ishape=target.shape).H
-    anp = A * np.repeat(np.eye(sens.shape[1])[np.newaxis, :, :], 8, axis=0)
+    A = linop.Sense(sens, coord, weights=None, ishape=target.shape).H
 
-    pulses = np.zeros(sens.shape, np.complex)
-    u = np.zeros(target.shape, np.complex)
+    pulses = np.zeros((sens.shape[0],coord.shape[0]), np.complex)
+    u = np.zeros((target.shape), np.complex)
 
-    lipschitz = np.linalg.svd(anp.T @ anp, compute_uv=False)[0]
+    lipschitz = np.linalg.svd(A * A.H * np.ones(target.shape, np.complex), compute_uv=False)[0]
     tau = 1.0 / lipschitz
-    sigma = 0.1
-    lamda = 0.1
+    sigma = 0.01
+    lamda = 0.01
 
-    #build proxg, includes all constraints
+    #build proxg, includes all constraints:
     def proxg(alpha, pulses):
         #instantaneous power constraint
         func = (pulses / (1 + lamda * alpha)) * np.minimum(pinst/np.abs(pulses ) ** 2 , 1)
         #avg power constraint for each of Nc channels
         for i in range(pulses.shape[0]):
-            func *= np.minimum(pavg/((np.linalg.norm(np.concatenate(pulses[i]) / (1 + lamda * alpha),2, axis=0) ** 2)/len(pulses[i])) , 1)
+            func[i] *= np.minimum(pavg/((np.linalg.norm(func[i],2, axis=0) ** 2)/len(pulses[i])) , 1)
 
         return func
 
@@ -62,4 +61,3 @@ def stspa(target, sens, mask, coord=None,pinst=float('inf'),pavg=float('inf'), m
         alg_method.update()
 
     return pulses
-

@@ -262,18 +262,6 @@ def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
     for i in range(1, ninterleaves):
         k = np.hstack((k, kt[0:] * np.exp(2 * np.pi * 1j * i / ninterleaves)))
 
-    # check for trajectories that are too long
-    if (img_shape[0] ** 2) <= len(np.real(k)):
-        raise ValueError(
-            'Trajectory length ({}) exceeds allowable length ({}). '
-            'Reduce trajectory length.'.format(len(np.real(k)),
-                                               img_shape[0] ** 2))
+    k = np.stack((np.real(k), np.imag(k)), axis=1)
 
-    # pad trajectory with 0's to reach img_shape[0]*img_shape[0] long traj
-    k = np.pad(k, (0, img_shape[0] ** 2 - len(np.real(k))),
-               'constant', constant_values=(0, 0))
-    k = k.reshape(img_shape[0], img_shape[0])
-
-    traj = np.stack((np.real(k), np.imag(k)), axis=2)
-
-    return traj
+    return k
