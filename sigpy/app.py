@@ -290,14 +290,14 @@ class LinearLeastSquares(App):
         if self.mu != 0:
             AHA += self.mu * I
 
-        max_eig = MaxEig(AHA, dtype=self.x.dtype,
-                         device=self.x_device, max_iter=self.max_power_iter,
-                         show_pbar=self.show_pbar).run()
-
-        if max_eig == 0:
-            self.alpha = 1
-        else:
-            self.alpha = 1 / max_eig
+        if self.alpha is None:
+            max_eig = MaxEig(AHA, dtype=self.x.dtype, device=self.x_device,
+                             max_iter=self.max_power_iter,
+                             show_pbar=self.show_pbar).run()
+            if max_eig == 0:
+                self.alpha = 1
+            else:
+                self.alpha = 1 / max_eig
 
         self.alg = GradientMethod(
             gradf,
