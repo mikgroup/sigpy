@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
 class TestAlg(unittest.TestCase):
     def Ax_setup(self, n):
-        A = np.eye(n) + 0.1 * np.ones([n, n])
+        A = np.eye(n) + 0 * np.ones([n, n])
         x = np.arange(n, dtype=np.float)
         return A, x
 
@@ -173,26 +173,61 @@ class TestAlg(unittest.TestCase):
     def test_BarrierMethod(self):
 
         n = 5
-        lamda = 0.1
+        lamda = 0
         A, x_numpy, y = self.Ax_y_setup(n, lamda)
 
-        c = 1
-        beta = 1
-        x = np.ones([n])
-        tol = 1E-3
-
-        def minL(B, tol):
-            x[:] = np.linalg.solve(
-                A.T @ A, A.T @ y + B)
+        #parameters for minimization procedure
+        beta = 0.5
+        c = 1e-3
+        beta_barrier = 1.075
+        tol = 1E-3 # unused
 
         def g(x):
-            b = np.max(x_numpy) - 1
-            return x - b
+            b = 3
+            inequality = x - b
+            #inequality[inequality > 0] = 0
+            return inequality
+
+
+        # minL method is a Newton's method optimization with barrier included
+        def minL(B, x):
+
+            def gradf(x):
+                gradf_x = A.T @ (A @ x - y) - (1/g(x))  # analytic
+                gradf_x += lamda * x
+                return gradf_x
+
+            def inv_hessf(x):
+                I = np.eye(n)
+                Bhess = ((1) / (g(x) ** 2) - 0 / g(x))
+                return lambda x: np.linalg.pinv(A.T @ A + lamda * I +Bhess) @ x
+
+            if beta < 1:
+                def f(x):
+                    f_x = 1 / 2 * np.linalg.norm(A @ x - y) ** 2
+                    f_x += lamda / 2 * np.linalg.norm(x) ** 2
+                    #f_x += B # add barrier to cost
+
+                    return f_x
+            else:
+                f = None
+
+            minL_method = alg.NewtonsMethod(
+                gradf, inv_hessf, x,
+                beta=beta, f=f, max_iter = 1)
+            while (not minL_method.done()):
+                minL_method.update()
+
+
+        x = np.zeros(n)
 
         alg_method = alg.BarrierMethod(
-            minL, g, x, c, beta, tol, max_iter=5, method='log-barrier')
+            minL, g, x, c, beta_barrier, tol, max_iter=1000, method='log-barrier')
 
         while (not alg_method.done()):
             alg_method.update()
 
-        npt.assert_almost_equal(x, x_numpy - 1, decimal=0)
+        print(x)
+        print(x_numpy)
+
+        npt.assert_allclose(x, x_numpy)

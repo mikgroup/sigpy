@@ -5,7 +5,6 @@ import numpy.testing as npt
 import sigpy.plot as pl
 import scipy.ndimage.filters as filt
 
-
 from sigpy.mri import rf, linop, sim
 
 if __name__ == '__main__':
