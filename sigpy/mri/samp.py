@@ -218,8 +218,8 @@ def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
         array: spiral coordinates.
 
     References:
-        Simple Analytic Variable Density Spiral Design
-        Dong-hyun Kim, Elfar Adalsteinsson, and Daniel M. Spielman. MRM 2003.
+        Dong-hyun Kim, Elfar Adalsteinsson, and Daniel M. Spielman.
+        'Simple Analytic Variable Density Spiral Design.' MRM 2003.
 
     """
     res = fov/img_shape[0]

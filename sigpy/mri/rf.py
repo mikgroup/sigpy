@@ -91,6 +91,7 @@ def dinf(d1=0.01, d2=0.01):
 
 def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
     """Primary function for design of pulses using the SLR algorithm.
+        Following functions are to support dzrf
 
     Args:
         N (int): number of time points.

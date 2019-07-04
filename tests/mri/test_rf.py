@@ -71,28 +71,23 @@ class TestRf(unittest.TestCase):
 
     def test_stspa_spiral(self):
 
-        traj = sp.mri.spiral(fov=1, img_shape=self.img_shape, f_sampling=1,
-                             R=0.5, ninterleaves=1, alpha=1.5, gm=0.03, sm=200)
+        dim = self.img_shape[0]
+        traj = sp.mri.spiral(fov=dim / 2, img_shape=self.img_shape, f_sampling=1, R=1, ninterleaves=1, alpha=1, gm=0.03,
+                             sm=200) * (dim / 2)
 
-        mask = np.zeros(self.img_shape)
+        A = linop.Sense(self.sens, coord=traj, ishape=self.target.shape).H
 
-        x, y = 0, 0
-        for i in range(self.img_shape[1]):
-            for j in range(self.img_shape[1]):
-                x = traj[i, j, 0] + self.img_shape[1] / 2
-                y = traj[i, j, 1] + self.img_shape[1] / 2
+        pulses = rf.stspa(self.target, self.sens, mask=None, pavg=np.Inf, pinst=np.Inf,
+                          coord=traj, max_iter=10000, tol=1E-3)
 
-                mask[int(y), int(x)] = 1
+        npt.assert_array_almost_equal(A*pulses, self.target, 1E-3)
 
-        fullmask = np.repeat(mask[np.newaxis, :, :], 8, axis=0)
+    def test_slr(self):
 
-        A = linop.Sense(self.sens, coord=traj, weights=fullmask,
-                        ishape=self.target.shape).H
+        N = 128
+        tb = 16
+        rf = sp.mri.rf.dzrf(N, tb, ptype='st', ftype='pm', d1=0.01, d2=0.01)
 
-        pulses = rf.stspa(self.target, self.sens, fullmask, coord=traj,
-                          max_iter=2000, tol=1E-10)
+        m = abs(np.fft.fftshift(np.fft.fft(rf)))
 
-        pl.ImagePlot(A*pulses)
-
-
-        npt.assert_array_almost_equal(A*pulses, self.target, 1E-10)
+        npt.assert_almost_equal(np.array([m[int(N/2-10)], m[int(N/2)], m[int(N/2+10)]]), np.array([0, 1, 0]), decimal=2)
