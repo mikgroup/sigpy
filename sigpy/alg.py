@@ -597,12 +597,10 @@ class BarrierMethod(Alg):
         elif self.method == 'inverse-barrier':
             self.B = (1. / self.c) * ((1./self.g(self.x)))
             # g(x) <= 0
-        self.minL(self.B, self.x) #minimize the fun + barrier using the desired unconstrained optimization method
+        self.minL(self.B, self.x)
 
-        #TODO : perform checking of tolerance
         self.chck = (1. / self.c) * self.B
 
-        #update c with beta, g with new value of x
         self.c *= self.beta
 
     def _done(self):
