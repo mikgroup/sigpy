@@ -325,21 +325,16 @@ class ImagePlot(object):
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
             subprocess.run(['ffmpeg',
-                            '-f',
-                            'image2',
-                            '-s',
-                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                           int(bbox.height * self.fig.dpi)),
-                            '-r',
-                            str(self.fps),
-                            '-i',
-                            '{} %05d.png'.format(temp_basename),
-                            '-vf',
-                            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                            '-vcodec',
-                            'libx264',
-                            '-pix_fmt',
-                            'yuv420p',
+                            '-f', 'image2',
+                            '-s', '{}x{}'.format(
+                                int(bbox.width * self.fig.dpi),
+                                int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                            '-vcodec', 'libx264',
+                            '-preset', 'veryslow',
+                            '-pix_fmt', 'yuv420p',
                             filename])
 
             for i in range(self.shape[self.d]):
@@ -739,21 +734,16 @@ class LinePlot(object):
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
             subprocess.run(['ffmpeg',
-                            '-f',
-                            'image2',
-                            '-s',
-                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                           int(bbox.height * self.fig.dpi)),
-                            '-r',
-                            str(self.fps),
-                            '-i',
-                            '{} %05d.png'.format(temp_basename),
-                            '-vf',
-                            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                            '-vcodec',
-                            'libx264',
-                            '-pix_fmt',
-                            'yuv420p',
+                            '-f', 'image2',
+                            '-s', '{}x{}'.format(
+                                int(bbox.width * self.fig.dpi),
+                                int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                            '-vcodec', 'libx264',
+                            '-preset', 'veryslow',
+                            '-pix_fmt', 'yuv420p',
                             filename])
 
             for i in range(self.shape[self.d]):
