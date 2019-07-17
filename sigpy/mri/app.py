@@ -386,7 +386,7 @@ class JsenseRecon(sp.app.App):
                  mps_ker_width=16, ksp_calib_width=24,
                  lamda=0, device=sp.cpu_device, comm=None,
                  weights=None, coord=None, max_iter=10,
-                 max_inner_iter=10, show_pbar=True):
+                 max_inner_iter=10, normalize=True, show_pbar=True):
         self.y = y
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
@@ -395,6 +395,7 @@ class JsenseRecon(sp.app.App):
         self.coord = coord
         self.max_iter = max_iter
         self.max_inner_iter = max_inner_iter
+        self.normalize = normalize
 
         self.device = sp.Device(device)
         self.comm = comm
@@ -432,10 +433,9 @@ class JsenseRecon(sp.app.App):
                 self.weights = self.weights[calib_idx]
 
         if self.weights is None:
-            self.y = sp.to_device(self.y / np.abs(self.y).max(), self.device)
+            self.y = sp.to_device(self.y, self.device)
         else:
-            self.y = sp.to_device(self.weights**0.5 *
-                                  self.y / np.abs(self.y).max(), self.device)
+            self.y = sp.to_device(self.weights**0.5 * self.y, self.device)
 
         if self.coord is not None:
             self.coord = sp.to_device(self.coord, self.device)
@@ -443,6 +443,11 @@ class JsenseRecon(sp.app.App):
             self.weights = sp.to_device(self.weights, self.device)
 
         self.weights = _estimate_weights(self.y, self.weights, self.coord)
+
+        if self.normalize:
+            xp = self.device.xp
+            with self.device:
+                self.y = self.y / xp.linalg.norm(self.y)
 
     def _get_vars(self):
         ndim = len(self.img_shape)
@@ -500,19 +505,19 @@ class JsenseRecon(sp.app.App):
         xp = self.device.xp
         # Normalize by root-sum-of-squares.
         with self.device:
-            mps_rss = 0
+            rss = 0
             mps = np.empty([self.num_coils] + self.img_shape, dtype=self.dtype)
             for c in range(self.num_coils):
                 mps_c = sp.ifft(sp.resize(self.mps_ker[c], self.img_shape))
-                mps_rss += xp.abs(mps_c)**2
+                rss += xp.abs(mps_c)**2
                 sp.copyto(mps[c], mps_c)
 
-            mps_rss = sp.to_device(mps_rss)
+            rss = sp.to_device(rss)
             if self.comm is not None:
-                self.comm.allreduce(mps_rss)
+                self.comm.allreduce(rss)
 
-            mps_rss = mps_rss**0.5
-            mps /= mps_rss
+            rss = rss**0.5
+            mps /= rss
             return mps
 
 
