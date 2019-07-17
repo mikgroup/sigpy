@@ -950,15 +950,13 @@ class Interpolate(Linop):
 
     """
 
-    def __init__(self, ishape, coord, width, kernel, scale=1, shift=0):
+    def __init__(self, ishape, coord, width, kernel):
         ndim = coord.shape[-1]
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.width = width
         self.kernel = kernel
-        self.shift = shift
-        self.scale = scale
 
         super().__init__(oshape, ishape)
 
@@ -967,15 +965,12 @@ class Interpolate(Linop):
         device = backend.get_device(input)
         coord = backend.to_device(self.coord, device)
         kernel = backend.to_device(self.kernel, device)
-        shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.interpolate(input, self.width, kernel,
-                                      coord * self.scale + shift)
+            return interp.interpolate(input, self.width, kernel, coord)
 
     def _adjoint_linop(self):
-        return Gridding(self.ishape, self.coord, self.width, self.kernel,
-                        scale=self.scale, shift=self.shift)
+        return Gridding(self.ishape, self.coord, self.width, self.kernel)
 
 
 class Gridding(Linop):
@@ -993,15 +988,13 @@ class Gridding(Linop):
 
     """
 
-    def __init__(self, oshape, coord, width, kernel, scale=1, shift=0):
+    def __init__(self, oshape, coord, width, kernel):
         ndim = coord.shape[-1]
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.width = width
         self.kernel = kernel
-        self.shift = shift
-        self.scale = scale
 
         super().__init__(oshape, ishape)
 
@@ -1009,15 +1002,13 @@ class Gridding(Linop):
         device = backend.get_device(input)
         coord = backend.to_device(self.coord, device)
         kernel = backend.to_device(self.kernel, device)
-        shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.gridding(input, self.oshape, self.width, kernel,
-                                   coord * self.scale + shift)
+            return interp.gridding(
+                input, self.oshape, self.width, kernel, coord)
 
     def _adjoint_linop(self):
-        return Interpolate(self.oshape, self.coord, self.width, self.kernel,
-                           scale=self.scale, shift=self.shift)
+        return Interpolate(self.oshape, self.coord, self.width, self.kernel)
 
 
 class Resize(Linop):
