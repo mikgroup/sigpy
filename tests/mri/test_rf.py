@@ -51,7 +51,7 @@ class TestRf(unittest.TestCase):
         A = linop.Sense(self.sens, coord=traj,
                         weights=None, ishape=self.target.shape).H
 
-        pulses = rf.stspa(self.target, self.sens, mask=None, coord=traj,
+        pulses = rf.stspa(self.target, self.sens, coord=traj,
                           max_iter=1000, tol=1E-3)
 
         npt.assert_array_almost_equal(A*pulses, self.target, 1E-3)
@@ -59,12 +59,13 @@ class TestRf(unittest.TestCase):
     def test_stspa_spiral(self):
 
         dim = self.img_shape[0]
-        traj = sp.mri.spiral(fov=dim / 2, img_shape=self.img_shape, f_sampling=1, R=1, ninterleaves=1, alpha=1, gm=0.03,
-                             sm=200) * (dim / 2)
+        traj = sp.mri.spiral(fov=dim / 2, img_shape=self.img_shape,
+                             f_sampling=1, R=1, ninterleaves=1, alpha=1,
+                             gm=0.03, sm=200)
 
         A = linop.Sense(self.sens, coord=traj, ishape=self.target.shape).H
 
-        pulses = rf.stspa(self.target, self.sens, mask=None, pavg=np.Inf, pinst=np.Inf,
+        pulses = rf.stspa(self.target, self.sens,  pavg=np.Inf, pinst=np.Inf,
                           coord=traj, max_iter=1000, tol=1E-3)
 
         npt.assert_array_almost_equal(A*pulses, self.target, 1E-3)
@@ -76,5 +77,5 @@ class TestRf(unittest.TestCase):
         rf = sp.mri.rf.dzrf(N, tb, ptype='st', ftype='pm', d1=0.01, d2=0.01)
 
         m = abs(np.fft.fftshift(np.fft.fft(rf)))
-
-        npt.assert_almost_equal(np.array([m[int(N/2-10)], m[int(N/2)], m[int(N/2+10)]]), np.array([0, 1, 0]), decimal=2)
+        pts = np.array([m[int(N/2-10)], m[int(N/2)], m[int(N/2+10)]])
+        npt.assert_almost_equal(pts, np.array([0, 1, 0]), decimal=2)

@@ -264,4 +264,4 @@ def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
 
     k = np.stack((np.real(k), np.imag(k)), axis=1)
 
-    return k
+    return k * fov
