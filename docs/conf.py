@@ -26,7 +26,7 @@ author = 'Frank Ong'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.1.14'
+release = '0.1.15'
 
 
 # -- General configuration ---------------------------------------------------
