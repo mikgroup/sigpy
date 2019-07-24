@@ -595,6 +595,8 @@ class LinePlot(object):
         self.mode = mode
         self.save_basename = save_basename
         self.fps = fps
+        self.bottom = None
+        self.top = None
 
         self.fig.canvas.mpl_disconnect(
             self.fig.canvas.manager.key_press_handler_id)
@@ -663,6 +665,8 @@ class LinePlot(object):
               event.key == 'r' or event.key == 'i' or event.key == 'l'):
 
             self.mode = event.key
+            self.bottom = None
+            self.top = None
 
             self.update_axes()
             self.update_line()
@@ -774,14 +778,19 @@ class LinePlot(object):
             eps = 1e-31
             arrv = np.log(np.abs(arrv) + eps)
 
+        if self.bottom is None:
+            self.bottom = arrv.min()
+
+        if self.top is None:
+            self.top = arrv.max()
+
         if self.axarr is None:
             self.axarr = self.ax.plot(arrv)[0]
 
         else:
             self.axarr.set_xdata(np.arange(len(arrv)))
             self.axarr.set_ydata(arrv)
-            self.ax.relim()
-            self.ax.autoscale_view()
+            self.ax.set_ylim(self.bottom, self.top)
 
     def update_axes(self):
 
