@@ -172,12 +172,12 @@ def msinc(N=64, m=1):
 
 
 def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
-              shift = 32):
+               shift=32):
 
-    ftw = dinf(d1,d2)/tb # fractional transition width of the slab profile
+    ftw = dinf(d1, d2)/tb  # fractional transition width of the slab profile
 
-    if np.fmod(G,2) and Gind == int(np.ceil(G/2)): # centered sub-slice
-        if G == 1: # no sub-slices, as a sanity check
+    if np.fmod(G, 2) and Gind == int(np.ceil(G/2)):  # centered sub-slice
+        if G == 1:  # no sub-slices, as a sanity check
             b = dzls(N, tb, d1, d2)
         else:
             # Design 2 filters, to allow arbitrary phases on the subslice the
@@ -190,10 +190,10 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
             mSub = [1, 1, 0, 0, 0, 0]
             w = [1, 1, d1/d2]
 
-            bNotch = signal.firls(N+1,f,mNotch,w) # the notched filter
-            bSub = signal.firls(N+1,f,mSub,w) # the subslice filter
+            bNotch = signal.firls(N+1, f, mNotch, w)  # the notched filter
+            bSub = signal.firls(N+1, f, mSub, w)  # the subslice filter
             # add them with the subslice phase
-            b = np.add(bNotch,np.multiply(np.exp(1j*phi),bSub))
+            b = np.add(bNotch, np.multiply(np.exp(1j*phi), bSub))
             # shift the filter half a sample to make it symmetric,
             # like in MATLAB
             c = np.exp(1j*2*np.pi/(2*(N+1)) *
@@ -204,7 +204,8 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
             b = b[:N]
 
     else:
-        # design two shifted filters that we can add to kill off the left band, then demodulate the result back to DC
+        # design two shifted filters that we can add to kill off the left band
+        # then demodulate the result back to DC
         Gcent = shift+(Gind-G/2-1/2)*tb/G
         if Gind > 1 and Gind < G:
             # separate transition bands for slab+slice
@@ -218,30 +219,30 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
         elif Gind == 1:
             # the slab and slice share a left transition band
             f = np.asarray([0, shift-(1+ftw)*(tb/2), shift-(1-ftw)*(tb/2),
-                Gcent+(tb/G/2-ftw*(tb/2)), Gcent+(tb/G/2+ftw*(tb/2)),
-                shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
+                           Gcent+(tb/G/2-ftw*(tb/2)), Gcent+(tb/G/2+ftw*(tb/2)),
+                           shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
             mNotch = [0, 0, 0, 0, 1, 1, 0, 0]
             mSub = [0, 0, 1, 1, 0, 0, 0, 0]
             w = [d1/d2, 1, 1, d1/d2]
         elif Gind == G:
             # the slab and slice share a right transition band
             f = np.asarray([0, shift-(1+ftw)*(tb/2), shift-(1-ftw)*(tb/2),
-                Gcent-(tb/G/2+ftw*(tb/2)), Gcent-(tb/G/2-ftw*(tb/2)),
-                shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
+                           Gcent-(tb/G/2+ftw*(tb/2)), Gcent-(tb/G/2-ftw*(tb/2)),
+                           shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
             mNotch = [0, 0, 1, 1, 0, 0, 0, 0]
             mSub = [0, 0, 0, 0, 1, 1, 0, 0]
             w = [d1/d2, 1, 1, d1/d2]
 
         c = np.exp(1j*2*np.pi/(2*(N+1))
-            * np.concatenate([np.arange(0,N/2+1,1), np.arange(-N/2,0,1)]))
+                   * np.concatenate([np.arange(0,N/2+1,1), np.arange(-N/2,0,1)]))
 
-        bNotch = signal.firls(N+1, f, mNotch, w) # the notched filter
+        bNotch = signal.firls(N+1, f, mNotch, w)  # the notched filter
         bNotch = np.fft.ifft(np.multiply(np.fft.fft(bNotch), c))
         bNotch = np.real(bNotch[:N])
         # hilbert transform to suppress negative passband
         bNotch = signal.hilbert(bNotch)
 
-        bSub = signal.firls(N+1,f,mSub,w) # the sub-band filter
+        bSub = signal.firls(N+1, f, mSub, w)  # the sub-band filter
         bSub = np.fft.ifft(np.multiply(np.fft.fft(bSub), c))
         bSub = np.real(bSub[:N])
         # hilbert transform to suppress negative passband
@@ -251,9 +252,9 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
         b = bNotch + np.exp(1j*phi)*bSub
 
         # demodulate to DC
-        cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0,N,1))/2 \
-            *np.exp(-1j*np.pi/N*shift)
-        b = np.multiply(b,cShift)
+        cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0, N, 1))/2 \
+            * np.exp(-1j*np.pi/N*shift)
+        b = np.multiply(b, cShift)
 
     return b
 
