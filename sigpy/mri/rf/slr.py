@@ -7,7 +7,8 @@ import numpy as np
 import scipy.signal as signal
 
 __all__ = ['dinf', 'dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
-           'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'abrm', 'abrmnd']
+           'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'abrm', 'abrmnd',
+           'dzgSliderB']
 
 
 """ Functions for use in SLR pulse design
@@ -85,7 +86,7 @@ def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
     elif ftype == 'ls':
         b = dzls(N, tb, d1, d2)
     else:
-        raise Exception('Pulse type ("{}") is not recognized.'.format(ftype))
+        raise Exception('Filter type ("{}") is not recognized.'.format(ftype))
 
     if ptype == 'st':
         rf = b
@@ -106,14 +107,12 @@ def dzls(N=64, tb=4, d1=0.01, d2=0.01):
 
     h = signal.firls(N+1, f, m, w)
     # shift the filter half a sample to make it symmetric, like in MATLAB
-    H = np.fft.fft(h)
     c = np.exp(1j*2*np.pi/(2*(N+1)) *
                np.concatenate([np.arange(0, N/2+1, 1),
                                np.arange(-N/2, 0, 1)]))
-    H = np.multiply(H, c)
-    h = np.fft.ifft(H)
+    h = np.real(np.fft.ifft(np.multiply(np.fft.fft(h), c)))
     # lop off extra sample
-    h = np.real(h[:N])
+    h = h[:N]
 
     return h
 
@@ -163,12 +162,100 @@ def dzlp(N=64, tb=4, d1=0.01, d2=0.01):
 
 
 def msinc(N=64, m=1):
+
     x = np.arange(-N/2, N/2, 1)/(N/2)
     snc = np.divide(np.sin(m*2*np.pi*x+0.00001), (m*2*np.pi*x+0.00001))
     ms = np.multiply(snc, 0.54+0.46*np.cos(np.pi*x))
     ms = ms*4*m/N
 
     return ms
+
+
+def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
+              shift = 32):
+
+    ftw = dinf(d1,d2)/tb # fractional transition width of the slab profile
+
+    if np.fmod(G,2) and Gind == int(np.ceil(G/2)): # centered sub-slice
+        if G == 1: # no sub-slices, as a sanity check
+            b = dzls(N, tb, d1, d2)
+        else:
+            # Design 2 filters, to allow arbitrary phases on the subslice the
+            # first is a wider notch filter with '0's where it the subslice
+            # appears, and the second is the subslice. Multiply the subslice by
+            # its phase and add the filters.
+            f = np.asarray([0, (1/G-ftw)*(tb/2), (1/G+ftw)*(tb/2),
+                            (1-ftw)*(tb/2), (1+ftw)*(tb/2), (N/2)])/(N/2)
+            mNotch = [0, 0, 1, 1, 0, 0]
+            mSub = [1, 1, 0, 0, 0, 0]
+            w = [1, 1, d1/d2]
+
+            bNotch = signal.firls(N+1,f,mNotch,w) # the notched filter
+            bSub = signal.firls(N+1,f,mSub,w) # the subslice filter
+            # add them with the subslice phase
+            b = np.add(bNotch,np.multiply(np.exp(1j*phi),bSub))
+            # shift the filter half a sample to make it symmetric,
+            # like in MATLAB
+            c = np.exp(1j*2*np.pi/(2*(N+1)) *
+                       np.concatenate([np.arange(0, N/2+1, 1),
+                                       np.arange(-N/2, 0, 1)]))
+            b = np.fft.ifft(np.multiply(np.fft.fft(b), c))
+            # lop off extra sample
+            b = b[:N]
+
+    else:
+        # design two shifted filters that we can add to kill off the left band, then demodulate the result back to DC
+        Gcent = shift+(Gind-G/2-1/2)*tb/G
+        if Gind > 1 and Gind < G:
+            # separate transition bands for slab+slice
+            f = np.asarray([0, shift-(1+ftw)*(tb/2), shift-(1-ftw)*(tb/2),
+                Gcent-(tb/G/2+ftw*(tb/2)), Gcent-(tb/G/2-ftw*(tb/2)),
+                Gcent+(tb/G/2-ftw*(tb/2)), Gcent+(tb/G/2+ftw*(tb/2)),
+                shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
+            mNotch = [0, 0, 1, 1, 0, 0, 1, 1, 0, 0]
+            mSub = [0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
+            w = [d1/d2, 1, 1, 1, d1/d2]
+        elif Gind == 1:
+            # the slab and slice share a left transition band
+            f = np.asarray([0, shift-(1+ftw)*(tb/2), shift-(1-ftw)*(tb/2),
+                Gcent+(tb/G/2-ftw*(tb/2)), Gcent+(tb/G/2+ftw*(tb/2)),
+                shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
+            mNotch = [0, 0, 0, 0, 1, 1, 0, 0]
+            mSub = [0, 0, 1, 1, 0, 0, 0, 0]
+            w = [d1/d2, 1, 1, d1/d2]
+        elif Gind == G:
+            # the slab and slice share a right transition band
+            f = np.asarray([0, shift-(1+ftw)*(tb/2), shift-(1-ftw)*(tb/2),
+                Gcent-(tb/G/2+ftw*(tb/2)), Gcent-(tb/G/2-ftw*(tb/2)),
+                shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
+            mNotch = [0, 0, 1, 1, 0, 0, 0, 0]
+            mSub = [0, 0, 0, 0, 1, 1, 0, 0]
+            w = [d1/d2, 1, 1, d1/d2]
+
+        c = np.exp(1j*2*np.pi/(2*(N+1))
+            * np.concatenate([np.arange(0,N/2+1,1), np.arange(-N/2,0,1)]))
+
+        bNotch = signal.firls(N+1, f, mNotch, w) # the notched filter
+        bNotch = np.fft.ifft(np.multiply(np.fft.fft(bNotch), c))
+        bNotch = np.real(bNotch[:N])
+        # hilbert transform to suppress negative passband
+        bNotch = signal.hilbert(bNotch)
+
+        bSub = signal.firls(N+1,f,mSub,w) # the sub-band filter
+        bSub = np.fft.ifft(np.multiply(np.fft.fft(bSub), c))
+        bSub = np.real(bSub[:N])
+        # hilbert transform to suppress negative passband
+        bSub = signal.hilbert(bSub)
+
+        # add them with the subslice phase
+        b = bNotch + np.exp(1j*phi)*bSub
+
+        # demodulate to DC
+        cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0,N,1))/2 \
+            *np.exp(-1j*np.pi/N*shift)
+        b = np.multiply(b,cShift)
+
+    return b
 
 
 def b2rf(b):
