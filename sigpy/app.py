@@ -126,8 +126,8 @@ class LinearLeastSquares(App):
         \min_x \frac{1}{2} \| A x - y \|_2^2 + g(G x) +
         \frac{\lamda}{2} \| x - z \|_2^2
 
-    Three algorithms can be used: :class:`sigpy.alg.ConjugateGradient`,
-    :class:`sigpy.alg.GradientMethod`,
+    Four solvers can be used: :class:`sigpy.alg.ConjugateGradient`,
+    :class:`sigpy.alg.GradientMethod`, :class:`sigpy.alg.ADMM`,
     and :class:`sigpy.alg.PrimalDualHybridGradient`.
     If ``solver`` is None, :class:`sigpy.alg.ConjugateGradient` is used
     when ``proxg`` is not specified. If ``proxg`` is specified,
