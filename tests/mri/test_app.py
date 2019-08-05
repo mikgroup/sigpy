@@ -29,19 +29,19 @@ class TestApp(unittest.TestCase):
         lamda = 0
 
         img_rec = app.SenseRecon(
-            ksp, mps, lamda, alg_name='ConjugateGradient',
+            ksp, mps, lamda, solver='ConjugateGradient',
             show_pbar=False).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
         img_rec = app.SenseRecon(
-            ksp, mps, lamda, alg_name='GradientMethod', show_pbar=False).run()
+            ksp, mps, lamda, solver='GradientMethod', show_pbar=False).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
         img_rec = app.SenseRecon(
             ksp,
             mps,
             lamda,
-            alg_name='PrimalDualHybridGradient',
+            solver='PrimalDualHybridGradient',
             max_iter=1000,
             show_pbar=False).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
@@ -55,12 +55,12 @@ class TestApp(unittest.TestCase):
             mps = mps[comm.rank::comm.size]
 
             img_rec = app.SenseRecon(
-                ksp, mps, lamda, comm=comm, alg_name='ConjugateGradient',
+                ksp, mps, lamda, comm=comm, solver='ConjugateGradient',
                 show_pbar=False).run()
             npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
             img_rec = app.SenseRecon(
-                ksp, mps, lamda, alg_name='GradientMethod',
+                ksp, mps, lamda, solver='GradientMethod',
                 show_pbar=False).run()
             npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
@@ -68,7 +68,7 @@ class TestApp(unittest.TestCase):
                 ksp,
                 mps,
                 lamda,
-                alg_name='PrimalDualHybridGradient',
+                solver='PrimalDualHybridGradient',
                 max_iter=1000,
                 show_pbar=False).run()
             npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
@@ -86,7 +86,7 @@ class TestApp(unittest.TestCase):
         lamda = 0
 
         img_rec = app.L1WaveletRecon(
-            ksp, mps, lamda, alg_name='GradientMethod',
+            ksp, mps, lamda, solver='GradientMethod',
             show_pbar=False).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 
@@ -94,7 +94,7 @@ class TestApp(unittest.TestCase):
             ksp,
             mps,
             lamda,
-            alg_name='PrimalDualHybridGradient',
+            solver='PrimalDualHybridGradient',
             max_iter=1000, show_pbar=False).run()
         npt.assert_allclose(img, img_rec, atol=1e-3, rtol=1e-3)
 

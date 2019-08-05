@@ -124,12 +124,12 @@ class LinearLeastSquares(App):
 
     .. math::
         \min_x \frac{1}{2} \| A x - y \|_2^2 + g(G x) +
-        \frac{\lambda}{2} \| R x \|_2^2 + \frac{\mu}{2} \| x - z \|_2^2
+        \frac{\lamda}{2} \| x - z \|_2^2
 
     Three algorithms can be used: :class:`sigpy.alg.ConjugateGradient`,
     :class:`sigpy.alg.GradientMethod`,
     and :class:`sigpy.alg.PrimalDualHybridGradient`.
-    If ``alg_name`` is None, :class:`sigpy.alg.ConjugateGradient` is used
+    If ``solver`` is None, :class:`sigpy.alg.ConjugateGradient` is used
     when ``proxg`` is not specified. If ``proxg`` is specified,
     then :class:`sigpy.alg.GradientMethod` is used when ``G`` is specified,
     and :class:`sigpy.alg.PrimalDualHybridGradient` is used otherwise.
@@ -143,10 +143,8 @@ class LinearLeastSquares(App):
         g (None or function): Regularization function.
             Only used for when `save_objective_values` is true.
         G (None or Linop): Regularization linear operator.
-        R (None or Linop): l2 regularization linear operator.
-        mu (float): l2 bias regularization parameter.
         z (float or array): Bias for l2 regularization.
-        alg_name (str): {`'ConjugateGradient'`, `'GradientMethod'`,
+        solver (str): {`'ConjugateGradient'`, `'GradientMethod'`,
             `'PrimalDualHybridGradient'`}.
         max_iter (int): Maximum number of iterations.
         P (Linop): Preconditioner for ConjugateGradient.
@@ -161,10 +159,9 @@ class LinearLeastSquares(App):
         save_objective_values (bool): Toggle saving objective value.
 
     """
-
     def __init__(self, A, y, x=None, proxg=None,
-                 lamda=0, G=None, g=None, R=None, mu=0, z=0,
-                 alg_name=None, max_iter=100,
+                 lamda=0, G=None, g=None, z=None,
+                 solver=None, max_iter=100,
                  P=None, alpha=None, max_power_iter=30, accelerate=True,
                  tau=None, sigma=None,
                  save_objective_values=False,
@@ -176,10 +173,8 @@ class LinearLeastSquares(App):
         self.lamda = lamda
         self.G = G
         self.g = g
-        self.R = R
-        self.mu = mu
         self.z = z
-        self.alg_name = alg_name
+        self.solver = solver
         self.max_iter = max_iter
         self.P = P
         self.alpha = alpha
@@ -216,30 +211,30 @@ class LinearLeastSquares(App):
         return self.x
 
     def _get_alg(self):
-        if self.alg_name is None:
+        if self.solver is None:
             if self.proxg is None:
-                self.alg_name = 'ConjugateGradient'
+                self.solver = 'ConjugateGradient'
             elif self.G is None:
-                self.alg_name = 'GradientMethod'
+                self.solver = 'GradientMethod'
             else:
-                self.alg_name = 'PrimalDualHybridGradient'
+                self.solver = 'PrimalDualHybridGradient'
 
-        if self.alg_name == 'ConjugateGradient':
+        if self.solver == 'ConjugateGradient':
             if self.proxg is not None:
                 raise ValueError(
                     'ConjugateGradient cannot have proxg specified.')
 
             self._get_ConjugateGradient()
-        elif self.alg_name == 'GradientMethod':
+        elif self.solver == 'GradientMethod':
             if self.G is not None:
                 raise ValueError('GradientMethod cannot have G specified.')
 
             self._get_GradientMethod()
-        elif self.alg_name == 'PrimalDualHybridGradient':
+        elif self.solver == 'PrimalDualHybridGradient':
             self._get_PrimalDualHybridGradient()
         else:
-            raise ValueError('Invalid alg_name: {alg_name}.'.format(
-                alg_name=self.alg_name))
+            raise ValueError('Invalid solver: {solver}.'.format(
+                solver=self.solver))
 
     def _get_ConjugateGradient(self):
         I = linop.Identity(self.x.shape)
@@ -247,14 +242,9 @@ class LinearLeastSquares(App):
         AHy = self.A.H(self.y)
 
         if self.lamda != 0:
-            if self.R is None:
-                AHA += self.lamda * I
-            else:
-                AHA += self.lamda * self.R.H * self.R
-
-        if self.mu != 0:
-            AHA += self.mu * I
-            util.axpy(AHy, self.mu, self.z)
+            AHA += self.lamda * I
+            if self.z is not None:
+                util.axpy(AHy, self.lamda, self.z)
 
         self.alg = ConjugateGradient(
             AHA, AHy, self.x, P=self.P, max_iter=self.max_iter)
@@ -268,29 +258,19 @@ class LinearLeastSquares(App):
             with self.x_device:
                 gradf_x = self.A.H(r)
                 if self.lamda != 0:
-                    if self.R is None:
+                    if self.z is None:
                         util.axpy(gradf_x, self.lamda, x)
                     else:
-                        util.axpy(gradf_x, self.lamda, self.R.H(self.R(x)))
-
-                if self.mu != 0:
-                    util.axpy(gradf_x, self.mu, x - self.z)
+                        util.axpy(gradf_x, self.lamda, x - self.z)
 
                 return gradf_x
 
-        I = linop.Identity(self.x.shape)
-        AHA = self.A.H * self.A
-
-        if self.lamda != 0:
-            if self.R is None:
-                AHA += self.lamda * I
-            else:
-                AHA += self.lamda * self.R.H * self.R
-
-        if self.mu != 0:
-            AHA += self.mu * I
-
         if self.alpha is None:
+            I = linop.Identity(self.x.shape)
+            AHA = self.A.H * self.A
+            if self.lamda != 0:
+                AHA += self.lamda * I
+
             max_eig = MaxEig(AHA, dtype=self.x.dtype, device=self.x_device,
                              max_iter=self.max_power_iter,
                              show_pbar=self.show_pbar).run()
@@ -317,26 +297,19 @@ class LinearLeastSquares(App):
         else:
             proxg = self.proxg
 
-        if self.lamda > 0 or self.mu > 0:
+        if self.lamda > 0:
             def gradh(x):
                 with backend.get_device(self.x):
                     gradh_x = 0
                     if self.lamda > 0:
-                        if self.R is None:
+                        if self.z is None:
                             gradh_x += self.lamda * x
                         else:
-                            gradh_x += self.lamda * self.R.H(self.R(x))
-
-                    if self.mu > 0:
-                        gradh_x += self.mu * (x - self.z)
+                            gradh_x += self.lamda * (x - self.z)
 
                     return gradh_x
 
-            if self.R is None:
-                gamma_primal = self.lamda + self.mu
-            else:
-                gamma_primal = self.mu
-
+            gamma_primal = self.lamda
         else:
             gradh = None
             gamma_primal = 0
@@ -365,7 +338,7 @@ class LinearLeastSquares(App):
                 max_iter=self.max_power_iter,
                 show_pbar=self.show_pbar).run()
 
-            self.tau = 1 / (max_eig + self.lamda + self.mu)
+            self.tau = 1 / (max_eig + self.lamda)
         else:
             T = linop.Multiply(A.ishape, self.tau)
             AAH = A * T * A.H
@@ -402,16 +375,12 @@ class LinearLeastSquares(App):
 
             obj = 1 / 2 * self.y_device.xp.linalg.norm(r).item()**2
             if self.lamda > 0:
-                if self.R is None:
+                if self.z is None:
                     obj += self.lamda / 2 * self.x_device.xp.linalg.norm(
                         self.x).item()**2
                 else:
                     obj += self.lamda / 2 * self.x_device.xp.linalg.norm(
-                        self.R(self.x)).item()**2
-
-            if self.mu != 0:
-                obj += self.mu / 2 * self.x_device.xp.linalg.norm(
-                    self.x - self.z).item()**2
+                        self.x - self.z).item()**2
 
             if self.proxg is not None:
                 if self.g is None:
