@@ -30,7 +30,8 @@ class TestApp(unittest.TestCase):
                 for proxg in [None, prox.L2Reg([n, 1], lamda)]:
                     for solver in ['GradientMethod',
                                    'PrimalDualHybridGradient',
-                                   'ConjugateGradient']:
+                                   'ConjugateGradient',
+                                   'ADMM']:
                         with self.subTest(proxg=proxg,
                                           solver=solver,
                                           lamda=lamda,
@@ -83,7 +84,7 @@ class TestApp(unittest.TestCase):
 
     def test_precond_LinearLeastSquares(self):
         n = 5
-        _A = np.eye(n) + 0.1 * util.randn([n, n])
+        _A = np.eye(n) + 0.01 * util.randn([n, n])
         A = linop.MatMul([n, 1], _A)
         x = util.randn([n, 1])
         y = A(x)

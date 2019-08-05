@@ -443,8 +443,7 @@ class AugmentedLagrangianMethod(Alg):
         \|[g(x) + \frac{u}{\mu}]_+\|_2^2 + \|h(x) + \frac{v}{\mu}\|_2^2)
 
     Args:
-        minL (function): a function that takes :math:`\mu` as input,
-            and minimizes the augmented Lagrangian over `x`.
+        minL (function): a function that minimizes the augmented Lagrangian.
         g (None or function): a function that takes :math:`x` as input,
             and outputs :math:`g(x)`, the inequality constraints.
         h (None or function): a function that takes :math:`x` as input,
@@ -467,7 +466,7 @@ class AugmentedLagrangianMethod(Alg):
         super().__init__(max_iter)
 
     def _update(self):
-        self.minL(self.mu)
+        self.minL()
         if self.g is not None:
             device = backend.get_device(self.u)
             xp = device.xp
@@ -477,6 +476,51 @@ class AugmentedLagrangianMethod(Alg):
 
         if self.h is not None:
             util.axpy(self.v, self.mu, self.h(self.x))
+
+
+class ADMM(Alg):
+    r"""Alternating Direction Method of Multipliers.
+
+    Consider the equality constrained problem:
+
+    .. math:: \min_{x: A x + B z = c} f(x) + g(z)
+
+    And perform the following update steps:
+
+    .. math::
+        x = \text{argmin}_{x} L_\mu(x, z, u)\\
+        z = \text{argmin}_{z} L_\mu(x, z, u)\\
+        u = u + A x + B z - c
+
+    where :math:`L(x, u, v, \mu)`: is the augmented Lagrangian function:
+
+    .. math::
+        L_\rho(x, z, u) = f(x) + g(z) + \frac{\rho}{2}\|A x + B z - c + u\|_2^2
+
+    Args:
+        minL_x (function): a function that minimizes L w.r.t. x.
+        minL_z (function): a function that minimizes L w.r.t. z.
+        x (array): primal variable 1.
+        z (array): primal variable 2.
+        u (array): scaled dual variable.
+        max_iter (int): maximum number of iterations.
+
+    """
+    def __init__(self, minL_x, minL_z, x, z, u, A, B, c, max_iter=30):
+        self.minL_x = minL_x
+        self.minL_z = minL_z
+        self.x = x
+        self.z = z
+        self.u = u
+        self.A = A
+        self.B = B
+        self.c = c
+        super().__init__(max_iter)
+
+    def _update(self):
+        self.minL_x()
+        self.minL_z()
+        self.u += self.A(self.x) + self.B(self.z) - self.c
 
 
 class NewtonsMethod(Alg):

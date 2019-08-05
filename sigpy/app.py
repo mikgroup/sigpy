@@ -7,7 +7,7 @@ import numpy as np
 
 from tqdm.auto import tqdm
 from sigpy import backend, linop, prox, util
-from sigpy.alg import (PowerMethod, GradientMethod,
+from sigpy.alg import (PowerMethod, GradientMethod, ADMM,
                        ConjugateGradient, PrimalDualHybridGradient)
 
 
@@ -145,7 +145,7 @@ class LinearLeastSquares(App):
         G (None or Linop): Regularization linear operator.
         z (float or array): Bias for l2 regularization.
         solver (str): {`'ConjugateGradient'`, `'GradientMethod'`,
-            `'PrimalDualHybridGradient'`}.
+            `'PrimalDualHybridGradient'`, `'ADMM'`}.
         max_iter (int): Maximum number of iterations.
         P (Linop): Preconditioner for ConjugateGradient.
         alpha (None or float): Step size for `GradientMethod`.
@@ -156,6 +156,9 @@ class LinearLeastSquares(App):
             specified.
         tau (float): Primal step-size for `PrimalDualHybridGradient`.
         sigma (float): Dual step-size for `PrimalDualHybridGradient`.
+        rho (float): Augmented Lagrangian parameter for `ADMM`.
+        max_cg_iter (int): Maximum number of iterations for conjugate gradient
+            in ADMM.
         save_objective_values (bool): Toggle saving objective value.
 
     """
@@ -164,6 +167,7 @@ class LinearLeastSquares(App):
                  solver=None, max_iter=100,
                  P=None, alpha=None, max_power_iter=30, accelerate=True,
                  tau=None, sigma=None,
+                 rho=1, max_cg_iter=10,
                  save_objective_values=False,
                  show_pbar=True, leave_pbar=True):
         self.A = A
@@ -182,6 +186,8 @@ class LinearLeastSquares(App):
         self.accelerate = accelerate
         self.tau = tau
         self.sigma = sigma
+        self.rho = rho
+        self.max_cg_iter = max_cg_iter
         self.save_objective_values = save_objective_values
         self.show_pbar = show_pbar
         self.leave_pbar = leave_pbar
@@ -232,6 +238,8 @@ class LinearLeastSquares(App):
             self._get_GradientMethod()
         elif self.solver == 'PrimalDualHybridGradient':
             self._get_PrimalDualHybridGradient()
+        elif self.solver == 'ADMM':
+            self._get_ADMM()
         else:
             raise ValueError('Invalid solver: {solver}.'.format(
                 solver=self.solver))
@@ -368,6 +376,36 @@ class LinearLeastSquares(App):
             gamma_dual=gamma_dual,
             gradh=gradh,
             max_iter=self.max_iter)
+
+    def _get_ADMM(self):
+        xp = self.x_device.xp
+        with self.x_device:
+            z = self.x.copy()
+            u = xp.zeros_like(self.x)
+
+        def minL_x():
+            if self.z is None:
+                z2 = -self.rho * (z + u)
+            else:
+                z2 = (-self.rho * (z + u) + self.lamda * self.z)
+
+            z2 /= (self.rho + self.lamda)
+
+            LinearLeastSquares(self.A, self.y, self.x,
+                               lamda=self.lamda + self.rho,
+                               z=z2,
+                               max_iter=self.max_cg_iter,
+                               show_pbar=self.show_pbar).run()
+
+        def minL_z():
+            if self.proxg is None:
+                backend.copyto(z, -(self.x + u))
+            else:
+                backend.copyto(z, self.proxg(1 / self.rho, -(self.x + u)))
+
+        I = linop.Identity(self.x.shape)
+        self.alg = ADMM(minL_x, minL_z, self.x, z, u,
+                        I, I, 0, max_iter=self.max_iter)
 
     def objective(self):
         with self.y_device:
