@@ -124,7 +124,7 @@ class LinearLeastSquares(App):
 
     .. math::
         \min_x \frac{1}{2} \| A x - y \|_2^2 + g(G x) +
-        \frac{\lamda}{2} \| x - z \|_2^2
+        \frac{\lambda}{2} \| x - z \|_2^2
 
     Four solvers can be used: :class:`sigpy.alg.ConjugateGradient`,
     :class:`sigpy.alg.GradientMethod`, :class:`sigpy.alg.ADMM`,
