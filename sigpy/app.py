@@ -393,9 +393,10 @@ class LinearLeastSquares(App):
 
             LinearLeastSquares(self.A, self.y, self.x,
                                lamda=self.lamda + self.rho,
-                               z=z2,
+                               z=z2, P=self.P,
                                max_iter=self.max_cg_iter,
-                               show_pbar=self.show_pbar).run()
+                               show_pbar=self.show_pbar,
+                               leave_pbar=False).run()
 
         def minL_z():
             if self.proxg is None:
