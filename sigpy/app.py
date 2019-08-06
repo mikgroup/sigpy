@@ -381,7 +381,7 @@ class LinearLeastSquares(App):
             max_iter=self.max_iter)
 
     def _get_ADMM(self):
-        """Considers the formulation:
+        r"""Considers the formulation:
 
         .. math::
             \min_{x, z: x = z} \frac{1}{2} \|A x - y\|_2^2 +
@@ -419,7 +419,7 @@ class LinearLeastSquares(App):
                         I, -I, 0, max_iter=self.max_iter)
 
     def _get_ADMM_G(self):
-        """Considers the formulation:
+        r"""Considers the formulation:
 
         .. math::
             \min_{x, z: x = z_1, G x = z_2}
