@@ -239,10 +239,7 @@ class LinearLeastSquares(App):
         elif self.solver == 'PrimalDualHybridGradient':
             self._get_PrimalDualHybridGradient()
         elif self.solver == 'ADMM':
-            if self.G is None:
-                self._get_ADMM()
-            else:
-                self._get_ADMM_G()
+            self._get_ADMM()
         else:
             raise ValueError('Invalid solver: {solver}.'.format(
                 solver=self.solver))
@@ -311,12 +308,11 @@ class LinearLeastSquares(App):
         if self.lamda > 0:
             def gradh(x):
                 with backend.get_device(self.x):
-                    gradh_x = 0
                     if self.lamda > 0:
                         if self.z is None:
-                            gradh_x += self.lamda * x
+                            gradh_x = self.lamda * x
                         else:
-                            gradh_x += self.lamda * (x - self.z)
+                            gradh_x = self.lamda * (x - self.z)
 
                     return gradh_x
 
@@ -384,92 +380,61 @@ class LinearLeastSquares(App):
         r"""Considers the formulation:
 
         .. math::
-            \min_{x, z: x = z} \frac{1}{2} \|A x - y\|_2^2 +
-            \frac{\lambda}{2} \| R x - z \|_2^2 + g(z)
+            \min_{x, v: G x = v} \frac{1}{2} \|A x - y\|_2^2 +
+            \frac{\lambda}{2} \| x - z \|_2^2 + g(v)
 
         """
         xp = self.x_device.xp
         with self.x_device:
-            z = self.x.copy()
-            u = xp.zeros_like(self.x)
+            if self.G is None:
+                v = self.x.copy()
+            else:
+                v = self.G(self.x)
+
+            u = xp.zeros_like(v)
 
         def minL_x():
-            if self.z is None:
-                z_u = self.rho * (z - u)
+            AHy = self.A.H * self.y
+            if self.G is None:
+                AHy += self.rho * (v - u)
             else:
-                z_u = self.rho * (z - u) + self.lamda * self.z
+                AHy += self.rho * self.G.H(v - u)
 
-            z_u /= (self.rho + self.lamda)
+            if self.z is not None:
+                AHy += self.lamda * self.z
 
-            LinearLeastSquares(self.A, self.y, self.x,
-                               lamda=self.lamda + self.rho,
-                               z=z_u, P=self.P,
-                               max_iter=self.max_cg_iter,
-                               show_pbar=self.show_pbar,
-                               leave_pbar=False).run()
-
-        def minL_z():
-            if self.proxg is None:
-                backend.copyto(z, self.x + u)
+            AHA = self.A.H * self.A
+            I = linop.Identity(self.x.shape)
+            if self.G is None:
+                AHA += (self.lamda + self.rho) * I
             else:
-                backend.copyto(z, self.proxg(1 / self.rho, self.x + u))
+                if self.lamda > 0:
+                    AHA += self.lamda * I
 
-        I = linop.Identity(self.x.shape)
-        self.alg = ADMM(minL_x, minL_z, self.x, z, u,
-                        I, -I, 0, max_iter=self.max_iter)
+                AHA += self.rho * self.G.H * self.G
 
-    def _get_ADMM_G(self):
-        r"""Considers the formulation:
+            App(ConjugateGradient(AHA, AHy, self.x, P=self.P,
+                                  max_iter=self.max_cg_iter),
+                show_pbar=False).run()
 
-        .. math::
-            \min_{x, z: x = z_1, G x = z_2}
-            \frac{1}{2} \|A z_1 - y\|_2^2 +
-            \frac{\lambda}{2} \| R z_1 - z \|_2^2 + g(z_2)
-
-        """
-        xp = self.x_device.xp
-        with self.x_device:
-            z = xp.concatenate([self.x.ravel(), self.G(self.x).ravel()])
-            u = xp.zeros_like(z)
-
-        I = linop.Identity(self.x.shape)
-        I_G = linop.Vstack([I, self.G])
-
-        def minL_x():
-            LinearLeastSquares(I_G, z - u, self.x,
-                               max_iter=self.max_cg_iter,
-                               show_pbar=self.show_pbar,
-                               leave_pbar=False).run()
-
-        def minL_z():
-            z1 = z[:self.x.size].reshape(self.x.shape)
-            z2 = z[self.x.size:].reshape(self.G.oshape)
-            u1 = u[:self.x.size].reshape(self.x.shape)
-            u2 = u[self.x.size:].reshape(self.G.oshape)
-
-            if self.z is None:
-                x_u1 = self.rho * (self.x + u1)
+        def minL_v():
+            if self.G is None:
+                backend.copyto(v, self.x + u)
             else:
-                x_u1 = self.rho * (self.x + u1) + self.lamda * self.z
+                backend.copyto(v, self.G(self.x) + u)
 
-            x_u1 /= (self.rho + self.lamda)
+            if self.proxg is not None:
+                backend.copyto(v, self.proxg(1 / self.rho, v))
 
-            LinearLeastSquares(self.A, self.y, z1,
-                               lamda=self.lamda + self.rho,
-                               z=x_u1, P=self.P,
-                               max_iter=self.max_cg_iter,
-                               show_pbar=self.show_pbar,
-                               leave_pbar=False).run()
+        I_v = linop.Identity(v.shape)
+        if self.G is None:
+            I_x = linop.Identity(self.x.shape)
+            G = I_x
+        else:
+            G = self.G
 
-            if self.proxg is None:
-                backend.copyto(z2, self.G(self.x) + u2)
-            else:
-                backend.copyto(
-                    z2, self.proxg(1 / self.rho, self.G(self.x) + u2))
-
-        I_z = linop.Identity(z.shape)
-        self.alg = ADMM(minL_x, minL_z, self.x, z, u,
-                        I_G, -I_z, 0, max_iter=self.max_iter)
+        self.alg = ADMM(minL_x, minL_v, self.x, v, u,
+                        G, -I_v, 0, max_iter=self.max_iter)
 
     def objective(self):
         with self.y_device:
