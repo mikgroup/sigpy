@@ -53,7 +53,8 @@ def pipe_menon_dcf(coord, device=sp.cpu_device, max_iter=30,
         kernel /= kernel.max()
 
         G = sp.linop.Gridding(img_shape, coord, width, kernel)
-        with tqdm(total=max_iter, disable=not show_pbar) as pbar:
+        with tqdm(total=max_iter, desc="PipeMenonDCF",
+                  disable=not show_pbar) as pbar:
             for it in range(max_iter):
                 GHGw = G.H * G * w
                 w /= xp.abs(GHGw)
