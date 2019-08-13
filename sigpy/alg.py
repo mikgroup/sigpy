@@ -279,13 +279,13 @@ class PrimalDualHybridGradient(Alg):
 
     Considers the problem:
 
-    .. math:: \min_x \max_u - f^*(u) + g(x) + h(x) + \left<Ax, u\right>
+    .. math:: \min_x \max_u - f^*(u) + g(x) + \left<Ax, u\right>
 
     Or equivalently:
 
-    .. math:: \min_x f(A x) + g(x) + h(x)
+    .. math:: \min_x f(A x) + g(x)
 
-    where f, and g are simple, and h is Lipschitz continuous.
+    where f, and g are simple.
 
     Args:
         proxfc (function): Function to compute proximal operator of f^*.
@@ -310,12 +310,11 @@ class PrimalDualHybridGradient(Alg):
     """
 
     def __init__(self, proxfc, proxg, A, AH, x, u,
-                 tau, sigma, theta=1, gradh=None,
+                 tau, sigma, theta=1,
                  gamma_primal=0, gamma_dual=0,
                  max_iter=100, tol=0):
         self.proxfc = proxfc
         self.proxg = proxg
-        self.gradh = gradh
         self.tol = tol
 
         self.A = A
@@ -355,11 +354,7 @@ class PrimalDualHybridGradient(Alg):
 
         # Update primal.
         with self.x_device:
-            delta_x = self.AH(self.u)
-            if self.gradh is not None:
-                delta_x += self.gradh(self.x)
-
-            util.axpy(self.x, -self.tau, delta_x)
+            util.axpy(self.x, -self.tau, self.AH(self.u))
             backend.copyto(self.x, self.proxg(self.tau, self.x))
 
         # Update step-size if neccessary.
