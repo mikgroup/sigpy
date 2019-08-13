@@ -297,37 +297,26 @@ class LinearLeastSquares(App):
 
     def _get_PrimalDualHybridGradient(self):
         with self.y_device:
-            y = -self.y
             A = self.A
 
-        if self.proxg is None:
-            proxg = prox.NoOp(self.x.shape)
-        else:
-            proxg = self.proxg
-
         if self.lamda > 0:
-            def gradh(x):
-                with backend.get_device(self.x):
-                    if self.lamda > 0:
-                        if self.z is None:
-                            gradh_x = self.lamda * x
-                        else:
-                            gradh_x = self.lamda * (x - self.z)
-
-                    return gradh_x
-
             gamma_primal = self.lamda
+            proxg = prox.L2Reg(self.x.shape, self.lamda,
+                               y=self.z, proxh=self.proxg)
         else:
-            gradh = None
             gamma_primal = 0
+            if self.proxg is None:
+                proxg = prox.NoOp(self.x.shape)
+            else:
+                proxg = self.proxg
 
         if self.G is None:
-            proxfc = prox.L2Reg(y.shape, 1, y=y)
+            proxfc = prox.L2Reg(self.y.shape, 1, y=-self.y)
             gamma_dual = 1
         else:
             A = linop.Vstack([A, self.G])
-            proxf1c = prox.L2Reg(self.y.shape, 1, y=y)
-            proxf2c = prox.Conj(self.proxg)
+            proxf1c = prox.L2Reg(self.y.shape, 1, y=-self.y)
+            proxf2c = prox.Conj(proxg)
             proxfc = prox.Stack([proxf1c, proxf2c])
             proxg = prox.NoOp(self.x.shape)
             gamma_dual = 0
@@ -345,8 +334,8 @@ class LinearLeastSquares(App):
                 max_iter=self.max_power_iter,
                 show_pbar=self.show_pbar).run()
 
-            self.tau = 1 / (max_eig + self.lamda)
-        else:
+            self.tau = 1 / max_eig
+        elif self.sigma is None:
             T = linop.Multiply(A.ishape, self.tau)
             AAH = A * T * A.H
 
@@ -373,7 +362,6 @@ class LinearLeastSquares(App):
             self.sigma,
             gamma_primal=gamma_primal,
             gamma_dual=gamma_dual,
-            gradh=gradh,
             max_iter=self.max_iter)
 
     def _get_ADMM(self):
