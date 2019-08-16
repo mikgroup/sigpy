@@ -4,6 +4,7 @@ and provides a few general Apps, including a linear least squares App,
 and a maximum eigenvalue estimation App.
 """
 import numpy as np
+import time
 
 from tqdm.auto import tqdm
 from sigpy import backend, linop, prox, util
@@ -42,10 +43,14 @@ class App(object):
 
     """
 
-    def __init__(self, alg, show_pbar=True, leave_pbar=True):
+    def __init__(self, alg, show_pbar=True, leave_pbar=True,
+                 record_time=True):
         self.alg = alg
         self.show_pbar = show_pbar
         self.leave_pbar = leave_pbar
+        self.record_time = record_time
+        if self.record_time:
+            self.time = [0]
 
     def _pre_update(self):
         return
@@ -73,9 +78,16 @@ class App(object):
                 total=self.alg.max_iter, desc=name, leave=self.leave_pbar)
 
         while(not self.alg.done()):
+            if self.record_time:
+                start_time = time.time()
+
             self._pre_update()
             self.alg.update()
             self._post_update()
+
+            if self.record_time:
+                self.time.append(self.time[-1] + time.time() - start_time)
+
             self._summarize()
             if self.show_pbar:
                 self.pbar.update()
@@ -201,6 +213,8 @@ class LinearLeastSquares(App):
         self._get_alg()
         if self.save_objective_values:
             self.objective_values = [self.objective()]
+
+        super().__init__(self.alg, show_pbar=show_pbar, leave_pbar=leave_pbar)
 
     def _summarize(self):
         if self.save_objective_values:
