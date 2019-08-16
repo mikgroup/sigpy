@@ -335,21 +335,23 @@ class PrimalDualHybridGradient(Alg):
         with self.x_device:
             self.x_ext = self.x.copy()
 
-        with self.u_device:
-            self.u_old = self.u.copy()
-            self.x_old = self.x.copy()
+        if self.gamma_primal > 0:
+            xp = self.x_device.xp
+            self.tau_min = xp.amin(xp.abs(tau)).item()
+
+        if self.gamma_dual > 0:
+            xp = self.u_device.xp
+            self.sigma_min = xp.amin(xp.abs(sigma)).item()
 
         self.resid = np.infty
 
         super().__init__(max_iter)
 
     def _update(self):
-        backend.copyto(self.u_old, self.u)
-        backend.copyto(self.x_old, self.x)
+        x_old = self.x.copy()
 
         # Update dual.
-        delta_u = self.A(self.x_ext)
-        util.axpy(self.u, self.sigma, delta_u)
+        util.axpy(self.u, self.sigma, self.A(self.x_ext))
         backend.copyto(self.u, self.proxfc(self.sigma, self.u))
 
         # Update primal.
@@ -361,18 +363,18 @@ class PrimalDualHybridGradient(Alg):
         if self.gamma_primal > 0 and self.gamma_dual == 0:
             with self.x_device:
                 xp = self.x_device.xp
-                theta = 1 / (1 + 2 * self.gamma_primal *
-                             xp.amin(xp.abs(self.tau)))**0.5
+                theta = 1 / (1 + 2 * self.gamma_primal * self.tau_min)**0.5
                 self.tau *= theta
+                self.tau_min *= theta
 
             with self.u_device:
                 self.sigma /= theta
         elif self.gamma_primal == 0 and self.gamma_dual > 0:
             with self.u_device:
                 xp = self.u_device.xp
-                theta = 1 / (1 + 2 * self.gamma_dual *
-                             xp.amin(xp.abs(self.sigma)))**0.5
+                theta = 1 / (1 + 2 * self.gamma_dual * self.sigma_min)**0.5
                 self.sigma *= theta
+                self.sigma_min *= theta
 
             with self.x_device:
                 self.tau /= theta
@@ -382,19 +384,12 @@ class PrimalDualHybridGradient(Alg):
         # Extrapolate primal.
         with self.x_device:
             xp = self.x_device.xp
-            x_diff = self.x - self.x_old
+            x_diff = self.x - x_old
+            self.resid = xp.linalg.norm(x_diff / self.tau**0.5).item()
             backend.copyto(self.x_ext, self.x + theta * x_diff)
-            x_diff_norm = xp.linalg.norm(x_diff / self.tau**0.5).item()
-
-        with self.u_device:
-            xp = self.u_device.xp
-            u_diff = self.u - self.u_old
-            u_diff_norm = xp.linalg.norm(u_diff / self.sigma**0.5).item()
-
-        self.resid = x_diff_norm**2 + u_diff_norm**2
 
     def _done(self):
-        return self.iter >= self.max_iter or self.resid <= self.tol
+        return (self.iter >= self.max_iter) or (self.resid <= self.tol)
 
 
 class AltMin(Alg):
