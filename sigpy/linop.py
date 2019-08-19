@@ -1265,20 +1265,24 @@ class Tile(Linop):
 
 
 class ArrayToBlocks(Linop):
-    """Extract blocks from array.
+    """Extract blocks from an array in a sliding window manner.
 
     Args:
-        ishape (tuple of ints): Input shape.
-        blk_shape (tuple of ints): Block shape.
-        blk_shape (tuple of ints): Block strides.
+        ishape (array): input array of shape [..., N_1, ..., N_D]
+        blk_shape (tuple): block shape of length D, with D <= 4.
+        blk_strides (tuple): block strides of length D.
+
+    See Also:
+        :func:`sigpy.block.array_to_blocks`
 
     """
 
     def __init__(self, ishape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
+        D = len(blk_shape)
         num_blks = [(i - b + s) // s for i, b,
-                    s in zip(ishape, blk_shape, blk_strides)]
+                    s in zip(ishape[-D:], blk_shape, blk_strides)]
         oshape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1291,20 +1295,23 @@ class ArrayToBlocks(Linop):
 
 
 class BlocksToArray(Linop):
-    """Average blocks to array.
+    """Accumulate blocks into an array in a sliding window manner.
 
     Args:
-        oshape (tuple of ints): Output shape.
-        blk_shape (tuple of ints): Block shape.
-        blk_shape (tuple of ints): Block strides.
+        oshape (tuple): output shape.
+        blk_shape (tuple): block shape of length D.
+        blk_strides (tuple): block strides of length D.
+
+    Returns:
+        array: array of shape oshape.
 
     """
-
     def __init__(self, oshape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
+        D = len(blk_shape)
         num_blks = [(i - b + s) // s for i, b,
-                    s in zip(oshape, blk_shape, blk_strides)]
+                    s in zip(oshape[-D:], blk_shape, blk_strides)]
         ishape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
