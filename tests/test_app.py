@@ -66,22 +66,6 @@ class TestApp(unittest.TestCase):
 
                                 npt.assert_allclose(x_rec, x_numpy, atol=1e-3)
 
-    def test_L2ConstrainedMinimization(self):
-        n = 5
-        _A = np.eye(n) + 0.1 * util.randn([n, n])
-        A = linop.MatMul([n, 1], _A)
-        x = util.randn([n, 1])
-        y = A(x)
-
-        eps = 0
-
-        def proxg(lamda, x):
-            return x / (1 + lamda)
-
-        x_rec = app.L2ConstrainedMinimization(A, y, proxg, eps,
-                                              show_pbar=False).run()
-        npt.assert_allclose(x_rec, x, atol=1e-3)
-
     def test_precond_LinearLeastSquares(self):
         n = 5
         _A = np.eye(n) + 0.01 * util.randn([n, n])

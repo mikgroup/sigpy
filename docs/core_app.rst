@@ -20,4 +20,3 @@ Apps
 
    sigpy.app.MaxEig
    sigpy.app.LinearLeastSquares
-   sigpy.app.L2ConstrainedMinimization

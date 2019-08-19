@@ -56,14 +56,6 @@ class TestApp(unittest.TestCase):
                         show_pbar=False).run()
                     npt.assert_allclose(img, img_rec, atol=1e-2, rtol=1e-2)
 
-    def test_shepp_logan_SenseConstrainedRecon(self):
-        img, mps, ksp = self.shepp_logan_setup()
-        std = 0
-
-        img_rec = app.SenseConstrainedRecon(ksp, mps, std,
-                                            show_pbar=False).run()
-        npt.assert_allclose(img, img_rec, atol=1e-2, rtol=1e-2)
-
     def test_shepp_logan_L1WaveletRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         lamda = 0
@@ -77,14 +69,6 @@ class TestApp(unittest.TestCase):
                     show_pbar=False).run()
                 npt.assert_allclose(img, img_rec, atol=1e-2, rtol=1e-2)
 
-    def test_shepp_logan_L1WaveletConstrainedRecon(self):
-        img, mps, ksp = self.shepp_logan_setup()
-        std = 0
-
-        img_rec = app.L1WaveletConstrainedRecon(
-            ksp, mps, std, show_pbar=False).run()
-        npt.assert_allclose(img, img_rec, atol=1e-2, rtol=1e-2)
-
     def test_shepp_logan_TotalVariationRecon(self):
         img, mps, ksp = self.shepp_logan_setup()
         lamda = 0
@@ -96,14 +80,6 @@ class TestApp(unittest.TestCase):
                     solver=solver, max_iter=1000, show_pbar=False).run()
 
                 npt.assert_allclose(img, img_rec, atol=1e-2, rtol=1e-2)
-
-    def test_shepp_logan_TotalVariationConstrainedRecon(self):
-        img, mps, ksp = self.shepp_logan_setup()
-        std = 0
-
-        img_rec = app.TotalVariationConstrainedRecon(
-            ksp, mps, std, max_iter=1000, show_pbar=False).run()
-        npt.assert_allclose(img, img_rec, atol=1e-2, rtol=1e-2)
 
     def test_ones_JsenseRecon(self):
         img_shape = [6, 6]
