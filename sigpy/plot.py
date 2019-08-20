@@ -512,8 +512,7 @@ def array_to_image(arr, color=False):
 
     """
     if color:
-        arr = np.divide(arr, np.abs(arr).max(),
-                        out=np.zeros_like(arr), where=arr != 0)
+        arr = arr / np.abs(arr).max()
 
     if arr.ndim == 2:
         return arr
@@ -525,8 +524,6 @@ def array_to_image(arr, color=False):
     else:
         ndim = 2
 
-    arr = sp.resize(arr, arr.shape[:-2] +
-                    (arr.shape[-2] + 2, arr.shape[-1] + 2))
     shape = arr.shape
     batch = sp.prod(shape[:-ndim])
     mshape = mosaic_shape(batch)
