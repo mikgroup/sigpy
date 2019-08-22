@@ -348,14 +348,13 @@ class PrimalDualHybridGradient(Alg):
         super().__init__(max_iter)
 
     def _update(self):
-        x_old = self.x.copy()
-
         # Update dual.
         util.axpy(self.u, self.sigma, self.A(self.x_ext))
         backend.copyto(self.u, self.proxfc(self.sigma, self.u))
 
         # Update primal.
         with self.x_device:
+            x_old = self.x.copy()
             util.axpy(self.x, -self.tau, self.AH(self.u))
             backend.copyto(self.x, self.proxg(self.tau, self.x))
 
