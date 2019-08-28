@@ -8,13 +8,13 @@ import scipy.signal as signal
 
 __all__ = ['dinf', 'dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
            'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'abrm', 'abrmnd',
-           'dzgSliderB']
+           'dzgSliderB', 'dzb1rf']
 
 
-""" Functions for use in SLR pulse design
+""" Functions for SLR pulse design
     SLR algorithm simplifies the solution of the Bloch equations
     to the design of 2 polynomials
-    Code from William Grissom, 2019
+    Code from William Grissom, 2019, based on John Pauly's rf_tools
 """
 
 
@@ -53,26 +53,7 @@ def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
         IEEE Transactions on Medical Imaging, Vol 10, No 1, 53-65.
     """
 
-    if ptype == 'st':
-        bsf = 1
-    elif ptype == 'ex':
-        bsf = np.sqrt(1/2)
-        d1 = np.sqrt(d1/2)
-        d2 = d2/np.sqrt(2)
-    elif ptype == 'se':
-        bsf = 1
-        d1 = d1/4
-        d2 = np.sqrt(d2)
-    elif ptype == 'inv':
-        bsf = 1
-        d1 = d1/8
-        d2 = np.sqrt(d2/2)
-    elif ptype == 'sat':
-        bsf = np.sqrt(1/2)
-        d1 = d1/2
-        d2 = np.sqrt(d2)
-    else:
-        raise Exception('Pulse type ("{}") is not recognized.'.format(ptype))
+    [bsf, d1, d2] = calcRipples(ptype, d1, d2)
 
     if ftype == 'ms':
         b = msinc(N, tb/4)
@@ -96,6 +77,30 @@ def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
 
     return rf
 
+def calcRipples(ptype = 'st', d1 = 0.01, d2 = 0.01):
+
+    if ptype == 'st':
+        bsf = 1
+    elif ptype == 'ex':
+        bsf = np.sqrt(1/2)
+        d1 = np.sqrt(d1/2)
+        d2 = d2/np.sqrt(2)
+    elif ptype == 'se':
+        bsf = 1
+        d1 = d1/4
+        d2 = np.sqrt(d2)
+    elif ptype == 'inv':
+        bsf = 1
+        d1 = d1/8
+        d2 = np.sqrt(d2/2)
+    elif ptype == 'sat':
+        bsf = np.sqrt(1/2)
+        d1 = d1/2
+        d2 = np.sqrt(d2)
+    else:
+        raise Exception('Pulse type ("{}") is not recognized.'.format(ptype))
+
+    return bsf, d1, d2
 
 def dzls(N=64, tb=4, d1=0.01, d2=0.01):
 
@@ -204,7 +209,7 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
             b = b[:N]
 
     else:
-        # design two shifted filters that we can add to kill off the left band
+        # design two shifted filters that we can add to kill off the left band,
         # then demodulate the result back to DC
         Gcent = shift+(Gind-G/2-1/2)*tb/G
         if Gind > 1 and Gind < G:
@@ -326,10 +331,77 @@ def ab2rf(a, b):
 
     return rf
 
+def dzb1rf(dt = 2e-6, tb = 4, ptype = 'st', flip = np.pi/6, pbw = 0.3, pbc = 2,
+    d1 = 0.01, d2 = 0.01, os = 8):
+
+    # design a B1-selective excitation pulse, following Grissom JMR 2014
+    # pbw = width of passband in Gauss
+    # pbc = center of passband in Gauss
+
+    # calculate beta filter ripple
+    [bsf, d1, d2] = calcRipples(ptype, d1, d2)
+
+    # calculate pulse duration
+    B = 4257*pbw
+    T = tb/B
+
+    # calculate number of samples in pulse
+    n = np.int(np.ceil(T/dt/2)*2)
+
+    if pbc == 0: # we want passband as close to zero as possible.
+                 # do my own dual-band filter design to minimize interaction
+                 # between the left and right bands
+
+        # build system matrix
+        A = np.exp(1j*2*np.pi*np.outer(np.arange(-n*os/2, n*os/2),
+            np.arange(-n/2, n/2))/(n*os))
+
+        # build target pattern
+        ii = np.arange(-n*os/2, n*os/2)/(n*os)*2
+        w = dinf(d1,d2)/tb
+        f = np.asarray([0, (1-w)*(tb/2), (1+w)*(tb/2), n/2])/(n/2)
+        d = np.double(np.abs(ii) < f[1])
+        ds = np.double(np.abs(ii) > f[2])
+
+        # shift the target pattern to minimum center position
+        pbc = np.int(np.ceil((f[2]-f[1])*n*os/2 + f[1]*n*os/2))
+        dl = np.roll(d, pbc)
+        dr = np.roll(d, -pbc)
+        dsl = np.roll(ds, pbc)
+        dsr = np.roll(ds, -pbc)
+
+        # build error weight vector
+        w = dl + dr + d1/d2*np.multiply(dsl, dsr)
+
+        # solve for the dual-band filter
+        AtA = A.conj().T @ np.multiply(np.reshape(w,(np.size(w), 1)), A)
+        Atd = A.conj().T @ np.multiply(w, dr-dl)
+        h = np.imag(np.linalg.pinv(AtA) @ Atd)
+
+    else: # normal design
+
+        # design filter
+        h = dzls(n, tb, d1, d2)
+
+        # dual-band-modulate the filter
+        om = 2*np.pi*4257*pbc # modulation frequency
+        t = np.arange(0, n)*T/n - T/2
+        h = 2*h*np.sin(om*t)
+
+    # split and flip fm waveform to improve large-tip accuracy
+    dom = np.concatenate((h[n//2::-1], h, h[n:n//2:-1]))/2
+
+    # scale to target flip, convert to Hz
+    dom = dom*flip/(2*np.pi*dt)
+
+    # build am waveform
+    om1 = np.concatenate((-np.ones(n//2), np.ones(n), -np.ones(n//2)))
+
+    return om1, dom
 
 def abrm(rf, x):
 
-    # Simulation of the RF pulse, with simultaneous RF + gradient rotations
+    # 1D Simulation of the RF pulse, with simultaneous RF + gradient rotations
     g = np.ones(np.size(rf))*2*np.pi/np.size(rf)
 
     a = np.ones(np.size(x), dtype=complex)
@@ -352,13 +424,15 @@ def abrmnd(rf, x, g):
 
     # assume x has inverse spatial units of g, and g has gamma*dt applied
     # assume x = [...,Ndim], g = [Ndim,Nt]
+    eps = 1e-16
 
     a = np.ones(np.shape(x)[0], dtype=complex)
     b = np.zeros(np.shape(x)[0], dtype=complex)
     for mm in range(0, np.size(rf), 1):
         om = x@g[mm, :]
         phi = np.sqrt(np.abs(rf[mm])**2 + om**2)
-        n = np.column_stack((np.real(rf[mm])/phi, np.imag(rf[mm])/phi, om/phi))
+        n = np.column_stack((np.real(rf[mm])/(phi+eps),
+            np.imag(rf[mm])/(phi+eps), om/(phi+eps)))
         av = np.cos(phi/2) - 1j*n[:, 2]*np.sin(phi/2)
         bv = -1j*(n[:, 0] + 1j*n[:, 1])*np.sin(phi/2)
         at = av*a - np.conj(bv)*b
