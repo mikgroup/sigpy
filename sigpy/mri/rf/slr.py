@@ -7,8 +7,8 @@ import numpy as np
 import scipy.signal as signal
 
 __all__ = ['dinf', 'dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
-           'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'abrm', 'abrmnd',
-           'dzgSliderB', 'dzb1rf']
+           'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'dzgSliderB', 'dzgSliderrf',
+           'dzb1rf']
 
 
 """ Functions for SLR pulse design
@@ -19,6 +19,7 @@ __all__ = ['dinf', 'dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
 
 
 def dinf(d1=0.01, d2=0.01):
+
     a1 = 5.309e-3
     a2 = 7.114e-2
     a3 = -4.761e-1
@@ -177,7 +178,7 @@ def msinc(N=64, m=1):
 
 
 def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
-               shift=32):
+               shift=32, demod=True):
 
     ftw = dinf(d1, d2)/tb  # fractional transition width of the slab profile
 
@@ -244,25 +245,41 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
         bNotch = signal.firls(N+1, f, mNotch, w)  # the notched filter
         bNotch = np.fft.ifft(np.multiply(np.fft.fft(bNotch), c))
         bNotch = np.real(bNotch[:N])
-        # hilbert transform to suppress negative passband
-        bNotch = signal.hilbert(bNotch)
+        if demod == True:
+            # hilbert transform to suppress negative passband
+            bNotch = signal.hilbert(bNotch)
 
         bSub = signal.firls(N+1, f, mSub, w)  # the sub-band filter
         bSub = np.fft.ifft(np.multiply(np.fft.fft(bSub), c))
         bSub = np.real(bSub[:N])
-        # hilbert transform to suppress negative passband
-        bSub = signal.hilbert(bSub)
+        if demod == True:
+            # hilbert transform to suppress negative passband
+            bSub = signal.hilbert(bSub)
 
         # add them with the subslice phase
         b = bNotch + np.exp(1j*phi)*bSub
 
-        # demodulate to DC
-        cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0, N, 1))/2 \
-            * np.exp(-1j*np.pi/N*shift)
-        b = np.multiply(b, cShift)
+        if demod == True:
+            # demodulate to DC
+            cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0, N, 1))/2 \
+                * np.exp(-1j*np.pi/N*shift)
+            b = np.multiply(b, cShift)
 
     return b
 
+
+def dzgSliderrf(N = 256, G = 5, flip = np.pi/2, phi = np.pi, tb = 12,
+    d1 = 0.01, d2 = 0.01):
+
+    bsf = np.sin(flip/2) # beta scaling factor
+
+    rf = np.zeros((N, G), dtype = 'complex')
+    for Gind in range(1,G+1):
+        b = bsf*dzgSliderB(N, G, Gind, tb, d1, d2, phi)
+        a = b2a(b)
+        rf[:, Gind-1] = ab2rf(a, b)
+
+    return rf
 
 def b2rf(b):
 
@@ -331,6 +348,7 @@ def ab2rf(a, b):
 
     return rf
 
+
 def dzb1rf(dt = 2e-6, tb = 4, ptype = 'st', flip = np.pi/6, pbw = 0.3, pbc = 2,
     d1 = 0.01, d2 = 0.01, os = 8):
 
@@ -398,46 +416,3 @@ def dzb1rf(dt = 2e-6, tb = 4, ptype = 'st', flip = np.pi/6, pbw = 0.3, pbc = 2,
     om1 = np.concatenate((-np.ones(n//2), np.ones(n), -np.ones(n//2)))
 
     return om1, dom
-
-def abrm(rf, x):
-
-    # 1D Simulation of the RF pulse, with simultaneous RF + gradient rotations
-    g = np.ones(np.size(rf))*2*np.pi/np.size(rf)
-
-    a = np.ones(np.size(x), dtype=complex)
-    b = np.zeros(np.size(x), dtype=complex)
-    for mm in range(0, np.size(rf), 1):
-        om = x*g[mm]
-        phi = np.sqrt(np.abs(rf[mm])**2 + om**2)
-        n = np.column_stack((np.real(rf[mm])/phi, np.imag(rf[mm])/phi, om/phi))
-        av = np.cos(phi/2) - 1j*n[:, 2]*np.sin(phi/2)
-        bv = -1j*(n[:, 0] + 1j*n[:, 1])*np.sin(phi/2)
-        at = av*a - np.conj(bv)*b
-        bt = bv*a + np.conj(av)*b
-        a = at
-        b = bt
-
-    return a, b
-
-
-def abrmnd(rf, x, g):
-
-    # assume x has inverse spatial units of g, and g has gamma*dt applied
-    # assume x = [...,Ndim], g = [Ndim,Nt]
-    eps = 1e-16
-
-    a = np.ones(np.shape(x)[0], dtype=complex)
-    b = np.zeros(np.shape(x)[0], dtype=complex)
-    for mm in range(0, np.size(rf), 1):
-        om = x@g[mm, :]
-        phi = np.sqrt(np.abs(rf[mm])**2 + om**2)
-        n = np.column_stack((np.real(rf[mm])/(phi+eps),
-            np.imag(rf[mm])/(phi+eps), om/(phi+eps)))
-        av = np.cos(phi/2) - 1j*n[:, 2]*np.sin(phi/2)
-        bv = -1j*(n[:, 0] + 1j*n[:, 1])*np.sin(phi/2)
-        at = av*a - np.conj(bv)*b
-        bt = bv*a + np.conj(av)*b
-        a = at
-        b = bt
-
-    return a, b
