@@ -73,6 +73,7 @@ class ImagePlot(object):
             c=None,
             hide_axes=False,
             mode=None,
+            colormap=None,
             title='',
             interpolation='nearest',
             save_basename='Figure',
@@ -100,6 +101,7 @@ class ImagePlot(object):
         self.title = title
         self.interpolation = interpolation
         self.mode = mode
+        self.colormap=colormap
         self.entering_slice = False
         self.vmin = None
         self.vmax = None
@@ -419,11 +421,15 @@ class ImagePlot(object):
             self.vmax = imv.max()
 
         if self.axim is None:
+            if self.colormap is None:
+                colormap = 'gray'
+            else:
+                colormap = self.colormap
             self.axim = self.ax.imshow(
                 imv,
                 vmin=self.vmin,
                 vmax=self.vmax,
-                cmap='gray',
+                cmap=colormap,
                 origin='lower',
                 interpolation=self.interpolation,
                 aspect=1.0,
@@ -432,6 +438,9 @@ class ImagePlot(object):
                     imv.shape[1],
                     0,
                     imv.shape[0]])
+
+            if self.colormap is not None:
+                self.fig.colorbar(self.axim)
 
         else:
             self.axim.set_data(imv)
