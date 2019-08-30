@@ -5,6 +5,7 @@ import numpy as np
 
 __all__ = ['bir4', 'hypsec']
 
+
 def bir4(n, beta, kappa, theta, dw0):
 
     # genbir4: generate a BIR-4 pulse

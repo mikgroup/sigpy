@@ -7,8 +7,7 @@ import numpy as np
 import scipy.signal as signal
 
 __all__ = ['dinf', 'dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
-           'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'dzgSliderB', 'dzgSliderrf',
-           'dzb1rf']
+           'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'dzgSliderB', 'dzgSliderrf']
 
 
 """ Functions for SLR pulse design
@@ -177,8 +176,7 @@ def msinc(N=64, m=1):
     return ms
 
 
-def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
-               shift=32, demod=True):
+def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi, shift=32):
 
     ftw = dinf(d1, d2)/tb  # fractional transition width of the slab profile
 
@@ -245,25 +243,22 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
         bNotch = signal.firls(N+1, f, mNotch, w)  # the notched filter
         bNotch = np.fft.ifft(np.multiply(np.fft.fft(bNotch), c))
         bNotch = np.real(bNotch[:N])
-        if demod == True:
-            # hilbert transform to suppress negative passband
-            bNotch = signal.hilbert(bNotch)
+        # hilbert transform to suppress negative passband
+        bNotch = signal.hilbert(bNotch)
 
         bSub = signal.firls(N+1, f, mSub, w)  # the sub-band filter
         bSub = np.fft.ifft(np.multiply(np.fft.fft(bSub), c))
         bSub = np.real(bSub[:N])
-        if demod == True:
-            # hilbert transform to suppress negative passband
-            bSub = signal.hilbert(bSub)
+        # hilbert transform to suppress negative passband
+        bSub = signal.hilbert(bSub)
 
         # add them with the subslice phase
         b = bNotch + np.exp(1j*phi)*bSub
 
-        if demod == True:
-            # demodulate to DC
-            cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0, N, 1))/2 \
-                * np.exp(-1j*np.pi/N*shift)
-            b = np.multiply(b, cShift)
+        # demodulate to DC
+        cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0, N, 1))/2 \
+            * np.exp(-1j*np.pi/N*shift)
+        b = np.multiply(b, cShift)
 
     return b
 
@@ -347,72 +342,3 @@ def ab2rf(a, b):
             b = bt[0:ii:1]
 
     return rf
-
-
-def dzb1rf(dt = 2e-6, tb = 4, ptype = 'st', flip = np.pi/6, pbw = 0.3, pbc = 2,
-    d1 = 0.01, d2 = 0.01, os = 8):
-
-    # design a B1-selective excitation pulse, following Grissom JMR 2014
-    # pbw = width of passband in Gauss
-    # pbc = center of passband in Gauss
-
-    # calculate beta filter ripple
-    [bsf, d1, d2] = calcRipples(ptype, d1, d2)
-
-    # calculate pulse duration
-    B = 4257*pbw
-    T = tb/B
-
-    # calculate number of samples in pulse
-    n = np.int(np.ceil(T/dt/2)*2)
-
-    if pbc == 0: # we want passband as close to zero as possible.
-                 # do my own dual-band filter design to minimize interaction
-                 # between the left and right bands
-
-        # build system matrix
-        A = np.exp(1j*2*np.pi*np.outer(np.arange(-n*os/2, n*os/2),
-            np.arange(-n/2, n/2))/(n*os))
-
-        # build target pattern
-        ii = np.arange(-n*os/2, n*os/2)/(n*os)*2
-        w = dinf(d1,d2)/tb
-        f = np.asarray([0, (1-w)*(tb/2), (1+w)*(tb/2), n/2])/(n/2)
-        d = np.double(np.abs(ii) < f[1])
-        ds = np.double(np.abs(ii) > f[2])
-
-        # shift the target pattern to minimum center position
-        pbc = np.int(np.ceil((f[2]-f[1])*n*os/2 + f[1]*n*os/2))
-        dl = np.roll(d, pbc)
-        dr = np.roll(d, -pbc)
-        dsl = np.roll(ds, pbc)
-        dsr = np.roll(ds, -pbc)
-
-        # build error weight vector
-        w = dl + dr + d1/d2*np.multiply(dsl, dsr)
-
-        # solve for the dual-band filter
-        AtA = A.conj().T @ np.multiply(np.reshape(w,(np.size(w), 1)), A)
-        Atd = A.conj().T @ np.multiply(w, dr-dl)
-        h = np.imag(np.linalg.pinv(AtA) @ Atd)
-
-    else: # normal design
-
-        # design filter
-        h = dzls(n, tb, d1, d2)
-
-        # dual-band-modulate the filter
-        om = 2*np.pi*4257*pbc # modulation frequency
-        t = np.arange(0, n)*T/n - T/2
-        h = 2*h*np.sin(om*t)
-
-    # split and flip fm waveform to improve large-tip accuracy
-    dom = np.concatenate((h[n//2::-1], h, h[n:n//2:-1]))/2
-
-    # scale to target flip, convert to Hz
-    dom = dom*flip/(2*np.pi*dt)
-
-    # build am waveform
-    om1 = np.concatenate((-np.ones(n//2), np.ones(n), -np.ones(n//2)))
-
-    return om1, dom
