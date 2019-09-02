@@ -34,7 +34,8 @@ def dinf(d1=0.01, d2=0.01):
     return d
 
 
-def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
+def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01,
+    cancelAlphaPhs = False):
     """Primary function for design of pulses using the SLR algorithm.
         Following functions are to support dzrf
 
@@ -45,6 +46,8 @@ def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
         ftype (string): type of filter to use in pulse design
         d1 (float): maximum instantaneous power
         d2 (float): maximum average power
+        cancelAlphaPhs (bool): For 'ex' pulses, absorb the alpha phase profile
+            from beta's profile, so they cancel for a flatter total phase
 
     References:
         Pauly, J., Le Roux, Patrick., Nishimura, D., and Macovski, A.(1991).
@@ -71,6 +74,9 @@ def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
 
     if ptype == 'st':
         rf = b
+    elif ptype == 'ex':
+        b = bsf*b
+        rf = b2rf(b, cancelAlphaPhs)
     else:
         b = bsf*b
         rf = b2rf(b)
@@ -264,22 +270,26 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi, shift=32):
 
 
 def dzgSliderrf(N = 256, G = 5, flip = np.pi/2, phi = np.pi, tb = 12,
-    d1 = 0.01, d2 = 0.01):
+    d1 = 0.01, d2 = 0.01, cancelAlphaPhs = True):
 
     bsf = np.sin(flip/2) # beta scaling factor
 
     rf = np.zeros((N, G), dtype = 'complex')
     for Gind in range(1,G+1):
         b = bsf*dzgSliderB(N, G, Gind, tb, d1, d2, phi)
-        a = b2a(b)
-        rf[:, Gind-1] = ab2rf(a, b)
+        rf[:, Gind-1] = b2rf(b, cancelAlphaPhs)
 
     return rf
 
-def b2rf(b):
+
+def b2rf(b, cancelAlphaPhs = False):
 
     a = b2a(b)
+    if cancelAlphaPhs:
+        b = np.fft.ifft(np.fft.fft(b)* \
+            np.exp(-1j*np.angle(np.fft.fft(a[np.size(a)::-1]))))
     rf = ab2rf(a, b)
+
     return rf
 
 

@@ -5,7 +5,9 @@ import numpy as np
 
 __all__ = ['abrm', 'abrmnd', 'abrm_hp']
 
-def abrm(rf, x):
+def abrm(rf, x, balanced = False):
+
+    eps = 1e-16
 
     # 1D Simulation of the RF pulse, with simultaneous RF + gradient rotations
     g = np.ones(np.size(rf))*2*np.pi/np.size(rf)
@@ -14,7 +16,7 @@ def abrm(rf, x):
     b = np.zeros(np.size(x), dtype=complex)
     for mm in range(0, np.size(rf), 1):
         om = x*g[mm]
-        phi = np.sqrt(np.abs(rf[mm])**2 + om**2)
+        phi = np.sqrt(np.abs(rf[mm])**2 + om**2) + eps
         n = np.column_stack((np.real(rf[mm])/phi, np.imag(rf[mm])/phi, om/phi))
         av = np.cos(phi/2) - 1j*n[:, 2]*np.sin(phi/2)
         bv = -1j*(n[:, 0] + 1j*n[:, 1])*np.sin(phi/2)
@@ -22,6 +24,15 @@ def abrm(rf, x):
         bt = bv*a + np.conj(av)*b
         a = at
         b = bt
+
+    if balanced: # apply a rewinder
+        g = -2*np.pi/2
+        om = x*g
+        phi = np.abs(om) + eps
+        nz = om/phi
+        av = np.cos(phi/2) - 1j*nz*np.sin(phi/2)
+        a = av*a
+        b = np.conj(av)*b
 
     return a, b
 
