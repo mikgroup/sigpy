@@ -7,18 +7,18 @@ import numpy as np
 import scipy.signal as signal
 
 __all__ = ['dinf', 'dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
-           'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'abrm', 'abrmnd',
-           'dzgSliderB']
+           'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'dzgSliderB', 'dzgSliderrf']
 
 
-""" Functions for use in SLR pulse design
+""" Functions for SLR pulse design
     SLR algorithm simplifies the solution of the Bloch equations
     to the design of 2 polynomials
-    Code from William Grissom, 2019
+    Code from William Grissom, 2019, based on John Pauly's rf_tools
 """
 
 
 def dinf(d1=0.01, d2=0.01):
+
     a1 = 5.309e-3
     a2 = 7.114e-2
     a3 = -4.761e-1
@@ -34,7 +34,8 @@ def dinf(d1=0.01, d2=0.01):
     return d
 
 
-def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
+def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01,
+    cancelAlphaPhs = False):
     """Primary function for design of pulses using the SLR algorithm.
         Following functions are to support dzrf
 
@@ -45,6 +46,8 @@ def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
         ftype (string): type of filter to use in pulse design
         d1 (float): maximum instantaneous power
         d2 (float): maximum average power
+        cancelAlphaPhs (bool): For 'ex' pulses, absorb the alpha phase profile
+            from beta's profile, so they cancel for a flatter total phase
 
     References:
         Pauly, J., Le Roux, Patrick., Nishimura, D., and Macovski, A.(1991).
@@ -52,6 +55,35 @@ def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
         Pulse Design Algorithm.
         IEEE Transactions on Medical Imaging, Vol 10, No 1, 53-65.
     """
+
+    [bsf, d1, d2] = calcRipples(ptype, d1, d2)
+
+    if ftype == 'ms':
+        b = msinc(N, tb/4)
+    elif ftype == 'pm':
+        b = dzlp(N, tb, d1, d2)
+    elif ftype == 'min':
+        b = dzmp(N, tb, d1, d2)
+        b = b[::-1]
+    elif ftype == 'max':
+        b = dzmp(N, tb, d1, d2)
+    elif ftype == 'ls':
+        b = dzls(N, tb, d1, d2)
+    else:
+        raise Exception('Filter type ("{}") is not recognized.'.format(ftype))
+
+    if ptype == 'st':
+        rf = b
+    elif ptype == 'ex':
+        b = bsf*b
+        rf = b2rf(b, cancelAlphaPhs)
+    else:
+        b = bsf*b
+        rf = b2rf(b)
+
+    return rf
+
+def calcRipples(ptype = 'st', d1 = 0.01, d2 = 0.01):
 
     if ptype == 'st':
         bsf = 1
@@ -74,28 +106,7 @@ def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01):
     else:
         raise Exception('Pulse type ("{}") is not recognized.'.format(ptype))
 
-    if ftype == 'ms':
-        b = msinc(N, tb/4)
-    elif ftype == 'pm':
-        b = dzlp(N, tb, d1, d2)
-    elif ftype == 'min':
-        b = dzmp(N, tb, d1, d2)
-        b = b[::-1]
-    elif ftype == 'max':
-        b = dzmp(N, tb, d1, d2)
-    elif ftype == 'ls':
-        b = dzls(N, tb, d1, d2)
-    else:
-        raise Exception('Filter type ("{}") is not recognized.'.format(ftype))
-
-    if ptype == 'st':
-        rf = b
-    else:
-        b = bsf*b
-        rf = b2rf(b)
-
-    return rf
-
+    return bsf, d1, d2
 
 def dzls(N=64, tb=4, d1=0.01, d2=0.01):
 
@@ -171,8 +182,7 @@ def msinc(N=64, m=1):
     return ms
 
 
-def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
-               shift=32):
+def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi, shift=32):
 
     ftw = dinf(d1, d2)/tb  # fractional transition width of the slab profile
 
@@ -204,7 +214,7 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
             b = b[:N]
 
     else:
-        # design two shifted filters that we can add to kill off the left band
+        # design two shifted filters that we can add to kill off the left band,
         # then demodulate the result back to DC
         Gcent = shift+(Gind-G/2-1/2)*tb/G
         if Gind > 1 and Gind < G:
@@ -259,10 +269,27 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi,
     return b
 
 
-def b2rf(b):
+def dzgSliderrf(N = 256, G = 5, flip = np.pi/2, phi = np.pi, tb = 12,
+    d1 = 0.01, d2 = 0.01, cancelAlphaPhs = True):
+
+    bsf = np.sin(flip/2) # beta scaling factor
+
+    rf = np.zeros((N, G), dtype = 'complex')
+    for Gind in range(1,G+1):
+        b = bsf*dzgSliderB(N, G, Gind, tb, d1, d2, phi)
+        rf[:, Gind-1] = b2rf(b, cancelAlphaPhs)
+
+    return rf
+
+
+def b2rf(b, cancelAlphaPhs = False):
 
     a = b2a(b)
+    if cancelAlphaPhs:
+        b = np.fft.ifft(np.fft.fft(b)* \
+            np.exp(-1j*np.angle(np.fft.fft(a[np.size(a)::-1]))))
     rf = ab2rf(a, b)
+
     return rf
 
 
@@ -327,43 +354,98 @@ def ab2rf(a, b):
     return rf
 
 
-def abrm(rf, x):
+def rootFlip(b, d1, flip, tb):
 
-    # Simulation of the RF pulse, with simultaneous RF + gradient rotations
-    g = np.ones(np.size(rf))*2*np.pi/np.size(rf)
-
-    a = np.ones(np.size(x), dtype=complex)
-    b = np.zeros(np.size(x), dtype=complex)
-    for mm in range(0, np.size(rf), 1):
-        om = x*g[mm]
-        phi = np.sqrt(np.abs(rf[mm])**2 + om**2)
-        n = np.column_stack((np.real(rf[mm])/phi, np.imag(rf[mm])/phi, om/phi))
-        av = np.cos(phi/2) - 1j*n[:, 2]*np.sin(phi/2)
-        bv = -1j*(n[:, 0] + 1j*n[:, 1])*np.sin(phi/2)
-        at = av*a - np.conj(bv)*b
-        bt = bv*a + np.conj(av)*b
-        a = at
-        b = bt
-
-    return a, b
+    b = b / np.max(np.abs(np.signal.freqz(b))) # normalize beta
+    b = b*np.sin(flip/2 + np.arctan(d1*2)/2) # scale to target flip
+    r = np.roots(b)
+    r = np.sort(np.angle(r))
 
 
-def abrmnd(rf, x, g):
+    return rf
 
-    # assume x has inverse spatial units of g, and g has gamma*dt applied
-    # assume x = [...,Ndim], g = [Ndim,Nt]
 
-    a = np.ones(np.shape(x)[0], dtype=complex)
-    b = np.zeros(np.shape(x)[0], dtype=complex)
-    for mm in range(0, np.size(rf), 1):
-        om = x@g[mm, :]
-        phi = np.sqrt(np.abs(rf[mm])**2 + om**2)
-        n = np.column_stack((np.real(rf[mm])/phi, np.imag(rf[mm])/phi, om/phi))
-        av = np.cos(phi/2) - 1j*n[:, 2]*np.sin(phi/2)
-        bv = -1j*(n[:, 0] + 1j*n[:, 1])*np.sin(phi/2)
-        at = av*a - np.conj(bv)*b
-        bt = bv*a + np.conj(av)*b
-        a = at
-        b = bt
+def leja(x):
 
-    return a, b
+    # Order roots in a way suitable to accurately compute polynomial
+    # coefficients. Based on MATLAB code from Markus Lang at Rice University
+
+    n = np.size(x)
+    # duplicate roots to n+1 rows
+    a = np.tile(np.reshape(x, (1, n)), (n+1, 1))
+    # take abs of first row
+    a[0, :] = np.abs(a[0, :])
+
+    tmp = np.zeros(n+1, dtype=complex)
+
+    # find index of max abs value
+    ind = np.argmax(a[0, :])
+    if ind != 0:
+        tmp[:] = a[:, 0]
+        a[:, 0] = a[:, ind]
+        a[:, ind] = tmp
+
+    x_out = np.zeros(n, dtype=complex)
+    x_out[0] = a[n-1, 0]
+    a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
+
+    for l in range(1, n-1):
+        aprod = np.abs(np.prod(a[0:l+1, l:], axis = 0))
+        ind = np.argmax(aprod)
+        ind = ind + l
+        if l != ind:
+            tmp[:] = a[:, l]
+            a[:, l] = a[:, ind]
+            a[:, ind] = tmp
+            x_out[l] = a[n-1, l]
+            a[l+1, (l+1):n] = np.abs(a[l+1, (l+1):] - x_out[l])
+
+    x_out = a[n, :]
+
+    return x_out
+
+
+def leja_fast(x):
+
+    # a faster version of the leja function that avoids repetitive
+    # prod() calculations that can be slow for large numbers of roots
+
+    n = np.size(x)
+    # duplicate roots to n+1 rows
+    a = np.tile(np.reshape(x, (1, n)), (n+1, 1))
+    # take abs of first row
+    a[0, :] = np.abs(a[0, :])
+
+    tmp = np.zeros(n+1, dtype=complex)
+
+    # find index of max abs value
+    ind = np.argmax(a[0, :])
+    if ind != 0:
+        tmp[:] = a[:, 0]
+        a[:, 0] = a[:, ind]
+        a[:, ind] = tmp
+
+    x_out = np.zeros(n, dtype=complex)
+    x_out[0] = a[n-1, 0] # first entry of last row
+    a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
+
+    foo = a[0, 0:n]
+
+    for l in range(1, n-1):
+        foo = np.multiply(foo, a[l, :])
+        ind = np.argmax(foo[l:])
+        ind = ind + l
+        if l != ind:
+            tmp[:] = a[:, l]
+            a[:, l] = a[:, ind]
+            a[:, ind] = tmp
+            # also swap inds in foo
+            tmp[0] = foo[l]
+            foo[l] = foo[ind]
+            foo[ind] = tmp[0]
+        x_out[l] = a[n-1, l]
+        a[l+1, (l+1):n] = np.abs(a[l+1, (l+1):] - x_out[l])
+
+    x_out = a[n, :]
+
+    return x_out

@@ -774,7 +774,7 @@ class LinePlot(object):
 
         if self.mode == 'm':
             arrv = np.abs(arrv)
-        elif self.mode == 'a':
+        elif self.mode == 'p':
             arrv = np.angle(arrv)
         elif self.mode == 'r':
             arrv = np.real(arrv)
