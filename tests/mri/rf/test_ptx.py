@@ -10,7 +10,7 @@ if __name__ == '__main__':
     unittest.main()
 
 
-class TestRf(unittest.TestCase):
+class TestPtx(unittest.TestCase):
 
     img_shape = [32, 32]
     sens_shape = [8, 32, 32]
@@ -69,13 +69,3 @@ class TestRf(unittest.TestCase):
                           coord=traj, max_iter=1000, tol=1E-3)
 
         npt.assert_array_almost_equal(A*pulses, self.target, 1E-3)
-
-    def test_slr(self):
-
-        N = 128
-        tb = 16
-        rf = sp.mri.rf.dzrf(N, tb, ptype='st', ftype='pm', d1=0.01, d2=0.01)
-
-        m = abs(np.fft.fftshift(np.fft.fft(rf)))
-        pts = np.array([m[int(N/2-10)], m[int(N/2)], m[int(N/2+10)]])
-        npt.assert_almost_equal(pts, np.array([0, 1, 0]), decimal=2)

@@ -4,7 +4,8 @@ import sigpy as sp
 import scipy.ndimage.filters as filt
 import numpy.testing as npt
 
-from sigpy.mri import app, sim, linop
+from sigpy.mri import app, sim
+from sigpy.mri import linop
 
 if __name__ == '__main__':
     unittest.main()
@@ -121,20 +122,20 @@ class TestApp(unittest.TestCase):
 
         # target - slightly blurred circle
         x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
-                        -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
         circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
         target = np.zeros(img_shape)
         target[circle] = 1
         target = filt.gaussian_filter(target, 1)
         target = target.astype(np.complex)
 
-        sens = sim.birdcage_maps(sens_shape)
+        sens = sp.mri.sim.birdcage_maps(sens_shape)
 
         traj = sp.mri.radial((sens_shape[1], sens_shape[1], 2),
                              img_shape, golden=True, dtype=np.float)
 
         # reshape to be Nt*2 trajectory
-        traj = np.reshape(traj, [traj.shape[0]*traj.shape[1], 2])
+        traj = np.reshape(traj, [traj.shape[0] * traj.shape[1], 2])
 
         A = linop.Sense(sens, coord=traj,
                         weights=None, ishape=img_shape).H
@@ -143,4 +144,4 @@ class TestApp(unittest.TestCase):
                                       max_iter=1000, tol=1e-3,
                                       show_pbar=False).run()
 
-        npt.assert_array_almost_equal(A*pulses, target, 1e-3)
+        npt.assert_array_almost_equal(A * pulses, target, 1e-3)
