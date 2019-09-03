@@ -6,6 +6,7 @@ provides functions to compute preconditioners.
 
 """
 from sigpy.mri import app, linop
+from sigpy.mri.rf import app
 
 from sigpy.mri.rf import ptx, slr, optcont, adiabatic, sim, b1sel
 from sigpy.mri.rf.ptx import *  # noqa
