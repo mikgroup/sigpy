@@ -361,8 +361,7 @@ def rootFlip(b, d1, flip, tb):
     r = np.roots(b)
     r = np.sort(np.angle(r))
 
-
-    return rf
+    return r
 
 
 def leja(x):
