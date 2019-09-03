@@ -25,68 +25,51 @@ class TestApp(unittest.TestCase):
         A = linop.MatMul([n, 1], _A)
         x = np.arange(n).reshape([n, 1])
         y = A(x)
-        z = np.arange(n).reshape([n, 1])
 
-        for mu in [0, 0.1]:
+        for z in [None, x.copy()]:
             for lamda in [0, 0.1]:
                 for proxg in [None, prox.L2Reg([n, 1], lamda)]:
-                    for alg_name in ['GradientMethod',
-                                     'PrimalDualHybridGradient',
-                                     'ConjugateGradient']:
+                    for solver in ['GradientMethod',
+                                   'PrimalDualHybridGradient',
+                                   'ConjugateGradient',
+                                   'ADMM']:
                         with self.subTest(proxg=proxg,
-                                          alg_name=alg_name,
+                                          solver=solver,
                                           lamda=lamda,
-                                          mu=mu):
-                            if proxg is None:
-                                prox_lamda = 0
-                            else:
-                                prox_lamda = lamda
+                                          z=z):
+                            AHA = _A.T @ _A + lamda * np.eye(n)
+                            AHy = _A.T @ y
+                            if proxg is not None:
+                                AHA += lamda * np.eye(n)
 
-                            x_numpy = np.linalg.solve(
-                                _A.T @ _A +
-                                (lamda + mu + prox_lamda) * np.eye(n),
-                                _A.T @ y + mu * z)
+                            if z is not None:
+                                AHy = _A.T @ y + lamda * z
 
-                            if (alg_name == 'ConjugateGradient'
+                            x_numpy = np.linalg.solve(AHA, AHy)
+                            if (solver == 'ConjugateGradient'
                                 and proxg is not None):
                                 with self.assertRaises(ValueError):
                                     app.LinearLeastSquares(
                                         A, y,
-                                        alg_name=alg_name,
+                                        solver=solver,
                                         lamda=lamda,
                                         proxg=proxg,
-                                        mu=mu, z=z,
+                                        z=z,
                                         show_pbar=False).run()
                             else:
                                 x_rec = app.LinearLeastSquares(
                                     A, y,
-                                    alg_name=alg_name,
+                                    solver=solver,
                                     lamda=lamda,
                                     proxg=proxg,
-                                    mu=mu, z=z,
+                                    z=z,
                                     show_pbar=False).run()
 
                                 npt.assert_allclose(x_rec, x_numpy, atol=1e-3)
 
-    def test_L2ConstrainedMinimization(self):
-        n = 5
-        _A = np.eye(n) + 0.1 * util.randn([n, n])
-        A = linop.MatMul([n, 1], _A)
-        x = util.randn([n, 1])
-        y = A(x)
-
-        eps = 0
-
-        def proxg(lamda, x):
-            return x / (1 + lamda)
-
-        x_rec = app.L2ConstrainedMinimization(A, y, proxg, eps,
-                                              show_pbar=False).run()
-        npt.assert_allclose(x_rec, x, atol=1e-3)
-
     def test_precond_LinearLeastSquares(self):
         n = 5
-        _A = np.eye(n) + 0.1 * util.randn([n, n])
+        _A = np.eye(n) + 0.01 * util.randn([n, n])
         A = linop.MatMul([n, 1], _A)
         x = util.randn([n, 1])
         y = A(x)
@@ -97,11 +80,11 @@ class TestApp(unittest.TestCase):
         x_rec = app.LinearLeastSquares(A, y, show_pbar=False).run()
         npt.assert_allclose(x_rec, x_lstsq, atol=1e-3)
 
-        alpha = p / app.MaxEig(P * A.H * A, show_pbar=False).run()
+        alpha = 1 / app.MaxEig(P * A.H * A, show_pbar=False).run()
         x_rec = app.LinearLeastSquares(
             A,
             y,
-            alg_name='GradientMethod',
+            solver='GradientMethod',
             alpha=alpha,
             max_power_iter=100,
             max_iter=1000, show_pbar=False).run()
@@ -111,7 +94,7 @@ class TestApp(unittest.TestCase):
         x_rec = app.LinearLeastSquares(
             A,
             y,
-            alg_name='PrimalDualHybridGradient',
+            solver='PrimalDualHybridGradient',
             max_iter=1000,
             tau=tau, show_pbar=False).run()
         npt.assert_allclose(x_rec, x_lstsq, atol=1e-3)
@@ -128,7 +111,7 @@ class TestApp(unittest.TestCase):
         x_rec = app.LinearLeastSquares(
             A,
             y,
-            alg_name='PrimalDualHybridGradient',
+            solver='PrimalDualHybridGradient',
             max_iter=1000,
             sigma=d, show_pbar=False).run()
         npt.assert_allclose(x_rec, x_lstsq, atol=1e-3)

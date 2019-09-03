@@ -22,6 +22,8 @@ First-order Gradient Methods
    sigpy.alg.GradientMethod
    sigpy.alg.ConjugateGradient
    sigpy.alg.PrimalDualHybridGradient
+   sigpy.alg.ADMM
+
 
 Other Methods
 -------------

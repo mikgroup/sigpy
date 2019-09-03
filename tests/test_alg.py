@@ -115,7 +115,7 @@ class TestAlg(unittest.TestCase):
         x_z = np.zeros([2 * n])
         v = np.zeros([n])
 
-        def minL(mu):
+        def minL():
             x = x_z[:n]
             z = x_z[n:]
             x[:] = np.linalg.solve(

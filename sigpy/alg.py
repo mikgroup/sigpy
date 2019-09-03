@@ -279,13 +279,13 @@ class PrimalDualHybridGradient(Alg):
 
     Considers the problem:
 
-    .. math:: \min_x \max_u - f^*(u) + g(x) + h(x) + \left<Ax, u\right>
+    .. math:: \min_x \max_u - f^*(u) + g(x) + \left<Ax, u\right>
 
     Or equivalently:
 
-    .. math:: \min_x f(A x) + g(x) + h(x)
+    .. math:: \min_x f(A x) + g(x)
 
-    where f, and g are simple, and h is Lipschitz continuous.
+    where f, and g are simple.
 
     Args:
         proxfc (function): Function to compute proximal operator of f^*.
@@ -310,12 +310,11 @@ class PrimalDualHybridGradient(Alg):
     """
 
     def __init__(self, proxfc, proxg, A, AH, x, u,
-                 tau, sigma, theta=1, gradh=None,
+                 tau, sigma, theta=1,
                  gamma_primal=0, gamma_dual=0,
                  max_iter=100, tol=0):
         self.proxfc = proxfc
         self.proxg = proxg
-        self.gradh = gradh
         self.tol = tol
 
         self.A = A
@@ -336,48 +335,46 @@ class PrimalDualHybridGradient(Alg):
         with self.x_device:
             self.x_ext = self.x.copy()
 
-        with self.u_device:
-            self.u_old = self.u.copy()
-            self.x_old = self.x.copy()
+        if self.gamma_primal > 0:
+            xp = self.x_device.xp
+            self.tau_min = xp.amin(xp.abs(tau)).item()
+
+        if self.gamma_dual > 0:
+            xp = self.u_device.xp
+            self.sigma_min = xp.amin(xp.abs(sigma)).item()
 
         self.resid = np.infty
 
         super().__init__(max_iter)
 
     def _update(self):
-        backend.copyto(self.u_old, self.u)
-        backend.copyto(self.x_old, self.x)
+        x_old = self.x.copy()
 
         # Update dual.
-        delta_u = self.A(self.x_ext)
-        util.axpy(self.u, self.sigma, delta_u)
+        util.axpy(self.u, self.sigma, self.A(self.x_ext))
         backend.copyto(self.u, self.proxfc(self.sigma, self.u))
 
         # Update primal.
         with self.x_device:
-            delta_x = self.AH(self.u)
-            if self.gradh is not None:
-                delta_x += self.gradh(self.x)
-
-            util.axpy(self.x, -self.tau, delta_x)
+            util.axpy(self.x, -self.tau, self.AH(self.u))
             backend.copyto(self.x, self.proxg(self.tau, self.x))
 
         # Update step-size if neccessary.
         if self.gamma_primal > 0 and self.gamma_dual == 0:
             with self.x_device:
                 xp = self.x_device.xp
-                theta = 1 / (1 + 2 * self.gamma_primal *
-                             xp.amin(xp.abs(self.tau)))**0.5
+                theta = 1 / (1 + 2 * self.gamma_primal * self.tau_min)**0.5
                 self.tau *= theta
+                self.tau_min *= theta
 
             with self.u_device:
                 self.sigma /= theta
         elif self.gamma_primal == 0 and self.gamma_dual > 0:
             with self.u_device:
                 xp = self.u_device.xp
-                theta = 1 / (1 + 2 * self.gamma_dual *
-                             xp.amin(xp.abs(self.sigma)))**0.5
+                theta = 1 / (1 + 2 * self.gamma_dual * self.sigma_min)**0.5
                 self.sigma *= theta
+                self.sigma_min *= theta
 
             with self.x_device:
                 self.tau /= theta
@@ -387,19 +384,12 @@ class PrimalDualHybridGradient(Alg):
         # Extrapolate primal.
         with self.x_device:
             xp = self.x_device.xp
-            x_diff = self.x - self.x_old
+            x_diff = self.x - x_old
+            self.resid = xp.linalg.norm(x_diff / self.tau**0.5).item()
             backend.copyto(self.x_ext, self.x + theta * x_diff)
-            x_diff_norm = xp.linalg.norm(x_diff / self.tau**0.5).item()
-
-        with self.u_device:
-            xp = self.u_device.xp
-            u_diff = self.u - self.u_old
-            u_diff_norm = xp.linalg.norm(u_diff / self.sigma**0.5).item()
-
-        self.resid = x_diff_norm**2 + u_diff_norm**2
 
     def _done(self):
-        return self.iter >= self.max_iter or self.resid <= self.tol
+        return (self.iter >= self.max_iter) or (self.resid <= self.tol)
 
 
 class AltMin(Alg):
@@ -443,8 +433,7 @@ class AugmentedLagrangianMethod(Alg):
         \|[g(x) + \frac{u}{\mu}]_+\|_2^2 + \|h(x) + \frac{v}{\mu}\|_2^2)
 
     Args:
-        minL (function): a function that takes :math:`\mu` as input,
-            and minimizes the augmented Lagrangian over `x`.
+        minL (function): a function that minimizes the augmented Lagrangian.
         g (None or function): a function that takes :math:`x` as input,
             and outputs :math:`g(x)`, the inequality constraints.
         h (None or function): a function that takes :math:`x` as input,
@@ -467,7 +456,7 @@ class AugmentedLagrangianMethod(Alg):
         super().__init__(max_iter)
 
     def _update(self):
-        self.minL(self.mu)
+        self.minL()
         if self.g is not None:
             device = backend.get_device(self.u)
             xp = device.xp
@@ -477,6 +466,51 @@ class AugmentedLagrangianMethod(Alg):
 
         if self.h is not None:
             util.axpy(self.v, self.mu, self.h(self.x))
+
+
+class ADMM(Alg):
+    r"""Alternating Direction Method of Multipliers.
+
+    Consider the equality constrained problem:
+
+    .. math:: \min_{x: A x + B z = c} f(x) + g(z)
+
+    And perform the following update steps:
+
+    .. math::
+        x = \text{argmin}_{x} L_\mu(x, z, u)\\
+        z = \text{argmin}_{z} L_\mu(x, z, u)\\
+        u = u + A x + B z - c
+
+    where :math:`L(x, u, v, \mu)`: is the augmented Lagrangian function:
+
+    .. math::
+        L_\rho(x, z, u) = f(x) + g(z) + \frac{\rho}{2}\|A x + B z - c + u\|_2^2
+
+    Args:
+        minL_x (function): a function that minimizes L w.r.t. x.
+        minL_z (function): a function that minimizes L w.r.t. z.
+        x (array): primal variable 1.
+        z (array): primal variable 2.
+        u (array): scaled dual variable.
+        max_iter (int): maximum number of iterations.
+
+    """
+    def __init__(self, minL_x, minL_z, x, z, u, A, B, c, max_iter=30):
+        self.minL_x = minL_x
+        self.minL_z = minL_z
+        self.x = x
+        self.z = z
+        self.u = u
+        self.A = A
+        self.B = B
+        self.c = c
+        super().__init__(max_iter)
+
+    def _update(self):
+        self.minL_x()
+        self.minL_z()
+        self.u += self.A(self.x) + self.B(self.z) - self.c
 
 
 class NewtonsMethod(Alg):

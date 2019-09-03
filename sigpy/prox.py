@@ -160,25 +160,36 @@ class L2Reg(Prox):
     r"""Proximal operator for l2 regularization.
 
     .. math::
-        \min_x \frac{1}{2} \| x - y \|_2^2 + \frac{\lambda}{2} \| x \|_2^2
+        \min_x \frac{1}{2} \|x - y\|_2^2 + \frac{\lambda}{2}\|x-z\|_2^2 + h(x)
 
     Args:
         shape (tuple of ints): Input shape.
         lamda (float): Regularization parameter.
         y (scalar or array): Bias term.
+        proxh (Prox): optional additional proximal operator.
 
     """
 
-    def __init__(self, shape, lamda, y=0):
+    def __init__(self, shape, lamda, y=None, proxh=None):
         self.lamda = lamda
         self.y = y
+        self.proxh = proxh
 
         super().__init__(shape)
 
     def _prox(self, alpha, input):
         with backend.get_device(input):
-            return (input + self.lamda * alpha * self.y) / \
-                (1 + self.lamda * alpha)
+            output = input.copy()
+            if self.y is not None:
+                output += (self.lamda * alpha) * self.y
+
+            output /= 1 + self.lamda * alpha
+
+            if self.proxh is not None:
+                return self.proxh(
+                    alpha / (1 + self.lamda * alpha), output)
+
+        return output
 
 
 class L2Proj(Prox):

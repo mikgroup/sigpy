@@ -8,9 +8,7 @@ from sigpy.mri import linop
 
 
 __all__ = ['SenseRecon', 'L1WaveletRecon', 'TotalVariationRecon',
-           'SenseConstrainedRecon', 'L1WaveletConstrainedRecon',
-           'TotalVariationConstrainedRecon',
-           'JsenseRecon']
+           'JsenseRecon', 'EspiritCalib']
 
 
 def _estimate_weights(y, weights, coord):
@@ -75,54 +73,6 @@ class SenseRecon(sp.app.LinearLeastSquares):
         super().__init__(A, y, lamda=lamda, show_pbar=show_pbar, **kwargs)
 
 
-class SenseConstrainedRecon(sp.app.L2ConstrainedMinimization):
-    r"""SENSE constrained reconstruction.
-
-    Considers the problem
-
-    .. math::
-        \min_x &\| x \|_2^2 \\
-        \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
-
-    where P is the sampling operator, F is the Fourier transform operator,
-    S is the SENSE operator, x is the image, and y is the k-space measurements.
-
-    Args:
-        y (array): k-space measurements.
-        mps (array): sensitivity maps.
-        eps (float): constraint parameter.
-        weights (float or array): weights for data consistency.
-        coord (None or array): coordinates.
-        device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils.
-        Only affects memory usage.
-        comm (Communicator): communicator for distributed computing.
-        **kwargs: Other optional arguments.
-
-    See also:
-       SenseRecon
-
-    """
-
-    def __init__(self, y, mps, eps,
-                 weights=None, coord=None,
-                 device=sp.cpu_device, coil_batch_size=None,
-                 comm=None, show_pbar=True, **kwargs):
-        weights = _estimate_weights(y, weights, coord)
-        if weights is not None:
-            y = sp.to_device(y * weights**0.5, device=device)
-        else:
-            y = sp.to_device(y, device=device)
-
-        A = linop.Sense(mps, coord=coord, weights=weights,
-                        comm=comm, coil_batch_size=coil_batch_size)
-        proxg = sp.prox.L2Reg(A.ishape, 1)
-        if comm is not None:
-            show_pbar = show_pbar and comm.rank == 0
-
-        super().__init__(A, y, proxg, eps, show_pbar=show_pbar, **kwargs)
-
-
 class L1WaveletRecon(sp.app.LinearLeastSquares):
     r"""L1 Wavelet regularized reconstruction.
 
@@ -180,60 +130,6 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             show_pbar = show_pbar and comm.rank == 0
 
         super().__init__(A, y, proxg=proxg, g=g, show_pbar=show_pbar, **kwargs)
-
-
-class L1WaveletConstrainedRecon(sp.app.L2ConstrainedMinimization):
-    r"""L1 wavelet regularized constrained reconstruction.
-
-    Considers the problem
-
-    .. math::
-        \min_x &\| W x \|_1 \\
-        \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
-
-    where P is the sampling operator, F is the Fourier transform operator,
-    S is the SENSE operator, W is the wavelet operator,
-    x is the image, and y is the k-space measurements.
-
-    Args:
-        y (array): k-space measurements.
-        mps (array): sensitivity maps.
-        eps (float): constraint parameter.
-        wave_name (str): wavelet name.
-        weights (float or array): weights for data consistency.
-        coord (None or array): coordinates.
-        device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils.
-        Only affects memory usage.
-        comm (Communicator): communicator for distributed computing.
-        **kwargs: Other optional arguments.
-
-    See also:
-       :func:`sigpy.mri.app.WaveletRecon`
-
-    """
-
-    def __init__(
-            self, y, mps, eps,
-            wave_name='db4', weights=None, coord=None,
-            device=sp.cpu_device, coil_batch_size=None, comm=None,
-            show_pbar=True, **kwargs):
-        weights = _estimate_weights(y, weights, coord)
-        if weights is not None:
-            y = sp.to_device(y * weights**0.5, device=device)
-        else:
-            y = sp.to_device(y, device=device)
-
-        A = linop.Sense(mps, coord=coord, weights=weights,
-                        comm=comm, coil_batch_size=coil_batch_size)
-        img_shape = mps.shape[1:]
-        W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
-        proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, 1), W)
-
-        if comm is not None:
-            show_pbar = show_pbar and comm.rank == 0
-
-        super().__init__(A, y, proxg, eps, show_pbar=show_pbar, **kwargs)
 
 
 class TotalVariationRecon(sp.app.LinearLeastSquares):
@@ -296,57 +192,6 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
                          **kwargs)
 
 
-class TotalVariationConstrainedRecon(sp.app.L2ConstrainedMinimization):
-    r"""Total variation regularized constrained reconstruction.
-
-    Considers the problem
-
-    .. math::
-        \min_x &\| G x \|_1 \\
-        \text{s.t.} &\| P F S x - y \|_2^2 \le \epsilon
-
-    where P is the sampling operator, F is the Fourier transform operator,
-    S is the SENSE operator, G is the gradient operator,
-    x is the image, and y is the k-space measurements.
-
-    Args:
-        y (array): k-space measurements.
-        mps (array): sensitivity maps.
-        eps (float): constraint parameter.
-        weights (float or array): weights for data consistency.
-        coord (None or array): coordinates.
-        device (Device): device to perform reconstruction.
-        coil_batch_size (int): batch size to process coils.
-        Only affects memory usage.
-        comm (Communicator): communicator for distributed computing.
-        **kwargs: Other optional arguments.
-
-    See also:
-       :func:`sigpy.mri.app.TotalVariationRecon`
-
-    """
-
-    def __init__(
-            self, y, mps, eps,
-            weights=None, coord=None, device=sp.cpu_device,
-            coil_batch_size=None, comm=None, show_pbar=True, **kwargs):
-        weights = _estimate_weights(y, weights, coord)
-        if weights is not None:
-            y = sp.to_device(y * weights**0.5, device=device)
-        else:
-            y = sp.to_device(y, device=device)
-
-        A = linop.Sense(mps, coord=coord, weights=weights,
-                        comm=comm, coil_batch_size=coil_batch_size)
-        G = sp.linop.FiniteDifference(A.ishape)
-        proxg = sp.prox.L1Reg(G.oshape, 1)
-
-        if comm is not None:
-            show_pbar = show_pbar and comm.rank == 0
-
-        super().__init__(A, y, proxg, eps, G=G, show_pbar=show_pbar, **kwargs)
-
-
 class JsenseRecon(sp.app.App):
     r"""JSENSE reconstruction.
 
@@ -386,7 +231,7 @@ class JsenseRecon(sp.app.App):
                  mps_ker_width=16, ksp_calib_width=24,
                  lamda=0, device=sp.cpu_device, comm=None,
                  weights=None, coord=None, max_iter=10,
-                 max_inner_iter=10, show_pbar=True):
+                 max_inner_iter=10, normalize=True, show_pbar=True):
         self.y = y
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
@@ -395,6 +240,7 @@ class JsenseRecon(sp.app.App):
         self.coord = coord
         self.max_iter = max_iter
         self.max_inner_iter = max_inner_iter
+        self.normalize = normalize
 
         self.device = sp.Device(device)
         self.comm = comm
@@ -432,10 +278,9 @@ class JsenseRecon(sp.app.App):
                 self.weights = self.weights[calib_idx]
 
         if self.weights is None:
-            self.y = sp.to_device(self.y / np.abs(self.y).max(), self.device)
+            self.y = sp.to_device(self.y, self.device)
         else:
-            self.y = sp.to_device(self.weights**0.5 *
-                                  self.y / np.abs(self.y).max(), self.device)
+            self.y = sp.to_device(self.weights**0.5 * self.y, self.device)
 
         if self.coord is not None:
             self.coord = sp.to_device(self.coord, self.device)
@@ -443,6 +288,11 @@ class JsenseRecon(sp.app.App):
             self.weights = sp.to_device(self.weights, self.device)
 
         self.weights = _estimate_weights(self.y, self.weights, self.coord)
+
+        if self.normalize:
+            xp = self.device.xp
+            with self.device:
+                self.y = self.y / xp.linalg.norm(self.y)
 
     def _get_vars(self):
         ndim = len(self.img_shape)
@@ -474,8 +324,7 @@ class JsenseRecon(sp.app.App):
                 self.mps_ker,
                 lamda=self.lamda,
                 max_iter=self.max_inner_iter,
-                show_pbar=self.show_pbar,
-                leave_pbar=False).run()
+                show_pbar=False).run()
 
         def min_img_ker():
             self.A_img_ker = linop.ConvSense(
@@ -490,8 +339,7 @@ class JsenseRecon(sp.app.App):
                 self.img_ker,
                 lamda=self.lamda,
                 max_iter=self.max_inner_iter,
-                show_pbar=self.show_pbar,
-                leave_pbar=False).run()
+                show_pbar=False).run()
 
         self.alg = sp.alg.AltMin(
             min_mps_ker, min_img_ker, max_iter=self.max_iter)
@@ -500,19 +348,19 @@ class JsenseRecon(sp.app.App):
         xp = self.device.xp
         # Normalize by root-sum-of-squares.
         with self.device:
-            mps_rss = 0
+            rss = 0
             mps = np.empty([self.num_coils] + self.img_shape, dtype=self.dtype)
             for c in range(self.num_coils):
                 mps_c = sp.ifft(sp.resize(self.mps_ker[c], self.img_shape))
-                mps_rss += xp.abs(mps_c)**2
+                rss += xp.abs(mps_c)**2
                 sp.copyto(mps[c], mps_c)
 
-            mps_rss = sp.to_device(mps_rss)
+            rss = sp.to_device(rss)
             if self.comm is not None:
-                self.comm.allreduce(mps_rss)
+                self.comm.allreduce(rss)
 
-            mps_rss = mps_rss**0.5
-            mps /= mps_rss
+            rss = rss**0.5
+            mps /= rss
             return mps
 
 

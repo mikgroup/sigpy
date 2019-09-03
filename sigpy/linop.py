@@ -950,15 +950,13 @@ class Interpolate(Linop):
 
     """
 
-    def __init__(self, ishape, coord, width, kernel, scale=1, shift=0):
+    def __init__(self, ishape, coord, width, kernel):
         ndim = coord.shape[-1]
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.width = width
         self.kernel = kernel
-        self.shift = shift
-        self.scale = scale
 
         super().__init__(oshape, ishape)
 
@@ -967,15 +965,12 @@ class Interpolate(Linop):
         device = backend.get_device(input)
         coord = backend.to_device(self.coord, device)
         kernel = backend.to_device(self.kernel, device)
-        shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.interpolate(input, self.width, kernel,
-                                      coord * self.scale + shift)
+            return interp.interpolate(input, self.width, kernel, coord)
 
     def _adjoint_linop(self):
-        return Gridding(self.ishape, self.coord, self.width, self.kernel,
-                        scale=self.scale, shift=self.shift)
+        return Gridding(self.ishape, self.coord, self.width, self.kernel)
 
 
 class Gridding(Linop):
@@ -993,15 +988,13 @@ class Gridding(Linop):
 
     """
 
-    def __init__(self, oshape, coord, width, kernel, scale=1, shift=0):
+    def __init__(self, oshape, coord, width, kernel):
         ndim = coord.shape[-1]
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.width = width
         self.kernel = kernel
-        self.shift = shift
-        self.scale = scale
 
         super().__init__(oshape, ishape)
 
@@ -1009,15 +1002,13 @@ class Gridding(Linop):
         device = backend.get_device(input)
         coord = backend.to_device(self.coord, device)
         kernel = backend.to_device(self.kernel, device)
-        shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.gridding(input, self.oshape, self.width, kernel,
-                                   coord * self.scale + shift)
+            return interp.gridding(
+                input, self.oshape, self.width, kernel, coord)
 
     def _adjoint_linop(self):
-        return Interpolate(self.oshape, self.coord, self.width, self.kernel,
-                           scale=self.scale, shift=self.shift)
+        return Interpolate(self.oshape, self.coord, self.width, self.kernel)
 
 
 class Resize(Linop):
@@ -1274,20 +1265,24 @@ class Tile(Linop):
 
 
 class ArrayToBlocks(Linop):
-    """Extract blocks from array.
+    """Extract blocks from an array in a sliding window manner.
 
     Args:
-        ishape (tuple of ints): Input shape.
-        blk_shape (tuple of ints): Block shape.
-        blk_shape (tuple of ints): Block strides.
+        ishape (array): input array of shape [..., N_1, ..., N_D]
+        blk_shape (tuple): block shape of length D, with D <= 4.
+        blk_strides (tuple): block strides of length D.
+
+    See Also:
+        :func:`sigpy.block.array_to_blocks`
 
     """
 
     def __init__(self, ishape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
+        D = len(blk_shape)
         num_blks = [(i - b + s) // s for i, b,
-                    s in zip(ishape, blk_shape, blk_strides)]
+                    s in zip(ishape[-D:], blk_shape, blk_strides)]
         oshape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1300,20 +1295,23 @@ class ArrayToBlocks(Linop):
 
 
 class BlocksToArray(Linop):
-    """Average blocks to array.
+    """Accumulate blocks into an array in a sliding window manner.
 
     Args:
-        oshape (tuple of ints): Output shape.
-        blk_shape (tuple of ints): Block shape.
-        blk_shape (tuple of ints): Block strides.
+        oshape (tuple): output shape.
+        blk_shape (tuple): block shape of length D.
+        blk_strides (tuple): block strides of length D.
+
+    Returns:
+        array: array of shape oshape.
 
     """
-
     def __init__(self, oshape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
+        D = len(blk_shape)
         num_blks = [(i - b + s) // s for i, b,
-                    s in zip(oshape, blk_shape, blk_strides)]
+                    s in zip(oshape[-D:], blk_shape, blk_strides)]
         ishape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1347,7 +1345,7 @@ def FiniteDifference(ishape, axes=None):
     axes = util._normalize_axes(axes, len(ishape))
     ndim = len(ishape)
     linops = []
-    for i in range(ndim):
+    for i in axes:
         D = I - Circshift(ishape, [0] * i + [1] + [0] * (ndim - i - 1))
         R = Reshape([1] + list(ishape), ishape)
         linops.append(R * D)

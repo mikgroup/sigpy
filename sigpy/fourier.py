@@ -4,6 +4,7 @@
 """
 import numpy as np
 
+from math import ceil
 from sigpy import backend, interp, util
 
 
@@ -276,9 +277,9 @@ def _scale_coord(coord, shape, oversamp):
     ndim = coord.shape[-1]
     device = backend.get_device(coord)
     scale = backend.to_device(
-        [int(oversamp * i) / i for i in shape[-ndim:]], device)
+        [ceil(oversamp * i) / i for i in shape[-ndim:]], device)
     shift = backend.to_device(
-        [int(oversamp * i) // 2 for i in shape[-ndim:]], device)
+        [ceil(oversamp * i) // 2 for i in shape[-ndim:]], device)
 
     with device:
         coord = scale * coord + shift
@@ -287,7 +288,7 @@ def _scale_coord(coord, shape, oversamp):
 
 
 def _get_oversamp_shape(shape, ndim, oversamp):
-    return list(shape)[:-ndim] + [int(oversamp * i) for i in shape[-ndim:]]
+    return list(shape)[:-ndim] + [ceil(oversamp * i) for i in shape[-ndim:]]
 
 
 def _apodize(input, ndim, oversamp, width, beta):
@@ -298,7 +299,7 @@ def _apodize(input, ndim, oversamp, width, beta):
     with device:
         for a in range(-ndim, 0):
             i = output.shape[a]
-            os_i = int(oversamp * i)
+            os_i = ceil(oversamp * i)
             idx = xp.arange(i, dtype=output.dtype)
 
             # Calculate apodization
