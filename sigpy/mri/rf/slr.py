@@ -352,3 +352,100 @@ def ab2rf(a, b):
             b = bt[0:ii:1]
 
     return rf
+
+
+def rootFlip(b, d1, flip, tb):
+
+    b = b / np.max(np.abs(np.signal.freqz(b))) # normalize beta
+    b = b*np.sin(flip/2 + np.arctan(d1*2)/2) # scale to target flip
+    r = np.roots(b)
+    r = np.sort(np.angle(r))
+
+
+    return rf
+
+
+def leja(x):
+
+    # Order roots in a way suitable to accurately compute polynomial
+    # coefficients. Based on MATLAB code from Markus Lang at Rice University
+
+    n = np.size(x)
+    # duplicate roots to n+1 rows
+    a = np.tile(np.reshape(x, (1, n)), (n+1, 1))
+    # take abs of first row
+    a[0, :] = np.abs(a[0, :])
+
+    tmp = np.zeros(n+1, dtype=complex)
+
+    # find index of max abs value
+    ind = np.argmax(a[0, :])
+    if ind != 0:
+        tmp[:] = a[:, 0]
+        a[:, 0] = a[:, ind]
+        a[:, ind] = tmp
+
+    x_out = np.zeros(n, dtype=complex)
+    x_out[0] = a[n-1, 0]
+    a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
+
+    for l in range(1, n-1):
+        aprod = np.abs(np.prod(a[0:l+1, l:], axis = 0))
+        ind = np.argmax(aprod)
+        ind = ind + l
+        if l != ind:
+            tmp[:] = a[:, l]
+            a[:, l] = a[:, ind]
+            a[:, ind] = tmp
+            x_out[l] = a[n-1, l]
+            a[l+1, (l+1):n] = np.abs(a[l+1, (l+1):] - x_out[l])
+
+    x_out = a[n, :]
+
+    return x_out
+
+
+def leja_fast(x):
+
+    # a faster version of the leja function that avoids repetitive
+    # prod() calculations that can be slow for large numbers of roots
+
+    n = np.size(x)
+    # duplicate roots to n+1 rows
+    a = np.tile(np.reshape(x, (1, n)), (n+1, 1))
+    # take abs of first row
+    a[0, :] = np.abs(a[0, :])
+
+    tmp = np.zeros(n+1, dtype=complex)
+
+    # find index of max abs value
+    ind = np.argmax(a[0, :])
+    if ind != 0:
+        tmp[:] = a[:, 0]
+        a[:, 0] = a[:, ind]
+        a[:, ind] = tmp
+
+    x_out = np.zeros(n, dtype=complex)
+    x_out[0] = a[n-1, 0] # first entry of last row
+    a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
+
+    foo = a[0, 0:n]
+
+    for l in range(1, n-1):
+        foo = np.multiply(foo, a[l, :])
+        ind = np.argmax(foo[l:])
+        ind = ind + l
+        if l != ind:
+            tmp[:] = a[:, l]
+            a[:, l] = a[:, ind]
+            a[:, ind] = tmp
+            # also swap inds in foo
+            tmp[0] = foo[l]
+            foo[l] = foo[ind]
+            foo[ind] = tmp[0]
+        x_out[l] = a[n-1, l]
+        a[l+1, (l+1):n] = np.abs(a[l+1, (l+1):] - x_out[l])
+
+    x_out = a[n, :]
+
+    return x_out
