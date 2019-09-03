@@ -6,14 +6,14 @@ provides functions to compute preconditioners.
 
 """
 from sigpy.mri import app, linop
-
 from sigpy.mri.rf import ptx, slr, optcont
+from sigpy.mri.rf.optcont import *  # noqa
 from sigpy.mri.rf.ptx import *  # noqa
 from sigpy.mri.rf.slr import *  # noqa
-from sigpy.mri.rf.optcont import *  # noqa
-
+from sigpy.mri.rf.trajgrad import *  # noga
 
 __all__ = ['app', 'linop']
 __all__.extend(ptx.__all__)
 __all__.extend(slr.__all__)
 __all__.extend(optcont.__all__)
+__all__.extend(trajgrad.__all__)
