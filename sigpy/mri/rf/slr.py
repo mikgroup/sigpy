@@ -356,12 +356,47 @@ def ab2rf(a, b):
 
 def rootFlip(b, d1, flip, tb):
 
+    n = np.size(b)
     b = b / np.max(np.abs(np.signal.freqz(b))) # normalize beta
     b = b*np.sin(flip/2 + np.arctan(d1*2)/2) # scale to target flip
-    r = np.roots(b)
-    r = np.sort(np.angle(r))
+    r = leja_fast(np.roots(b))
 
-    return r
+    candidates = np.abs(1-np.abs(r)) > 0.004 and \
+        np.abs(np.angle(r)) < tb/n*np.pi
+
+    iiMin = 0
+    iiMax = 2**np.sum(candidates)
+
+    maxRF = np.max(np.abs(b2rf(b)))
+
+    for ii in range(iiMin, iiMax):
+
+        # get a binary flipping pattern
+        doFlipStr = format(ii, 'b')
+        doFlip = np.zeros(np.sum(candidates), dtype=bool)
+        for jj in range(0, len(doFlipStr)):
+            doFlip[jj] = bool(int(doFlipStr[jj]))
+
+        # embed the pattern in an all-roots vector
+        tmp = np.zeros(n-1, dtype=bool)
+        tmp[candidates] = doFlip
+        doFlip = tmp
+
+        # flip those indices
+        rFlip = r
+        rFlip[doFlip == True] = np.conj(1/rFlip(doFlip == True))
+
+        bTmp = np.poly(rFlip)
+        bTmp = bTmp / np.max(np.abs(np.signal.freqz(bTmp))) # normalize beta
+        bTmp = bTmp * np.sin(flip/2 + np.arctan(d1*2)/2) # scale to target flip
+        rfTmp = b1rf(bTmp)
+
+        if np.max(np.abs(rfTmp)) < maxRF:
+            maxRF = np.max(np.abs(rfTmp))
+            rf_out = rfTmp
+            b_out = bTmp
+
+    return rf_out, b_out
 
 
 def leja(x):
