@@ -86,6 +86,8 @@ def dzb1gSliderrf(dt = 2e-6, G = 5, tb = 12, ptype = 'st', flip = np.pi/6,
 
     # calculate beta filter ripple
     [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
+    if ptype == 'st':
+        bsf = flip
 
     # calculate pulse duration
     B = 4257*pbw
@@ -101,7 +103,9 @@ def dzb1gSliderrf(dt = 2e-6, G = 5, tb = 12, ptype = 'st', flip = np.pi/6,
     dom = np.zeros((2*n, G))
     for Gind in range(1,G+1):
         # design filter
-        h = slr.dzgSliderB(n, G, Gind, tb, d1, d2, np.pi)
+        h = bsf*slr.dzgSliderB(n, G, Gind, tb, d1, d2, np.pi)
+        if ptype == 'ex':
+            h = slr.b2rf(h)
         # modulate filter to center and add it to a time-reversed and modulated
         # copy, then take the imaginary part to get an odd filter
         h = np.imag(h*np.exp(1j*om*t) - h[n::-1]*np.exp(1j*-om*t))
@@ -112,6 +116,6 @@ def dzb1gSliderrf(dt = 2e-6, G = 5, tb = 12, ptype = 'st', flip = np.pi/6,
             -np.ones(n//2)))
 
     # scale to target flip, convert to Hz
-    dom = dom*flip/(2*np.pi*dt)
+    dom = dom/(2*np.pi*dt)
 
     return om1, dom
