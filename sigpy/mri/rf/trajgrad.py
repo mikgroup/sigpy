@@ -98,6 +98,20 @@ def trapgrad(area, gmax, dgdt, dt, *args):
 
 
 def spiral(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
+    """Variable density spiral designer. Produces trajectory, gradients,
+    and slew rate.
+
+    Args:
+        opfov (float): imaging field of view (cm)
+        opxres (float): imaging resolution
+        gts (float): sample time in sec
+        gslew (float): max slew rate in
+        gamp (float): max gradient amplitude
+        densamp (float):  duration of full density sampling (# of samples)
+        dentrans (float): duration of transition from higher to lower (should be >= densamp/2)
+        nl (float): degree of undersampling outer region
+
+    """
     fsgcm = gamp  # fullscale g/cm
     risetime = gamp / gslew * 10000  # us
     ts = gts  # sampling time

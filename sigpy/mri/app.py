@@ -498,18 +498,20 @@ class SpatialPtxPulses(sp.app.App):
         self.device = sp.Device(device)
         self.show_pbar = show_pbar
 
+        xp = self.device.xp
+
         A = linop.Sense(self.sens, self.coord,
                         self.mask, ishape=self.target.shape).H
 
         if coord is not None:
             # Nc*Nt pulses
-            self.pulses = np.zeros((sens.shape[0], coord.shape[0]), np.complex)
+            self.pulses = xp.zeros((sens.shape[0], coord.shape[0]), np.complex)
         else:
-            self.pulses = np.zeros(sens.shape, np.complex)
+            self.pulses = xp.zeros(sens.shape, np.complex)
 
-        self.u = np.zeros(target.shape, np.complex)
+        self.u = xp.zeros(target.shape, np.complex)
 
-        lipschitz = np.linalg.svd(A * A.H * np.ones(target.shape, np.complex),
+        lipschitz = np.linalg.svd(A * A.H * xp.ones(target.shape, np.complex),
                                   compute_uv=False)[0]
         tau = 1.0 / lipschitz
         sigma = 0.01
@@ -518,25 +520,26 @@ class SpatialPtxPulses(sp.app.App):
         def proxg(alpha, pulses):
             # instantaneous power constraint
             func = (pulses / (1 + self.lamda * alpha)) * \
-                   np.minimum(pinst / np.abs(pulses) ** 2, 1)
+                   np.minimum(pinst / xp.abs(pulses) ** 2, 1)
             # avg power constraint for each of Nc channels
             for i in range(pulses.shape[0]):
-                norm = np.linalg.norm(func[i], 2, axis=0)
-                func[i] *= np.minimum(pavg / (norm**2 / len(pulses[i])), 1)
+                norm = xp.linalg.norm(func[i], 2, axis=0)
+                func[i] *= xp.minimum(pavg / (norm**2 / len(pulses[i])), 1)
 
             return func
 
-        if self.pinst == float('inf') and self.pavg == float('inf'):
-            self.alg = sp.alg.ConjugateGradient(A.H*A, A.H*self.target,
-                                                self.pulses,
-                                                max_iter=max_iter, tol=tol)
-        else:
-            self.alg = sp.alg.PrimalDualHybridGradient(
-                lambda alpha, u: (u - alpha * target) / (1 + alpha),
-                lambda alpha, pulses: proxg(alpha, pulses),
-                lambda pulses: A * pulses,
-                lambda pulses: A.H * pulses,
-                self.pulses, self.u, tau, sigma, max_iter=max_iter, tol=tol)
+        with self.device:
+            if self.pinst == float('inf') and self.pavg == float('inf'):
+                self.alg = sp.alg.ConjugateGradient(A.H*A, A.H*self.target,
+                                                    self.pulses,
+                                                    max_iter=max_iter, tol=tol)
+            else:
+                self.alg = sp.alg.PrimalDualHybridGradient(
+                    lambda alpha, u: (u - alpha * target) / (1 + alpha),
+                    lambda alpha, pulses: proxg(alpha, pulses),
+                    lambda pulses: A * pulses,
+                    lambda pulses: A.H * pulses,
+                    self.pulses, self.u, tau, sigma, max_iter=max_iter, tol=tol)
 
         super().__init__(self.alg, show_pbar=show_pbar)
 
