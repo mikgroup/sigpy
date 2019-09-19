@@ -3,7 +3,7 @@
 """
 import numpy as np
 
-__all__ = ['bir4', 'hypsec']
+__all__ = ['bir4', 'hypsec', 'wurst']
 
 
 def bir4(n, beta, kappa, theta, dw0):
@@ -41,11 +41,22 @@ def bir4(n, beta, kappa, theta, dw0):
 
     return a, om
 
+
 def hypsec(n = 512, beta = 800, mu = 4.9, T = 0.012):
 
     t = np.arange(-n//2,n//2)/n*T
 
     a = np.cosh(beta*t)**(-1)
     om = -mu*beta*np.tanh(beta*t)
+
+    return a, om
+
+
+def wurst(n = 512, N_fac = 40, bw = 40e3, T = 2e-3):
+
+    t = np.arange(0, n)*T/n
+
+    a = 1 - np.power(np.abs(np.cos(np.pi*t/T)), N_fac)
+    om = np.linspace(-bw/2, bw/2, n)*2*np.pi
 
     return a, om

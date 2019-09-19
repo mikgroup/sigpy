@@ -9,7 +9,7 @@ import sigpy as sp
 
 __all__ = ['dinf', 'dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
            'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'dzgSliderB', 'dzgSliderrf',
-           'rootFlip']
+           'rootFlip', 'dzRecursiveRF']
 
 
 """ Functions for SLR pulse design
@@ -376,6 +376,10 @@ def rootFlip(b, d1, flip, tb):
 
     for ii in range(iiMin, iiMax):
 
+        if ii % 20 == 0:
+            print('Evaluating root-flip pattern ' + str(ii) + ' out of ' +
+                str(iiMax-iiMin))
+
         # get a binary flipping pattern
         doFlipStr = format(ii, 'b')
         doFlip = np.zeros(np.sum(candidates), dtype=bool)
@@ -404,3 +408,159 @@ def rootFlip(b, d1, flip, tb):
             b_out = bTmp
 
     return rf_out, b_out
+
+
+def dzRecursiveRF(Nseg, tb, N, seSeq = False, tbRef = 8, zPadFact = 4,
+    winFact = 1.75, cancelAlphaPhs = True, T1 = np.inf, TRseg = 60,
+    useMz = True, d1 = 0.01, d2 = 0.01, d1se = 0.01, d2se = 0.01):
+
+    # get refocusing pulse and its rotation parameters
+    if seSeq == True:
+        [bsf, d1se, d2se] = calcRipples('se', d1se, d2se)
+        bRef = bsf*dzls(N, tbRef, d1se, d2se)
+        bRef = np.concatenate((np.zeros(int(zPadFact*N/2-N/2)), bRef,
+            np.zeros(int(zPadFact*N/2-N/2))))
+        rfRef = b2rf(bRef)
+        Bref = ft(bRef)
+        Bref /= np.max(np.abs(Bref))
+        BrefMag = np.abs(Bref)
+        ArefMag = np.abs(np.sqrt(1 - BrefMag**2))
+        flipRef = 2*np.arcsin(BrefMag(zPadFact*N/2))*180/np.pi
+
+    # get flip angles
+    flip = np.zeros(Nseg)
+    flip[Nseg-1] = 90
+    for jj in range(Nseg-2,-1,-1):
+        if seSeq == False:
+            flip[jj] = np.arctan(np.sin(flip[jj+1]*np.pi/180))*180/np.pi
+        else:
+            flip[jj] = np.arctan(np.cos(flipRef*pi/180)*
+                np.sin(flip[jj+1]*np.pi/180))*180/np.pi
+
+    # design first RF pulse
+    b = np.zeros((int(zPadFact*N), Nseg), dtype = complex)
+    b[int(zPadFact*N/2-N/2):int(zPadFact*N/2+N/2), 0] = dzls(N, tb, d1, d2)
+    #b = np.concatenate((np.zeros(int(zPadFact*N/2-N/2)), b,
+    #    np.zeros(int(zPadFact*N/2-N/2))))
+    B = ft(b[:, 0])
+    c = np.exp(-1j*2*np.pi/(N*zPadFact)/2*
+        np.arange(-N*zPadFact/2, N*zPadFact/2, 1))
+    B = np.multiply(B, c)
+    b[:, 0] = ift(B / np.max(np.abs(B)))
+    b[:, 0] *= np.sin(flip[0]*(np.pi/180)/2)
+    rf = np.zeros((zPadFact*N, Nseg), dtype = complex)
+    a = b2a(b[:, 0])
+    if cancelAlphaPhs:
+        # cancel a phase by absorbing into b
+        # Note that this is the only time we need to do it
+        b[:, 0] = np.fft.ifft(np.fft.fft(b[:, 0])* \
+            np.exp(-1j*np.angle(np.fft.fft(a[np.size(a)::-1]))))
+    rf[:, 0] = b2rf(b[:, 0])
+
+    # get min-phase alpha and its response
+    #a = b2a(b[:, 0])
+    A = sp.fft(a)
+
+    # calculate beta filter response
+    B = ft(b[:, 0])
+
+    if winFact < zPadFact:
+        winLen = (winFact - 1)*N
+        Npad = N*zPadFact - winFact*N
+        # blackman window?
+        window = signal.blackman(int((winFact-1)*N))
+        # split in half; stick N ones in the middle
+        window = np.concatenate((window[0:int(winLen/2)], np.ones(N),
+            window[int(winLen/2):]))
+        window = np.concatenate((np.zeros(int(Npad/2)), window,
+            np.zeros(int(Npad/2))))
+        # apply windowing to first pulse for consistency
+        b[:, 0] = np.multiply(b[:, 0], window)
+        rf[:, 0] = b2rf(b[:, 0])
+        # recalculate B and A
+        B = ft(b[:, 0])
+        A = ft(b2a(b[:, 0]))
+
+    # use A and B to get Mxy
+    #Mxy = np.zeros((zPadFact*N, Nseg), dtype = complex)
+    if seSeq == False:
+        Mxy0 = 2*np.conj(A)*B
+    else:
+        Mxy0 = 2*A*np.conj(B)*Bref**2
+
+    # Amplitude of next pulse's Mxy profile will be
+    #               |Mz*2*a*b| = |Mz*2*sqrt(1-abs(B).^2)*B|.
+    # If we set this = |Mxy_1|, we can solve for |B| via solving quadratic
+    # equation 4*Mz^2*(1-B^2)*B^2 = |Mxy_1|^2.
+    # Subsequently solve for |A|, and get phase of A via min-phase, and
+    # then get phase of B by dividing phase of A from first pulse's Mxy phase.
+    Mz = np.ones((zPadFact*N), dtype = complex)
+    for jj in range(1, Nseg):
+
+        # calculate Mz profile after previous pulse
+        if seSeq == False:
+            Mz = Mz * (1-2*np.abs(B)**2)*np.exp(-TRseg/T1) + \
+                (1-np.exp(-TRseg/T1))
+        else:
+            Mz = Mz * (1-2*(np.abs(A*BrefMag)**2 + np.abs(ArefMag*B)**2))
+            # (second term is about 1%)
+
+        if useMz == True: # design the pulses accounting for the
+                          # actual Mz profile (the full method)
+            # set up quadratic equation to get |B|
+            cq = -np.abs(Mxy0)**2
+            if seSeq == False:
+                bq = 4*Mz**2
+                aq = -4*Mz**2
+            else:
+                bq = 4*(BrefMag**4)*Mz**2
+                aq = -4*(BrefMag**4)*Mz**2
+            Bmag = np.sqrt((-bq+np.real(np.sqrt(bq**2-4*aq*cq)))/(2*aq))
+            Bmag[np.isnan(Bmag)] = 0
+            # get A - easier to get complex A than complex B since |A| is
+            # determined by |B|, and phase is gotten by min-phase relationship
+            # Phase of B doesn't matter here since only profile mag is used by
+            # b2a
+            A = ft(b2a(ift(Bmag)))
+            # trick: now we can get complex B from ratio of Mxy and A
+            B = Mxy0/(2*np.conj(A)*Mz)
+
+        else: # design assuming ideal Mz (conventional VFA)
+
+            B *= np.sin(np.pi/180*flip[jj]/2)/np.sin(np.pi/180*flip[jj-1]/2)
+            A = ft(b2a(ift(B)))
+
+        # get polynomial
+        b[:, jj] = ift(B)
+
+        if winFact < zPadFact:
+            b[:, jj] *= window
+            # recalculate B and A
+            B = ft(b[:, jj])
+            A = ft(b2a(b[:, jj]))
+
+        rf[:, jj] = b2rf(b[:, jj])
+
+    # truncate the RF
+    if winFact < zPadFact:
+        pulseLen = int(winFact*N)
+        rf = rf[int(Npad/2):int(Npad/2+pulseLen), :]
+
+    if seSeq == False:
+        return rf
+    else:
+        return rf, rfRef
+
+
+def ft(x):
+
+    X = np.fft.fftshift(np.fft.fft(np.fft.fftshift(x)))
+
+    return X
+
+
+def ift(X):
+
+    x = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(X)))
+
+    return x
