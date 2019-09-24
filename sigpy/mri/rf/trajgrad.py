@@ -77,7 +77,7 @@ def trapgrad(area, gmax, dgdt, dt, *args):
             else:
                 # trapezoid pulse
                 nflat = np.ceil((area - triareamax)/gmax / dt / 2) * 2
-                pulse = np.concatenate((np.linspace(0, ramppts, num=ramppts) / ramppts, np.ones(nflat), np.linspace(ramppts, 0, num=ramppts) / ramppts))
+                pulse = np.concatenate((np.linspace(0, ramppts, num=ramppts) / ramppts, np.ones(int(nflat)), np.linspace(ramppts, 0, num=ramppts) / ramppts))
 
             trap = pulse * (area / (sum(pulse) * dt))
 
@@ -103,10 +103,10 @@ def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
 
     Args:
         opfov (float): imaging field of view (cm)
-        opxres (float): imaging resolution
+        opxres (float): imaging resolution (cm)
         gts (float): sample time in sec
-        gslew (float): max slew rate in
-        gamp (float): max gradient amplitude
+        gslew (float): max slew rate in T/m/s
+        gamp (float): max gradient amplitude in T/m/s
         densamp (float):  duration of full density sampling (# of samples)
         dentrans (float): duration of transition from higher to lower (should be >= densamp/2)
         nl (float): degree of undersampling outer region
@@ -296,21 +296,24 @@ def spiralarch(D, N, gts, gslew, gamp):
     and slew rate.
 
     Args:
-        D (float): imaging field of view
-        N(float): desired matrix size
+        D (float): imaging field of view (m)
+        N(float): effective matrix size
         gts (float): sample time in sec
-        gslew (float): max slew rate in
-        gamp (float): max gradient amplitude
+        gslew (float): max slew rate in T/m/s
+        gamp (float): max gradient amplitude in T/m
 
     References:
         Glover, G. H.(1999).
         Simple Analytic Spiral K-Space Algorithm.
         Magnetic resonance in medicine, 42, 412-415.
+
+        Bernstein, M.A.; King, K.F.; amd Zhou, X.J. (2004).
+        Handbook of MRI Pulse Sequences. Elsevier.
     """
 
     gam = 267.522 * 1e6  # rad/s/Tesla
     gambar = gam / 2 / np.pi  # Hz/T
-    dx = D / N  # m
+    dx = D / N  # m, resolution
     lam = 1 / (2 * np.pi * D)
     beta = gambar * gslew / lam
 
@@ -359,7 +362,6 @@ def spiralarch(D, N, gts, gslew, gamp):
     s = np.diff(g, 1, axis=0) / (gts * 1000)  # slew rate factor
 
     # change from (real, imag) notation to (Nt, 2) notation
-
     ktemp = np.zeros((len(k), 2))
     ktemp[:, 0], ktemp[:, 1] = np.real(k), np.imag(k)
     k = ktemp

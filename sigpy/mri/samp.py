@@ -201,12 +201,12 @@ def _poisson(nx, ny, K, R, calib, seed):
     return mask
 
 
-def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
+def spiral(fov, N, f_sampling, R, ninterleaves, alpha, gm, sm):
     """Generate variable density spiral trajectory.
 
     Args:
         fov (float): field of view in meters.
-        img_shape (tuple of ints): image shape.
+        N (int): effective matrix shape.
         f_sampling (float): undersampling factor in freq encoding direction.
         R (float): undersampling factor.
         ninterleaves (int): number of spiral interleaves
@@ -222,7 +222,7 @@ def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
         'Simple Analytic Variable Density Spiral Design.' MRM 2003.
 
     """
-    res = fov/img_shape[0]
+    res = fov/N
 
     gamma = 2.678e8  # in rad/T/s
     lam = .5 / res  # in m**(-1)
@@ -264,4 +264,4 @@ def spiral(fov, img_shape, f_sampling, R, ninterleaves, alpha, gm, sm):
 
     k = np.stack((np.real(k), np.imag(k)), axis=1)
 
-    return k * fov
+    return k
