@@ -76,7 +76,7 @@ def abrm_hp(rf, gamgdt, xx, dom0dt=0):
 
     for ii in np.arange(Nt):
         # apply phase accural
-        z = np.exp(-1j*(xx*gamgdt[ii,]+dom0dt))
+        z = np.exp(-1j*(xx*gamgdt[ii,] + dom0dt))
         b = b*z
 
         # apply rf
@@ -88,7 +88,7 @@ def abrm_hp(rf, gamgdt, xx, dom0dt=0):
         a = at
         b = bt
 
-    z = np.exp(1j/2*(xx*np.sum(gamgdt,axis=0)+Nt*dom0dt))
+    z = np.exp(1j/2*(xx*np.sum(gamgdt, axis=0) + Nt*dom0dt))
     a = a*z
     b = b*z
 

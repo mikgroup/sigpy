@@ -5,6 +5,7 @@
 
 import numpy as np
 import scipy.signal as signal
+import scipy.linalg as linalg
 import sigpy as sp
 
 __all__ = ['dinf', 'dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
@@ -216,7 +217,8 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi, shift=32):
             b = b[:N]
 
     else:
-        # design two shifted filters that we can add to kill off the left band,
+        # design filters for the slab and the subslice, hilbert xform them
+        # to suppress their left bands,
         # then demodulate the result back to DC
         Gcent = shift+(Gind-G/2-1/2)*tb/G
         if Gind > 1 and Gind < G:
@@ -232,7 +234,8 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi, shift=32):
             # the slab and slice share a left transition band
             f = np.asarray([0, shift-(1+ftw)*(tb/2), shift-(1-ftw)*(tb/2),
                            Gcent+(tb/G/2-ftw*(tb/2)), Gcent+(tb/G/2+ftw*(tb/2)),
-                           shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
+                           shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2),
+                           (N/2)])/(N/2)
             mNotch = [0, 0, 0, 0, 1, 1, 0, 0]
             mSub = [0, 0, 1, 1, 0, 0, 0, 0]
             w = [d1/d2, 1, 1, d1/d2]
@@ -240,13 +243,14 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi, shift=32):
             # the slab and slice share a right transition band
             f = np.asarray([0, shift-(1+ftw)*(tb/2), shift-(1-ftw)*(tb/2),
                            Gcent-(tb/G/2+ftw*(tb/2)), Gcent-(tb/G/2-ftw*(tb/2)),
-                           shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2), (N/2)])/(N/2)
+                           shift+(1-ftw)*(tb/2), shift+(1+ftw)*(tb/2),
+                           (N/2)])/(N/2)
             mNotch = [0, 0, 1, 1, 0, 0, 0, 0]
             mSub = [0, 0, 0, 0, 1, 1, 0, 0]
             w = [d1/d2, 1, 1, d1/d2]
 
-        c = np.exp(1j*2*np.pi/(2*(N+1))
-                   * np.concatenate([np.arange(0,N/2+1,1), np.arange(-N/2,0,1)]))
+        c = np.exp(1j*2*np.pi/(2*(N+1)) * np.concatenate([np.arange(0,N/2+1,1),
+            np.arange(-N/2,0,1)]))
 
         bNotch = signal.firls(N+1, f, mNotch, w)  # the notched filter
         bNotch = np.fft.ifft(np.multiply(np.fft.fft(bNotch), c))
@@ -263,6 +267,81 @@ def dzgSliderB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, phi=np.pi, shift=32):
         # add them with the subslice phase
         b = bNotch + np.exp(1j*phi)*bSub
 
+        # demodulate to DC
+        cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0, N, 1))/2 \
+            * np.exp(-1j*np.pi/N*shift)
+        b = np.multiply(b, cShift)
+
+    return b
+
+
+def dzHadamardB(N=128, G=5, Gind=1, tb=4, d1=0.01, d2=0.01, shift=32):
+
+    H = linalg.hadamard(G)
+    encode = H[Gind-1, :]
+
+    ftw = dinf(d1, d2)/tb  # fractional transition width of the slab profile
+
+    if Gind == 1: # no sub-slices
+        b = dzls(N, tb, d1, d2)
+    else:
+        # left stopband
+        f = np.asarray([0, shift-(1+ftw)*(tb/2)])
+        m = np.asarray([0, 0])
+        w = np.asarray([d1/d2])
+        # first sub-band
+        ii = 1
+        Gcent = shift + (ii-G/2-1/2)*tb/G # first band center
+        f = np.append(f, Gcent-(tb/G/2-ftw*(tb/2))) # first band left edge
+        m = np.append(m, encode[ii-1])
+        if encode[ii-1] != encode[ii]:
+            # add the first band's right edge and its amplitude, and a weight
+            f = np.append(f, Gcent+(tb/G/2-ftw*(tb/2)))
+            m = np.append(m, encode[ii-1])
+            w = np.append(w, 1)
+        # middle sub-bands
+        for ii in range(2, G):
+            Gcent = shift + (ii-G/2-1/2)*tb/G # center of this band
+            if encode[ii-1] != encode[ii-2]:
+                # add a left edge and amp for this band
+                f = np.append(f, Gcent-(tb/G/2-ftw*(tb/2)))
+                m = np.append(m, encode[ii-1])
+            if encode[ii-1] != encode[ii]:
+                # add a right edge and its amp, and a weight for this band
+                f = np.append(f, Gcent+(tb/G/2-ftw*(tb/2)))
+                m = np.append(m, encode[ii-1])
+                w = np.append(w, 1)
+        # last sub-band
+        ii = G
+        Gcent = shift + (ii-G/2-1/2)*tb/G # center of last band
+        if encode[ii-1] != encode[ii-2]:
+            # add a left edge and amp for the last band
+            f = np.append(f, Gcent-(tb/G/2-ftw*(tb/2)))
+            m = np.append(m, encode[ii-1])
+        # add a right edge and its amp, and a weight for the last band
+        f = np.append(f, Gcent+(tb/G/2-ftw*(tb/2)))
+        m = np.append(m, encode[ii-1])
+        w = np.append(w, 1)
+        # right stop-band
+        f = np.append(f, (shift+(1+ftw)*(tb/2), (N/2)))/(N/2)
+        m = np.append(m, [0, 0])
+        w = np.append(w, d1/d2)
+
+        # separate the positive and negative bands
+        mp = (m > 0).astype(float)
+        mn = (m < 0).astype(float)
+
+        # design the positive and negative filters
+        c = np.exp(1j*2*np.pi/(2*(N+1)) * np.concatenate([np.arange(0,N/2+1,1),
+            np.arange(-N/2,0,1)]))
+        bp = signal.firls(N+1, f, mp, w)  # the positive filter
+        bn = signal.firls(N+1, f, mn, w)  # the negative filter
+
+        # combine the filters and demodulate
+        b = np.fft.ifft(np.multiply(np.fft.fft(bp - bn), c))
+        b = np.real(b[:N])
+        # hilbert transform to suppress negative passband
+        b = signal.hilbert(b)
         # demodulate to DC
         cShift = np.exp(-1j*2*np.pi/N*shift*np.arange(0, N, 1))/2 \
             * np.exp(-1j*np.pi/N*shift)
@@ -425,7 +504,7 @@ def dzRecursiveRF(Nseg, tb, N, seSeq = False, tbRef = 8, zPadFact = 4,
         Bref /= np.max(np.abs(Bref))
         BrefMag = np.abs(Bref)
         ArefMag = np.abs(np.sqrt(1 - BrefMag**2))
-        flipRef = 2*np.arcsin(BrefMag(zPadFact*N/2))*180/np.pi
+        flipRef = 2*np.arcsin(BrefMag[int(zPadFact*N/2)])*180/np.pi
 
     # get flip angles
     flip = np.zeros(Nseg)
@@ -434,7 +513,7 @@ def dzRecursiveRF(Nseg, tb, N, seSeq = False, tbRef = 8, zPadFact = 4,
         if seSeq == False:
             flip[jj] = np.arctan(np.sin(flip[jj+1]*np.pi/180))*180/np.pi
         else:
-            flip[jj] = np.arctan(np.cos(flipRef*pi/180)*
+            flip[jj] = np.arctan(np.cos(flipRef*np.pi/180)*
                 np.sin(flip[jj+1]*np.pi/180))*180/np.pi
 
     # design first RF pulse
