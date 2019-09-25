@@ -6,7 +6,7 @@ import sigpy as sp
 import numpy as np
 
 
-def pTxSpatialA(sens, coord, dt, img_shape, B0=None, comm=None):
+def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, comm=None):
     """Explicit spatial-domain pulse design linear operator.
     Linear operator relates rf pulses to desired magnetization.
     Linear operator dimensions will be Ns * Nt
@@ -22,7 +22,7 @@ def pTxSpatialA(sens, coord, dt, img_shape, B0=None, comm=None):
             for distributed computing.
 
     """
-    Nc = sens[0]
+    Nc = sens.shape[0]
     T = dt * coord.shape[0]  # duration of pulse, in seconds
     t = np.expand_dims(np.linspace(0, T, coord.shape[0]), axis=1)  # create time vector
 
@@ -51,9 +51,9 @@ def pTxSpatialA(sens, coord, dt, img_shape, B0=None, comm=None):
     AFullExplicit = AFullExplicit[:,coord.shape[0]:] # remove 1st empty AExplicit entries
     A = sp.linop.MatMul((coord.shape[0]*Nc, 1), AFullExplicit)
 
-    if comm is not None:
-        C = sp.linop.AllReduceAdjoint(img_shape, comm, in_place=True)
+    if comm is not None: # TODO: UNTESTED
+        C = sp.linop.AllReduceAdjoint(A.ishape, comm, in_place=True)
         A = A * C
 
-    A.repr_str = 'Sense'
+    A.repr_str = 'spatial pulse system matrix'
     return A
