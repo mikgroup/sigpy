@@ -1,8 +1,7 @@
-"""The module contains functions and classes for MRI reconstruction.
+"""The module contains functions and classes for MRI pulse design.
 
-It provides convenient simulation and sampling functions,
-such as the poisson-disc sampling function. It also
-provides functions to compute preconditioners.
+It provides tools for SLR, pTx, adiabatic, and other types of rf pulses,
+as well as gradient and trajectory designers.
 
 """
 from sigpy.mri import app, linop

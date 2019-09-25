@@ -62,8 +62,8 @@ def stspa(target, sens, coord=None, mask=None, pinst=float('inf'),
         return func
 
     if pinst == float('inf') and pavg == float('inf'):
-        alg_method = sp.alg.ConjugateGradient(A.H * A, pulses,
-                                              A.H * target, P=None,
+        alg_method = sp.alg.ConjugateGradient(A.H * A, A.H * target,
+                                              pulses, P=None,
                                               max_iter=max_iter, tol=tol)
     else:
         alg_method = sp.alg.PrimalDualHybridGradient(
