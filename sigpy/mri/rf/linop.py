@@ -51,9 +51,5 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, comm=None):
     AFullExplicit = AFullExplicit[:,coord.shape[0]:] # remove 1st empty AExplicit entries
     A = sp.linop.MatMul((coord.shape[0]*Nc, 1), AFullExplicit)
 
-    if comm is not None: # TODO: UNTESTED
-        C = sp.linop.AllReduceAdjoint(A.ishape, comm, in_place=True)
-        A = A * C
-
     A.repr_str = 'spatial pulse system matrix'
     return A
