@@ -37,8 +37,8 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, comm=None):
     if B0 is None:
         AExplicit = np.exp(1j * (np.outer(np.concatenate(x), coord[:, 0]) + np.outer(np.concatenate(y), coord[:, 1])))
     else:
-        AExplicit = np.exp(1j * 2 * np.pi * np.transpose(np.concatenate(B0) * (t-T))) * \
-            np.exp(1j * (np.outer(np.concatenate(x), coord[:, 0]) + np.outer(np.concatenate(y), coord[:, 1])))
+        AExplicit = np.exp(1j * 2 * np.pi * np.transpose(np.concatenate(B0) * (t-T)) +
+                           1j * (np.outer(np.concatenate(x), coord[:, 0]) + np.outer(np.concatenate(y), coord[:, 1])))
 
     AFullExplicit = np.empty(AExplicit.shape)
 

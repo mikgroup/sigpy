@@ -22,7 +22,7 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
         coord (array): coordinates for noncartesian trajectories [Nt 2]
         dt (float): hardware sampling dwell time
         alpha (float): regularization term
-        B0 (array): B0 inhomogeneity map [dim dim]
+        B0 (array): B0 inhomogeneity map [dim dim]. Not supported for nonexplicit matrix
         pinst (float): maximum instantaneous power
         pavg (float): maximum average power
         explicit (bool): Use explicit matrix

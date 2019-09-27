@@ -49,7 +49,7 @@ def mintrapgrad(area, gmax, dgdt, dt, *args):
 
 
 def trapgrad(area, gmax, dgdt, dt, *args):
-    """General trapezoidal gradient designer.
+    """General trapezoidal gradient designer. Min total time.
 
     Args:
         area (float): pulse area in (g*sec)/cm
