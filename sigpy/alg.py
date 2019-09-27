@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """This module provides an abstract class Alg for iterative algorithms,
-and implements commonly used methods.
+and implements commonly used methods, such as gradient methods,
+Newton's method, and the augmented Lagrangian method.
 """
 import numpy as np
 from sigpy import backend, util
@@ -37,6 +38,10 @@ class Alg(object):
     Args:
         max_iter (int): Maximum number of iterations.
 
+    Attributes:
+        max_iter (int): Maximum number of iterations.
+        iter (int): Current iteration.
+
     """
 
     def __init__(self, max_iter):
@@ -50,10 +55,18 @@ class Alg(object):
         return self.iter >= self.max_iter
 
     def update(self):
+        """Perform one update step.
+
+        Call the user-defined _update() function and increment iter.
+        """
         self._update()
         self.iter += 1
 
     def done(self):
+        """Return whether the algorithm is done.
+
+        Call the user-defined _done() function.
+        """
         return self._done()
 
 
@@ -83,7 +96,7 @@ class PowerMethod(Alg):
         xp = device.xp
         with device:
             if self.norm_func is None:
-                self.max_eig = util.asscalar(xp.linalg.norm(y))
+                self.max_eig = xp.linalg.norm(y).item()
             else:
                 self.max_eig = self.norm_func(y)
 
@@ -118,23 +131,11 @@ class GradientMethod(Alg):
     Nesterov's acceleration is supported by toggling the `accelerate`
     input option.
 
-    Backtracking line search is supported by setting :math:`\beta < 1`,
-    which keeps scaling the step-size :math:`\alpha` by :math:`\beta`
-    until the following condition holds:
-
-    .. math:: f(x_\text{new}) \leq f(x) +
-        \left< \Delta x, \nabla f(x) \right> +
-        \frac{1}{2 \alpha} \| \Delta x \|_2^2
-
     Args:
         gradf (function): function to compute :math:`\nabla f`.
         x (array): variable to optimize over.
         alpha (float or None): step size, or initial step size
              if backtracking line-search is on.
-        beta (scalar): backtracking linesearch factor.
-             Enables backtracking when beta < 1.
-        f (function or None): function to compute :math:`f`
-             for backtracking line-search.
         proxg (Prox, function or None): Prox or function to compute
             proximal operator of :math:`g`.
         accelerate (bool): toggle Nesterov acceleration.
@@ -155,16 +156,10 @@ class GradientMethod(Alg):
     """
 
     def __init__(self, gradf, x, alpha, proxg=None,
-                 f=None, beta=1, accelerate=False, max_iter=100,
+                 accelerate=False, max_iter=100,
                  tol=0):
-        if beta < 1 and f is None:
-            raise TypeError(
-                "Cannot do backtracking linesearch without specifying f.")
-
         self.gradf = gradf
         self.alpha = alpha
-        self.f = f
-        self.beta = beta
         self.accelerate = accelerate
         self.proxg = proxg
         self.x = x
@@ -182,51 +177,36 @@ class GradientMethod(Alg):
     def _update(self):
         xp = self.device.xp
         with self.device:
+            x_old = self.x.copy()
+
             if self.accelerate:
                 backend.copyto(self.x, self.z)
 
             # Perform update
-            gradf_x = self.gradf(self.x)
-            alpha = self.alpha
-            x_new = self.x - alpha * gradf_x
+            util.axpy(self.x, -self.alpha, self.gradf(self.x))
             if self.proxg is not None:
-                x_new = self.proxg(alpha, x_new)
+                backend.copyto(self.x, self.proxg(self.alpha, self.x))
 
-            delta_x = x_new - self.x
-            # Backtracking line search
-            if self.beta < 1:
-                fx = self.f(self.x)
-                while self.f(x_new) > fx + util.asscalar(
-                        xp.real(xp.vdot(delta_x, gradf_x))) + \
-                        1 / (2 * alpha) * util.asscalar(
-                            xp.linalg.norm(delta_x))**2:
-                    alpha *= self.beta
-
-                    x_new = self.x - alpha * gradf_x
-                    if self.proxg is not None:
-                        x_new = self.proxg(alpha, x_new)
-
-                    delta_x = x_new - self.x
-
-            backend.copyto(self.x, x_new)
             if self.accelerate:
                 t_old = self.t
                 self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
-                backend.copyto(self.z, x_new +
-                               ((t_old - 1) / self.t) * delta_x)
+                backend.copyto(self.z, self.x +
+                               ((t_old - 1) / self.t) * (self.x - x_old))
 
-            self.resid = util.asscalar(xp.linalg.norm(delta_x / alpha))
+            self.resid = xp.linalg.norm(self.x - x_old).item() / self.alpha
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.resid <= self.tol
 
 
 class ConjugateGradient(Alg):
-    r"""Conjugate Gradient Method. Solves for:
+    r"""Conjugate gradient method.
+
+    Solves for:
 
     .. math:: A x = b
 
-    where A is hermitian.
+    where A is a Hermitian linear operator.
 
     Args:
         A (Linop or function): Linop or function to compute A.
@@ -260,7 +240,7 @@ class ConjugateGradient(Alg):
 
             self.not_positive_definite = False
             self.rzold = xp.real(xp.vdot(self.r, z))
-            self.resid = util.asscalar(self.rzold)**0.5
+            self.resid = self.rzold.item()**0.5
 
         super().__init__(max_iter)
 
@@ -268,7 +248,7 @@ class ConjugateGradient(Alg):
         with self.device:
             xp = self.device.xp
             Ap = self.A(self.p)
-            pAp = util.asscalar(xp.real(xp.vdot(self.p, Ap)))
+            pAp = xp.real(xp.vdot(self.p, Ap)).item()
             if pAp <= 0:
                 self.not_positive_definite = True
                 return
@@ -287,7 +267,7 @@ class ConjugateGradient(Alg):
                 util.xpay(self.p, beta, z)
                 self.rzold = rznew
 
-            self.resid = util.asscalar(self.rzold)**0.5
+            self.resid = self.rzold.item()**0.5
 
     def _done(self):
         return (self.iter >= self.max_iter or
@@ -299,13 +279,13 @@ class PrimalDualHybridGradient(Alg):
 
     Considers the problem:
 
-    .. math:: \min_x \max_u - f^*(u) + g(x) + h(x) + <Ax, u>
+    .. math:: \min_x \max_u - f^*(u) + g(x) + \left<Ax, u\right>
 
     Or equivalently:
 
-    .. math:: \min_x f(A x) + g(x) + h(x)
+    .. math:: \min_x f(A x) + g(x)
 
-    where f, and g are simple, and h is Lipschitz continuous.
+    where f, and g are simple.
 
     Args:
         proxfc (function): Function to compute proximal operator of f^*.
@@ -330,12 +310,11 @@ class PrimalDualHybridGradient(Alg):
     """
 
     def __init__(self, proxfc, proxg, A, AH, x, u,
-                 tau, sigma, theta=1, gradh=None,
+                 tau, sigma, theta=1,
                  gamma_primal=0, gamma_dual=0,
                  max_iter=100, tol=0):
         self.proxfc = proxfc
         self.proxg = proxg
-        self.gradh = gradh
         self.tol = tol
 
         self.A = A
@@ -356,48 +335,46 @@ class PrimalDualHybridGradient(Alg):
         with self.x_device:
             self.x_ext = self.x.copy()
 
-        with self.u_device:
-            self.u_old = self.u.copy()
-            self.x_old = self.x.copy()
+        if self.gamma_primal > 0:
+            xp = self.x_device.xp
+            self.tau_min = xp.amin(xp.abs(tau)).item()
+
+        if self.gamma_dual > 0:
+            xp = self.u_device.xp
+            self.sigma_min = xp.amin(xp.abs(sigma)).item()
 
         self.resid = np.infty
 
         super().__init__(max_iter)
 
     def _update(self):
-        backend.copyto(self.u_old, self.u)
-        backend.copyto(self.x_old, self.x)
+        x_old = self.x.copy()
 
         # Update dual.
-        delta_u = self.A(self.x_ext)
-        util.axpy(self.u, self.sigma, delta_u)
+        util.axpy(self.u, self.sigma, self.A(self.x_ext))
         backend.copyto(self.u, self.proxfc(self.sigma, self.u))
 
         # Update primal.
         with self.x_device:
-            delta_x = self.AH(self.u)
-            if self.gradh is not None:
-                delta_x += self.gradh(self.x)
-
-            util.axpy(self.x, -self.tau, delta_x)
+            util.axpy(self.x, -self.tau, self.AH(self.u))
             backend.copyto(self.x, self.proxg(self.tau, self.x))
 
         # Update step-size if neccessary.
         if self.gamma_primal > 0 and self.gamma_dual == 0:
             with self.x_device:
                 xp = self.x_device.xp
-                theta = 1 / (1 + 2 * self.gamma_primal *
-                             xp.amin(xp.abs(self.tau)))**0.5
+                theta = 1 / (1 + 2 * self.gamma_primal * self.tau_min)**0.5
                 self.tau *= theta
+                self.tau_min *= theta
 
             with self.u_device:
                 self.sigma /= theta
         elif self.gamma_primal == 0 and self.gamma_dual > 0:
             with self.u_device:
                 xp = self.u_device.xp
-                theta = 1 / (1 + 2 * self.gamma_dual *
-                             xp.amin(xp.abs(self.sigma)))**0.5
+                theta = 1 / (1 + 2 * self.gamma_dual * self.sigma_min)**0.5
                 self.sigma *= theta
+                self.sigma_min *= theta
 
             with self.x_device:
                 self.tau /= theta
@@ -407,23 +384,16 @@ class PrimalDualHybridGradient(Alg):
         # Extrapolate primal.
         with self.x_device:
             xp = self.x_device.xp
-            x_diff = self.x - self.x_old
+            x_diff = self.x - x_old
+            self.resid = xp.linalg.norm(x_diff / self.tau**0.5).item()
             backend.copyto(self.x_ext, self.x + theta * x_diff)
-            x_diff_norm = xp.linalg.norm(x_diff / self.tau**0.5)
-
-        with self.u_device:
-            xp = self.u_device.xp
-            u_diff = self.u - self.u_old
-            u_diff_norm = xp.linalg.norm(u_diff / self.sigma**0.5)
-
-        self.resid = util.asscalar(x_diff_norm**2 + u_diff_norm**2)
 
     def _done(self):
-        return self.iter >= self.max_iter or self.resid <= self.tol
+        return (self.iter >= self.max_iter) or (self.resid <= self.tol)
 
 
 class AltMin(Alg):
-    """Alternating Minimization.
+    """Alternating minimization.
 
     Args:
         min1 (function): Function to minimize over variable 1.
@@ -463,8 +433,7 @@ class AugmentedLagrangianMethod(Alg):
         \|[g(x) + \frac{u}{\mu}]_+\|_2^2 + \|h(x) + \frac{v}{\mu}\|_2^2)
 
     Args:
-        minL (function): a function that takes :math:`\mu` as input,
-            and minimizes the augmented Lagrangian over `x`.
+        minL (function): a function that minimizes the augmented Lagrangian.
         g (None or function): a function that takes :math:`x` as input,
             and outputs :math:`g(x)`, the inequality constraints.
         h (None or function): a function that takes :math:`x` as input,
@@ -487,7 +456,7 @@ class AugmentedLagrangianMethod(Alg):
         super().__init__(max_iter)
 
     def _update(self):
-        self.minL(self.mu)
+        self.minL()
         if self.g is not None:
             device = backend.get_device(self.u)
             xp = device.xp
@@ -497,6 +466,51 @@ class AugmentedLagrangianMethod(Alg):
 
         if self.h is not None:
             util.axpy(self.v, self.mu, self.h(self.x))
+
+
+class ADMM(Alg):
+    r"""Alternating Direction Method of Multipliers.
+
+    Consider the equality constrained problem:
+
+    .. math:: \min_{x: A x + B z = c} f(x) + g(z)
+
+    And perform the following update steps:
+
+    .. math::
+        x = \text{argmin}_{x} L_\mu(x, z, u)\\
+        z = \text{argmin}_{z} L_\mu(x, z, u)\\
+        u = u + A x + B z - c
+
+    where :math:`L(x, u, v, \mu)`: is the augmented Lagrangian function:
+
+    .. math::
+        L_\rho(x, z, u) = f(x) + g(z) + \frac{\rho}{2}\|A x + B z - c + u\|_2^2
+
+    Args:
+        minL_x (function): a function that minimizes L w.r.t. x.
+        minL_z (function): a function that minimizes L w.r.t. z.
+        x (array): primal variable 1.
+        z (array): primal variable 2.
+        u (array): scaled dual variable.
+        max_iter (int): maximum number of iterations.
+
+    """
+    def __init__(self, minL_x, minL_z, x, z, u, A, B, c, max_iter=30):
+        self.minL_x = minL_x
+        self.minL_z = minL_z
+        self.x = x
+        self.z = z
+        self.u = u
+        self.A = A
+        self.B = B
+        self.c = c
+        super().__init__(max_iter)
+
+    def _update(self):
+        self.minL_x()
+        self.minL_z()
+        self.u += self.A(self.x) + self.B(self.z) - self.c
 
 
 class NewtonsMethod(Alg):
@@ -538,7 +552,7 @@ class NewtonsMethod(Alg):
         with device:
             gradf_x = self.gradf(self.x)
             p = -self.inv_hessf(self.x)(gradf_x)
-            self.lamda2 = util.asscalar(-xp.real(xp.vdot(p, gradf_x)))
+            self.lamda2 = -xp.real(xp.vdot(p, gradf_x)).item()
 
             if self.lamda2 < 0:
                 raise ValueError(

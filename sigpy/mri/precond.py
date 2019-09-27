@@ -8,7 +8,8 @@ __all__ = ['kspace_precond', 'circulant_precond']
 
 
 def kspace_precond(mps, weights=None, coord=None,
-                   lamda=0, device=sp.cpu_device):
+                   lamda=0, device=sp.cpu_device,
+                   oversamp=1.25):
     r"""Compute a diagonal preconditioner in k-space.
 
     Considers the optimization problem:
@@ -59,7 +60,7 @@ def kspace_precond(mps, weights=None, coord=None,
             if weights is not None:
                 ones *= weights**0.5
 
-            psf = sp.nufft_adjoint(ones, coord2, img2_shape)
+            psf = sp.nufft_adjoint(ones, coord2, img2_shape, oversamp=oversamp)
 
         p_inv = []
         for mps_i in mps:
@@ -76,7 +77,7 @@ def kspace_precond(mps, weights=None, coord=None,
             if coord is None:
                 p_inv_i = sp.fft(xcorr)[idx]
             else:
-                p_inv_i = sp.nufft(xcorr, coord2)
+                p_inv_i = sp.nufft(xcorr, coord2, oversamp=oversamp)
 
             if weights is not None:
                 p_inv_i *= weights**0.5

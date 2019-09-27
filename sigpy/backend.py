@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""Functions and classes for getting and setting computing devices.
+
+"""
 import numpy as np
 from sigpy import config
 if config.cupy_enabled:
@@ -67,6 +71,14 @@ class Device(object):
             return np
 
         return cp
+
+    def use(self):
+        """Use computing device.
+
+        All operations after use() will use the device.
+        """
+        if self.id > 0:
+            self.cpdevice.use()
 
     def __int__(self):
         return self.id

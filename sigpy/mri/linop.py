@@ -84,11 +84,14 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
 
     """
     ndim = len(img_ker_shape)
-    A = sp.linop.ConvolveInput(
-        img_ker_shape, mps_ker, mode='valid', output_multi_channel=True)
+    num_coils = mps_ker.shape[0]
+    mps_ker = mps_ker.reshape((num_coils, 1) + mps_ker.shape[1:])
+    R = sp.linop.Reshape((1, ) + tuple(img_ker_shape), img_ker_shape)
+    C = sp.linop.ConvolveData(R.oshape, mps_ker,
+                              mode='valid', multi_channel=True)
+    A = C * R
 
     if coord is not None:
-        num_coils = mps_ker.shape[0]
         grd_shape = [num_coils] + sp.estimate_shape(coord)
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
@@ -117,9 +120,13 @@ def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None):
 
     """
     ndim = img_ker.ndim
-
-    A = sp.linop.ConvolveFilter(mps_ker_shape, img_ker,
-                                mode='valid', output_multi_channel=True)
+    num_coils = mps_ker_shape[0]
+    img_ker = img_ker.reshape((1, ) + img_ker.shape)
+    R = sp.linop.Reshape((num_coils, 1) + tuple(mps_ker_shape[1:]),
+                         mps_ker_shape)
+    C = sp.linop.ConvolveFilter(R.oshape, img_ker,
+                                mode='valid', multi_channel=True)
+    A = C * R
 
     if coord is not None:
         num_coils = mps_ker_shape[0]

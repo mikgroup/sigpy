@@ -1,569 +1,451 @@
 # -*- coding: utf-8 -*-
-"""Convolution functions.
-
-This module contains convolution functions that support multi-dimension,
-and multi-channel.
+"""Convolution functions with  multi-dimension, and multi-channel support.
 
 """
 import numpy as np
-from sigpy import backend, fourier, util, config
+import scipy.signal as signal
+from sigpy import backend, util, config
 
 
-__all__ = ['convolve', 'convolve_adjoint_input', 'convolve_adjoint_filter']
+__all__ = ['convolve', 'convolve_data_adjoint', 'convolve_filter_adjoint']
 
 
-def convolve(x, W, input_multi_channel=False,
-             output_multi_channel=False, mode='full'):
-    """Convolution that supports multi-dimensional and multi-channel inputs.
+def convolve(data, filt,
+             mode='full', strides=None,
+             multi_channel=False):
+    r"""Convolution that supports multi-dimensional and multi-channel inputs.
+
+    This function follows the signal processing definition of convolution.
 
     Args:
-        x (array): input array with shape batch_shape + input_shape
-            if input_multi_channel=False.
-            Otherwise with shape batch_shape + [input_channel] + input_shape.
-        W (array): filter array of shape filter_shape,
-            [input_channel] + filter_shape, [output_channel] + filter_shape,
-            or [output_channel, input_channel] + filter_shape.
-        input_multi_channel (bool): Specify if input has multiple channels.
-        output_multi_channel (bool): Specify if output has multiple channels.
+        data (array): data array of shape:
+            :math:`[..., m_1, ..., m_D]` if multi_channel is False,
+            :math:`[..., c_i, m_1, ..., m_D]` otherwise.
+        filt (array): filter array of shape:
+            :math:`[n_1, ..., n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, ..., n_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    Returns:
+        array: output array of shape:
+            :math:`[..., p_1, ..., p_D]` if multi_channel is False,
+            :math:`[..., c_o, p_1, ..., p_D]` otherwise.
+
+    """
+    device = backend.get_device(data)
+    filt = backend.to_device(filt, device)
+    with device:
+        filt = filt.astype(data.dtype, copy=False)
+
+    if device == backend.cpu_device:
+        output = _convolve(data, filt, mode=mode, strides=strides,
+                           multi_channel=multi_channel)
+    else:  # pragma: no cover
+        if config.cudnn_enabled:
+            if np.issubdtype(data.dtype, np.floating):
+                output = _convolve_cuda(data, filt,
+                                        mode=mode, strides=strides,
+                                        multi_channel=multi_channel)
+            else:
+                output = _complex(_convolve_cuda, data, filt,
+                                  mode=mode, strides=strides,
+                                  multi_channel=multi_channel)
+        else:
+            data = backend.to_device(data)
+            filt = backend.to_device(filt)
+            output = _convolve(data, filt,
+                               mode=mode, strides=strides,
+                               multi_channel=multi_channel)
+            output = backend.to_device(output, device)
+
+    return output
+
+
+def convolve_data_adjoint(output, filt, data_shape,
+                          mode='full', strides=None,
+                          multi_channel=False):
+    """Adjoint convolution operation with respect to data.
+
+    Args:
+        output (array): output array of shape
+            :math:`[..., p_1, ..., p_D]` if multi_channel is False,
+            :math:`[..., c_o, p_1, ..., p_D]` otherwise.
+        filt (array): filter array of shape
+            :math:`[n_1, ..., n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, ..., n_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+        multi_channel (bool): specify if data/output has multiple channels.
         mode (str): {'full', 'valid'}.
 
     Returns:
-        array: output array with shape batch_shape + output_shape,
-            if output_multi_channel=False.
-            Otherwise with shape batch_shape + [output_channel] + output_shape
-            if output_multi_channel=True.
-            output_shape = input_shape + filter_shape - 1 if mode='full',
-            output_shape = input_shape - filter_shape + 1 if mode='valid'.
+        array: data array of shape
+            :math:`[..., m_1, ..., m_D]` if multi_channel is False,
+            :math:`[..., c_i, m_1, ..., m_D]` otherwise.
 
     """
-    ndim, input_shape, filter_shape, batch_shape, batch_size, \
-        input_channel, output_channel = _get_convolve_params(
-            x, W, input_multi_channel, output_multi_channel)
-
-    device = backend.get_device(x)
+    device = backend.get_device(output)
+    data_shape = tuple(data_shape)
+    filt = backend.to_device(filt, device)
     with device:
-        x = x.reshape((batch_size, input_channel) + input_shape)
-        W = W.reshape((output_channel, input_channel) + filter_shape)
+        filt = filt.astype(output.dtype, copy=False)
 
-    if (device != backend.cpu_device
-        and config.cudnn_enabled):  # pragma: no cover
-        y = _cudnn_convolve(x, W, mode=mode)
-    else:
-        y = _fft_convolve(x, W, mode=mode)
-
-    output_shape = y.shape[-ndim:]
-    with device:
-        if output_multi_channel:
-            return y.reshape(batch_shape + (output_channel, ) + output_shape)
+    if device == backend.cpu_device:
+        data = _convolve_data_adjoint(output, filt, data_shape,
+                                      mode=mode, strides=strides,
+                                      multi_channel=multi_channel)
+    else:  # pragma: no cover
+        if config.cudnn_enabled:
+            if np.issubdtype(output.dtype, np.floating):
+                data = _convolve_data_adjoint_cuda(
+                    output, filt, data_shape,
+                    mode=mode, strides=strides,
+                    multi_channel=multi_channel)
+            else:
+                data = _complex(_convolve_data_adjoint_cuda,
+                                output, filt.conj(), data_shape,
+                                mode=mode, strides=strides,
+                                multi_channel=multi_channel)
         else:
-            return y.reshape(batch_shape + output_shape)
+            filt = backend.to_device(filt)
+            output = backend.to_device(output)
+            data = _convolve_data_adjoint(output, filt, data_shape,
+                                          mode=mode, strides=strides,
+                                          multi_channel=multi_channel)
+            data = backend.to_device(data, device)
+
+    return data
 
 
-def convolve_adjoint_input(W, y, input_multi_channel=False,
-                           output_multi_channel=False, mode='full'):
-    """Convolution adjoint.
+def convolve_filter_adjoint(output, data, filt_shape,
+                            mode='full', strides=None,
+                            multi_channel=False):
+    """Adjoint convolution operation with respect to filter.
 
     Args:
-        W (array): filter array of shape filter_shape,
-            [input_channel] + filter_shape, [output_channel] + filter_shape,
-            or [output_channel, input_channel] + filter_shape.
-        y (array): output array with shape batch_shape + output_shape
-            if output_multi_channel=False.
-            Otherwise with shape batch_shape + [output_channel] + input_shape.
-        input_multi_channel (bool): Specify if input has multiple channels.
-        output_multi_channel (bool): Specify if output has multiple channels.
+        output (array): output array of shape:
+            :math:`[..., p_1, ..., p_D]` if multi_channel is False,
+            :math:`[..., c_o, p_1, ..., p_D]` otherwise.
+        data (array): data array of shape:
+            :math:`[..., m_1, ..., m_D]` if multi_channel is False,
+            :math:`[..., c_i, m_1, ..., m_D]` otherwise.
         mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
 
     Returns:
-        array: output array with shape batch_shape + output_shape,
-            if output_multi_channel=False.
-            Otherwise with shape batch_shape + [output_channel] + output_shape
-            if output_multi_channel=True.
-            output_shape = input_shape + filter_shape - 1 if mode='full',
-            output_shape = input_shape - filter_shape + 1 if mode='valid'.
+        array: filter array of shape:
+            :math:`[n_1, ..., n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, ..., n_D]` otherwise.
 
     """
-    ndim, output_shape, filter_shape, batch_shape, batch_size, \
-        input_channel, output_channel = _get_convolve_adjoint_input_params(
-            W, y, input_multi_channel, output_multi_channel)
-
-    device = backend.get_device(y)
+    device = backend.get_device(output)
+    filt_shape = tuple(filt_shape)
+    data = backend.to_device(data, device)
     with device:
-        y = y.reshape((batch_size, output_channel) + output_shape)
-        W = W.reshape((output_channel, input_channel) + filter_shape)
+        data = data.astype(output.dtype, copy=False)
 
-    if (device != backend.cpu_device
-        and config.cudnn_enabled):  # pragma: no cover
-        x = _cudnn_convolve_adjoint_input(W, y, mode=mode)
-    else:
-        x = _fft_convolve_adjoint_input(W, y, mode=mode)
-
-    input_shape = x.shape[-ndim:]
-    with device:
-        if input_multi_channel:
-            return x.reshape(batch_shape + (input_channel, ) + input_shape)
+    if device == backend.cpu_device:
+        filt = _convolve_filter_adjoint(output, data, filt_shape,
+                                        mode=mode, strides=strides,
+                                        multi_channel=multi_channel)
+    else:  # pragma: no cover
+        if config.cudnn_enabled:
+            if np.issubdtype(output.dtype, np.floating):
+                filt = _convolve_filter_adjoint_cuda(
+                    output, data, filt_shape,
+                    mode=mode, strides=strides,
+                    multi_channel=multi_channel)
+            else:
+                filt = _complex(_convolve_filter_adjoint_cuda,
+                                output, data.conj(), filt_shape,
+                                mode=mode, strides=strides,
+                                multi_channel=multi_channel)
         else:
-            return x.reshape(batch_shape + input_shape)
+            data = backend.to_device(data)
+            output = backend.to_device(output)
+            filt = _convolve_filter_adjoint(output, data, filt_shape,
+                                            mode=mode, strides=strides,
+                                            multi_channel=multi_channel)
+            filt = backend.to_device(filt, device)
+
+    return filt
 
 
-def convolve_adjoint_filter(x, y, ndim, input_multi_channel=False,
-                            output_multi_channel=False, mode='full'):
-    """Convolution adjoint.
+def _get_convolve_params(data_shape, filt_shape,
+                         mode, strides, multi_channel):
+    D = len(filt_shape) - 2 * multi_channel
+    m = tuple(data_shape[-D:])
+    n = tuple(filt_shape[-D:])
+    b = tuple(data_shape[:-D - multi_channel])
+    B = util.prod(b)
 
-    Args:
-        x (array): input array with shape batch_shape + input_shape
-            if input_multi_channel=False.
-            Otherwise with shape batch_shape + [input_channel] + input_shape.
-        y (array): output array with shape batch_shape + output_shape
-            if output_multi_channel=False.
-            Otherwise with shape batch_shape + [output_channel] + input_shape.
-        ndim (int): number of dimensions.
-        input_multi_channel (bool): Specify if input has multiple channels.
-        output_multi_channel (bool): Specify if output has multiple channels.
-        mode (str): {'full', 'valid'}.
+    if multi_channel:
+        if filt_shape[-D - 1] != data_shape[-D - 1]:
+            raise ValueError('Data channel mismatch, '
+                             'got {} from data and {} from filt.'.format(
+                                 data_shape[-D - 1], filt_shape[-D - 1]))
 
-    Returns:
-        array: filter array of shape filter_shape,
-            [input_channel] + filter_shape, [output_channel] + filter_shape,
-            or [output_channel, input_channel] + filter_shape.
-
-    """
-    input_shape, output_shape, batch_shape, batch_size, \
-        input_channel, output_channel = _get_convolve_adjoint_filter_params(
-            x, y, ndim, input_multi_channel, output_multi_channel)
-
-    device = backend.get_device(x)
-    with device:
-        x = x.reshape((batch_size, input_channel) + input_shape)
-        y = y.reshape((batch_size, output_channel) + output_shape)
-
-    if (device != backend.cpu_device
-        and config.cudnn_enabled):  # pragma: no cover
-        W = _cudnn_convolve_adjoint_filter(x, y, mode=mode)
+        c_i = filt_shape[-D - 1]
+        c_o = filt_shape[-D - 2]
     else:
-        W = _fft_convolve_adjoint_filter(x, y, mode=mode)
+        c_i = 1
+        c_o = 1
 
-    with device:
-        W_shape = W.shape[-ndim:]
-        if input_multi_channel:
-            W_shape = (input_channel, ) + W_shape
-
-        if output_multi_channel:
-            W_shape = (output_channel, ) + W_shape
-
-        return W.reshape(W_shape)
-
-
-def _get_convolve_params(x, W, input_multi_channel, output_multi_channel):
-    ndim = W.ndim - input_multi_channel - output_multi_channel
-    input_shape = x.shape[-ndim:]
-    filter_shape = W.shape[-ndim:]
-    batch_shape = x.shape[:-ndim - input_multi_channel]
-    batch_size = util.prod(batch_shape)
-
-    if x.dtype != W.dtype:
-        raise TypeError(
-            'x and W must have the same dtype, got {} and {}.'.format(
-                x.dtype, W.dtype))
-
-    if backend.get_device(x) != backend.get_device(W):
-        raise TypeError(
-            'x and W must be on the same device, got {} and {}.'.format(
-                backend.get_device(x), backend.get_device(W)))
-
-    if input_multi_channel:
-        input_channel = x.shape[-ndim - 1]
+    if strides is None:
+        s = (1, ) * D
     else:
-        input_channel = 1
+        if len(strides) != D:
+            raise ValueError('Strides must have length {}.'.format(D))
 
-    if output_multi_channel:
-        output_channel = W.shape[
-            -ndim - input_multi_channel - output_multi_channel]
-    else:
-        output_channel = 1
+        s = tuple(strides)
 
-    return ndim, input_shape, filter_shape, batch_shape, \
-        batch_size, input_channel, output_channel
-
-
-def _get_convolve_adjoint_input_params(
-        W, y, input_multi_channel, output_multi_channel):
-    ndim = W.ndim - input_multi_channel - output_multi_channel
-    output_shape = y.shape[-ndim:]
-    filter_shape = W.shape[-ndim:]
-    batch_shape = y.shape[:-ndim - output_multi_channel]
-    batch_size = util.prod(batch_shape)
-
-    if y.dtype != W.dtype:
-        raise TypeError(
-            'y and W must have the same dtype, got {} and {}.'.format(
-                y.dtype, W.dtype))
-
-    if backend.get_device(y) != backend.get_device(W):
-        raise TypeError(
-            'y and W must be on the same device, got {} and {}.'.format(
-                backend.get_device(y), backend.get_device(W)))
-
-    if input_multi_channel:
-        input_channel = W.shape[-ndim - 1]
-    else:
-        input_channel = 1
-
-    if output_multi_channel:
-        output_channel = y.shape[-ndim - 1]
-    else:
-        output_channel = 1
-
-    return ndim, output_shape, filter_shape, batch_shape, \
-        batch_size, input_channel, output_channel
-
-
-def _get_convolve_adjoint_filter_params(
-        x, y, ndim, input_multi_channel, output_multi_channel):
-    output_shape = y.shape[-ndim:]
-    input_shape = x.shape[-ndim:]
-    batch_shape = y.shape[:-ndim - output_multi_channel]
-    batch_size = util.prod(batch_shape)
-
-    if x.dtype != y.dtype:
-        raise TypeError(
-            'x and y must have the same dtype, got {} and {}.'.format(
-                x.dtype, y.dtype))
-
-    if backend.get_device(y) != backend.get_device(x):
-        raise TypeError(
-            'y and x must be on the same device, got {} and {}.'.format(
-                backend.get_device(y), backend.get_device(x)))
-
-    if input_multi_channel:
-        input_channel = x.shape[-ndim - 1]
-    else:
-        input_channel = 1
-
-    if output_multi_channel:
-        output_channel = y.shape[-ndim - 1]
-    else:
-        output_channel = 1
-
-    return input_shape, output_shape, batch_shape, \
-        batch_size, input_channel, output_channel
-
-
-def _fft_convolve(x, W, mode='full'):
-    ndim = x.ndim - 2
-    batch_size = len(x)
-    output_channel, input_channel = W.shape[:2]
-    input_shape = x.shape[-ndim:]
-    filter_shape = W.shape[-ndim:]
     if mode == 'full':
-        output_shape = tuple(
-            m + n - 1 for m, n in zip(input_shape, filter_shape))
-        pad_shape = output_shape
+        p = tuple((m_d + n_d - 1 + s_d - 1) // s_d
+                  for m_d, n_d, s_d in zip(m, n, s))
     elif mode == 'valid':
-        output_shape = tuple(
-            m - n + 1 for m, n in zip(input_shape, filter_shape))
-        pad_shape = input_shape
+        if (any(m_d >= n_d for m_d, n_d in zip(m, n)) and
+            any(m_d < n_d for m_d, n_d in zip(m, n))):
+            raise ValueError('In valid mode, either data or filter must be '
+                             'at least as large as the other in every axis.')
 
-    dtype = x.dtype
-    device = backend.get_device(x)
-    xp = device.xp
-    with device:
-        x = x.reshape((batch_size, 1, input_channel) + input_shape)
-        x_pad = util.resize(x, (batch_size, 1, input_channel) + pad_shape,
-                            oshift=[0] * x.ndim)
-        W_pad = util.resize(W, (output_channel, input_channel) + pad_shape,
-                            oshift=[0] * W.ndim)
+        p = tuple((m_d - n_d + 1 + s_d - 1) // s_d
+                  for m_d, n_d, s_d in zip(m, n, s))
+    else:
+        raise ValueError('Invalid mode, got {}'.format(mode))
 
-        if np.issubdtype(dtype, np.floating):
-            x_fft = xp.fft.rfftn(x_pad, axes=range(-ndim, 0), norm='ortho')
-            W_fft = xp.fft.rfftn(W_pad, axes=range(-ndim, 0), norm='ortho')
-            y_fft = xp.sum(x_fft * W_fft, axis=-ndim - 1)
-            y = xp.fft.irfftn(y_fft, pad_shape,
-                              axes=range(-ndim, 0), norm='ortho').astype(dtype)
-        else:
-            x_fft = fourier.fft(x_pad, axes=range(-ndim, 0), center=False)
-            W_fft = fourier.fft(W_pad, axes=range(-ndim, 0), center=False)
-            y_fft = xp.sum(x_fft * W_fft, axis=-ndim - 1)
-            y = fourier.ifft(y_fft, axes=range(-ndim, 0), center=False)
-
-        if mode == 'full':
-            shift = [0] * y.ndim
-        elif mode == 'valid':
-            shift = [0, 0] + [n - 1 for n in filter_shape]
-
-        y = util.resize(y, (batch_size, output_channel) + output_shape,
-                        ishift=shift)
-        y *= util.prod(pad_shape)**0.5
-        return y
+    return D, b, B, m, n, s, c_i, c_o, p
 
 
-def _fft_convolve_adjoint_input(W, y, mode='full'):
-    ndim = y.ndim - 2
-    batch_size = len(y)
-    output_channel, input_channel = W.shape[:2]
-    output_shape = y.shape[-ndim:]
-    filter_shape = W.shape[-ndim:]
+def _convolve(data, filt,
+              mode='full', strides=None,
+              multi_channel=False):
+    D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
+        data.shape, filt.shape,
+        mode, strides, multi_channel)
+
+    # Normalize shapes.
+    data = data.reshape((B, c_i) + m)
+    filt = filt.reshape((c_o, c_i) + n)
+    output = np.zeros((B, c_o) + p, dtype=data.dtype)
+    slc = tuple(slice(None, None, s_d) for s_d in s)
+
+    for k in range(B):
+        for j in range(c_o):
+            for i in range(c_i):
+                output[k, j] += signal.convolve(
+                    data[k, i], filt[j, i], mode=mode)[slc]
+
+    # Reshape.
+    if multi_channel:
+        output = output.reshape(b + (c_o, ) + p)
+    else:
+        output = output.reshape(b + p)
+
+    return output
+
+
+def _convolve_data_adjoint(output, filt, data_shape,
+                           mode='full', strides=None,
+                           multi_channel=False):
+    D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
+        data_shape, filt.shape,
+        mode, strides, multi_channel)
+
+    # Normalize shapes.
+    output = output.reshape((B, c_o) + p)
+    filt = filt.reshape((c_o, c_i) + n)
+    data = np.zeros((B, c_i) + m, dtype=output.dtype)
+    slc = tuple(slice(None, None, s_d) for s_d in s)
     if mode == 'full':
-        input_shape = tuple(
-            p - n + 1 for p, n in zip(output_shape, filter_shape))
-        pad_shape = output_shape
+        output_kj = np.zeros([m_d + n_d - 1 for m_d, n_d in zip(m, n)],
+                             dtype=output.dtype)
+        adjoint_mode = 'valid'
     elif mode == 'valid':
-        input_shape = tuple(
-            p + n - 1 for p, n in zip(output_shape, filter_shape))
-        pad_shape = input_shape
-
-    dtype = y.dtype
-    device = backend.get_device(y)
-    xp = device.xp
-    with device:
-        y = y.reshape((batch_size, output_channel, 1) + output_shape)
-        W = xp.conj(util.flip(W, axes=range(-ndim, 0)))
-
-        y_pad = util.resize(y, (batch_size, output_channel, 1) + pad_shape,
-                            oshift=[0] * y.ndim)
-        W_pad = util.resize(W, (output_channel, input_channel) + pad_shape,
-                            oshift=[0] * W.ndim)
-
-        if np.issubdtype(dtype, np.floating):
-            y_fft = xp.fft.rfftn(y_pad, axes=range(-ndim, 0), norm='ortho')
-            W_fft = xp.fft.rfftn(W_pad, axes=range(-ndim, 0), norm='ortho')
-            x_fft = xp.sum(y_fft * W_fft, axis=-ndim - 2)
-            x = xp.fft.irfftn(x_fft, pad_shape,
-                              axes=range(-ndim, 0), norm='ortho').astype(dtype)
+        output_kj = np.zeros([max(m_d, n_d) - min(m_d, n_d) + 1
+                              for m_d, n_d in zip(m, n)],
+                             dtype=output.dtype)
+        if all(m_d >= n_d for m_d, n_d in zip(m, n)):
+            adjoint_mode = 'full'
         else:
-            y_fft = fourier.fft(y_pad, axes=range(-ndim, 0), center=False)
-            W_fft = fourier.fft(W_pad, axes=range(-ndim, 0), center=False)
-            x_fft = xp.sum(y_fft * W_fft, axis=-ndim - 2)
-            x = fourier.ifft(x_fft, axes=range(-ndim, 0), center=False)
+            adjoint_mode = 'valid'
 
-        if mode == 'full':
-            shift = [0, 0] + [n - 1 for n in filter_shape]
-        elif mode == 'valid':
-            shift = [0] * x.ndim
+    for k in range(B):
+        for j in range(c_o):
+            for i in range(c_i):
+                output_kj[slc] = output[k, j]
+                data[k, i] += signal.correlate(
+                    output_kj, filt[j, i],
+                    mode=adjoint_mode)
 
-        x = util.resize(
-            x, (batch_size, input_channel) + input_shape, ishift=shift)
-        x *= util.prod(pad_shape)**0.5
-        return x
+    # Reshape.
+    data = data.reshape(data_shape)
+    return data
 
 
-def _fft_convolve_adjoint_filter(x, y, mode='full'):
-    ndim = x.ndim - 2
-    batch_size = len(x)
-    output_channel = y.shape[1]
-    input_channel = x.shape[1]
-    output_shape = y.shape[-ndim:]
-    input_shape = x.shape[-ndim:]
+def _convolve_filter_adjoint(output, data, filt_shape,
+                             mode='full', strides=None,
+                             multi_channel=False):
+    D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
+        data.shape, filt_shape,
+        mode, strides, multi_channel)
+
+    # Normalize shapes.
+    data = data.reshape((B, c_i) + m)
+    output = output.reshape((B, c_o) + p)
+    slc = tuple(slice(None, None, s_d) for s_d in s)
     if mode == 'full':
-        filter_shape = tuple(
-            p - m + 1 for m, p in zip(input_shape, output_shape))
-        pad_shape = output_shape
+        output_kj = np.zeros([m_d + n_d - 1 for m_d, n_d in zip(m, n)],
+                             dtype=output.dtype)
+        adjoint_mode = 'valid'
     elif mode == 'valid':
-        filter_shape = tuple(
-            m - p + 1 for m, p in zip(input_shape, output_shape))
-        pad_shape = input_shape
-
-    dtype = x.dtype
-    device = backend.get_device(x)
-    xp = device.xp
-    with device:
-        x = xp.conj(util.flip(x, axes=range(-ndim, 0)))
-        x = x.reshape((batch_size, 1, input_channel) + input_shape)
-        y = y.reshape((batch_size, output_channel, 1) + output_shape)
-
-        x_pad = util.resize(x, (batch_size, 1, input_channel) + pad_shape,
-                            oshift=[0] * x.ndim)
-        y_pad = util.resize(y, (batch_size, output_channel, 1) + pad_shape,
-                            oshift=[0] * y.ndim)
-
-        if np.issubdtype(dtype, np.floating):
-            x_fft = xp.fft.rfftn(x_pad, axes=range(-ndim, 0), norm='ortho')
-            y_fft = xp.fft.rfftn(y_pad, axes=range(-ndim, 0), norm='ortho')
-            W_fft = xp.sum(x_fft * y_fft, axis=0)
-            W = xp.fft.irfftn(W_fft, pad_shape,
-                              axes=range(-ndim, 0), norm='ortho').astype(dtype)
+        output_kj = np.zeros([max(m_d, n_d) - min(m_d, n_d) + 1
+                              for m_d, n_d in zip(m, n)],
+                             dtype=output.dtype)
+        if all(m_d >= n_d for m_d, n_d in zip(m, n)):
+            adjoint_mode = 'valid'
         else:
-            x_fft = fourier.fft(x_pad, axes=range(-ndim, 0), center=False)
-            y_fft = fourier.fft(y_pad, axes=range(-ndim, 0), center=False)
-            W_fft = xp.sum(x_fft * y_fft, axis=0)
-            W = fourier.ifft(W_fft, axes=range(-ndim, 0), center=False)
+            adjoint_mode = 'full'
 
-        if mode == 'full':
-            shift = [0, 0] + [m - 1 for m in input_shape]
-        elif mode == 'valid':
-            shift = [0, 0] + [p - 1 for p in output_shape]
+    filt = np.zeros((c_o, c_i) + n, dtype=output.dtype)
+    for k in range(B):
+        for j in range(c_o):
+            for i in range(c_i):
+                output_kj[slc] = output[k, j]
+                filt[j, i] += signal.correlate(
+                    output_kj, data[k, i], mode=adjoint_mode)
 
-        W = util.resize(
-            W, (output_channel, input_channel) + filter_shape, ishift=shift)
-        W *= util.prod(pad_shape)**0.5
-        return W
+    # Reshape.
+    filt = filt.reshape(filt_shape)
+    return filt
 
 
 if config.cudnn_enabled:  # pragma: no cover
     from cupy import cudnn
 
-    def _cudnn_convolve(x, W, mode='full'):
-        dtype = x.dtype
-        device = backend.get_device(x)
+    def _complex(func, data1, data2, *kargs, **kwargs):
+        """Helper function to convert func to support complex floats.
+        """
+        device = backend.get_device(data1)
         xp = device.xp
-        if np.issubdtype(dtype, np.complexfloating):
-            with device:
-                xr = xp.real(x)
-                xi = xp.imag(x)
-                Wr = xp.real(W)
-                Wi = xp.imag(W)
+        with device:
+            data1r = xp.real(data1)
+            data1i = xp.imag(data1)
+            data2r = xp.real(data2)
+            data2i = xp.imag(data2)
 
-                # Concatenate real and imaginary to input/output channels
-                x = xp.concatenate([xr, xi], axis=1)
-                W = xp.concatenate([xp.concatenate([Wr, -Wi], axis=1),
-                                    xp.concatenate([Wi, Wr], axis=1)], axis=0)
+            outputr = func(data1r, data2r, *kargs, **kwargs)
+            outputr -= func(data1i, data2i, *kargs, **kwargs)
+            outputi = func(data1i, data2r, *kargs, **kwargs)
+            outputi += func(data1r, data2i, *kargs, **kwargs)
 
-                y = _cudnn_convolve(x, W, mode=mode)
+            output = outputr + 1j * outputi
+            output = output.astype(data1.dtype, copy=False)
+            return output
 
-                # Convert back to complex
-                y = y[:, :y.shape[1] // 2] + 1j * y[:, y.shape[1] // 2:]
-                y = y.astype(dtype)
+    def _convolve_cuda(data, filt,
+                       mode='full', strides=None,
+                       multi_channel=False):
+        device = backend.get_device(data)
+        xp = device.xp
 
-                return y
-
-        ndim = x.ndim - 2
-        batch_size = len(x)
-        output_channel = W.shape[0]
-        input_shape = x.shape[-ndim:]
-        filter_shape = W.shape[-ndim:]
-        strides = (1, ) * ndim
-        dilations = (1, ) * ndim
+        D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
+            data.shape, filt.shape,
+            mode, strides, multi_channel)
+        dilations = (1, ) * D
         groups = 1
         auto_tune = True
         tensor_core = 'auto'
         if mode == 'full':
-            output_shape = tuple(
-                m + n - 1 for m, n in zip(input_shape, filter_shape))
-            pads = tuple(n - 1 for n in W.shape[2:])
+            pads = tuple(n_d - 1 for n_d in n)
         elif mode == 'valid':
-            output_shape = tuple(
-                m - n + 1 for m, n in zip(input_shape, filter_shape))
-            pads = (0, ) * ndim
+            pads = (0, ) * D
 
         with device:
-            y = xp.empty((batch_size, output_channel) + output_shape,
-                         dtype=dtype)
-            W = util.flip(W, axes=range(-ndim, 0))
-            cudnn.convolution_forward(x, W, None, y,
-                                      pads, strides, dilations, groups,
+            data = data.reshape((B, c_i) + m)
+            filt = filt.reshape((c_o, c_i) + n)
+            output = xp.empty((B, c_o) + p, dtype=data.dtype)
+            filt = util.flip(filt, axes=range(-D, 0))
+            cudnn.convolution_forward(data, filt, None, output,
+                                      pads, s, dilations, groups,
                                       auto_tune=auto_tune,
                                       tensor_core=tensor_core)
 
-        return y
+            # Reshape.
+            if multi_channel:
+                output = output.reshape(b + (c_o, ) + p)
+            else:
+                output = output.reshape(b + p)
 
-    def _cudnn_convolve_adjoint_input(W, y, mode='full'):
-        dtype = y.dtype
-        device = backend.get_device(y)
+        return output
+
+    def _convolve_data_adjoint_cuda(output, filt, data_shape,
+                                    mode='full', strides=None,
+                                    multi_channel=False):
+        device = backend.get_device(output)
         xp = device.xp
-        if np.issubdtype(dtype, np.complexfloating):
-            with device:
-                Wr = xp.real(W)
-                Wi = xp.imag(W)
-                yr = xp.real(y)
-                yi = xp.imag(y)
 
-                # Concatenate real and imaginary to input/output channels
-                y = xp.concatenate([yr, yi], axis=1)
-                W = xp.concatenate([xp.concatenate([Wr, -Wi], axis=1),
-                                    xp.concatenate([Wi, Wr], axis=1)], axis=0)
-
-                x = _cudnn_convolve_adjoint_input(W, y, mode=mode)
-
-                # Convert back to complex
-                x = x[:, :x.shape[1] // 2] + 1j * x[:, x.shape[1] // 2:]
-                x = x.astype(dtype)
-
-                return x
-
-        ndim = y.ndim - 2
-        batch_size = len(y)
-        input_channel = W.shape[1]
-        output_shape = y.shape[-ndim:]
-        filter_shape = W.shape[-ndim:]
-        strides = (1, ) * ndim
-        dilations = (1, ) * ndim
+        D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
+            data_shape, filt.shape,
+            mode, strides, multi_channel)
+        dilations = (1, ) * D
         groups = 1
         auto_tune = True
         tensor_core = 'auto'
         deterministic = False
         if mode == 'full':
-            input_shape = tuple(
-                p - n + 1 for p, n in zip(output_shape, filter_shape))
-            pads = tuple(n - 1 for n in W.shape[2:])
+            pads = tuple(n_d - 1 for n_d in n)
         elif mode == 'valid':
-            input_shape = tuple(
-                p + n - 1 for p, n in zip(output_shape, filter_shape))
-            pads = (0, ) * ndim
+            pads = (0, ) * D
 
         with device:
-            x = xp.empty((batch_size, input_channel) + input_shape,
-                         dtype=dtype)
-            W = util.flip(W, axes=range(-ndim, 0))
-            cudnn.convolution_backward_data(W, y, None, x,
-                                            pads, strides, dilations, groups,
+            output = output.reshape((B, c_o) + p)
+            filt = filt.reshape((c_o, c_i) + n)
+            data = xp.empty((B, c_i) + m, dtype=output.dtype)
+            filt = util.flip(filt, axes=range(-D, 0))
+            cudnn.convolution_backward_data(filt, output, None, data,
+                                            pads, s, dilations, groups,
                                             deterministic=deterministic,
                                             auto_tune=auto_tune,
                                             tensor_core=tensor_core)
 
-        return x
+            # Reshape.
+            data = data.reshape(data_shape)
 
-    def _cudnn_convolve_adjoint_filter(x, y, mode='full'):
-        dtype = y.dtype
-        device = backend.get_device(y)
+        return data
+
+    def _convolve_filter_adjoint_cuda(output, data, filt_shape,
+                                      mode='full', strides=None,
+                                      multi_channel=False):
+        device = backend.get_device(data)
         xp = device.xp
-        if np.issubdtype(dtype, np.complexfloating):
-            with device:
-                xr = xp.real(x)
-                xi = xp.imag(x)
-                yr = xp.real(y)
-                yi = xp.imag(y)
 
-                # Concatenate real and imaginary to input/output channels
-                x = xp.concatenate([xr, xi], axis=1)
-                y = xp.concatenate([yr, yi], axis=1)
-
-                W = _cudnn_convolve_adjoint_filter(x, y, mode=mode)
-
-                # Convert back to complex
-                Wr = W[:W.shape[0] // 2, :W.shape[1] // 2]
-                Wr += W[W.shape[0] // 2:, W.shape[1] // 2:]
-                Wi = W[W.shape[0] // 2:, :W.shape[1] // 2]
-                Wi -= W[:W.shape[0] // 2, W.shape[1] // 2:]
-                return (Wr + 1j * Wi).astype(dtype)
-
-        ndim = y.ndim - 2
-        input_channel = x.shape[1]
-        output_channel = y.shape[1]
-        input_shape = x.shape[-ndim:]
-        output_shape = y.shape[-ndim:]
-        strides = (1, ) * ndim
-        dilations = (1, ) * ndim
+        D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
+            data.shape, filt_shape,
+            mode, strides, multi_channel)
+        dilations = (1, ) * D
         groups = 1
         auto_tune = True
         tensor_core = 'auto'
         deterministic = False
         if mode == 'full':
-            filter_shape = tuple(
-                p - m + 1 for m, p in zip(input_shape, output_shape))
-            pads = tuple(n - 1 for n in filter_shape)
+            pads = tuple(n_d - 1 for n_d in n)
         elif mode == 'valid':
-            filter_shape = tuple(
-                m - p + 1 for m, p in zip(input_shape, output_shape))
-            pads = (0, ) * ndim
+            pads = (0, ) * D
 
         with device:
-            W = xp.empty(
-                (output_channel, input_channel) + filter_shape, dtype=dtype)
-            cudnn.convolution_backward_filter(x, y, W,
-                                              pads, strides, dilations, groups,
+            data = data.reshape((B, c_i) + m)
+            output = output.reshape((B, c_o) + p)
+            filt = xp.empty((c_o, c_i) + n, dtype=output.dtype)
+            cudnn.convolution_backward_filter(data, output, filt,
+                                              pads, s, dilations, groups,
                                               deterministic=deterministic,
                                               auto_tune=auto_tune,
                                               tensor_core=tensor_core)
-            W = util.flip(W, axes=range(-ndim, 0))
+            filt = util.flip(filt, axes=range(-D, 0))
+            filt = filt.reshape(filt_shape)
 
-        return W
+        return filt

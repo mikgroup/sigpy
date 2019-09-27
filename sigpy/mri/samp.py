@@ -66,7 +66,9 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
     """Generate radial trajectory.
 
     Args:
-        coord_shape (tuple of ints): coordinates of shape [ntr, nro, ndim]
+        coord_shape (tuple of ints): coordinates of shape [ntr, nro, ndim],
+            where ntr is the number of TRs, nro is the number of readout,
+            and ndim is the number of dimensions.
         img_shape (tuple of ints): image shape.
         golden (bool): golden angle ordering.
         dtype (Dtype): data type.
@@ -74,21 +76,32 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
     Returns:
         array: radial coordinates.
 
-    """
-    ntr, nro, ndim = coord_shape
+    References:
+        1. An Optimal Radial Profile Order Based on the Golden
+        Ratio for Time-Resolved MRI
+        Stefanie Winkelmann, Tobias Schaeffter, Thomas Koehler,
+        Holger Eggers, and Olaf Doessel. TMI 2007.
+        2. Temporal stability of adaptive 3D radial MRI using
+        multidimensional golden means
+        Rachel W. Chan, Elizabeth A. Ramsay, Charles H. Cunningham,
+        and Donald B. Plewes. MRM 2009.
 
+    """
+    if len(img_shape) != coord_shape[-1]:
+        raise ValueError(
+            'coord_shape[-1] must match len(img_shape), '
+            'got {} and {}'.format(coord_shape[-1], len(img_shape)))
+
+    ntr, nro, ndim = coord_shape
     if ndim == 2:
         if golden:
-            # 111.25 degrees in radians
-            # from: Winkelmann, S. An Optimal Radial Profile Order Based on
-            # the Golden Ratio for Time-Resolved MRI, IEEE TMI, 2007
-            phi = 0.970839395
+            phi = np.pi * (3 - 5**0.5)
         else:
-            phi = 1.0 / ntr
+            phi = 2 * np.pi / ntr
 
         n, r = np.mgrid[:ntr, :0.5:0.5 / nro]
 
-        theta = 2.0 * np.pi * n * phi
+        theta = n * phi
         coord = np.zeros((ntr, nro, 2))
         coord[:, :, -1] = r * np.cos(theta)
         coord[:, :, -2] = r * np.sin(theta)
@@ -110,7 +123,8 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
         coord[:, :, -2] = r * np.sin(beta) * np.sin(alpha)
         coord[:, :, -3] = r * np.cos(beta)
     else:
-        raise ValueError('Invalid ndim: {}'.format(ndim))
+        raise ValueError(
+            'coord_shape[-1] must be 2 or 3, got {}'.format(ndim))
 
     return (coord * img_shape[-ndim:]).astype(dtype)
 

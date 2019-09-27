@@ -7,10 +7,9 @@ import numba as nb
 from sigpy import backend, config
 
 
-__all__ = ['asscalar', 'prod', 'vec', 'split', 'rss', 'resize',
+__all__ = ['prod', 'vec', 'split', 'rss', 'resize',
            'flip', 'circshift', 'downsample', 'upsample', 'dirac', 'randn',
-           'triang', 'hanning', 'monte_carlo_sure', 'axpy', 'xpay',
-           'ShuffledNumbers']
+           'triang', 'hanning', 'monte_carlo_sure', 'axpy', 'xpay']
 
 
 def _normalize_axes(axes, ndim):
@@ -45,19 +44,6 @@ def _check_same_dtype(*arrays):
             raise TypeError(
                 'inputs dtype mismatch, got {a_dtype}, and {dtype}.'.format(
                     a_dtype=a.dtype, dtype=dtype))
-
-
-def asscalar(input):
-    """Returns input array as scalar.
-
-    Args:
-        input (array): Input array
-
-    Returns:
-        scalar.
-
-    """
-    return np.asscalar(backend.to_device(input, backend.cpu_device))
 
 
 def prod(shape):
@@ -402,36 +388,6 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
             2 * sigma**2 * divf_y / n
 
     return sure
-
-
-class ShuffledNumbers(object):
-    """Produces shuffled numbers between given range.
-
-    Args:
-        Arguments to numpy.arange.
-
-    """
-
-    def __init__(self, *args):
-        self.numbers = np.arange(*args)
-        np.random.shuffle(self.numbers)
-        self.i = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        return self.next()
-
-    def next(self):
-        ret = self.numbers[self.i]
-
-        self.i += 1
-        if self.i == len(self.numbers):
-            np.random.shuffle(self.numbers)
-            self.i = 0
-
-        return ret
 
 
 def axpy(y, a, x):

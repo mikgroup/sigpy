@@ -37,7 +37,7 @@ $\bf{Hotkeys:}$
     $\bf{[/]:}$ change brightness.
     $\bf{\{/\}:}$ change contrast.
     $\bf{s:}$ save as png.
-    $\bf{g/v:}$ save as gif/mp4 by along current axis.
+    $\bf{g/v:}$ save as gif/video by along current axis.
     $\bf{q:}$ refresh.
     $\bf{0-9:}$ enter slice number.
     $\bf{enter:}$ set current axis as slice number.
@@ -55,13 +55,13 @@ class ImagePlot(object):
         y (int): y axis.
         z (None or int): z axis.
         c (None or int): color axis.
-        axis_hide (bool): toggle hiding axes, labels and title.
+        hide_axes (bool): toggle hiding axes, labels and title.
         mode (str): specify magnitude, phase, real, imaginary,
             and log mode. {'m', 'p', 'r', 'i', 'l'}.
         title (str): title.
         interpolation (str): plot interpolation.
-        save_basename (str): saved png, gif, and mp4 base name.
-        fps (int): frame per seconds for gif and mp4.
+        save_basename (str): saved png, gif, and video base name.
+        fps (int): frame per seconds for gif and video.
 
     """
     def __init__(
@@ -71,10 +71,10 @@ class ImagePlot(object):
             y=-2,
             z=None,
             c=None,
-            axes_hide=False,
-            mode='m',
+            hide_axes=False,
+            mode=None,
             title='',
-            interpolation='lanczos',
+            interpolation='nearest',
             save_basename='Figure',
             fps=10):
         if im.ndim < 2:
@@ -95,7 +95,7 @@ class ImagePlot(object):
         self.z = z % self.ndim if z is not None else None
         self.c = c % self.ndim if c is not None else None
         self.d = max(self.ndim - 3, 0)
-        self.axes_hide = axes_hide
+        self.hide_axes = hide_axes
         self.show_help = False
         self.title = title
         self.interpolation = interpolation
@@ -201,7 +201,7 @@ class ImagePlot(object):
             self.fig.canvas.draw()
 
         elif event.key == 'a':
-            self.axes_hide = not self.axes_hide
+            self.hide_axes = not self.hide_axes
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -288,7 +288,7 @@ class ImagePlot(object):
                             '-s',
                             '{}x{}'.format(int(bbox.width * self.fig.dpi),
                                            int(bbox.height * self.fig.dpi)),
-                            '-r',
+                            '-framerate',
                             str(self.fps),
                             '-i',
                             '{} %05d.png'.format(temp_basename),
@@ -299,7 +299,7 @@ class ImagePlot(object):
                             '-s', '{}x{}'.format(
                                 int(bbox.width * self.fig.dpi),
                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
+                            '-framerate', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
                             '-lavfi', 'paletteuse', filename])
@@ -325,21 +325,16 @@ class ImagePlot(object):
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
             subprocess.run(['ffmpeg',
-                            '-f',
-                            'image2',
-                            '-s',
-                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                           int(bbox.height * self.fig.dpi)),
-                            '-r',
-                            str(self.fps),
-                            '-i',
-                            '{} %05d.png'.format(temp_basename),
-                            '-vf',
-                            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                            '-vcodec',
-                            'libx264',
-                            '-pix_fmt',
-                            'yuv420p',
+                            '-f', 'image2',
+                            '-s', '{}x{}'.format(
+                                int(bbox.width * self.fig.dpi),
+                                int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                            '-vcodec', 'libx264',
+                            '-preset', 'veryslow',
+                            '-pix_fmt', 'yuv420p',
                             filename])
 
             for i in range(self.shape[self.d]):
@@ -406,6 +401,12 @@ class ImagePlot(object):
         imv = np.transpose(imv, np.argsort(np.argsort(imv_dims)))
         imv = array_to_image(imv, color=self.c is not None)
 
+        if self.mode is None:
+            if np.isrealobj(imv):
+                self.mode = 'r'
+            else:
+                self.mode = 'm'
+
         if self.mode == 'm':
             imv = np.abs(imv)
         elif self.mode == 'p':
@@ -458,7 +459,7 @@ class ImagePlot(object):
 
     def update_axes(self):
 
-        if not self.axes_hide:
+        if not self.hide_axes:
             caption = '['
             for i in range(self.ndim):
 
@@ -469,7 +470,8 @@ class ImagePlot(object):
 
                 if (self.flips[i] == -1 and (i == self.x or
                                              i == self.y or
-                                             i == self.z)):
+                                             i == self.z or
+                                             i == self.c)):
                     caption += '-'
 
                 if i == self.x:
@@ -522,10 +524,12 @@ def array_to_image(arr, color=False):
     """
     Flattens all dimensions except the last two
 
+    Args:
+        arr (array): shape [z, x, y, c] if color, else [z, x, y]
+
     """
-    if color:
-        arr = np.divide(arr, np.abs(arr).max(),
-                        out=np.zeros_like(arr), where=arr != 0)
+    if color and not (arr.max() == 0 and arr.min() == 0):
+        arr = arr / np.abs(arr).max()
 
     if arr.ndim == 2:
         return arr
@@ -533,30 +537,29 @@ def array_to_image(arr, color=False):
         return arr
 
     if color:
-        ndim = 3
+        img_shape = arr.shape[-3:]
+        batch = sp.prod(arr.shape[:-3])
+        mshape = mosaic_shape(batch)
     else:
-        ndim = 2
-
-    arr = sp.resize(arr, arr.shape[:-2] +
-                    (arr.shape[-2] + 2, arr.shape[-1] + 2))
-    shape = arr.shape
-    batch = sp.prod(shape[:-ndim])
-    mshape = mosaic_shape(batch)
+        img_shape = arr.shape[-2:]
+        batch = sp.prod(arr.shape[:-2])
+        mshape = mosaic_shape(batch)
 
     if sp.prod(mshape) == batch:
-        img = arr.reshape((batch, ) + shape[-ndim:])
+        img = arr.reshape((batch, ) + img_shape)
     else:
-        img = np.zeros((sp.prod(mshape), ) + shape[-ndim:], dtype=arr.dtype)
-        img[:batch, ...] = arr.reshape((batch, ) + shape[-ndim:])
+        img = np.zeros((sp.prod(mshape), ) + img_shape, dtype=arr.dtype)
+        img[:batch, ...] = arr.reshape((batch, ) + img_shape)
 
-    img = img.reshape(mshape + shape[-ndim:])
+    img = img.reshape(mshape + img_shape)
     if color:
         img = np.transpose(img, (0, 2, 1, 3, 4))
-        img = img.reshape(
-            (shape[-3] * mshape[-2], shape[-2] * mshape[-1], shape[-1]))
+        img = img.reshape((img_shape[0] * mshape[0],
+                           img_shape[1] * mshape[1], 3))
     else:
         img = np.transpose(img, (0, 2, 1, 3))
-        img = img.reshape((shape[-2] * mshape[-2], shape[-1] * mshape[-1]))
+        img = img.reshape((img_shape[0] * mshape[0],
+                           img_shape[1] * mshape[1]))
 
     return img
 
@@ -577,10 +580,10 @@ class LinePlot(object):
         l: log mode
         s: save as png.
         g: save as gif by traversing current dimension.
-        v: save as mp4 by traversing current dimension.
+        v: save as video by traversing current dimension.
     """
 
-    def __init__(self, arr, x=-1, axes_hide=False, mode='m', title='',
+    def __init__(self, arr, x=-1, hide_axes=False, mode='m', title='',
                  save_basename='Figure', fps=10):
         import matplotlib.pyplot as plt
 
@@ -595,11 +598,13 @@ class LinePlot(object):
         self.flips = [1] * self.ndim
         self.x = x % self.ndim
         self.d = max(self.ndim - 3, 0)
-        self.axes_hide = axes_hide
+        self.hide_axes = hide_axes
         self.title = title
         self.mode = mode
         self.save_basename = save_basename
         self.fps = fps
+        self.bottom = None
+        self.top = None
 
         self.fig.canvas.mpl_disconnect(
             self.fig.canvas.manager.key_press_handler_id)
@@ -656,7 +661,7 @@ class LinePlot(object):
             self.fig.canvas.draw()
 
         elif event.key == 'a':
-            self.axes_hide = not self.axes_hide
+            self.hide_axes = not self.hide_axes
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -668,6 +673,8 @@ class LinePlot(object):
               event.key == 'r' or event.key == 'i' or event.key == 'l'):
 
             self.mode = event.key
+            self.bottom = None
+            self.top = None
 
             self.update_axes()
             self.update_line()
@@ -702,7 +709,7 @@ class LinePlot(object):
                             '-s',
                             '{}x{}'.format(int(bbox.width * self.fig.dpi),
                                            int(bbox.height * self.fig.dpi)),
-                            '-r',
+                            '-framerate',
                             str(self.fps),
                             '-i',
                             '{} %05d.png'.format(temp_basename),
@@ -713,7 +720,7 @@ class LinePlot(object):
                             '-s', '{}x{}'.format(
                                 int(bbox.width * self.fig.dpi),
                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
+                            '-framerate', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
                             '-lavfi', 'paletteuse', filename])
@@ -725,7 +732,7 @@ class LinePlot(object):
         elif event.key == 'v':
             filename = self.save_basename + \
                 datetime.datetime.now().strftime(
-                    ' %Y-%m-%d at %h.%M.%S %p.mp4')
+                    ' %Y-%m-%d at %h.%M.%S %p.mov')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -739,21 +746,9 @@ class LinePlot(object):
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
             subprocess.run(['ffmpeg',
-                            '-f',
-                            'image2',
-                            '-s',
-                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                           int(bbox.height * self.fig.dpi)),
-                            '-r',
-                            str(self.fps),
-                            '-i',
-                            '{} %05d.png'.format(temp_basename),
-                            '-vf',
-                            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                            '-vcodec',
-                            'libx264',
-                            '-pix_fmt',
-                            'yuv420p',
+                            '-framerate', str(self.fps),
+                            '-i', '{} %05d.png'.format(temp_basename),
+                            '-vcodec', 'png',
                             filename])
 
             for i in range(self.shape[self.d]):
@@ -784,18 +779,23 @@ class LinePlot(object):
             eps = 1e-31
             arrv = np.log(np.abs(arrv) + eps)
 
+        if self.bottom is None:
+            self.bottom = arrv.min()
+
+        if self.top is None:
+            self.top = arrv.max()
+
         if self.axarr is None:
             self.axarr = self.ax.plot(arrv)[0]
 
         else:
             self.axarr.set_xdata(np.arange(len(arrv)))
             self.axarr.set_ydata(arrv)
-            self.ax.relim()
-            self.ax.autoscale_view()
+            self.ax.set_ylim(self.bottom, self.top)
 
     def update_axes(self):
 
-        if not self.axes_hide:
+        if not self.hide_axes:
             caption = 'Slice: ['
             for i in range(self.ndim):
 
@@ -853,7 +853,7 @@ class ScatterPlot(object):
             coord,
             data=None,
             z=None,
-            axes_hide=False,
+            hide_axes=False,
             mode='m',
             title='',
             save_basename='Figure',
@@ -870,6 +870,7 @@ class ScatterPlot(object):
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111)
         self.ax.set_facecolor('k')
+        self.ax.axis('equal')
 
         for c, d in zip(coord.shape[:-1], self.data.shape[-coord.ndim + 1:]):
             assert c == d
@@ -881,7 +882,7 @@ class ScatterPlot(object):
         self.flips = [1] * self.ndim
         self.z = z % self.ndim if z is not None else None
         self.d = 0
-        self.axes_hide = axes_hide
+        self.hide_axes = hide_axes
         self.title = title
         self.mode = mode
         self.axsc = None
@@ -945,7 +946,7 @@ class ScatterPlot(object):
         #     self.fig.canvas.draw()
 
         elif event.key == 'a':
-            self.axes_hide = not self.axes_hide
+            self.hide_axes = not self.hide_axes
 
             self.update_axes()
             self.fig.canvas.draw()
@@ -992,7 +993,7 @@ class ScatterPlot(object):
                             '-s',
                             '{}x{}'.format(int(bbox.width * self.fig.dpi),
                                            int(bbox.height * self.fig.dpi)),
-                            '-r',
+                            '-framerate',
                             str(self.fps),
                             '-i',
                             '{} %05d.png'.format(temp_basename),
@@ -1003,7 +1004,7 @@ class ScatterPlot(object):
                             '-s', '{}x{}'.format(
                                 int(bbox.width * self.fig.dpi),
                                 int(bbox.height * self.fig.dpi)),
-                            '-r', str(self.fps),
+                            '-framerate', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-i', '{} palette.png'.format(temp_basename),
                             '-lavfi', 'paletteuse', filename])
@@ -1015,7 +1016,7 @@ class ScatterPlot(object):
         elif event.key == 'v':
             filename = self.save_basename + \
                 datetime.datetime.now().strftime(
-                    ' %Y-%m-%d at %h.%M.%S %p.mp4')
+                    ' %Y-%m-%d at %h.%M.%S %p.mov')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -1029,21 +1030,12 @@ class ScatterPlot(object):
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
             subprocess.run(['ffmpeg',
-                            '-f',
-                            'image2',
-                            '-s',
-                            '{}x{}'.format(int(bbox.width * self.fig.dpi),
-                                           int(bbox.height * self.fig.dpi)),
-                            '-r',
+                            '-framerate',
                             str(self.fps),
                             '-i',
                             '{} %05d.png'.format(temp_basename),
-                            '-vf',
-                            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
                             '-vcodec',
-                            'libx264',
-                            '-pix_fmt',
-                            'yuv420p',
+                            'png',
                             filename])
 
             for i in range(self.shape[self.d]):
@@ -1136,7 +1128,7 @@ class ScatterPlot(object):
 
     def update_axes(self):
 
-        if not self.axes_hide:
+        if not self.hide_axes:
             caption = '['
             for i in range(self.ndim):
 

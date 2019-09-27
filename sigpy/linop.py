@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This module contains an abstract class Linop for linear operators,
+"""This module contains an abstraction class Linop for linear operators,
 and provides commonly used linear operators, including signal transforms
 such as FFT, NUFFT, and wavelet, and array manipulation operators,
 such as reshape, transpose, and resize.
@@ -45,8 +45,8 @@ class Linop(object):
         oshape: output shape.
         ishape: input shape.
         H: adjoint linear operator.
-    """
 
+    """
     def __init__(self, oshape, ishape, repr_str=None):
         self.oshape = list(oshape)
         self.ishape = list(ishape)
@@ -77,6 +77,18 @@ class Linop(object):
         raise NotImplementedError
 
     def apply(self, input):
+        """Apply linear operation on input.
+
+        This function checks for the input/output shapes,
+        and calls the internal user-defined _apply() method.
+
+        Args:
+            input (array): input array of shape `ishape`.
+
+        Returns:
+            array: output array of shape `oshape`.
+
+        """
         self._check_domain(input)
         with backend.get_device(input):
             output = self._apply(input)
@@ -89,6 +101,18 @@ class Linop(object):
 
     @property
     def H(self):
+        r"""Return adjoint linear operator.
+
+        An adjoint linear operator :math:`A^H` for
+        a linear operator :math:`A` is defined as:
+
+        .. math:
+            \left< A x, y \right> = \left< x, A^H, y \right>
+
+        Returns:
+            Linop: adjoint linear operator.
+
+        """
         return self._adjoint_linop()
 
     def __call__(self, input):
@@ -222,7 +246,7 @@ class AllReduceAdjoint(Linop):
 
 
 class Conj(Linop):
-    """Returns complex conjugate of linear operator.
+    """Complex conjugate of linear operator.
 
     Args:
         A (Linop): Input linear operator.
@@ -591,7 +615,7 @@ class Diag(Linop):
 
 
 class Reshape(Linop):
-    """Linear operator that reshapes input to given output shape.
+    """Reshape input to given output shape.
 
     Args:
         oshape (tuple of ints): Output shape.
@@ -610,7 +634,7 @@ class Reshape(Linop):
 
 
 class Transpose(Linop):
-    """Linear operator that transposes input with the given axes.
+    """Tranpose input with the given axes.
 
     Args:
         ishape (tuple of ints): Input shape.
@@ -730,7 +754,7 @@ def _get_matmul_adjoint_sum_axes(oshape, ishape, mshape):
 
 
 class MatMul(Linop):
-    """Linear operator that performs matrix multiplication.
+    """Matrix multiplication.
 
     Args:
         ishape (tuple of ints): Input shape.
@@ -794,7 +818,7 @@ def _get_right_matmul_oshape(ishape, mshape, adjoint):
 
 
 class RightMatMul(Linop):
-    """Linear operator that performs matrix multiplication on the right.
+    """Matrix multiplication on the right.
 
     Args:
         ishape (tuple of ints): Input shape.
@@ -926,15 +950,13 @@ class Interpolate(Linop):
 
     """
 
-    def __init__(self, ishape, coord, width, kernel, scale=1, shift=0):
+    def __init__(self, ishape, coord, width, kernel):
         ndim = coord.shape[-1]
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.width = width
         self.kernel = kernel
-        self.shift = shift
-        self.scale = scale
 
         super().__init__(oshape, ishape)
 
@@ -943,15 +965,12 @@ class Interpolate(Linop):
         device = backend.get_device(input)
         coord = backend.to_device(self.coord, device)
         kernel = backend.to_device(self.kernel, device)
-        shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.interpolate(input, self.width, kernel,
-                                      coord * self.scale + shift)
+            return interp.interpolate(input, self.width, kernel, coord)
 
     def _adjoint_linop(self):
-        return Gridding(self.ishape, self.coord, self.width, self.kernel,
-                        scale=self.scale, shift=self.shift)
+        return Gridding(self.ishape, self.coord, self.width, self.kernel)
 
 
 class Gridding(Linop):
@@ -969,15 +988,13 @@ class Gridding(Linop):
 
     """
 
-    def __init__(self, oshape, coord, width, kernel, scale=1, shift=0):
+    def __init__(self, oshape, coord, width, kernel):
         ndim = coord.shape[-1]
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.width = width
         self.kernel = kernel
-        self.shift = shift
-        self.scale = scale
 
         super().__init__(oshape, ishape)
 
@@ -985,15 +1002,13 @@ class Gridding(Linop):
         device = backend.get_device(input)
         coord = backend.to_device(self.coord, device)
         kernel = backend.to_device(self.kernel, device)
-        shift = backend.to_device(self.shift, device)
 
         with device:
-            return interp.gridding(input, self.oshape, self.width, kernel,
-                                   coord * self.scale + shift)
+            return interp.gridding(
+                input, self.oshape, self.width, kernel, coord)
 
     def _adjoint_linop(self):
-        return Interpolate(self.oshape, self.coord, self.width, self.kernel,
-                           scale=self.scale, shift=self.shift)
+        return Interpolate(self.oshape, self.coord, self.width, self.kernel)
 
 
 class Resize(Linop):
@@ -1157,7 +1172,7 @@ class Wavelet(Linop):
 
 
 class InverseWavelet(Linop):
-    """Wavelet transform linear operator.
+    """Inverse wavelet transform linear operator.
 
     Currently only has CPU implementation. GPU inputs will be copied to CPU,
     and back to compute on CPU.
@@ -1250,20 +1265,24 @@ class Tile(Linop):
 
 
 class ArrayToBlocks(Linop):
-    """Extract blocks from array.
+    """Extract blocks from an array in a sliding window manner.
 
     Args:
-        ishape (tuple of ints): Input shape.
-        blk_shape (tuple of ints): Block shape.
-        blk_shape (tuple of ints): Block strides.
+        ishape (array): input array of shape [..., N_1, ..., N_D]
+        blk_shape (tuple): block shape of length D, with D <= 4.
+        blk_strides (tuple): block strides of length D.
+
+    See Also:
+        :func:`sigpy.block.array_to_blocks`
 
     """
 
     def __init__(self, ishape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
+        D = len(blk_shape)
         num_blks = [(i - b + s) // s for i, b,
-                    s in zip(ishape, blk_shape, blk_strides)]
+                    s in zip(ishape[-D:], blk_shape, blk_strides)]
         oshape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1276,20 +1295,23 @@ class ArrayToBlocks(Linop):
 
 
 class BlocksToArray(Linop):
-    """Average blocks to array.
+    """Accumulate blocks into an array in a sliding window manner.
 
     Args:
-        oshape (tuple of ints): Output shape.
-        blk_shape (tuple of ints): Block shape.
-        blk_shape (tuple of ints): Block strides.
+        oshape (tuple): output shape.
+        blk_shape (tuple): block shape of length D.
+        blk_strides (tuple): block strides of length D.
+
+    Returns:
+        array: array of shape oshape.
 
     """
-
     def __init__(self, oshape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
+        D = len(blk_shape)
         num_blks = [(i - b + s) // s for i, b,
-                    s in zip(oshape, blk_shape, blk_strides)]
+                    s in zip(oshape[-D:], blk_shape, blk_strides)]
         ishape = num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1303,6 +1325,16 @@ class BlocksToArray(Linop):
 
 
 def Gradient(ishape, axes=None):
+    import warnings
+
+    warnings.warn('Gradient Linop is renamed to FiniteDifference, '
+                  'Please switch to use FiniteDifference.',
+                  category=DeprecationWarning)
+
+    return FiniteDifference(ishape, axes=axes)
+
+
+def FiniteDifference(ishape, axes=None):
     """Linear operator that computes finite difference gradient.
 
     Args:
@@ -1313,7 +1345,7 @@ def Gradient(ishape, axes=None):
     axes = util._normalize_axes(axes, len(ishape))
     ndim = len(ishape)
     linops = []
-    for i in range(ndim):
+    for i in axes:
         D = I - Circshift(ishape, [0] * i + [1] + [0] * (ndim - i - 1))
         R = Reshape([1] + list(ishape), ishape)
         linops.append(R * D)
@@ -1334,7 +1366,6 @@ class NUFFT(Linop):
         n (int): Kernel sampling number.
 
     """
-
     def __init__(self, ishape, coord, oversamp=1.25, width=4.0, n=128):
         self.coord = coord
         self.oversamp = oversamp
@@ -1373,7 +1404,6 @@ class NUFFTAdjoint(Linop):
         n (int): Kernel sampling number.
 
     """
-
     def __init__(self, oshape, coord, oversamp=1.25, width=4.0, n=128):
         self.coord = coord
         self.oversamp = oversamp
@@ -1397,201 +1427,189 @@ class NUFFTAdjoint(Linop):
 
     def _adjoint_linop(self):
 
-        return NUFFTAdjoint(self.ishape, self.coord,
-                            oversamp=self.oversamp, width=self.width, n=self.n)
+        return NUFFT(self.oshape, self.coord,
+                     oversamp=self.oversamp, width=self.width, n=self.n)
 
 
-class ConvolveInput(Linop):
+class ConvolveData(Linop):
+    r"""Convolution operator for data arrays.
 
-    def __init__(self, x_shape, W, mode='full',
-                 input_multi_channel=False, output_multi_channel=False):
-        self.W = W
+    Args:
+        data_shape (tuple of ints): data array shape:
+            :math:`[\ldots, m_1, \ldots, m_D]` if multi_channel is False,
+            :math:`[\ldots, c_i, m_1, \ldots, m_D]` otherwise.
+        filt (array): filter array of shape:
+            :math:`[n_1, \ldots, n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, \ldots, n_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    """
+    def __init__(self, data_shape, filt, mode='full', strides=None,
+                 multi_channel=False):
+        self.filt = filt
         self.mode = mode
-        self.input_multi_channel = input_multi_channel
-        self.output_multi_channel = output_multi_channel
+        self.strides = strides
+        self.multi_channel = multi_channel
 
-        ndim = W.ndim - input_multi_channel - output_multi_channel
-        if mode == 'full':
-            y_shape = [m + n - 1 for m,
-                       n in zip(x_shape[-ndim:], W.shape[-ndim:])]
-        elif mode == 'valid':
-            y_shape = [m - n + 1 for m,
-                       n in zip(x_shape[-ndim:], W.shape[-ndim:])]
+        D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
+            data_shape, filt.shape,
+            mode, strides, multi_channel)
 
-        if output_multi_channel:
-            y_shape = [W.shape[0]] + y_shape
+        if multi_channel:
+            output_shape = b + (c_o, ) + p
+        else:
+            output_shape = b + p
 
-        batch_shape = list(x_shape[:-ndim - input_multi_channel])
-        y_shape = batch_shape + y_shape
-
-        super().__init__(y_shape, x_shape)
+        super().__init__(output_shape, data_shape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        W = backend.to_device(self.W, backend.get_device(input))
-        with device:
-            W = W.astype(input.dtype, copy=False)
-
-        return conv.convolve(input, W, mode=self.mode,
-                             input_multi_channel=self.input_multi_channel,
-                             output_multi_channel=self.output_multi_channel)
+        return conv.convolve(input, self.filt, mode=self.mode,
+                             strides=self.strides,
+                             multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveAdjointInput(
-            self.oshape,
-            self.W,
-            mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+        return ConvolveDataAdjoint(
+            self.ishape, self.filt,
+            mode=self.mode, strides=self.strides,
+            multi_channel=self.multi_channel)
 
 
-class ConvolveAdjointInput(Linop):
+class ConvolveDataAdjoint(Linop):
+    r"""Adjoint convolution operator for data arrays.
 
-    def __init__(self, y_shape, W, mode='full',
-                 input_multi_channel=False, output_multi_channel=False):
-        self.W = W
+    Args:
+        data_shape (tuple of ints): data array shape:
+            :math:`[\ldots, m_1, \ldots, m_D]` if multi_channel is False,
+            :math:`[\ldots, c_i, m_1, \ldots, m_D]` otherwise.
+        filt (array): filter array of shape:
+            :math:`[n_1, \ldots, n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, \ldots, n_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    """
+    def __init__(self, data_shape, filt,
+                 mode='full', strides=None, multi_channel=False):
+        self.filt = filt
         self.mode = mode
-        self.input_multi_channel = input_multi_channel
-        self.output_multi_channel = output_multi_channel
+        self.strides = strides
+        self.multi_channel = multi_channel
 
-        ndim = W.ndim - input_multi_channel - output_multi_channel
-        if mode == 'full':
-            x_shape = [p - n + 1 for p,
-                       n in zip(y_shape[-ndim:], W.shape[-ndim:])]
-        elif mode == 'valid':
-            x_shape = [p + n - 1 for p,
-                       n in zip(y_shape[-ndim:], W.shape[-ndim:])]
+        D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
+            data_shape, filt.shape,
+            mode, strides, multi_channel)
 
-        if input_multi_channel:
-            x_shape = [W.shape[-ndim - 1]] + x_shape
+        if multi_channel:
+            output_shape = b + (c_o, ) + p
+        else:
+            output_shape = b + p
 
-        batch_shape = list(y_shape[:-ndim - output_multi_channel])
-        x_shape = batch_shape + x_shape
-
-        super().__init__(x_shape, y_shape)
+        super().__init__(data_shape, output_shape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        W = backend.to_device(self.W, backend.get_device(input))
-        with device:
-            W = W.astype(input.dtype, copy=False)
-
-        return conv.convolve_adjoint_input(
-            W,
-            input,
+        return conv.convolve_data_adjoint(
+            input, self.filt, self.oshape,
             mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+            strides=self.strides,
+            multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveInput(self.oshape, self.W, mode=self.mode,
-                             input_multi_channel=self.input_multi_channel,
-                             output_multi_channel=self.output_multi_channel)
+        return ConvolveData(self.oshape, self.filt,
+                            mode=self.mode, strides=self.strides,
+                            multi_channel=self.multi_channel)
 
 
 class ConvolveFilter(Linop):
+    r"""Convolution operator for filter arrays.
 
-    def __init__(self, W_shape, x, mode='full',
-                 input_multi_channel=False, output_multi_channel=False):
-        self.x = x
+    Args:
+        filt_shape (tuple of ints): filter array shape:
+            :math:`[n_1, \ldots, n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, \ldots, n_D]` otherwise.
+        data (array): data array of shape:
+            :math:`[\ldots, m_1, \ldots, m_D]` if multi_channel is False,
+            :math:`[\ldots, c_i, m_1, \ldots, m_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    """
+    def __init__(self, filt_shape, data,
+                 mode='full', strides=None,
+                 multi_channel=False):
+        self.data = data
         self.mode = mode
-        self.input_multi_channel = input_multi_channel
-        self.output_multi_channel = output_multi_channel
+        self.strides = strides
+        self.multi_channel = multi_channel
 
-        ndim = len(W_shape) - input_multi_channel - output_multi_channel
-        if mode == 'full':
-            y_shape = [m + n - 1 for m,
-                       n in zip(x.shape[-ndim:], W_shape[-ndim:])]
-        elif mode == 'valid':
-            y_shape = [m - n + 1 for m,
-                       n in zip(x.shape[-ndim:], W_shape[-ndim:])]
+        D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
+            data.shape, filt_shape,
+            mode, strides, multi_channel)
 
-        if output_multi_channel:
-            y_shape = [W_shape[-ndim - input_multi_channel - 1]] + y_shape
+        if multi_channel:
+            output_shape = b + (c_o, ) + p
+        else:
+            output_shape = b + p
 
-        batch_shape = list(x.shape[:-ndim - input_multi_channel])
-        y_shape = batch_shape + y_shape
-
-        self.ndim = ndim
-        super().__init__(y_shape, W_shape)
+        super().__init__(output_shape, filt_shape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        x = backend.to_device(self.x, backend.get_device(input))
-        with device:
-            x = x.astype(input.dtype, copy=False)
-
-        return conv.convolve(x, input, mode=self.mode,
-                             input_multi_channel=self.input_multi_channel,
-                             output_multi_channel=self.output_multi_channel)
+        data = backend.to_device(self.data, backend.get_device(input))
+        return conv.convolve(data, input,
+                             mode=self.mode, strides=self.strides,
+                             multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveAdjointFilter(
-            self.oshape,
-            self.x,
-            self.ndim,
-            mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+        return ConvolveFilterAdjoint(
+            self.ishape, self.data,
+            mode=self.mode, strides=self.strides,
+            multi_channel=self.multi_channel)
 
 
-class ConvolveAdjointFilter(Linop):
+class ConvolveFilterAdjoint(Linop):
+    r"""Adjoint convolution operator for filter arrays.
 
-    def __init__(self, y_shape, x, ndim, mode='full',
-                 input_multi_channel=False, output_multi_channel=False):
-        self.x = x
+    Args:
+        filt_shape (tuple of ints): filter array shape:
+            :math:`[n_1, \ldots, n_D]` if multi_channel is False
+            :math:`[c_o, c_i, n_1, \ldots, n_D]` otherwise.
+        data (array): data array of shape:
+            :math:`[\ldots, m_1, \ldots, m_D]` if multi_channel is False,
+            :math:`[\ldots, c_i, m_1, \ldots, m_D]` otherwise.
+        mode (str): {'full', 'valid'}.
+        strides (None or tuple of ints): convolution strides of length D.
+        multi_channel (bool): specify if input/output has multiple channels.
+
+    """
+    def __init__(self, filt_shape, data,
+                 mode='full', strides=None,
+                 multi_channel=False):
+        self.data = data
         self.mode = mode
-        self.input_multi_channel = input_multi_channel
-        self.output_multi_channel = output_multi_channel
-        self.ndim = ndim
+        self.strides = strides
+        self.multi_channel = multi_channel
 
-        if mode == 'full':
-            W_shape = [p - m + 1 for m,
-                       p in zip(x.shape[-ndim:], y_shape[-ndim:])]
-        elif mode == 'valid':
-            W_shape = [m - p + 1 for m,
-                       p in zip(x.shape[-ndim:], y_shape[-ndim:])]
+        D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
+            data.shape, filt_shape,
+            mode, strides, multi_channel)
 
-        if input_multi_channel:
-            W_shape = [x.shape[-ndim - 1]] + W_shape
+        if multi_channel:
+            output_shape = b + (c_o, ) + p
+        else:
+            output_shape = b + p
 
-        if output_multi_channel:
-            W_shape = [y_shape[-ndim - 1]] + W_shape
-
-        super().__init__(W_shape, y_shape)
+        super().__init__(filt_shape, output_shape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        x = backend.to_device(self.x, backend.get_device(input))
-        with device:
-            x = x.astype(input.dtype, copy=False)
-
-        return conv.convolve_adjoint_filter(
-            x, input, self.ndim, mode=self.mode,
-            input_multi_channel=self.input_multi_channel,
-            output_multi_channel=self.output_multi_channel)
+        return conv.convolve_filter_adjoint(
+            input, self.data, self.oshape,
+            mode=self.mode, strides=self.strides,
+            multi_channel=self.multi_channel)
 
     def _adjoint_linop(self):
-        return ConvolveFilter(self.oshape, self.x, mode=self.mode,
-                              input_multi_channel=self.input_multi_channel,
-                              output_multi_channel=self.output_multi_channel)
-
-
-class AsType(Linop):
-
-    def __init__(self, shape, odtype, idtype):
-        self.odtype = odtype
-        self.idtype = idtype
-
-        super().__init__(shape, shape)
-
-    def _apply(self, input):
-        with backend.get_device(input):
-            if (np.issubdtype(self.idtype, np.complexfloating) and
-                    not np.issubdtype(self.odtype, np.complexfloating)):
-                input = input.real
-
-            return input.astype(self.odtype)
-
-    def _adjoint_linop(self):
-        return AsType(self.oshape, self.idtype, self.odtype)
+        return ConvolveFilter(self.oshape, self.data,
+                              mode=self.mode, strides=self.strides,
+                              multi_channel=self.multi_channel)

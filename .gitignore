@@ -60,3 +60,6 @@ Thumbs.db
 *.tar.bz2
 
 .coverage
+docs/generated
+docs/_static
+docs/_autosummary

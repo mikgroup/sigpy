@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""Functions for simulations.
+
+"""
 import numpy as np
 
 __all__ = ['shepp_logan']
