@@ -12,7 +12,7 @@ __all__ = ['stspa']
 
 
 def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
-          pavg=float('inf'), explicit=False, max_iter=1000, tol=1E-6):
+          pavg=float('inf'), explicit=False, phase_update_interval =float('inf'), max_iter=1000, tol=1E-6):
     """Small tip spatial domain method for multicoil parallel excitation.
        Allows for constrained or unconstrained designs.
 
@@ -109,6 +109,17 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
 
     # finally, apply optimization method to find solution pulse
     while not alg_method.done():
+
+        # phase_update switch
+        if (alg_method.iter % phase_update_interval == 0) and (alg_method.iter > 0):
+            target = np.abs(target) * np.exp(1j * np.angle(np.reshape(A * pulses, target.shape)))
+            # put correct m into alg_method (Ax=b notation)
+            if explicit:
+                b = A.H * np.transpose(np.expand_dims(np.concatenate(target), axis=0))
+            else:
+                b = A.H * target
+            alg_method.b = b
+
         alg_method.update()
 
     return pulses
