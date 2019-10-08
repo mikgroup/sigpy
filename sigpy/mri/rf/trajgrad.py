@@ -112,6 +112,7 @@ def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
         nl (float): degree of undersampling outer region
 
     """
+    # TODO: CITE BASED ON DOUG NOLL'S spriallx6
     fsgcm = gamp  # fullscale g/cm
     risetime = gamp / gslew * 10000  # us
     ts = gts  # sampling time

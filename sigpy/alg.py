@@ -220,6 +220,7 @@ class ConjugateGradient(Alg):
 
     def __init__(self, A, b, x, P=None, max_iter=100, tol=0):
         self.A = A
+        self.b = b
         self.P = P
         self.x = x
         self.tol = tol
