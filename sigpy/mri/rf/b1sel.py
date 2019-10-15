@@ -5,7 +5,7 @@ import numpy as np
 import sigpy as sp
 from sigpy.mri.rf import slr as slr
 
-__all__ = ['dzb1rf', 'dzb1gSliderrf', 'dzb1Hadamardrf']
+__all__ = ['dzb1rf', 'buildfm', 'dzb1gSliderrf', 'dzb1Hadamardrf']
 
 def dzb1rf(dt = 2e-6, tb = 4, ptype = 'st', flip = np.pi/6, pbw = 0.3, pbc = 2,
     d1 = 0.01, d2 = 0.01, os = 8, splitAndReflect = True):
