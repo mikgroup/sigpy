@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
 class TestAlg(unittest.TestCase):
     def Ax_setup(self, n):
-        A = np.eye(n) + 0 * np.ones([n, n])
+        A = np.eye(n) + 0.1 * np.ones([n, n])
         x = np.arange(n, dtype=np.float)
         return A, x
 
@@ -129,7 +129,6 @@ class TestAlg(unittest.TestCase):
 
         alg_method = alg.AugmentedLagrangianMethod(
             minL, None, h, x_z, None, v, mu)
-
         while(not alg_method.done()):
             alg_method.update()
 

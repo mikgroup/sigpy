@@ -49,7 +49,7 @@ def mintrapgrad(area, gmax, dgdt, dt, *args):
 
 
 def trapgrad(area, gmax, dgdt, dt, *args):
-    """General trapezoidal gradient designer.
+    """General trapezoidal gradient designer. Min total time.
 
     Args:
         area (float): pulse area in (g*sec)/cm
@@ -112,6 +112,7 @@ def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
         nl (float): degree of undersampling outer region
 
     """
+    # TODO: CITE BASED ON DOUG NOLL'S spriallx6
     fsgcm = gamp  # fullscale g/cm
     risetime = gamp / gslew * 10000  # us
     ts = gts  # sampling time
