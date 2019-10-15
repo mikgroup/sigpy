@@ -5,7 +5,7 @@ import numpy as np
 import sigpy as sp
 from sigpy.mri.rf import slr as slr
 
-__all__ = ['dzb1rf', 'dzb1gSliderrf']
+__all__ = ['dzb1rf', 'dzb1gSliderrf', 'dzb1Hadamardrf']
 
 def dzb1rf(dt = 2e-6, tb = 4, ptype = 'st', flip = np.pi/6, pbw = 0.3, pbc = 2,
     d1 = 0.01, d2 = 0.01, os = 8, splitAndReflect = True):
@@ -54,29 +54,54 @@ def dzb1rf(dt = 2e-6, tb = 4, ptype = 'st', flip = np.pi/6, pbw = 0.3, pbc = 2,
         Atd = A.conj().T @ np.multiply(w, dr-dl)
         h = np.imag(np.linalg.pinv(AtA) @ Atd)
 
+        if splitAndReflect:
+            # split and flip fm waveform to improve large-tip accuracy
+            #fm = np.concatenate((h[n//2::-1], h, h[n:n//2:-1]))/2
+            fm = np.concatenate((-h[n//2:n:1], h, -h[0:n//2:1]))/2
+        else:
+            fm = np.concatenate((0*h[n//2::-1], h, 0*h[n:n//2:-1]))
+
+        # scale to target flip, convert to Hz
+        fm = fm*flip/(2*np.pi*dt)
+
     else: # normal design
 
         # design filter
         h = slr.dzls(n, tb, d1, d2)
 
-        # dual-band-modulate the filter
-        om = 2*np.pi*4257*pbc # modulation frequency
-        t = np.arange(0, n)*T/n - T/2
-        h = 2*h*np.sin(om*t)
+        # dual-band it
+        fm = buildfm(h, pbc, T, flip, dt, splitAndReflect)
+
+    # build am waveform
+    am = np.concatenate((-np.ones(n//2), np.ones(n), -np.ones(n//2)))
+
+    return am, fm
+
+
+def buildfm(h, pbc, T, flip, dt, splitAndReflect = True):
+
+    n = np.size(h)
+
+    # dual-band-modulate the filter
+    om = 2*np.pi*4257*pbc # modulation frequency
+    t = np.arange(0, n)*T/n #- T/2
+    t -= (t[n//2-2] + t[n//2-1])/2 # center the time vector
+    #h = 2*h*np.sin(om*t)
+    # modulate filter to center and add it to a time-reversed and modulated
+    # copy, then take the imaginary part to get an odd filter
+    h = np.imag(h*np.exp(1j*om*t) - h[n::-1]*np.exp(1j*-om*t))
 
     if splitAndReflect:
         # split and flip fm waveform to improve large-tip accuracy
-        dom = np.concatenate((h[n//2::-1], h, h[n:n//2:-1]))/2
+        #fm = np.concatenate((h[n//2::-1], h, h[n:n//2:-1]))/2
+        fm = np.concatenate((-h[n//2:n:1], h, -h[0:n//2:1]))/2
     else:
-        dom = np.concatenate((0*h[n//2::-1], h, 0*h[n:n//2:-1]))
+        fm = np.concatenate((0*h[n//2::-1], h, 0*h[n:n//2:-1]))
 
     # scale to target flip, convert to Hz
-    dom = dom*flip/(2*np.pi*dt)
+    fm = fm*flip/(2*np.pi*dt)
 
-    # build am waveform
-    om1 = np.concatenate((-np.ones(n//2), np.ones(n), -np.ones(n//2)))
-
-    return om1, dom
+    return fm
 
 
 def dzb1gSliderrf(dt = 2e-6, G = 5, tb = 12, ptype = 'st', flip = np.pi/6,
@@ -90,7 +115,7 @@ def dzb1gSliderrf(dt = 2e-6, G = 5, tb = 12, ptype = 'st', flip = np.pi/6,
     # calculate beta filter ripple
     [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
     #if ptype == 'st':
-    bsf = flip
+    #bsf = flip
 
     # calculate pulse duration
     B = 4257*pbw
@@ -99,32 +124,19 @@ def dzb1gSliderrf(dt = 2e-6, G = 5, tb = 12, ptype = 'st', flip = np.pi/6,
     # calculate number of samples in pulse
     n = np.int(np.ceil(T/dt/2)*2)
 
-    om = 2*np.pi*4257*pbc # modulation frequency to center profile at pbc gauss
-    t = np.arange(0, n)*T/n - T/2
-
-    om1 = np.zeros((2*n, G))
-    dom = np.zeros((2*n, G))
-    for Gind in range(1,G+1):
+    am = np.zeros((2*n, G))
+    fm = np.zeros((2*n, G))
+    for Gind in range(1, G+1):
         # design filter
-        h = bsf*slr.dzgSliderB(n, G, Gind, tb, d1, d2, np.pi, n//4)
+        h = slr.dzgSliderB(n, G, Gind, tb, d1, d2, np.pi, n//4)
         #if ptype == 'ex':
         #h = slr.b2rf(h)
-        # modulate filter to center and add it to a time-reversed and modulated
-        # copy, then take the imaginary part to get an odd filter
-        h = np.imag(h*np.exp(1j*om*t) - h[n::-1]*np.exp(1j*-om*t))
-        if splitAndReflect:
-            # split and flip fm waveform to improve large-tip accuracy
-            dom[:, Gind-1] = np.concatenate((h[n//2::-1], h, h[n:n//2:-1]))/2
-        else:
-            dom[:, Gind-1] = np.concatenate((0*h[n//2::-1], h, 0*h[n:n//2:-1]))
+        fm[:, Gind-1] = buildfm(h, pbc, T, flip, dt, splitAndReflect)
         # build am waveform
-        om1[:, Gind-1] = np.concatenate((-np.ones(n//2), np.ones(n),
+        am[:, Gind-1] = np.concatenate((-np.ones(n//2), np.ones(n),
             -np.ones(n//2)))
 
-    # scale to target flip, convert to Hz
-    dom = dom/(2*np.pi*dt)
-
-    return om1, dom
+    return am, fm
 
 
 def dzb1Hadamardrf(dt = 2e-6, G = 8, tb = 16, ptype = 'st', flip = np.pi/6,
@@ -138,7 +150,7 @@ def dzb1Hadamardrf(dt = 2e-6, G = 8, tb = 16, ptype = 'st', flip = np.pi/6,
     # calculate beta filter ripple
     [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
     #if ptype == 'st':
-    bsf = flip
+    #bsf = flip
 
     # calculate pulse duration
     B = 4257*pbw
@@ -147,29 +159,16 @@ def dzb1Hadamardrf(dt = 2e-6, G = 8, tb = 16, ptype = 'st', flip = np.pi/6,
     # calculate number of samples in pulse
     n = np.int(np.ceil(T/dt/2)*2)
 
-    om = 2*np.pi*4257*pbc # modulation frequency to center profile at pbc gauss
-    t = np.arange(0, n)*T/n - T/2
-
-    om1 = np.zeros((2*n, G))
-    dom = np.zeros((2*n, G))
-    for Gind in range(1,G+1):
+    am = np.zeros((2*n, G))
+    fm = np.zeros((2*n, G))
+    for Gind in range(1, G+1):
         # design filter
-        h = bsf*slr.dzHadamardB(n, G, Gind, tb, d1, d2, n//4)
+        h = slr.dzHadamardB(n, G, Gind, tb, d1, d2, n//4)
         #if ptype == 'ex':
         #h = slr.b2rf(h)
-        # modulate filter to center and add it to a time-reversed and modulated
-        # copy, then take the imaginary part to get an odd filter
-        h = np.imag(h*np.exp(1j*om*t) - h[n::-1]*np.exp(1j*-om*t))
-        if splitAndReflect:
-            # split and flip fm waveform to improve large-tip accuracy
-            dom[:, Gind-1] = np.concatenate((h[n//2::-1], h, h[n:n//2:-1]))/2
-        else:
-            dom[:, Gind-1] = np.concatenate((0*h[n//2::-1], h, 0*h[n:n//2:-1]))
+        fm[:, Gind-1] = buildfm(h, pbc, T, flip, dt, splitAndReflect)
         # build am waveform
-        om1[:, Gind-1] = np.concatenate((-np.ones(n//2), np.ones(n),
+        am[:, Gind-1] = np.concatenate((-np.ones(n//2), np.ones(n),
             -np.ones(n//2)))
 
-    # scale to target flip, convert to Hz
-    dom = dom/(2*np.pi*dt)
-
-    return om1, dom
+    return am, fm
