@@ -416,7 +416,7 @@ def leja(x):
     a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
 
     for l in range(1, n-1):
-        aprod = np.abs(np.prod(a[0:l+1, l:], axis = 0))
+        aprod = np.abs(np.prod(a[0:l+1, l:], axis=0))
         ind = np.argmax(aprod)
         ind = ind + l
         if l != ind:
@@ -452,7 +452,7 @@ def leja_fast(x):
         a[:, ind] = tmp
 
     x_out = np.zeros(n, dtype=complex)
-    x_out[0] = a[n-1, 0] # first entry of last row
+    x_out[0] = a[n-1, 0]  # first entry of last row
     a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
 
     foo = a[0, 0:n]

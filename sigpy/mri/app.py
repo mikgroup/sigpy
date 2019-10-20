@@ -539,7 +539,8 @@ class SpatialPtxPulses(sp.app.App):
                     lambda alpha, pulses: proxg(alpha, pulses),
                     lambda pulses: A * pulses,
                     lambda pulses: A.H * pulses,
-                    self.pulses, self.u, tau, sigma, max_iter=max_iter, tol=tol)
+                    self.pulses, self.u, tau, sigma,
+                    max_iter=max_iter, tol=tol)
 
         super().__init__(self.alg, show_pbar=show_pbar)
 

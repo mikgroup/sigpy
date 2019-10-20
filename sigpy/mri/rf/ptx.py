@@ -4,8 +4,6 @@
 """
 
 import sigpy as sp
-
-from sigpy.mri import linop
 from sigpy import backend
 
 __all__ = ['stspa']
@@ -22,7 +20,7 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
         coord (array): coordinates for noncartesian trajectories [Nt 2]
         dt (float): hardware sampling dwell time
         alpha (float): regularization term
-        B0 (array): B0 inhomogeneity map [dim dim]. Not supported for nonexplicit matrix
+        B0 (array): B0 inhomogeneity map [dim dim]. Explicit matrix only.
         pinst (float): maximum instantaneous power
         pavg (float): maximum average power
         explicit (bool): Use explicit matrix
@@ -39,23 +37,25 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
     xp = device.xp
     with device:
         Nc = sens.shape[0]
-        T = dt * coord.shape[0]  # duration of pulse, in seconds
-        t = xp.expand_dims(xp.linspace(0, T, coord.shape[0]), axis=1)  # create time vector
 
         pulses = xp.zeros((sens.shape[0], coord.shape[0]), xp.complex)
 
         if explicit:
             # reshape pulses to be Nc * Nt, 1 - all 1 vector
             pulses = xp.concatenate(pulses)
-            pulses = xp.transpose(xp.expand_dims(pulses, axis=0))  # add empty dimension to make (Nt, 1)
+            # add empty dimension to make (Nt, 1)
+            pulses = xp.transpose(xp.expand_dims(pulses, axis=0))
 
             # explicit matrix design linop
-            A = sp.mri.rf.linop.PtxSpatialExplicit(sens, coord, dt, target.shape, B0, comm=None)
+            A = sp.mri.rf.linop.PtxSpatialExplicit(sens, coord, dt,
+                                                   target.shape, B0, comm=None)
 
             # explicit AND constrained, must reshape A output
-            # TODO: more elegant solution with matrix shape should be found than custom or varying between cases
-            # TODO: part of problem is that explicit formulation has different shape than nonexplicit formulation.
-            # TODO: Reshape nonexplicit so consistent?
+            # TODO: more elegant solution with matrix shape should be found
+            #  than custom or varying between cases
+            #  part of problem is that explicit formulation has different shape
+            #  than nonexplicit formulation.
+            #  Reshape nonexplicit so consistent?
 
             if pinst != float('inf') or pavg != float('inf'):
                 # reshape output to play nicely with PDHG
@@ -72,19 +72,22 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
 
             if explicit:
                 I = sp.linop.Identity((coord.shape[0] * Nc, 1))
-                b = A.H * xp.transpose(xp.expand_dims(xp.concatenate(target), axis=0))
+                b = A.H * xp.transpose(xp.expand_dims(xp.concatenate(target),
+                                                      axis=0))
 
             else:
                 I = sp.linop.Identity((Nc, coord.shape[0]))
                 b = A.H * target
 
-            alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I, b, pulses, P=None,
+            alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
+                                                  b, pulses, P=None,
                                                   max_iter=max_iter, tol=tol)
 
         # Constrained, use primal dual hybrid gradient
         else:
             u = xp.zeros(target.shape, xp.complex)
-            lipschitz = xp.linalg.svd(A * A.H * xp.ones(A.H.ishape, xp.complex),
+            lipschitz = xp.linalg.svd(A * A.H *
+                                      xp.ones(A.H.ishape, xp.complex),
                                       compute_uv=False)[0]
             tau = 1.0 / lipschitz
             sigma = 0.01
@@ -98,7 +101,8 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
                 # avg power constraint for each of Nc channels
                 for i in range(pulses.shape[0]):
                     norm = xp.linalg.norm(func[i], 2, axis=0)
-                    func[i] *= xp.minimum(pavg / (norm ** 2 / len(pulses[i])), 1)
+                    func[i] *= xp.minimum(pavg /
+                                          (norm ** 2 / len(pulses[i])), 1)
 
                 return func
 

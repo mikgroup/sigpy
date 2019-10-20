@@ -1,9 +1,10 @@
 import unittest
+
 import numpy as np
-import sigpy as sp
 import numpy.testing as npt
 import scipy.ndimage.filters as filt
 
+import sigpy as sp
 from sigpy.mri import rf, linop, sim
 
 if __name__ == '__main__':
@@ -11,7 +12,6 @@ if __name__ == '__main__':
 
 
 class TestPtx(unittest.TestCase):
-
     img_shape = [32, 32]
     sens_shape = [8, 32, 32]
     dt = 4e-6
@@ -27,26 +27,23 @@ class TestPtx(unittest.TestCase):
 
     sens = sim.birdcage_maps(sens_shape)
 
-
-
     def test_stspa_radial(self):
-
         # makes dim*dim*2 trajectory
         traj = sp.mri.radial((self.sens.shape[1], self.sens.shape[1], 2),
                              self.img_shape, golden=True, dtype=np.float)
         # reshape to be Nt*2 trajectory
-        traj = np.reshape(traj, [traj.shape[0]*traj.shape[1], 2])
+        traj = np.reshape(traj, [traj.shape[0] * traj.shape[1], 2])
 
         A = linop.Sense(self.sens, coord=traj,
                         weights=None, ishape=self.target.shape).H
 
-        pulses = rf.stspa(self.target, self.sens, traj, self.dt, alpha=1, B0=None, pinst=float('inf'),
-                          pavg=float('inf'), explicit=False, max_iter=100, tol=1E-4)
+        pulses = rf.stspa(self.target, self.sens, traj, self.dt, alpha=1,
+                          B0=None, pinst=float('inf'), pavg=float('inf'),
+                          explicit=False, max_iter=100, tol=1E-4)
 
-        npt.assert_array_almost_equal(A*pulses, self.target, 1E-3)
+        npt.assert_array_almost_equal(A * pulses, self.target, 1E-3)
 
     def test_stspa_spiral(self):
-
         dim = self.img_shape[0]
         traj = sp.mri.spiral(fov=dim / 2, N=self.img_shape[0],
                              f_sampling=1, R=1, ninterleaves=1, alpha=1,
@@ -54,7 +51,8 @@ class TestPtx(unittest.TestCase):
 
         A = linop.Sense(self.sens, coord=traj, ishape=self.target.shape).H
 
-        pulses = rf.stspa(self.target, self.sens, traj, self.dt, alpha=1, B0=None, pinst=float('inf'),
-                          pavg=float('inf'), explicit=False, max_iter=100, tol=1E-4)
+        pulses = rf.stspa(self.target, self.sens, traj, self.dt, alpha=1,
+                          B0=None, pinst=float('inf'), pavg=float('inf'),
+                          explicit=False, max_iter=100, tol=1E-4)
 
-        npt.assert_array_almost_equal(A*pulses, self.target, 1E-3)
+        npt.assert_array_almost_equal(A * pulses, self.target, 1E-3)

@@ -17,10 +17,6 @@ def mintrapgrad(area, gmax, dgdt, dt, *args):
 
     """
 
-    if len(args) < 5:
-        # in case we are making a rewinder
-        rampsamp = 1
-
     if np.abs(area) > 0:
         # we get the solution for plateau amp by setting derivative of
         # duration as a function of amplitude to zero and solving
@@ -39,8 +35,9 @@ def mintrapgrad(area, gmax, dgdt, dt, *args):
         # make attack and decay ramps
 
         ramppts = int(np.ceil(max(flat) / dgdt / dt))
-        trap = np.concatenate((np.linspace(0, ramppts, num=ramppts) / ramppts * np.max(flat), flat,
-                              np.linspace(ramppts, 0, num=ramppts) / ramppts * np.max(flat)))
+        rampup = np.linspace(0, ramppts, num=ramppts) / ramppts * np.max(flat)
+        rampdwn = np.linspace(ramppts, 0, num=ramppts) / ramppts * np.max(flat)
+        trap = np.concatenate(rampup, flat, rampdwn)
 
     else:
         trap, ramppts = 0, 0
@@ -66,30 +63,38 @@ def trapgrad(area, gmax, dgdt, dt, *args):
     if np.abs(area) > 0:
         if rampsamp:
 
-            ramppts = np.ceil(gmax/dgdt/dt)
+            ramppts = np.ceil(gmax / dgdt / dt)
             triareamax = ramppts * dt * gmax
 
             if triareamax > np.abs(area):
                 # triangle pulse
                 newgmax = np.sqrt(np.abs(area) * dgdt)
-                ramppts = np.ceil(newgmax/dgdt/dt)
-                pulse = np.concatenate((np.linspace(0, ramppts, num=ramppts)/ramppts, np.linspace(ramppts, 0, num=ramppts)/ramppts))
+                ramppts = np.ceil(newgmax / dgdt / dt)
+                rampup = np.linspace(0, ramppts, num=ramppts) / ramppts
+                rampdwn = np.linspace(ramppts, 0, num=ramppts) / ramppts
+                pulse = np.concatenate(rampup, rampdwn)
             else:
                 # trapezoid pulse
-                nflat = np.ceil((area - triareamax)/gmax / dt / 2) * 2
-                pulse = np.concatenate((np.linspace(0, ramppts, num=ramppts) / ramppts, np.ones(int(nflat)), np.linspace(ramppts, 0, num=ramppts) / ramppts))
+                nflat = np.ceil((area - triareamax) / gmax / dt / 2) * 2
+                rampup = np.linspace(0, ramppts, num=ramppts) / ramppts
+                rampdwn = np.linspace(ramppts, 0, num=ramppts) / ramppts
+                pulse = np.concatenate(rampup, np.ones(int(nflat)), rampdwn)
 
             trap = pulse * (area / (sum(pulse) * dt))
 
         else:
             # make a flat portion of magnitude gmax
             # and enough area for the entire swath
-            flat = np.ones(1, np.ceil(area/gmax/dt))
+            flat = np.ones(1, np.ceil(area / gmax / dt))
             flat = flat / sum(flat) * area / dt
 
             # make attack and decay ramps
             ramppts = np.ceil(np.max(flat) / dgdt / dt)
-            trap = np.concatenate(np.linspace(0, ramppts, num=ramppts) / ramppts * np.max(flat), flat, np.linspace(ramppts, 0, num=ramppts) / ramppts * np.max(flat))
+            rampup = np.linspace(0, ramppts, num=ramppts) \
+                / ramppts * np.max(flat)
+            rampdwn = np.linspace(ramppts, 0, num=ramppts) \
+                / ramppts * np.max(flat)
+            trap = np.concatenate(rampup, flat, rampdwn)
 
     else:
         trap, ramppts = 0, 0
@@ -108,7 +113,8 @@ def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
         gslew (float): max slew rate in T/m/s
         gamp (float): max gradient amplitude in T/m/s
         densamp (float):  duration of full density sampling (# of samples)
-        dentrans (float): duration of transition from higher to lower (should be >= densamp/2)
+        dentrans (float): duration of transition from higher to lower
+                          (should be >= densamp/2)
         nl (float): degree of undersampling outer region
 
     """
@@ -177,7 +183,8 @@ def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
                     denoffset = taun_1
                     fractrans = (realn - densamp) / dentrans
                     fractrans = 1 - ((fractrans - 1) * (fractrans - 1))
-                    scthat = scoffset + (omf + (om - omf) * fractrans) * (tauhat - denoffset)
+                    scthat = scoffset + (omf + (om - omf) * fractrans) \
+                        * (tauhat - denoffset)
 
             else:
                 fractrans = 0
@@ -270,11 +277,13 @@ def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
 
     # append rewinder gradient
     if len(rewx) > len(rewy):
-        r = -np.sign(np.real(sum(g))) * rewx - np.sign(np.imag(sum(g))) * 1j * np.abs(np.imag(sum(g))) / np.real(
-            sum(g)) * rewx
+        r = -np.sign(np.real(sum(g))) * \
+            rewx - np.sign(np.imag(sum(g))) * \
+            1j * np.abs(np.imag(sum(g))) / np.real(sum(g)) * rewx
     else:
-        r = -np.sign(np.real(sum(g))) * np.abs(np.real(sum(g)) / np.imag(sum(g))) * rewy - 1j * np.sign(
-            np.imag(sum(g))) * rewy
+        r = -np.sign(np.real(sum(g))) * \
+            np.abs(np.real(sum(g)) / np.imag(sum(g))) * \
+            rewy - 1j * np.sign(np.imag(sum(g))) * rewy
 
     g = np.concatenate((g, r))
 
@@ -319,12 +328,12 @@ def spiralarch(D, N, gts, gslew, gamp):
     beta = gambar * gslew / lam
 
     kmax = N / (2 * D)
-    dr = 1 / (2 * kmax)
     a_2 = (9 * beta / 4) ** (1 / 3)  # rad ** (1/3) / s ** (2/3)
     Lambda = 5
     thetamax = kmax / lam
     Ts = (3 * gam * gamp / (4 * np.pi * lam * a_2 ** 2)) ** 3
-    theta_s = (0.5 * beta * Ts ** 2) / (Lambda + beta / (2 * a_2) * Ts ** (4 / 3))
+    theta_s = (0.5 * beta * Ts ** 2) \
+        / (Lambda + beta / (2 * a_2) * Ts ** (4 / 3))
     t_g = np.pi * lam * (thetamax ** 2 - theta_s ** 2) / (gam * gamp)
     n_s = int(np.round(Ts / gts))
     n_g = int(np.round(t_g / gts))
@@ -338,12 +347,10 @@ def spiralarch(D, N, gts, gslew, gamp):
         t_s = np.linspace(0, Ts, n_s)
         t_g = np.linspace(Ts + gts, tacq, n_g)
 
-        theta_1 = (beta / 2 * t_s ** 2) / (Lambda + beta / (2 * a_2) * t_s ** (4 / 3))
-        dtheta_1 = -(2 / 3) * a_2 * beta * t_s * (beta * t_s ** (4 / 3) - 6 * a_2 * Lambda) / (
-                    beta * t_s ** (4 / 3) + 6 * a_2 * Lambda) ** 2  # quotient rule
-        theta_2 = np.sqrt(theta_s ** 2 + gam / (np.pi * lam) * gamp * (t_g - Ts))
-        dtheta_2 = gslew * gam / (
-                    2 * lam * np.sqrt(np.pi / lam * (gslew * gam * t_g - gslew * gam * Ts + lam * np.pi * theta_s)))
+        theta_1 = (beta / 2 * t_s ** 2) \
+            / (Lambda + beta / (2 * a_2) * t_s ** (4 / 3))
+        theta_2 = np.sqrt(theta_s ** 2 + gam
+                          / (np.pi * lam) * gamp * (t_g - Ts))
 
         k1 = lam * theta_1 * (np.cos(theta_1) + 1j * np.sin(theta_1))
         k2 = lam * theta_2 * (np.cos(theta_2) + 1j * np.sin(theta_2))
@@ -354,7 +361,8 @@ def spiralarch(D, N, gts, gslew, gamp):
         tacq = 2 * np.pi * D / 3 * np.sqrt(np.pi / (gam * gslew * dx ** 3))
         n_t = int(np.round(tacq / gts))
         t_s = np.linspace(0, tacq, n_t)
-        theta_1 = (beta / 2 * t_s ** 2) / (Lambda + beta / (2 * a_2) * t_s ** (4 / 3))
+        theta_1 = (beta / 2 * t_s ** 2) \
+            / (Lambda + beta / (2 * a_2) * t_s ** (4 / 3))
 
         k = lam * theta_1 * (np.cos(theta_1) + 1j * np.sin(theta_1))
 

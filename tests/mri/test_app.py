@@ -122,7 +122,7 @@ class TestApp(unittest.TestCase):
 
         # target - slightly blurred circle
         x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
-               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+                        -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
         circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
         target = np.zeros(img_shape)
         target[circle] = 1

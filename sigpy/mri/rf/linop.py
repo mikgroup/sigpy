@@ -12,7 +12,7 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, comm=None):
     Linear operator dimensions will be Ns * Nt
 
     Args:
-        sens (array): sensitivity maps of length = number of channels. [Nc dim dim].
+        sens (array): sensitivity maps [Nc dim dim]
         B0 (array): 2D array, B0 inhomogeneity map
         coord (None or array): coordinates. [Nt 2]
         dt (float): hardware sampling dt
@@ -27,21 +27,26 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, comm=None):
     with device:
         Nc = sens.shape[0]
         T = dt * coord.shape[0]  # duration of pulse, in seconds
-        t = xp.expand_dims(xp.linspace(0, T, coord.shape[0]), axis=1)  # create time vector
+        # create time vector
+        t = xp.expand_dims(xp.linspace(0, T, coord.shape[0]), axis=1)
 
         x, y = xp.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
-               -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
+                        -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
 
-        #make x and y into proper grid layout
-        x = x*xp.ones(img_shape)
-        y = y*xp.ones(img_shape)
+        # make x and y into proper grid layout
+        x = x * xp.ones(img_shape)
+        y = y * xp.ones(img_shape)
 
-        # create explicit Ns * Nt system matrix with and without B0 inhomogeneity correction
+        # create explicit Ns * Nt system matrix
         if B0 is None:
-            AExplicit = xp.exp(1j * (xp.outer(xp.concatenate(x), coord[:, 0]) + xp.outer(xp.concatenate(y), coord[:, 1])))
+            AExplicit = xp.exp(1j * (xp.outer(xp.concatenate(x), coord[:, 0]) +
+                                     xp.outer(xp.concatenate(y), coord[:, 1])))
         else:
-            AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(xp.concatenate(B0) * (t-T)) +
-                               1j * (xp.outer(xp.concatenate(x), coord[:, 0]) + xp.outer(xp.concatenate(y), coord[:, 1])))
+            AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(xp.concatenate(B0)
+                                                             * (t - T)) +
+                               1j * (xp.outer(xp.concatenate(x), coord[:, 0])
+                                     + xp.outer(xp.concatenate(y),
+                                                coord[:, 1])))
 
         AFullExplicit = xp.empty(AExplicit.shape)
 
@@ -49,10 +54,12 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, comm=None):
         for ii in range(Nc):
             tmp = xp.concatenate(sens[ii, :, :])
             D = xp.transpose(xp.tile(tmp, [coord.shape[0], 1]))
-            AFullExplicit = xp.concatenate((AFullExplicit, D*AExplicit), axis=1)
+            AFullExplicit = xp.concatenate((AFullExplicit, D * AExplicit),
+                                           axis=1)
 
-        AFullExplicit = AFullExplicit[:,coord.shape[0]:] # remove 1st empty AExplicit entries
-        A = sp.linop.MatMul((coord.shape[0]*Nc, 1), AFullExplicit)
+        # remove 1st empty AExplicit entries
+        AFullExplicit = AFullExplicit[:, coord.shape[0]:]
+        A = sp.linop.MatMul((coord.shape[0] * Nc, 1), AFullExplicit)
 
         A.repr_str = 'spatial pulse system matrix'
         return A
