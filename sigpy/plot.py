@@ -311,7 +311,7 @@ class ImagePlot(object):
         elif event.key == 'v':
             filename = self.save_basename + \
                 datetime.datetime.now().strftime(
-                    ' %Y-%m-%d at %I.%M.%S %p.mov')
+                    ' %Y-%m-%d at %I.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
             bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
@@ -325,9 +325,16 @@ class ImagePlot(object):
                                  format='png', bbox_inches=bbox, pad_inches=0)
 
             subprocess.run(['ffmpeg',
-                            '-framerate', str(self.fps),
+                            '-f', 'image2',
+                            '-s', '{}x{}'.format(
+                                int(bbox.width * self.fig.dpi),
+                                int(bbox.height * self.fig.dpi)),
+                            '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
-                            '-vcodec', 'png',
+                            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                            '-vcodec', 'libx264',
+                            '-preset', 'veryslow',
+                            '-pix_fmt', 'yuv420p',
                             filename])
 
             for i in range(self.shape[self.d]):
