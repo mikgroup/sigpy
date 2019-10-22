@@ -40,4 +40,3 @@ class TestSlr(unittest.TestCase):
                         Mz[int(len(Mz) / 2 + len(Mz)/3)]])
 
         npt.assert_almost_equal(pts, np.array([1, 0, 1]), decimal=1)
-

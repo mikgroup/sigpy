@@ -22,3 +22,11 @@ RF Pulse Simulation
     sigpy.mri.rf.sim.abrm_nd
     sigpy.mri.rf.sim.abrm_hp
 
+RF Utilities
+--------------------------
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    sigpy.mri.rf.util.dinf
+

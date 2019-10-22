@@ -1,11 +1,9 @@
 import unittest
 import numpy as np
 import sigpy as sp
-import scipy.ndimage.filters as filt
 import numpy.testing as npt
 
 from sigpy.mri import app, sim
-from sigpy.mri import linop
 
 if __name__ == '__main__':
     unittest.main()
@@ -115,33 +113,3 @@ class TestApp(unittest.TestCase):
             ksp, output_eigenvalue=True, show_pbar=False).run()
 
         np.testing.assert_allclose(eig_val, 1, rtol=0.01, atol=0.01)
-
-    def test_radial_SmallTipSpatialDomain(self):
-        img_shape = [32, 32]
-        sens_shape = [8, 32, 32]
-
-        # target - slightly blurred circle
-        x, y = np.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
-                        -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
-        circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
-        target = np.zeros(img_shape)
-        target[circle] = 1
-        target = filt.gaussian_filter(target, 1)
-        target = target.astype(np.complex)
-
-        sens = sp.mri.sim.birdcage_maps(sens_shape)
-
-        traj = sp.mri.radial((sens_shape[1], sens_shape[1], 2),
-                             img_shape, golden=True, dtype=np.float)
-
-        # reshape to be Nt*2 trajectory
-        traj = np.reshape(traj, [traj.shape[0] * traj.shape[1], 2])
-
-        A = linop.Sense(sens, coord=traj,
-                        weights=None, ishape=img_shape).H
-
-        pulses = app.SpatialPtxPulses(target, sens, coord=traj, lamda=0.01,
-                                      max_iter=1000, tol=1e-3,
-                                      show_pbar=False).run()
-
-        npt.assert_array_almost_equal(A * pulses, target, 1e-3)
