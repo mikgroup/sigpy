@@ -1,7 +1,7 @@
-"""The module contains functions and classes for MRI pulse design.
+"""This MRI submodule contains functions and classes for MRI pulse design.
 
 It currently provides tools for SLR pulse design and RF pulse simulation.
-Tools for for designing pTx, adiabatic, and other types of rf pulses,
+Tools for designing pTx, adiabatic, and other types of rf pulses,
 as well as gradient and trajectory designers will be added soon.
 
 Explore RF design tutorials at `sigpy-rf-tutorials`_.

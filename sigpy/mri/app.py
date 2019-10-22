@@ -486,7 +486,7 @@ class SpatialPtxPulses(sp.app.App):
     """
 
     def __init__(self, target, sens,
-                 coord=None,pinst=float('inf'),
+                 coord=None, pinst=float('inf'),
                  pavg=float('inf'), lamda=0.01, max_iter=1000,
                  tol=1E-6, device=sp.cpu_device,
                  show_pbar=True):

@@ -99,6 +99,7 @@ def calcRipples(ptype='st', d1=0.01, d2=0.01):
 
 # following functions are used to support dzrf
 
+
 def dzls(N=64, tb=4, d1=0.01, d2=0.01):
     di = dinf(d1, d2)
     w = di / tb
