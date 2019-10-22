@@ -7,11 +7,20 @@ __all__ = ['mbPhsTab', 'dzmbrf']
 
 
 def dzmbrf(pulseIn, nBands=3, bandSep=5, phsOpt='None'):
-    # multiband an input RF pulse
-    # pulseIn: Samples of single-band RF pulse
-    # nBands: number of bands
-    # bandSep: normalized slice separation. bandSep = sliceSep/sliceThick*tb,
-    #   where tb is time-bandwidth product of the single-band pulse
+    r"""Multiband an input RF pulse.
+
+     Args:
+         pulseIn (array): samples of single-band RF pulse.
+         nBands (int): number of bands.
+         bandSep (float): normalized slice separation.
+
+     bandSep = sliceSep/sliceThick*tb, where tb is time-bandwidth product
+     of the single-band pulse
+
+     Returns:
+         array: multiband pulse out
+
+     """
 
     if phsOpt != 'None':
         phs = mbPhsTab(nBands, phsOpt)

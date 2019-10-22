@@ -27,6 +27,9 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
         max_iter (int): max number of iterations
         tol (float): allowable error
 
+    Returns:
+        array: pulses out
+
     References:
         Grissom, W., Yip, C., Zhang, Z., Stenger, V. A., Fessler, J. A.
         & Noll, D. C.(2006).

@@ -23,18 +23,20 @@ __all__ = ['dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
 
 def dzrf(N=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01,
          cancelAlphaPhs=False):
-    """Primary function for design of pulses using the SLR algorithm.
-        Following functions are to support dzrf
+    r"""Primary function for design of pulses using the SLR algorithm.
 
     Args:
         N (int): number of time points.
         tb (int): pulse time bandwidth product.
         ptype (string): type of pulse to be designed.
         ftype (string): type of filter to use in pulse design
-        d1 (float): maximum instantaneous power
-        d2 (float): maximum average power
+        d1 (float): passband ripple level in M0**-1.
+        d2 (float): stopband ripple level in M0**-1.
         cancelAlphaPhs (bool): For 'ex' pulses, absorb the alpha phase profile
             from beta's profile, so they cancel for a flatter total phase
+
+    Returns:
+        rf (array): designed RF pulse.
 
     References:
         Pauly, J., Le Roux, Patrick., Nishimura, D., and Macovski, A.(1991).
@@ -95,6 +97,7 @@ def calcRipples(ptype='st', d1=0.01, d2=0.01):
 
     return bsf, d1, d2
 
+# following functions are used to support dzrf
 
 def dzls(N=64, tb=4, d1=0.01, d2=0.01):
     di = dinf(d1, d2)

@@ -10,10 +10,14 @@ def mintrapgrad(area, gmax, dgdt, dt, *args):
     """Minimal duration trapezoidal gradient designer.
 
     Args:
-        area (float): pulse area in (g*sec)/cm
-        gmax (float): maximum gradient in g/cm
-        dgdt (float): max slew rate in g/cm/sec
-        dt (float): sample time in sec
+        area (float): pulse area in (g*sec)/cm.
+        gmax (float): maximum gradient in g/cm.
+        dgdt (float): max slew rate in g/cm/sec.
+        dt (float): sample time in sec.
+
+    Returns:
+        array: gradient trapezoid.
+        int: length of ramp.
 
     """
 
@@ -49,10 +53,14 @@ def trapgrad(area, gmax, dgdt, dt, *args):
     """General trapezoidal gradient designer. Min total time.
 
     Args:
-        area (float): pulse area in (g*sec)/cm
-        gmax (float): maximum gradient in g/cm
-        dgdt (float): max slew rate in g/cm/sec
-        dt (float): sample time in sec
+        area (float): pulse area in (g*sec)/cm.
+        gmax (float): maximum gradient in g/cm.
+        dgdt (float): max slew rate in g/cm/sec.
+        dt (float): sample time in sec.
+
+    Returns:
+        array: gradient trapezoid.
+        int: length of ramp.
 
     """
 
@@ -107,15 +115,22 @@ def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
     and slew rate.
 
     Args:
-        opfov (float): imaging field of view (cm)
-        opxres (float): imaging resolution (cm)
-        gts (float): sample time in sec
-        gslew (float): max slew rate in T/m/s
-        gamp (float): max gradient amplitude in T/m/s
-        densamp (float):  duration of full density sampling (# of samples)
-        dentrans (float): duration of transition from higher to lower
+        opfov (float): imaging field of view (cm).
+        opxres (float): imaging resolution (cm).
+        gts (float): sample time in sec.
+        gslew (float): max slew rate in T/m/s.
+        gamp (float): max gradient amplitude in T/m/s.
+        densamp (float):  duration of full density sampling (# of samples).
+        dentrans (float): duration of transition from higher to lower.
                           (should be >= densamp/2)
-        nl (float): degree of undersampling outer region
+        nl (float): degree of undersampling outer region.
+
+    Returns:
+        array: gradient array.
+        array: k-space trajectory.
+        array: time vector.
+        array: slew rate vector.
+        array: dens vector.
 
     """
     # TODO: CITE BASED ON DOUG NOLL'S spriallx6
@@ -306,11 +321,17 @@ def spiralarch(D, N, gts, gslew, gamp):
     and slew rate.
 
     Args:
-        D (float): imaging field of view (m)
-        N(float): effective matrix size
-        gts (float): sample time in sec
-        gslew (float): max slew rate in T/m/s
-        gamp (float): max gradient amplitude in T/m
+        D (float): imaging field of view (m).
+        N(float): effective matrix size.
+        gts (float): sample time in sec.
+        gslew (float): max slew rate in T/m/s.
+        gamp (float): max gradient amplitude in T/m.
+
+    Returns:
+        array: gradient array.
+        array: k-space trajectory.
+        array: time vector.
+        array: slew rate array.
 
     References:
         Glover, G. H.(1999).

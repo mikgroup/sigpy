@@ -7,6 +7,19 @@ __all__ = ['blochsim', 'deriv']
 
 
 def blochsim(rf, x, g):
+    r"""1D RF pulse simulation, with simultaneous RF + gradient rotations.
+
+     Args:
+         rf (array): rf waveform input.
+         x (array): spatial locations.
+         balanced (bool): toggles application of rewinder.
+
+
+     Returns:
+         array: SLR alpha parameter
+         array: SLR beta parameter
+
+     """
     # assume x has inverse spatial units of g, and g has gamma*dt applied
     # assume x = [...,Ndim], g = [Ndim,Nt]
 

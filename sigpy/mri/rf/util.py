@@ -8,6 +8,22 @@ __all__ = ['dinf']
 
 
 def dinf(d1=0.01, d2=0.01):
+    """Calculate D infinity for a linear phase filter.
+
+    Args:
+        d1 (float): passband ripple level in M0**-1.
+        d2 (float): stopband ripple level in M0**-1.
+
+    Returns:
+        float: D infinity.
+
+    References:
+        Pauly J, Le Roux P, Nishimra D, Macovski A. Parameter relations for the
+        Shinnar-Le Roux selective excitation pulse design algorithm.
+        IEEE Tr Medical Imaging 1991; 10(1):53-65.
+
+    """
+
     a1 = 5.309e-3
     a2 = 7.114e-2
     a3 = -4.761e-1

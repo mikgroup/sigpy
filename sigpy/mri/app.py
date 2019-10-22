@@ -365,7 +365,7 @@ class JsenseRecon(sp.app.App):
 
 
 class EspiritCalib(sp.app.App):
-    """ESPIRiT calibration.
+    r"""ESPIRiT calibration.
 
     Currently only supports outputting one set of maps.
 
@@ -461,18 +461,22 @@ class EspiritCalib(sp.app.App):
 
 
 class SpatialPtxPulses(sp.app.App):
-    """Small tip spatial domain method for multicoil parallel excitation.
+    r"""Small tip spatial domain method for parallel excitation.
+
        Allows for constrained or unconstrained designs.
 
     Args:
         target (array): desired magnetization profile.
         sens (array): sensitivity maps.
-        coord (array): coordinates for noncartesian trajectories
-        mask (array): kspace sampling mask for cartesian patterns only
-        pinst (float): maximum instantaneous power
-        pavg (float): maximum average power
-        max_iter (int): max number of iterations
-        tol (float): allowable error
+        coord (array): coordinates for k-space trajectory.
+        pinst (float): maximum instantaneous power.
+        pavg (float): maximum average power.
+        max_iter (int): max number of iterations.
+        tol (float): allowable error.
+        device (Device): computing device.
+
+    Returns:
+        array: N channel pulses
 
     References:
         Grissom, W., Yip, C., Zhang, Z., Stenger, V. A., Fessler, J. A.
@@ -482,14 +486,13 @@ class SpatialPtxPulses(sp.app.App):
     """
 
     def __init__(self, target, sens,
-                 coord=None, mask=None, pinst=float('inf'),
+                 coord=None,pinst=float('inf'),
                  pavg=float('inf'), lamda=0.01, max_iter=1000,
                  tol=1E-6, device=sp.cpu_device,
                  show_pbar=True):
         self.target = target
         self.sens = sens
         self.coord = coord
-        self.mask = mask
         self.pinst = pinst
         self.pavg = pavg
         self.lamda = lamda
@@ -500,8 +503,7 @@ class SpatialPtxPulses(sp.app.App):
 
         xp = self.device.xp
 
-        A = linop.Sense(self.sens, self.coord,
-                        self.mask, ishape=self.target.shape).H
+        A = linop.Sense(self.sens, self.coord, ishape=self.target.shape).H
 
         if coord is not None:
             # Nc*Nt pulses

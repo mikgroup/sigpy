@@ -7,18 +7,20 @@ __all__ = ['bir4', 'hypsec', 'wurst']
 
 
 def bir4(n, beta, kappa, theta, dw0):
-    # genbir4: generate a BIR-4 pulse
-    # In:
-    #     n: number of samples (should be multiple of 4)
-    #     beta: AM waveform parameter
-    #     kappa: FM waveform parameter
-    #     theta: flip angle in radians
-    #     dw0: FM waveform scaling (radians/s)
-    #
-    # Out:
-    #     a: AM waveform
-    #     om: FM waveform (radians/s)
+    """Generate a BIR-4 pulse
 
+    Args:
+        n (int): number of samples (should be a multiple of 4).
+        beta (float): AM waveform parameter.
+        kappa (float): FM waveform parameter.
+        theta (float): flip angle in radians.
+        dw0 (float): FM waveform scaling (radians/s)
+
+    Returns:
+        array: AM waveform
+        array: FM waveform (radians/s)
+
+    """
     dphi = np.pi + theta / 2
 
     t = np.arange(0, n) / n

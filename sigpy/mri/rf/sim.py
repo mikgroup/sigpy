@@ -3,17 +3,29 @@
 """
 from sigpy import backend
 
-__all__ = ['abrm', 'abrmnd', 'abrm_hp']
+__all__ = ['abrm', 'abrm_nd', 'abrm_hp']
 
 
 def abrm(rf, x, balanced=False):
+    r"""1D RF pulse simulation, with simultaneous RF + gradient rotations.
+
+    Args:
+         rf (array): rf waveform input.
+         x (array): spatial locations.
+         balanced (bool): toggles application of rewinder.
+
+    Returns:
+            2-element tuple containing
+
+            - **a** (*array*): SLR alpha parameter.
+            - **b** (*array*): SLR beta parameter.
+
+     """
     device = backend.get_device(rf)
     xp = device.xp
     with device:
         eps = 1e-16
 
-        # 1D Simulation of the RF pulse,
-        # with simultaneous RF + gradient rotations
         g = xp.ones(xp.size(rf)) * 2 * xp.pi / xp.size(rf)
 
         a = xp.ones(xp.size(x), dtype=complex)
@@ -43,7 +55,26 @@ def abrm(rf, x, balanced=False):
         return a, b
 
 
-def abrmnd(rf, x, g):
+def abrm_nd(rf, x, g):
+    r"""N-dim RF pulse simulation
+
+    Assumes that x has inverse spatial units of g, and g has gamma*dt applied.
+
+    Assumes dimensions x = [...,Ndim], g = [Ndim,Nt].
+
+    Args:
+         rf (array): rf waveform input.
+         x (array): spatial locations.
+         g (array): gradient array.
+
+    Returns:
+            2-element tuple containing
+
+            - **a** (*array*): SLR alpha parameter.
+            - **b** (*array*): SLR beta parameter.
+
+     """
+
     # assume x has inverse spatial units of g, and g has gamma*dt applied
     # assume x = [...,Ndim], g = [Ndim,Nt]
     device = backend.get_device(rf)
@@ -70,10 +101,22 @@ def abrmnd(rf, x, g):
 
 
 def abrm_hp(rf, gamgdt, xx, dom0dt=0):
-    # rf: rf pulse samples in radians
-    # gamgdt: gradient samples in radians/(units of xx)
-    # xx: spatial locations
-    # dom0dt: off-resonance phase in radians
+    r"""1D RF pulse simulation, with non-simultaneous RF + gradient rotations.
+
+    Args:
+        rf (array): rf pulse samples in radians.
+        gamdt (array): gradient samples in radians/(units of xx).
+        xx (array): spatial locations.
+        dom0dt (float): off-resonance phase in radians.
+
+    Returns:
+            2-element tuple containing
+
+            - **a** (*array*): SLR alpha parameter.
+            - **b** (*array*): SLR beta parameter.
+
+     """
+
     device = backend.get_device(rf)
     xp = device.xp
     with device:

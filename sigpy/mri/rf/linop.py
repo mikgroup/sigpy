@@ -8,6 +8,7 @@ from sigpy import backend
 
 def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, comm=None):
     """Explicit spatial-domain pulse design linear operator.
+
     Linear operator relates rf pulses to desired magnetization.
     Linear operator dimensions will be Ns * Nt
 

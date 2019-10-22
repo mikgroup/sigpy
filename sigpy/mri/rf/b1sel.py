@@ -11,10 +11,33 @@ __all__ = ['dzb1rf', 'buildfm', 'dzb1gSliderrf', 'dzb1Hadamardrf']
 
 def dzb1rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3, pbc=2,
            d1=0.01, d2=0.01, os=8, splitAndReflect=True):
-    # design a B1-selective excitation pulse, following Grissom JMR 2014
-    # pbw = width of passband in Gauss
-    # pbc = center of passband in Gauss
+    """Design a B1-selective excitation pulse following Grissom JMR 2014
 
+    Args:
+        dt (float): hardware sampling dwell time in s.
+        tb (int): time-bandwidth product.
+        ptype (string): pulse type, 'st', 'ex', 'se', 'inv', or 'sat'.
+        flip (float): flip angle, in radians.
+        pbw (float): width of passband in Gauss.
+        pbc (float): center of passband in Gauss.
+        d1 (float): passband ripple level in M0**-1.
+        d2 (float): stopband ripple level in M0**-1.
+        splitAndReflect (bool): option to split and reflect designed pulse.
+
+    Split-and-reflect preserves pulse selectivity when scaled to excite large
+    tip-angles.
+
+
+    Returns:
+        array: AM waveform
+        array: FM waveform (radians/s)
+
+    References:
+        Grissom, W., Cao, Z., & Does, M. (2014).
+        |B1+|-selective excitation pulse design using the Shinnar-Le Roux
+        algorithm. Journal of Magnetic Resonance, 242, 189-196.
+
+    """
     # calculate beta filter ripple
     [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
 
@@ -105,11 +128,35 @@ def buildfm(h, pbc, T, flip, dt, splitAndReflect=True):
 
 def dzb1gSliderrf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi / 6,
                   pbw=0.5, pbc=2, d1=0.01, d2=0.01, splitAndReflect=True):
-    # design B1-selective excitation gSlider pulses,
-    # following Grissom JMR 2014
-    # pbw = width of passband in Gauss
-    # pbc = center of passband in Gauss
+    """Design a B1-selective excitation gSlider pulse following Grissom JMR
+    2014.
 
+     Args:
+         dt (float): hardware sampling dwell time in s.
+         G (int): number of slabs to be acquired.
+         tb (int): time-bandwidth product.
+         ptype (string): pulse type, 'st', 'ex', 'se', 'inv', or 'sat'.
+         flip (float): flip angle, in radians.
+         pbw (float): width of passband in Gauss.
+         pbc (float): center of passband in Gauss.
+         d1 (float): passband ripple level in M0**-1.
+         d2 (float): stopband ripple level in M0**-1.
+         splitAndReflect (bool): option to split and reflect designed pulse.
+
+     Split-and-reflect preserves pulse selectivity when scaled to excite large
+     tip-angles.
+
+
+     Returns:
+         array: AM waveform
+         array: FM waveform (radians/s)
+
+     References:
+         Grissom, W., Cao, Z., & Does, M. (2014).
+         |B1+|-selective excitation pulse design using the Shinnar-Le Roux
+         algorithm. Journal of Magnetic Resonance, 242, 189-196.
+
+     """
     # calculate beta filter ripple
     [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
 
@@ -125,8 +172,6 @@ def dzb1gSliderrf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi / 6,
     for Gind in range(1, G + 1):
         # design filter
         h = slr.dzgSliderB(n, G, Gind, tb, d1, d2, np.pi, n // 4)
-        # if ptype == 'ex':
-        # h = slr.b2rf(h)
         fm[:, Gind - 1] = buildfm(h, pbc, T, flip, dt, splitAndReflect)
         # build am waveform
         am[:, Gind - 1] = np.concatenate((-np.ones(n // 2), np.ones(n),
@@ -137,6 +182,35 @@ def dzb1gSliderrf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi / 6,
 
 def dzb1Hadamardrf(dt=2e-6, G=8, tb=16, ptype='st', flip=np.pi / 6,
                    pbw=2, pbc=2, d1=0.01, d2=0.01, splitAndReflect=True):
+    """Design a B1-selective Hadamard-encoded pulse following Grissom JMR
+    2014.
+
+     Args:
+         dt (float): hardware sampling dwell time in s.
+         G (int): number of slabs to be acquired.
+         tb (int): time-bandwidth product.
+         ptype (string): pulse type, 'st', 'ex', 'se', 'inv', or 'sat'.
+         flip (float): flip angle, in radians.
+         pbw (float): width of passband in Gauss.
+         pbc (float): center of passband in Gauss.
+         d1 (float): passband ripple level in M0**-1.
+         d2 (float): stopband ripple level in M0**-1.
+         splitAndReflect (bool): option to split and reflect designed pulse.
+
+     Split-and-reflect preserves pulse selectivity when scaled to excite large
+     tip-angles.
+
+
+     Returns:
+         array: AM waveform
+         array: FM waveform (radians/s)
+
+     References:
+         Grissom, W., Cao, Z., & Does, M. (2014).
+         |B1+|-selective excitation pulse design using the Shinnar-Le Roux
+         algorithm. Journal of Magnetic Resonance, 242, 189-196.
+
+     """
     # design B1-selective excitation gSlider pulses,
     # following Grissom JMR 2014
     # pbw = width of passband in Gauss
