@@ -46,6 +46,7 @@ Sampling Functions
 
    sigpy.mri.poisson
    sigpy.mri.radial
+   sigpy.mri.spiral
 
 Simulation Functions
 --------------------
