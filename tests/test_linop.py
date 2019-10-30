@@ -175,7 +175,7 @@ class TestLinop(unittest.TestCase):
         I = linop.Identity(shape)
         x = util.randn([5, 6])
 
-        A = linop.Diag([I, I], axis=1)
+        A = linop.Diag([I, I], iaxis=1, oaxis=1)
         npt.assert_allclose(A(x), x)
         self.check_linop_linear(A)
         self.check_linop_adjoint(A)
