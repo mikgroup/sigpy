@@ -326,8 +326,8 @@ class LinearLeastSquares(App):
 
         with self.y_device:
             if self.G is None:
-                    proxfc = prox.L2Reg(self.y.shape, 1, y=-self.y)
-                    gamma_dual = 1
+                proxfc = prox.L2Reg(self.y.shape, 1, y=-self.y)
+                gamma_dual = 1
             else:
                 A = linop.Vstack([A, self.G])
                 proxf1c = prox.L2Reg(self.y.shape, 1, y=-self.y)
