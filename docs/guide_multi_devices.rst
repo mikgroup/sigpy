@@ -12,12 +12,12 @@ Another benefit is that an MPI parallelized code can run on both shared memory a
 For example, if we consider the following shared memory configuration (one multi-core CPU and two GPUs),
 and want to run the blue and red tasks concurrently:
 
-.. image:: figures/multiprocess_desired.pdf
+.. image:: figures/multiprocess_desired.png
    :align: center
 
 Then, using MPI, we can split the tasks to two MPI nodes as follows:
 
-.. image:: figures/multiprocess_mpi.pdf
+.. image:: figures/multiprocess_mpi.png
    :align: center
 
 Note that tasks on each MPI node can run on any CPU/GPU device, and in our example, the blue task uses CPU and GPU 0, and
