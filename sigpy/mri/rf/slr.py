@@ -511,9 +511,6 @@ def root_flip(b, d1, flip, tb):
         tb (int): pulse time bandwidth product.
 
     Returns:
-        rf_out (array): designed RF pulse.
-
-    Returns:
         2-element tuple containing
 
         - **rf_out** (*array*): rf pulse out.
@@ -578,6 +575,34 @@ def root_flip(b, d1, flip, tb):
 def dz_recursive_rf(n_seg, tb, N, se_seq=False, tb_ref=8, z_pad_fact=4,
                     win_fact=1.75, cancel_alpha_phs=True, t1=np.inf, tr_seg=60,
                     use_mz=True, d1=0.01, d2=0.01, d1se=0.01, d2se=0.01):
+    r"""Recursive SLR pulse design.
+
+    Args:
+        n_seg (int): number of segments designed by recursion.
+        tb (int): time bandwidth product.
+        N (int): pulse length.
+        se_seq (bool): spin echo sequence.
+        tb_ref (int): time bandwidth product of refocusing pulse.
+        z_pad_fact (float): zero padding factor.
+        win_fact (float): applied window factor.
+        cancel_alpha_phs (bool): absorb the alpha phase
+            profile from beta's profile, so they cancel for a flatter
+            total phase
+        t1 (float): t1
+        tr_seg (int): length of tr
+        use_mz (bool): design the pulses accounting for the actual Mz profile
+        d1 (float): passband ripple level in M0**-1.
+        d2 (float): stopband ripple level in M0**-1.
+        d1se (float): passband ripple level for se
+        d2se (float): stopband ripple level for se
+
+    Returns:
+        If se_seq=True, 2-element tuple containing
+
+        - **rf** (*array*): rf pulse out.
+        - **rf_ref** (*array*): rf refocusing pulse out.
+    """
+
     # get refocusing pulse and its rotation parameters
     if se_seq is True:
         [bsf, d1se, d2se] = calc_ripples('se', d1se, d2se)
