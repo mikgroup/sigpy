@@ -26,7 +26,7 @@ RF Pulse Simulation
     sigpy.mri.rf.sim.abrm_nd
     sigpy.mri.rf.sim.abrm_hp
 
-RF Utilities
+RF Utility
 --------------------------
 .. autosummary::
     :toctree: generated
