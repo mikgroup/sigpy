@@ -201,7 +201,7 @@ def _poisson(nx, ny, K, R, calib, seed):
     return mask
 
 
-def spiral(fov, N, f_sampling, R, ninterleaves, alpha, gm, sm):
+def spiral(fov, N, f_sampling, R, ninterleaves, alpha, gm, sm, gamma=2.678e8):
     """Generate variable density spiral trajectory.
 
     Args:
@@ -213,6 +213,7 @@ def spiral(fov, N, f_sampling, R, ninterleaves, alpha, gm, sm):
         alpha (float): variable density factor
         gm (float): maximum gradient amplitude (T/m)
         sm (float): maximum slew rate (T/m/s)
+        gamma (float): gyromagnetic ratio in rad/T/s
 
     Returns:
         array: spiral coordinates.
@@ -224,7 +225,6 @@ def spiral(fov, N, f_sampling, R, ninterleaves, alpha, gm, sm):
     """
     res = fov/N
 
-    gamma = 2.678e8  # in rad/T/s
     lam = .5 / res  # in m**(-1)
     n = 1 / (1 - (1 - ninterleaves * R / fov / lam) ** (1 / alpha))
     w = 2 * np.pi * n
