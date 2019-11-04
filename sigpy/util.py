@@ -9,8 +9,7 @@ from sigpy import backend, config
 
 __all__ = ['prod', 'vec', 'split', 'rss', 'resize',
            'flip', 'circshift', 'downsample', 'upsample', 'dirac', 'randn',
-           'triang', 'hanning', 'monte_carlo_sure', 'axpy', 'xpay', 'leja',
-           'leja_fast']
+           'triang', 'hanning', 'monte_carlo_sure', 'axpy', 'xpay', 'leja']
 
 
 def _normalize_axes(axes, ndim):
@@ -392,49 +391,22 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
 
 
 def leja(x):
+    """ Perform leja ordering of roots of a polynomial.
 
-    # Order roots in a way suitable to accurately compute polynomial
-    # coefficients. Based on MATLAB code from Markus Lang at Rice University
+    Orders roots in a way suitable to accurately compute polynomial
+    coefficients.
 
-    n = np.size(x)
-    # duplicate roots to n+1 rows
-    a = np.tile(np.reshape(x, (1, n)), (n+1, 1))
-    # take abs of first row
-    a[0, :] = np.abs(a[0, :])
+    Args:
+        x (array): roots to be ordered.
 
-    tmp = np.zeros(n+1, dtype=complex)
+    Returns:
+        array: ordered roots.
 
-    # find index of max abs value
-    ind = np.argmax(a[0, :])
-    if ind != 0:
-        tmp[:] = a[:, 0]
-        a[:, 0] = a[:, ind]
-        a[:, ind] = tmp
-
-    x_out = np.zeros(n, dtype=complex)
-    x_out[0] = a[n-1, 0]
-    a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
-
-    for l in range(1, n-1):
-        aprod = np.abs(np.prod(a[0:l+1, l:], axis = 0))
-        ind = np.argmax(aprod)
-        ind = ind + l
-        if l != ind:
-            tmp[:] = a[:, l]
-            a[:, l] = a[:, ind]
-            a[:, ind] = tmp
-            x_out[l] = a[n-1, l]
-            a[l+1, (l+1):n] = np.abs(a[l+1, (l+1):] - x_out[l])
-
-    x_out = a[n, :]
-
-    return x_out
-
-
-def leja_fast(x):
-
-    # a faster version of the leja function that avoids repetitive
-    # prod() calculations that can be slow for large numbers of roots
+    References:
+        Lang, M. and B. Frenzel. 1993.
+        A New and Efficient Program for Finding All Polynomial Roots. Rice
+        University ECE Technical Report, no. TR93-08, 1993.
+    """
 
     n = np.size(x)
     # duplicate roots to n+1 rows
@@ -452,7 +424,7 @@ def leja_fast(x):
         a[:, ind] = tmp
 
     x_out = np.zeros(n, dtype=complex)
-    x_out[0] = a[n-1, 0] # first entry of last row
+    x_out[0] = a[n-1, 0]  # first entry of last row
     a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
 
     foo = a[0, 0:n]
