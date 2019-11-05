@@ -220,6 +220,7 @@ class ConjugateGradient(Alg):
 
     def __init__(self, A, b, x, P=None, max_iter=100, tol=0):
         self.A = A
+        self.b = b
         self.P = P
         self.x = x
         self.tol = tol
@@ -552,7 +553,6 @@ class NewtonsMethod(Alg):
             gradf_x = self.gradf(self.x)
             p = -self.inv_hessf(self.x)(gradf_x)
             self.lamda2 = -xp.real(xp.vdot(p, gradf_x)).item()
-
             if self.lamda2 < 0:
                 raise ValueError(
                     'Direction is not descending. Got lamda2={}. '
