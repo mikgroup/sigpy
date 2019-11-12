@@ -136,11 +136,11 @@ def fwt(input, wave_name='db4', axes=None, level=None, apply_zpad=True):
         level (None or int): Number of wavelet levels.
         apply_zpad (bool): True implies appropriate zero-padding for linear convolution.
     """
-    if (level is not None and level <= 0):
-        return input
-
     device = backend.get_device(input)
     xp = device.xp
+
+    if axes == None:
+        axes = tuple([k for k in range(len(input.shape)) if input.shape[k] > 1])
 
     if (type(axes) == int):
         axes = (axes,)
@@ -149,12 +149,11 @@ def fwt(input, wave_name='db4', axes=None, level=None, apply_zpad=True):
     dec_lo = xp.array(wavdct.dec_lo)
     dec_hi = xp.array(wavdct.dec_hi)
 
-    if not axes:
-        axes = [k for k in range(len(input.shape)) if input.shape[k] > 1]
-        axes = tuple(axes)
+    if level == None:
+        level = pywt.dwt_max_level(xp.min([input.shape[ax] for ax in axes]), dec_lo.size) - 1
 
-    if not level:
-        level = pywt.dwt_max_level(xp.min([input.shape[ax] for ax in axes]), dec_lo.size)
+    if level <= 0:
+        return input
 
     assert level > 0
 
@@ -176,11 +175,11 @@ def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
         level (None or int): Number of wavelet levels.
         inplace (bool): Modify input array in place.
     """
-    if (level is not None and level <= 0):
-        return input
-
     device = backend.get_device(input)
     xp = device.xp
+
+    if axes == None:
+        axes = tuple([k for k in range(len(input.shape)) if input.shape[k] > 1])
 
     if (type(axes) == int):
         axes = (axes,)
@@ -189,14 +188,13 @@ def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
     rec_lo = xp.array(wavdct.rec_lo)
     rec_hi = xp.array(wavdct.rec_hi)
 
-    if not axes:
-        axes = [k for k in range(len(input.shape)) if input.shape[k] > 1]
-        axes = tuple(axes)
+    if level == None:
+        level = pywt.dwt_max_level(xp.min([input.shape[ax] for ax in axes]), rec_lo.size) - 1
 
-    if not level:
-        level = pywt.dwt_max_level(xp.min([oshape[ax] for ax in axes]), rec_lo.size)
+    if level <= 0:
+        return input
 
-    assert level > 0
+    assert level >= 0
     for ax in axes:
         assert input.shape[ax] % 2 == 0, "Axes chosen must have dimension divisible by 2**level"
 
