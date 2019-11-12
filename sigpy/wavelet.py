@@ -142,6 +142,9 @@ def fwt(input, wave_name='db4', axes=None, level=None, apply_zpad=True):
     if (level == 0):
         return input
 
+    if (type(axes) == int):
+        axes = (axes,)
+
     wavdct = pywt.Wavelet(wave_name)
     dec_lo = xp.array(wavdct.dec_lo)
     dec_hi = xp.array(wavdct.dec_hi)
@@ -178,6 +181,9 @@ def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
     if (level == 0):
         return input
 
+    if (type(axes) == int):
+        axes = (axes,)
+
     wavdct = pywt.Wavelet(wave_name)
     rec_lo = xp.array(wavdct.rec_lo)
     rec_hi = xp.array(wavdct.rec_hi)
@@ -190,7 +196,7 @@ def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
 
     assert level > 0
     for ax in axes:
-        assert ax % 2 == 0, "Axes chosen must have dimension divisible by 2**level"
+        assert input.shape[ax] % 2 == 0, "Axes chosen must have dimension divisible by 2**level"
 
     x = input if inplace else input.copy()
 
