@@ -1164,7 +1164,8 @@ class Wavelet(Linop):
         self.wave_name = wave_name
         self.axes = axes
         self.level = level
-        oshape = wavelet.get_wavelet_shape(ishape, wave_name=wave_name, axes=axes, level=level)
+        oshape = wavelet.get_wavelet_shape(ishape, wave_name=wave_name,
+                                           axes=axes, level=level)
 
         super().__init__(oshape, ishape)
 
@@ -1197,12 +1198,14 @@ class InverseWavelet(Linop):
         self.wave_name = wave_name
         self.axes = axes
         self.level = level
-        ishape = wavelet.get_wavelet_shape(oshape, wave_name=wave_name, axes=axes, level=level)
+        ishape = wavelet.get_wavelet_shape(oshape, wave_name=wave_name,
+                                           axes=axes, level=level)
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
         return wavelet.iwt(
-            input, self.oshape, wave_name=self.wave_name, axes=self.axes, level=self.level)
+            input, self.oshape, wave_name=self.wave_name,
+            axes=self.axes, level=self.level)
 
     def _adjoint_linop(self):
         return Wavelet(self.oshape, axes=self.axes,
