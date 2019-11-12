@@ -172,7 +172,7 @@ def fwt(input, wave_name='db4', axes=None, level=None, apply_zpad=True):
 
     if level is None:
         level = pywt.dwt_max_level(
-                    xp.min([input.shape[ax] for ax in axes]),
+                    xp.min(xp.array([input.shape[ax] for ax in axes])),
                     dec_lo.size)
 
     if level <= 0:
@@ -217,7 +217,7 @@ def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
 
     if level is None:
         level = pywt.dwt_max_level(
-                    xp.min([input.shape[ax] for ax in axes]),
+                    xp.min(xp.array([input.shape[ax] for ax in axes])),
                     rec_lo.size)
 
     if level <= 0:
