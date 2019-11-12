@@ -136,11 +136,11 @@ def fwt(input, wave_name='db4', axes=None, level=None, apply_zpad=True):
         level (None or int): Number of wavelet levels.
         apply_zpad (bool): True implies appropriate zero-padding for linear convolution.
     """
+    if (level is not None and level <= 0):
+        return input
+
     device = backend.get_device(input)
     xp = device.xp
-
-    if (level == 0):
-        return input
 
     if (type(axes) == int):
         axes = (axes,)
@@ -152,14 +152,15 @@ def fwt(input, wave_name='db4', axes=None, level=None, apply_zpad=True):
     if not axes:
         axes = [k for k in range(len(input.shape)) if input.shape[k] > 1]
         axes = tuple(axes)
+
     if not level:
         level = pywt.dwt_max_level(xp.min([input.shape[ax] for ax in axes]), dec_lo.size)
+
     assert level > 0
 
     y = apply_dec_along_axis(input, axes, dec_lo, dec_hi, level, apply_zpad)
     approx_idx = tuple([slice(0, y.shape[k]//2) if k in axes else slice(0, None) for k in range(len(input.shape))])
-    lowlvl = fwt(y[approx_idx], wave_name=wave_name, axes=axes, level=level-1, apply_zpad=False)
-    y[approx_idx] = lowlvl;
+    y[approx_idx] = fwt(y[approx_idx], wave_name=wave_name, axes=axes, level=level-1, apply_zpad=False)
 
     return y
 
@@ -175,11 +176,11 @@ def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
         level (None or int): Number of wavelet levels.
         inplace (bool): Modify input array in place.
     """
+    if (level is not None and level <= 0):
+        return input
+
     device = backend.get_device(input)
     xp = device.xp
-
-    if (level == 0):
-        return input
 
     if (type(axes) == int):
         axes = (axes,)
@@ -191,6 +192,7 @@ def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
     if not axes:
         axes = [k for k in range(len(input.shape)) if input.shape[k] > 1]
         axes = tuple(axes)
+
     if not level:
         level = pywt.dwt_max_level(xp.min([oshape[ax] for ax in axes]), rec_lo.size)
 
