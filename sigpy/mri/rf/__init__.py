@@ -12,6 +12,8 @@ See in-progress features at `sigpy-rf`_.
 .. _sigpy-rf: https://github.com/jonbmartin/sigpy-rf
 
 """
+from sigpy.mri import linop
+
 from sigpy.mri.rf import adiabatic, b1sel, multiband, optcont, sim, slr, util
 from sigpy.mri.rf.adiabatic import *  # noqa
 from sigpy.mri.rf.b1sel import *  # noqa
@@ -21,7 +23,7 @@ from sigpy.mri.rf.sim import *  # noqa
 from sigpy.mri.rf.slr import *  # noqa
 from sigpy.mri.rf.util import *  # noqa
 
-__all__ = []
+__all__ = ['linop']
 __all__.extend(adiabatic.__all__)
 __all__.extend(b1sel.__all__)
 __all__.extend(multiband.__all__)
