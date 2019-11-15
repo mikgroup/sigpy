@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Multiband RF Pulse Design functions.
 """
 import numpy as np

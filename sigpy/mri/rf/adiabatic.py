@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Adiabatic Pulse Design functions.
 
 """

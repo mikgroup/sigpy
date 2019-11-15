@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """B1-selective RF Pulse Design functions.
 
 """
