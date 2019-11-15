@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""MRI RF-specific linear operators.
+"""MRI pulse-design-specific linear operators.
 """
 import sigpy as sp
 from sigpy import backend
@@ -18,6 +18,12 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None):
         img_shape (None or tuple): image shape.
         B0 (array): 2D array, B0 inhomogeneity map
 
+
+    References:
+        Grissom, W., Yip, C., Zhang, Z., Stenger, V. A., Fessler, J. A.
+        & Noll, D. C.(2006).
+        Spatial Domain Method for the Design of RF Pulses in Multicoil
+        Parallel Excitation. Magnetic resonance in medicine, 56, 620-629.
     """
     device = backend.get_device(sens)
     xp = device.xp
