@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Optimal Control Pulse Design functions.
 """
 from sigpy import backend
