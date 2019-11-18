@@ -101,7 +101,7 @@ class ImagePlot(object):
         self.title = title
         self.interpolation = interpolation
         self.mode = mode
-        self.colormap=colormap
+        self.colormap = colormap
         self.entering_slice = False
         self.vmin = None
         self.vmax = None
