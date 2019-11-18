@@ -18,7 +18,7 @@ from sigpy.mri.rf import adiabatic, b1sel, multiband, optcont, ptx,\
     sim, slr, util
 from sigpy.mri.rf.adiabatic import *  # noqa
 from sigpy.mri.rf.b1sel import *  # noqa
-from sigpy.mri.rf.mutliband import *  # noqa
+from sigpy.mri.rf.multiband import *  # noqa
 from sigpy.mri.rf.optcont import *  # noqa
 from sigpy.mri.rf.ptx import *  # noqa
 from sigpy.mri.rf.sim import *  # noqa

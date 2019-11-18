@@ -117,17 +117,18 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
         while not alg_method.done():
 
             # phase_update switch
-            if (alg_method.iter % phase_update_interval == 0) and (
-                    alg_method.iter > 0) and (phase_update_interval > 0):
-                target = xp.abs(target) * xp.exp(
-                    1j * xp.angle(xp.reshape(A * pulses, target.shape)))
-                # put correct m into alg_method (Ax=b notation)
-                if explicit:
-                    b = A.H * xp.transpose(
-                        xp.expand_dims(xp.concatenate(target), axis=0))
-                else:
-                    b = A.H * target
-                alg_method.b = b
+            if phase_update_interval > 0:
+                if (alg_method.iter % phase_update_interval == 0) and (
+                        alg_method.iter > 0):
+                    target = xp.abs(target) * xp.exp(
+                        1j * xp.angle(xp.reshape(A * pulses, target.shape)))
+                    # put correct m into alg_method (Ax=b notation)
+                    if explicit:
+                        b = A.H * xp.transpose(
+                            xp.expand_dims(xp.concatenate(target), axis=0))
+                    else:
+                        b = A.H * target
+                    alg_method.b = b
 
             alg_method.update()
 
