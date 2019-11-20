@@ -74,12 +74,16 @@ def from_pytorch(tensor, iscomplex=False):  # pragma: no cover
                              'specified, but got {}'.format(output.shape))
 
         with backend.get_device(output):
-            if output.dtype == np.float32:
-                output = output.view(np.complex64)
-            elif output.dtype == np.float64:
-                output = output.view(np.complex128)
+            if output.flags['C_CONTIGUOUS']:
+                if output.dtype == np.float32:
+                    output = output.view(np.complex64)
+                elif output.dtype == np.float64:
+                    output = output.view(np.complex128)
 
-            output = output.reshape(output.shape[:-1])
+                output = output.reshape(output.shape[:-1])
+            else:
+                output = output[..., 0] + 1j * output[..., 1]
+
 
     return output
 
