@@ -35,7 +35,7 @@ For example to create an array on GPU 1, we can do:
 Note that this can also be done with ``cupy.cuda.Device``, and you can choose to use it as well.
 The main difference is that :class:`sigpy.Device` maps -1 to CPU, and makes it easier to develop CPU/GPU generic code.
 
-.. image:: figures/device.pdf
+.. image:: figures/device.png
    :align: center
 
 To transfer an array between device, we can use :class:`sigpy.to_device`. For example, to transfer a numpy array to GPU 1, we can do:

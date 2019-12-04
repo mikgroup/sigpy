@@ -25,6 +25,7 @@
    mri
    mri_linop
    mri_app
+   mri_rf
 
 .. toctree::
    :hidden:

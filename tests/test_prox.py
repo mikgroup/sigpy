@@ -54,7 +54,7 @@ class TestProx(unittest.TestCase):
         shape = [6]
         epsilon = 1.0
         P = prox.L2Proj(shape, epsilon)
-        x = util.randn(shape)
+        x = util.randn(shape) * 10
         y = P(1.0, x)
         npt.assert_allclose(y, x / np.linalg.norm(x.ravel()))
 
