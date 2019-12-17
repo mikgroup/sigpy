@@ -332,9 +332,9 @@ class ImagePlot(object):
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
                             '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                            '-crf', '0',
                             '-vcodec', 'libx264',
                             '-preset', 'veryslow',
-                            '-pix_fmt', 'yuv420p',
                             filename])
 
             for i in range(self.shape[self.d]):
