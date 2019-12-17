@@ -220,6 +220,7 @@ class ConjugateGradient(Alg):
 
     def __init__(self, A, b, x, P=None, max_iter=100, tol=0):
         self.A = A
+        self.b = b
         self.P = P
         self.x = x
         self.tol = tol
@@ -348,14 +349,13 @@ class PrimalDualHybridGradient(Alg):
         super().__init__(max_iter)
 
     def _update(self):
-        x_old = self.x.copy()
-
         # Update dual.
         util.axpy(self.u, self.sigma, self.A(self.x_ext))
         backend.copyto(self.u, self.proxfc(self.sigma, self.u))
 
         # Update primal.
         with self.x_device:
+            x_old = self.x.copy()
             util.axpy(self.x, -self.tau, self.AH(self.u))
             backend.copyto(self.x, self.proxg(self.tau, self.x))
 
@@ -553,7 +553,6 @@ class NewtonsMethod(Alg):
             gradf_x = self.gradf(self.x)
             p = -self.inv_hessf(self.x)(gradf_x)
             self.lamda2 = -xp.real(xp.vdot(p, gradf_x)).item()
-
             if self.lamda2 < 0:
                 raise ValueError(
                     'Direction is not descending. Got lamda2={}. '

@@ -555,20 +555,23 @@ class Diag(Linop):
     Args:
         linops (list of Linops): list of linops with the same input and
             output shape.
-        axis (int or None): If None, inputs/outputs are vectorized
+        iaxis (int or None): If None, inputs are vectorized
+            and concatenated.
+        oaxis (int or None): If None, outputs are vectorized
             and concatenated.
 
     """
 
-    def __init__(self, linops, axis=None):
+    def __init__(self, linops, oaxis=None, iaxis=None):
         self.nops = len(linops)
 
         self.linops = linops
-        self.axis = axis
+        self.oaxis = oaxis
+        self.iaxis = iaxis
         ishape, self.iindices = _hstack_params(
-            [linop.ishape for linop in self.linops], axis)
+            [linop.ishape for linop in self.linops], iaxis)
         oshape, self.oindices = _vstack_params(
-            [linop.oshape for linop in self.linops], axis)
+            [linop.oshape for linop in self.linops], oaxis)
 
         super().__init__(oshape, ishape)
 
@@ -592,26 +595,32 @@ class Diag(Linop):
                     iend = self.iindices[n]
                     oend = self.oindices[n]
 
-                if self.axis is None:
-                    output[ostart:oend] = linop(
+                if self.iaxis is None:
+                    output_n = linop(
                         input[istart:iend].reshape(linop.ishape)).ravel()
                 else:
-                    ndim = len(linop.oshape)
-                    axis = self.axis % ndim
-                    oslc = tuple([slice(None)] * axis + [slice(ostart, oend)] +
-                                 [slice(None)] * (ndim - axis - 1))
-
                     ndim = len(linop.ishape)
-                    axis = self.axis % ndim
+                    axis = self.iaxis % ndim
                     islc = tuple([slice(None)] * axis + [slice(istart, iend)] +
                                  [slice(None)] * (ndim - axis - 1))
 
-                    output[oslc] = linop(input[islc])
+                    output_n = linop(input[islc])
+
+                if self.oaxis is None:
+                    output[ostart:oend] = output_n
+                else:
+                    ndim = len(linop.oshape)
+                    axis = self.oaxis % ndim
+                    oslc = tuple([slice(None)] * axis + [slice(ostart, oend)] +
+                                 [slice(None)] * (ndim - axis - 1))
+
+                    output[oslc] = output_n
 
         return output
 
     def _adjoint_linop(self):
-        return Diag([op.H for op in self.linops], axis=self.axis)
+        return Diag([op.H for op in self.linops],
+                    oaxis=self.iaxis, iaxis=self.oaxis)
 
 
 class Reshape(Linop):
@@ -1155,7 +1164,8 @@ class Wavelet(Linop):
         self.wave_name = wave_name
         self.axes = axes
         self.level = level
-        oshape, _ = wavelet.get_wavelet_shape(ishape, wave_name, axes, level)
+        oshape = wavelet.get_wavelet_shape(ishape, wave_name=wave_name,
+                                           axes=axes, level=level)
 
         super().__init__(oshape, ishape)
 
@@ -1188,14 +1198,14 @@ class InverseWavelet(Linop):
         self.wave_name = wave_name
         self.axes = axes
         self.level = level
-        ishape, self.coeff_slices = wavelet.get_wavelet_shape(
-            oshape, wave_name, axes, level)
+        ishape = wavelet.get_wavelet_shape(oshape, wave_name=wave_name,
+                                           axes=axes, level=level)
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
         return wavelet.iwt(
-            input, self.oshape, self.coeff_slices,
-            wave_name=self.wave_name, axes=self.axes, level=self.level)
+            input, self.oshape, wave_name=self.wave_name,
+            axes=self.axes, level=self.level)
 
     def _adjoint_linop(self):
         return Wavelet(self.oshape, axes=self.axes,

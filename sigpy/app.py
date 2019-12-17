@@ -324,16 +324,17 @@ class LinearLeastSquares(App):
             else:
                 proxg = self.proxg
 
-        if self.G is None:
-            proxfc = prox.L2Reg(self.y.shape, 1, y=-self.y)
-            gamma_dual = 1
-        else:
-            A = linop.Vstack([A, self.G])
-            proxf1c = prox.L2Reg(self.y.shape, 1, y=-self.y)
-            proxf2c = prox.Conj(proxg)
-            proxfc = prox.Stack([proxf1c, proxf2c])
-            proxg = prox.NoOp(self.x.shape)
-            gamma_dual = 0
+        with self.y_device:
+            if self.G is None:
+                proxfc = prox.L2Reg(self.y.shape, 1, y=-self.y)
+                gamma_dual = 1
+            else:
+                A = linop.Vstack([A, self.G])
+                proxf1c = prox.L2Reg(self.y.shape, 1, y=-self.y)
+                proxf2c = prox.Conj(proxg)
+                proxfc = prox.Stack([proxf1c, proxf2c])
+                proxg = prox.NoOp(self.x.shape)
+                gamma_dual = 0
 
         if self.tau is None:
             if self.sigma is None:

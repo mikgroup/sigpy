@@ -3,7 +3,7 @@ Building iterative methods
 
 SigPy provides four abstraction classes (Linop, Prox, Alg, and App) for optimization based iterative methods. Such abstraction is inspired by similar structure in BART.
 
-.. image:: figures/architecture.pdf
+.. image:: figures/architecture.png
    :align: center
 
 The Linop class abstracts a linear operator, and supports adjoint, addition, composing, and stacking. Prepackaged Linops include FFT, NUFFT, and wavelet, and common array manipulation functions. In particular, given a Linop ``A``, the following operations can be performed:
