@@ -324,7 +324,6 @@ class ImagePlot(object):
                     ' %Y-%m-%d at %I.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
-            bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
             for i in range(self.shape[self.d]):
                 self.slices[self.d] = i
 
@@ -332,19 +331,17 @@ class ImagePlot(object):
                 self.update_image()
                 self.fig.canvas.draw()
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
-                                 format='png', bbox_inches=bbox, pad_inches=0)
+                                 format='png', transparent=True,
+                                 bbox_inches='tight', pad_inches=0)
 
             subprocess.run(['ffmpeg',
-                            '-f', 'image2',
-                            '-s', '{}x{}'.format(
-                                int(bbox.width * self.fig.dpi),
-                                int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
-                            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                            '-vf', 'crop=floor(iw/2)*2-10:floor(ih/2)*2-10',
+                            '-pix_fmt', 'yuv420p',
+                            '-crf', '1',
                             '-vcodec', 'libx264',
                             '-preset', 'veryslow',
-                            '-pix_fmt', 'yuv420p',
                             filename])
 
             for i in range(self.shape[self.d]):
