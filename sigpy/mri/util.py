@@ -101,7 +101,7 @@ def apply_tseg(input, coord, B, Ct, fwd=True):
     """
 
     # get number of time segments from B input.
-    Lseg = B.shape[0]
+    Lseg = B.shape[1]
     dim = input.shape[0]
 
     out = 0
