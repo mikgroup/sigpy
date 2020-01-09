@@ -109,6 +109,6 @@ def mb_phs_tab(n_bands, phs_type='phs_mod'):
         out = k * (np.arange(0, n_bands, 1) - (n_bands - 1) / 2) ** 2
 
     else:
-        raise Exception('phase type ("{}") is not recognized.'.format(phs_type))
+        raise Exception('phase type ("{}") not recognized.'.format(phs_type))
 
     return out
