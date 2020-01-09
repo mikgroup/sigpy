@@ -10,8 +10,8 @@ from sigpy import backend
 __all__ = ['stspa']
 
 
-def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
-          pavg=float('inf'), phase_update_interval=0, tseg=False,
+def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
+          pinst=float('inf'), pavg=float('inf'), phase_update_interval=0,
           explicit=False, max_iter=1000, tol=1E-6):
     """Small tip spatial domain method for multicoil parallel excitation.
        Allows for constrained or unconstrained designs.
@@ -22,11 +22,16 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
         coord (array): coordinates for noncartesian trajectories. [Nt 2]
         dt (float): hardware sampling dwell time.
         alpha (float): regularization term, if unconstrained.
-        B0 (array): B0 inhomogeneity map [dim dim]. Explicit matrix only.
+        B0 (array): B0 inhomogeneity map [dim dim]. For explicit matrix
+            building.
+        tseg (None or Dictionary): parameters for time-segmented off-resonance
+            correction. Parameters are 'b0' (array), 'dt' (float),
+            'lseg' (int), and 'n_bins' (int). Lseg is the number of
+            time segments used, and n_bins is the number of histogram bins.
         pinst (float): maximum instantaneous power.
         pavg (float): maximum average power.
         phase_update_interval (int): number of iters between exclusive phase
-         updates. If 0, no phase updates performed.
+            updates. If 0, no phase updates performed.
         explicit (bool): Use explicit matrix.
         max_iter (int): max number of iterations.
         tol (float): allowable error.
@@ -64,7 +69,7 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
 
         # using non-explicit formulation
         else:
-            A = sp.mri.linop.Sense(sens, coord, weights=None, B0=B0, dt=dt,
+            A = sp.mri.linop.Sense(sens, coord, weights=None, tseg=tseg,
                                    ishape=target.shape).H
 
         # Unconstrained, use conjugate gradient
