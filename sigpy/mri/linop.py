@@ -7,7 +7,6 @@ discrete Fourier transform.
 
 """
 import sigpy as sp
-import numpy as np
 
 
 def Sense(mps, coord=None, weights=None, B0=None, dt=None, ishape=None,
@@ -21,7 +20,7 @@ def Sense(mps, coord=None, weights=None, B0=None, dt=None, ishape=None,
             Useful for soft-gating or density compensation.
         B0 (None or array): B0 inhomogeneity matrix.
             If provided, perform time-segmented off-resonance correction.
-        dt (None or array): hardware dwell time (ms).
+        dt (None or float): hardware dwell time (ms).
             Required for time-segmented off-resonance correction.
         ishape (None or tuple): image shape.
         coil_batch_size (None or int): batch size for processing multi-channel.
@@ -70,11 +69,11 @@ def Sense(mps, coord=None, weights=None, B0=None, dt=None, ishape=None,
     else:
         F = sp.linop.NUFFT(S.oshape, coord)
         duration = len(coord) * dt
-        Lseg = 4
-        b, ct = sp.mri.util.tseg_off_res_B_Ct(B0, 40, Lseg, dt, duration)
+        bins, Lseg = 40, 4
+        b, ct = sp.mri.util.tseg_off_res_B_Ct(B0, bins, Lseg, dt, duration)
         for ii in range(Lseg):
             Bi = sp.linop.Multiply(F.oshape, b[:, ii])
-            Cti = sp.linop.Multiply(S.ishape, np.reshape(ct[:, ii], S.ishape))
+            Cti = sp.linop.Multiply(S.ishape, ct[:, ii].reshape(S.ishape))
 
             # operation below is effectively A = A + Bi * F(Cti * S)
             if ii == 0:
