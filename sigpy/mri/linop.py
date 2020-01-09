@@ -9,7 +9,7 @@ discrete Fourier transform.
 import sigpy as sp
 
 
-def Sense(mps, coord=None, weights=None, B0=None, dt=None, ishape=None,
+def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
           coil_batch_size=None, comm=None):
     """Sense linear operator.
 
@@ -18,10 +18,10 @@ def Sense(mps, coord=None, weights=None, B0=None, dt=None, ishape=None,
         coord (None or array): coordinates.
         weights (None or array): k-space weights.
             Useful for soft-gating or density compensation.
-        B0 (None or array): B0 inhomogeneity matrix.
-            If provided, perform time-segmented off-resonance correction.
-        dt (None or float): hardware dwell time (ms).
-            Required for time-segmented off-resonance correction.
+        tseg (None or Dictionary): parameters for time-segmented off-resonance
+            correction. Parameters are 'b0' (array), 'dt' (float),
+            'lseg' (int), and 'n_bins' (int). Lseg is the number of
+            time segments used, and n_bins is the number of histogram bins.
         ishape (None or tuple): image shape.
         coil_batch_size (None or int): batch size for processing multi-channel.
             When None, process all coils at the same time.
@@ -57,7 +57,7 @@ def Sense(mps, coord=None, weights=None, B0=None, dt=None, ishape=None,
 
     # Create Sense linear operator
     S = sp.linop.Multiply(ishape, mps)
-    if B0 is None:
+    if tseg is None:
         if coord is None:
             F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
         else:
@@ -68,10 +68,10 @@ def Sense(mps, coord=None, weights=None, B0=None, dt=None, ishape=None,
     # If B0 provided, perform time-segmented off-resonance compensation
     else:
         F = sp.linop.NUFFT(S.oshape, coord)
-        duration = len(coord) * dt
-        bins, Lseg = 40, 4
-        b, ct = sp.mri.util.tseg_off_res_B_Ct(B0, bins, Lseg, dt, duration)
-        for ii in range(Lseg):
+        time = len(coord) * tseg['dt']
+        b, ct = sp.mri.util.tseg_off_res_B_Ct(tseg['b0'], tseg['n_bins'],
+                                              tseg['lseg'], tseg['dt'], time)
+        for ii in range(tseg['lseg']):
             Bi = sp.linop.Multiply(F.oshape, b[:, ii])
             Cti = sp.linop.Multiply(S.ishape, ct[:, ii].reshape(S.ishape))
 
