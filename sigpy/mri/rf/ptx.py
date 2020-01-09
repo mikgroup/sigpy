@@ -4,14 +4,15 @@
 """
 
 import sigpy as sp
+import sigpy.mri.rf as rf
 from sigpy import backend
 
 __all__ = ['stspa']
 
 
 def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
-          pavg=float('inf'), phase_update_interval=0, explicit=False,
-          max_iter=1000, tol=1E-6):
+          pavg=float('inf'), phase_update_interval=0, tseg=False,
+          explicit=False, max_iter=1000, tol=1E-6):
     """Small tip spatial domain method for multicoil parallel excitation.
        Allows for constrained or unconstrained designs.
 
@@ -46,7 +47,7 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
     with device:
 
         pulses = xp.zeros((sens.shape[0], coord.shape[0]), xp.complex)
-
+        # set up the system matrix
         if explicit:
             # reshape pulses to be Nc * Nt, 1 - all 1 vector
             pulses = xp.concatenate(pulses)
@@ -54,18 +55,17 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
             pulses = xp.transpose(xp.expand_dims(pulses, axis=0))
 
             # explicit matrix design linop
-            A = sp.mri.rf.linop.PtxSpatialExplicit(sens, coord, dt,
-                                                   target.shape, B0, comm=None)
+            A = rf.linop.PtxSpatialExplicit(sens, coord, dt,
+                                                   target.shape, B0)
 
-            # explicit AND constrained, must reshape A output
+            # explicit AND constrained, must reshape A output for PDHG
             if pinst != float('inf') or pavg != float('inf'):
-                # reshape output to play nicely with PDHG
-                R = sp.linop.Reshape(target.shape, A.oshape)
-                A = R * A
+                A = sp.linop.Reshape(target.shape, A.oshape) * A
 
         # using non-explicit formulation
         else:
-            A = sp.mri.linop.Sense(sens, coord, None, ishape=target.shape).H
+            A = sp.mri.linop.Sense(sens, coord, weights=None, B0=B0, dt=dt,
+                                   ishape=target.shape).H
 
         # Unconstrained, use conjugate gradient
         if pinst == float('inf') and pavg == float('inf'):
@@ -75,13 +75,17 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
                 b = A.H * xp.transpose(xp.expand_dims(xp.concatenate(target),
                                                       axis=0))
 
+                alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
+                                                      b, pulses, P=None,
+                                                      max_iter=max_iter, tol=tol)
+
             else:
                 I = sp.linop.Identity((Nc, coord.shape[0]))
                 b = A.H * target
 
-            alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
-                                                  b, pulses, P=None,
-                                                  max_iter=max_iter, tol=tol)
+                alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
+                                                      b, pulses, P=None,
+                                                      max_iter=max_iter, tol=tol)
 
         # Constrained case, use primal dual hybrid gradient
         else:
@@ -117,18 +121,18 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, pinst=float('inf'),
         while not alg_method.done():
 
             # phase_update switch
-            if phase_update_interval > 0:
-                if (alg_method.iter % phase_update_interval == 0) and (
-                        alg_method.iter > 0):
+            if (alg_method.iter % phase_update_interval == 0) and (
+                    alg_method.iter > 0):
+                # put correct m into alg_method (Ax=b notation)
+                if explicit:
+                    b = A.H * xp.transpose(
+                        xp.expand_dims(xp.concatenate(target), axis=0))
+                else:
                     target = xp.abs(target) * xp.exp(
-                        1j * xp.angle(xp.reshape(A * pulses, target.shape)))
-                    # put correct m into alg_method (Ax=b notation)
-                    if explicit:
-                        b = A.H * xp.transpose(
-                            xp.expand_dims(xp.concatenate(target), axis=0))
-                    else:
-                        b = A.H * target
-                    alg_method.b = b
+                        1j * xp.angle(
+                            xp.reshape(A * alg_method.x, target.shape)))
+                    b = A.H * target
+                alg_method.b = b
 
             alg_method.update()
 

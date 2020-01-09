@@ -140,7 +140,7 @@ def dz_b1_gslider_rf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi/6,
 
     # calculate beta filter ripple
     [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
-    #if ptype == 'st':
+    # if ptype == 'st':
     bsf = flip
 
     # calculate pulse duration
@@ -150,7 +150,7 @@ def dz_b1_gslider_rf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi/6,
     # calculate number of samples in pulse
     n = np.int(np.ceil(T/dt/2)*2)
 
-    om = 2*np.pi*4257*pbc # modulation frequency to center profile at pbc gauss
+    om = 2*np.pi*4257*pbc  # modulation frequency to center profile at pbc gauss
     t = np.arange(0, n)*T/n - T/2
 
     om1 = np.zeros((2*n, G))
@@ -158,8 +158,7 @@ def dz_b1_gslider_rf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi/6,
     for Gind in range(1,G+1):
         # design filter
         h = bsf*slr.dzgSliderB(n, G, Gind, tb, d1, d2, np.pi, n//4)
-        #if ptype == 'ex':
-        #h = slr.b2rf(h)
+
         # modulate filter to center and add it to a time-reversed and modulated
         # copy, then take the imaginary part to get an odd filter
         h = np.imag(h*np.exp(1j*om*t) - h[n::-1]*np.exp(1j*-om*t))
@@ -170,7 +169,7 @@ def dz_b1_gslider_rf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi/6,
             dom[:, Gind-1] = np.concatenate((0*h[n//2::-1], h, 0*h[n:n//2:-1]))
         # build am waveform
         om1[:, Gind-1] = np.concatenate((-np.ones(n//2), np.ones(n),
-            -np.ones(n//2)))
+                                        -np.ones(n//2)))
 
     # scale to target flip, convert to Hz
     dom = dom/(2*np.pi*dt)
@@ -179,7 +178,7 @@ def dz_b1_gslider_rf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi/6,
 
 
 def dz_b1_hadamard_rf(dt=2e-6, G=8, tb=16, ptype='st', flip=np.pi/6,
-                   pbw=2, pbc=2, d1=0.01, d2=0.01, split_and_reflect=True):
+                      pbw=2, pbc=2, d1=0.01, d2=0.01, split_and_reflect=True):
     """Design a B1-selective Hadamard-encoded pulse following Grissom JMR
     2014.
     Args:
@@ -244,7 +243,7 @@ def dz_b1_hadamard_rf(dt=2e-6, G=8, tb=16, ptype='st', flip=np.pi/6,
                                              0 * h[n:n // 2:-1]))
         # build am waveform
         om1[:, Gind-1] = np.concatenate((-np.ones(n // 2), np.ones(n),
-            -np.ones(n // 2)))
+                                        -np.ones(n // 2)))
 
     # scale to target flip, convert to Hz
     dom = dom/(2 * np.pi * dt)
