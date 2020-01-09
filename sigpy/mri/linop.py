@@ -7,9 +7,10 @@ discrete Fourier transform.
 
 """
 import sigpy as sp
+import numpy as np
 
 
-def Sense(mps, coord=None, weights=None, ishape=None,
+def Sense(mps, coord=None, weights=None, B0=None, dt=None, ishape=None,
           coil_batch_size=None, comm=None):
     """Sense linear operator.
 
@@ -17,7 +18,11 @@ def Sense(mps, coord=None, weights=None, ishape=None,
         mps (array): sensitivity maps of length = number of channels.
         coord (None or array): coordinates.
         weights (None or array): k-space weights.
-        Useful for soft-gating or density compensation.
+            Useful for soft-gating or density compensation.
+        B0 (None or array): B0 inhomogeneity matrix.
+            If provided, perform time-segmented off-resonance correction.
+        dt (None or array): hardware dwell time (ms).
+            Required for time-segmented off-resonance correction.
         ishape (None or tuple): image shape.
         coil_batch_size (None or int): batch size for processing multi-channel.
             When None, process all coils at the same time.
@@ -53,12 +58,29 @@ def Sense(mps, coord=None, weights=None, ishape=None,
 
     # Create Sense linear operator
     S = sp.linop.Multiply(ishape, mps)
-    if coord is None:
-        F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
+    if B0 is None:
+        if coord is None:
+            F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
+        else:
+            F = sp.linop.NUFFT(S.oshape, coord)
+
+        A = F * S
+
+    # If B0 provided, perform time-segmented off-resonance compensation
     else:
         F = sp.linop.NUFFT(S.oshape, coord)
+        duration = len(coord) * dt
+        Lseg = 4
+        b, ct = sp.mri.util.tseg_off_res_B_Ct(B0, 40, Lseg, dt, duration)
+        for ii in range(Lseg):
+            Bi = sp.linop.Multiply(F.oshape, b[:, ii])
+            Cti = sp.linop.Multiply(S.ishape, np.reshape(ct[:, ii], S.ishape))
 
-    A = F * S
+            # operation below is effectively A = A + Bi * F(Cti * S)
+            if ii == 0:
+                A = Bi * F * S * Cti
+            else:
+                A = A + Bi * F * S * Cti
 
     if weights is not None:
         with sp.get_device(weights):
