@@ -3,8 +3,9 @@
 
 """
 from sigpy import backend
+import sigpy.plot as pl
 
-__all__ = ['abrm', 'abrm_nd', 'abrm_hp']
+__all__ = ['abrm', 'abrm_nd', 'abrm_hp', 'abrm_ptx']
 
 
 def abrm(rf, x, balanced=False):
@@ -162,3 +163,94 @@ def abrm_hp(rf, gamgdt, xx, dom0dt=0):
         b = b * z
 
         return a, b
+
+
+def abrm_ptx(rf, x, g, dt, sens=None):
+    r"""N-dim RF pulse simulation
+
+    Assumes that x has inverse spatial units of g, and g has gamma*dt applied.
+
+    Assumes dimensions rf = [Nc, Nt], x = [...,Ndim], g = [Ndim,Nt], and
+    sens = [Nc, dim, dim].
+
+    Args:
+         rf (array): rf waveform input.
+         x (array): spatial locations.
+         g (array): gradient array.
+         dt (float): hardware dwell time (s).
+         sens (array or None): B1+ sensitivity matrix. If None, creates matrix
+            of 1's.
+
+
+    Returns:
+        2-element tuple containing
+
+        - **a** (*array*): SLR alpha parameter.
+        - **b** (*array*): SLR beta parameter.
+
+    References:
+        Pauly, J., Le Roux, Patrick., Nishimura, D., and Macovski, A.(1991).
+        'Parameter Relations for the Shinnar-LeRoux Selective Excitation
+        Pulse Design Algorithm'.
+        IEEE Transactions on Medical Imaging, Vol 10, No 1, 53-65.
+     """
+
+    device = backend.get_device(rf)
+    xp = device.xp
+    with device:
+
+        gambar = 42570000  # gamma / 2pi in Hz / T
+        gam = gambar * 2 * xp.pi / 10000  # gamma in radians / g
+
+        dim = int(xp.sqrt(x.shape[0]))
+        Ns = dim * dim
+        Nc = rf.shape[0]
+        Nt = rf.shape[1]
+        dim = int(xp.sqrt(x.shape[0]))
+
+        if sens is None:
+            sens = xp.ones((dim*dim, Nc))
+        else:
+            sens = xp.reshape(sens, (dim*dim, Nc))
+
+        bxy = sens @ rf
+
+        bz = x @ xp.transpose(g)
+
+        # TODO: add off-resonance
+        statea = xp.ones((Ns, 1))
+        stateb = xp.zeros((Ns, 1))
+        a = xp.ones(xp.shape(x)[0], dtype=complex)
+        b = xp.zeros(xp.shape(x)[0], dtype=complex)
+        for mm in range(Nt):
+            phi = dt*gam*xp.sqrt(xp.abs(bxy[:, mm]) ** 2 + bz[:, mm] ** 2)
+            with xp.errstate(divide='ignore'):
+                normfact = dt*gam*(phi ** -1)
+                normfact[xp.isinf(normfact)] = 0
+                nxy = normfact * bxy[:, mm]
+                nxy[xp.isinf(nxy)] = 0
+            nz = normfact * bz[:, mm]
+            nz[xp.isinf(nz)] = 0
+            cp = xp.cos(phi/2)
+            sp = xp.sin(phi/2)
+            alpha = xp.expand_dims(cp + 1j * nz * sp, 1)
+            beta = xp.expand_dims(1j * xp.conj(nxy) * sp, 1)
+
+            tmpa = xp.multiply(alpha, statea) + xp.multiply(beta,  stateb)
+            tmpb = -xp.conj(beta) * statea + xp.conj(alpha) * stateb
+
+            statea, stateb = tmpa, tmpb
+
+            # NOT returning all states:
+            a = statea
+            b = -xp.conj(stateb)
+
+        mxy0 = 0 + 1j * 0
+        mz0 = 1
+        m = mz0 * xp.conj(statea) * stateb
+        m += mxy0*xp.conj(statea) ** 2
+        m -= xp.conj(mxy0)*(stateb ** 2)
+        mz = mz0 * (statea * xp.conj(statea) - stateb * xp.conj(stateb))
+        mz += 2 * xp.real(mxy0 * xp.conj(statea)*xp.negative(xp.conj(stateb)))
+
+        return a, b, m, mz
