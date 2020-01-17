@@ -360,7 +360,9 @@ def spiralarch(D, N, gts, gslew, gamp):
 
     # end of trajectory calculation; prepare outputs
     g = np.diff(k, 1, axis=0) / (gts * gambar)  # gradient
+    g = np.pad(g, (0, 1), 'constant')
     s = np.diff(g, 1, axis=0) / (gts * 1000)  # slew rate factor
+    s = np.pad(s, (0, 1), 'constant')
 
     # change from (real, imag) notation to (Nt, 2) notation
     ktemp = np.zeros((len(k), 2))
