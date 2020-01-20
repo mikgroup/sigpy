@@ -3,10 +3,13 @@
 """
 import numpy as np
 
-__all__ = ['mb_phs_tab', 'mb_rf']
+__all__ = ['mb_phs_tab', 'mb_rf', 'dz_pins']
+
+from sigpy.mri.rf.trajgrad import trapgrad
+import sigpy.mri.rf.slr as slr
 
 
-def mb_rf(pulse_in, n_bands=3, band_sep=5, phs_0_pt='None'):
+def mb_rf(pulse_in, n_bands = 3, band_sep = 5, phs_0_pt = 'None'):
     r"""Multiband an input RF pulse.
 
      Args:
@@ -16,7 +19,7 @@ def mb_rf(pulse_in, n_bands=3, band_sep=5, phs_0_pt='None'):
          phs_0_pt (string): set of phases to use. Can be 'phs_mod' (Wong),
             'amp_mod' (Malik), 'quad_mod' (Grissom), or 'None'
 
-     bandSep = sliceSep/sliceThick*tb, where tb is time-bandwidth product
+     band_sep = slice_sep/slice_thick*tb, where tb is time-bandwidth product
      of the single-band pulse
 
      Returns:
@@ -30,7 +33,7 @@ def mb_rf(pulse_in, n_bands=3, band_sep=5, phs_0_pt='None'):
 
     # build multiband modulation function
     n = np.size(pulse_in)
-    b = np.zeros(n, dtype='complex')
+    b = np.zeros(n, dtype = 'complex')
     for ii in range(0, n_bands):
         b += np.exp(1j * 2 * np.pi / n * band_sep * np.arange(-n / 2, n / 2, 1)
                     * (ii - (n_bands - 1) / 2)) * np.exp(1j * phs[ii])
@@ -112,3 +115,56 @@ def mb_phs_tab(n_bands, phs_type='phs_mod'):
         raise Exception('phase type ("{}") not recognized.'.format(phs_type))
 
     return out
+
+
+def dz_pins(tb, sl_sep, sl_thick, g_max, g_slew, dt, b1_max = 0.18,
+            p_type = 'ex', f_type = 'ls', d1 = 0.01, d2 = 0.01, gambar = 4258):
+
+    r"""PINS multiband pulse design.
+
+    Args:
+        tb (float): time-bandwidth product.
+        sl_sep (float): slice separation in cm.
+        sl_thick (float): slice thickness in cm.
+        g_max (float): max gradient amplitude in gauss/cm
+        g_slew (float): max gradient sliew in gauss/cm/s
+        dt (float): RF + gradient dwell time in seconds
+        b1_max (float): Maximum RF amplitude
+
+    Returns:
+        2-element tuple containing:
+
+        - **rf** (*array*): RF Pulse in Gauss
+        - **g** (*array*): Gradient waveform in Gauss/cm
+
+    References:
+        Norris, D.G. and Koopmans, P.J. and Boyacioglu, R and Barth, M (2011).
+        'Power independent of number of slices (PINS) radiofrequency Pulses
+        for low-power simultaneous multislice excitation'.
+        Magn. Reson. Med., 66(5):1234-1240.
+    """
+
+    kz_width = tb / sl_thick # 1/cm, width in k-space we must go
+    # calcualte number of subpulses (odd)
+    n_pulses = int(2 * np.floor(np.ceil(kz_width / (1 / sl_sep)) / 2))
+    # call SLR to get envelope
+    rf_soft = slr.dzrf(n_pulses, tb, p_type, f_type, d1, d2)
+
+    # design the blip trapezoid
+    g_area = 1 / sl_sep / gambar
+    [gz_blip, _] = trapgrad(g_area, g_max, g_slew, dt)
+
+    # Calculate the block/hard RF pulse width based on b1_max
+    hpw = int(np.ceil(np.max(np.abs(rf_soft)) / (2 * np.pi * gambar * b1_max * dt)))
+
+    # interleave RF subpusles with gradient subpulses to form full pulses
+    rf = np.kron(rf_soft[:-1], np.concatenate((np.ones((hpw)),
+        np.zeros((np.size(gz_blip))))))
+    rf = np.concatenate((rf, rf_soft[-1] * np.ones((hpw))))
+    rf = rf / (np.sum(rf) * 2 * np.pi * gambar * dt) * np.sum(rf_soft)
+
+    g = np.concatenate((np.zeros((hpw)), gz_blip))
+    g = np.tile(g, n_pulses - 1)
+    g = np.concatenate((g, np.zeros(hpw)))
+
+    return rf, g
