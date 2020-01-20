@@ -4,7 +4,7 @@
 """
 import numpy as np
 
-__all__ = ['bir4', 'hypsec', 'wurst']
+__all__ = ['bir4', 'hypsec', 'wurst', 'goia_wurst', 'bloch_siegert_fm']
 
 
 def bir4(n, beta, kappa, theta, dw0):
@@ -114,3 +114,80 @@ def wurst(n=512, N_fac=40, bw=40e3, T=2e-3):
     om = np.linspace(-bw / 2, bw / 2, n) * 2 * np.pi
 
     return a, om
+
+
+def goia_wurst(n = 512, T = 3.5e-3, f = 0.9, n_b1 = 16, m_grad = 4,
+                b1_max = 817, bw = 20000):
+    r"""Generate a GOIA (gradient offset independent adiabaticity) WURST
+     inversion pulse
+
+    Args:
+        n (int): number of samples.
+        T (float): pulse duration (s).
+        f (float): [0,1] gradient modulation factor
+        n_b1 (int): order for B1 modulation
+        m_grad (int): order for gradient modulation
+        b1_max (float): maximum b1 (Hz)
+        bw (float): pulse bandwidth (Hz)
+
+    Returns:
+        3-element tuple containing:
+
+        - **a** (*array*): AM waveform (Hz)
+        - **om** (*array*): FM waveform (Hz)
+        - **g** (*array*): normalized gradient waveform
+
+    References:
+        O. C. Andronesi, S. Ramadan, E.-M. Ratai, D. Jennings, C. E. Mountford,
+        A. G. Sorenson.
+        J Magn Reson, 203:283-293, 2010.
+
+    """
+
+    t = np.arange(0, n) * T / n
+
+    a = b1_max*(1 - np.abs(np.sin(np.pi / 2 * (2 * t / T - 1))) ** n_b1)
+    g = (1 - f) + f * np.abs(np.sin(np.pi / 2 * (2 * t / T - 1))) ** m_grad
+    om = np.cumsum((a ** 2) / g) * T / n
+    om = om - om[n//2 + 1]
+    om = g * om
+    om = om / np.max(np.abs(om)) * bw / 2
+
+    return a, om, g
+
+
+def bloch_siegert_fm(n = 512, T = 2e-3, B1p = 20., K = 42.,
+                     gamma = 2*np.pi*42.58):
+    r"""
+
+    U-shaped FM waveform for adiabatic Bloch-Siegert B1+ mapping and
+    spatial encoding.
+
+    Args:
+        n (int): number of time points
+        T (float): duration in seconds
+        B1p (float): nominal amplitude of constant AM waveform
+        K (float): design parameter that affects max in-band
+            perturbation
+        gamma (float): gyromagnetic ratio
+
+    Returns:
+        om (array): FM waveform (radians/s).
+
+    References:
+        M. M. Khalighi, B. K. Rutt, and A. B. Kerr.
+        Adiabatic RF pulse design for Bloch-Siegert B1+ mapping.
+        Magn Reson Med, 70(3):829–835, 2013.
+
+        M. Jankiewicz, J. C. Gore, and W. A. Grissom.
+        Improved encoding pulses for Bloch-Siegert B1+ mapping.
+        J Magn Reson, 226:79–87, 2013.
+
+    """
+
+    t = np.arange(1, n//2) * T / n
+
+    om = gamma * B1p / np.sqrt((1 - gamma * B1p / K * t) ** -2 - 1)
+    om = np.concatenate((om, om[::-1]))
+
+    return om
