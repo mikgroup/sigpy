@@ -19,6 +19,9 @@ SigPy.RF
 
 SigPy.RF is an expanded version of the SigPy package for signal processing, and includes a wide range of RF pulse design tools for MRI. It is built to operate directly on NumPy arrays on CPU and CuPy arrays on GPU. SigPy.RF provides several domain-specific submodules: ``sigpy.plot`` for multi-dimensional array plotting, ``sigpy.mri`` for MRI iterative reconstruction, and ``sigpy.learn`` for dictionary learning. The goal of this fork is to develop the ``sigpy.mri.rf`` submodule for RF pulse design. Features are gradually being moved from the sigpy-rf fork to sigpy. 
 
+RF Design Features
+------------
+
 Currently implemented RF pulse design features in SigPy.RF include:
 
 * Adiabatic pulse designers (BIR-4, GOIA, Hyperbolic Secant, Wurst)
