@@ -97,19 +97,22 @@ def trapgrad(area, gmax, dgdt, dt, *args):
     return trap, ramppts
 
 
-def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
+def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
+                 rewinder=False):
     """Variable density spiral designer. Produces trajectory, gradients,
     and slew rate.
 
     Args:
-        opfov (float): imaging field of view (cm)
-        opxres (float): imaging resolution (cm)
-        gts (float): sample time in sec
-        gslew (float): max slew rate in T/m/s
-        gamp (float): max gradient amplitude in T/m/s
-        densamp (float):  duration of full density sampling (# of samples)
-        dentrans (float): duration of transition from higher to lower (should be >= densamp/2)
-        nl (float): degree of undersampling outer region
+        opfov (float): imaging field of view (cm).
+        opxres (float): imaging resolution (cm).
+        gts (float): sample time in sec.
+        gslew (float): max slew rate in T/m/s.
+        gamp (float): max gradient amplitude in T/m/s.
+        densamp (float):  duration of full density sampling (# of samples).
+        dentrans (float): duration of transition from higher to lower
+            (should be >= densamp/2).
+        nl (float): degree of undersampling outer region.
+        rewinder (Boolean): if True, include rewinder. If false, exclude.
 
     """
     # TODO: CITE BASED ON DOUG NOLL'S spriallx6
@@ -265,18 +268,21 @@ def spiralvarden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl):
     dens.extend([0] * len(ind3))
 
     # rewinder
-    rewx, ramppts = trapgrad(abs(np.real(sum(g))) * gts, gamp, gslew * 50, gts)
-    rewy, ramppts = trapgrad(abs(np.imag(sum(g))) * gts, gamp, gslew * 50, gts)
+    if rewinder:
+        rewx, ramppts = trapgrad(abs(np.real(sum(g))) * gts,
+                                 gamp, gslew * 50, gts)
+        rewy, ramppts = trapgrad(abs(np.imag(sum(g))) * gts,
+                                 gamp, gslew * 50, gts)
 
-    # append rewinder gradient
-    if len(rewx) > len(rewy):
-        r = -np.sign(np.real(sum(g))) * rewx - np.sign(np.imag(sum(g))) * 1j * np.abs(np.imag(sum(g))) / np.real(
-            sum(g)) * rewx
-    else:
-        r = -np.sign(np.real(sum(g))) * np.abs(np.real(sum(g)) / np.imag(sum(g))) * rewy - 1j * np.sign(
-            np.imag(sum(g))) * rewy
+        # append rewinder gradient
+        if len(rewx) > len(rewy):
+            r = -np.sign(np.real(sum(g))) * rewx - np.sign(np.imag(sum(g))) * 1j * np.abs(np.imag(sum(g))) / np.real(
+                sum(g)) * rewx
+        else:
+            r = -np.sign(np.real(sum(g))) * np.abs(np.real(sum(g)) / np.imag(sum(g))) * rewy - 1j * np.sign(
+                np.imag(sum(g))) * rewy
 
-    g = np.concatenate((g, r))
+        g = np.concatenate((g, r))
 
     # change from (real, imag) notation to (Nt, 2) notation
     gtemp = np.zeros((len(g), 2))
