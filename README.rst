@@ -1,4 +1,4 @@
-SigPy
+SigPy.RF
 =====
 
 .. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
@@ -15,9 +15,9 @@ SigPy
 	:target: https://codecov.io/gh/mikgroup/sigpy
 
 
-`Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `MRI Tutorial <https://github.com/mikgroup/sigpy-mri-tutorial>`_
+`Source Code <https://github.com/jonbmartin/sigpy-rf>`_ | `Source Code for SigPy <https://github.com/mikgroup[/sigpy>`_  | `Documentation <https://sigpy.readthedocs.io>`_ | `RF Design Tutorials <https://github.com/jonbmartin/sigpy-rf-tutorials>`_
 
-SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on NumPy arrays on CPU and CuPy arrays on GPU. SigPy also provides several domain-specific submodules: ``sigpy.plot`` for multi-dimensional array plotting, ``sigpy.mri`` for MRI iterative reconstruction, and ``sigpy.learn`` for dictionary learning.
+SigPy is a package for signal processing, with emphasis on iterative methods. SigPy-rf expands the It is built to operate directly on NumPy arrays on CPU and CuPy arrays on GPU. SigPy also provides several domain-specific submodules: ``sigpy.plot`` for multi-dimensional array plotting, ``sigpy.mri`` for MRI iterative reconstruction, and ``sigpy.learn`` for dictionary learning. The goal of this fork is to develop the ``sigpy.mri.rf`` submodule for RF pulse design. 
 
 Installation
 ------------
