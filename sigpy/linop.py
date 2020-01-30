@@ -90,17 +90,20 @@ class Linop():
             array: output array of shape `oshape`.
 
         """
-        self._check_domain(input)
-        idevice = backend.get_device(input)
-        with idevice:
-            output = self._apply(input)
+        try:
+            self._check_domain(input)
+            idevice = backend.get_device(input)
+            with idevice:
+                output = self._apply(input)
 
-        self._check_codomain(output)
-        odevice = backend.get_device(output)
-        if odevice != idevice:
-            raise RuntimeError(
-                'Input/output device mismatch, got {} and {}.'.format(
-                    idevice, odevice))
+            self._check_codomain(output)
+            odevice = backend.get_device(output)
+            if odevice != idevice:
+                raise RuntimeError(
+                    'Input/output device mismatch, got {} and {}.'.format(
+                        idevice, odevice))
+        except Exception as e:
+            raise RuntimeError('Error occurs in {}.'.format(self)) from e
 
         return output
 
