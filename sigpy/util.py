@@ -59,60 +59,6 @@ def prod(shape):
     return np.prod(shape, dtype=np.long)
 
 
-def vec(inputs):
-    """Vectorize inputs.
-
-    Args:
-        shape (tuple or list): shape.
-
-    Returns:
-        array: Vectorized result.
-    """
-    device = backend.get_device(inputs[0])
-    xp = device.xp
-
-    with device:
-        return xp.concatenate([i.ravel() for i in inputs])
-
-
-def split(vec, oshapes):
-    """Split input into specified output shapes.
-
-    Args:
-        oshapes (list of tuple of ints): Output shapes.
-
-    Returns:
-        list of arrays: Splitted outputs.
-    """
-    device = backend.get_device(vec)
-    with device:
-        outputs = []
-        for oshape in oshapes:
-            osize = prod(oshape)
-            outputs.append(vec[:osize].reshape(oshape))
-            vec = vec[osize:]
-
-    return outputs
-
-
-def rss(input, axes=(0, )):
-    """Root sum of squares.
-
-    Args:
-        input (array): Input array.
-        axes (None or tuple of ints): Axes to perform operation.
-
-    Returns:
-        array: Result.
-    """
-
-    device = backend.get_device(input)
-    xp = device.xp
-
-    with device:
-        return xp.sum(xp.abs(input)**2, axis=axes)**0.5
-
-
 def resize(input, oshape, ishift=None, oshift=None):
     """Resize with zero-padding or cropping.
 
