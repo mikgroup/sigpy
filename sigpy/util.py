@@ -271,9 +271,11 @@ def randn(shape, scale=1, dtype=np.float, device=backend.cpu_device):
 
     with device:
         if np.issubdtype(dtype, np.complexfloating):
-            output = (xp.random.normal(
-                size=shape, scale=scale / 2**0.5) * 1j).astype(dtype)
-            output += xp.random.normal(size=shape, scale=scale / 2**0.5)
+            real_dtype = np.array([], dtype=dtype).real.dtype
+            real_shape = tuple(shape) + (2, )
+            output = xp.random.normal(size=real_shape, scale=scale / 2**0.5)
+            output = output.astype(real_dtype)
+            output = output.view(dtype=dtype).reshape(shape)
             return output
         else:
             return xp.random.normal(size=shape, scale=scale).astype(dtype)
