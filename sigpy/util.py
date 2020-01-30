@@ -59,6 +59,51 @@ def prod(shape):
     return np.prod(shape, dtype=np.long)
 
 
+def vec(inputs):
+    """Vectorize inputs.
+
+    Args:
+        shape (tuple or list): shape.
+
+    Returns:
+        array: Vectorized result.
+    """
+    xp = backend.get_array_module(inputs[0])
+    return xp.concatenate([i.ravel() for i in inputs])
+
+
+def split(vec, oshapes):
+    """Split input into specified output shapes.
+
+    Args:
+        oshapes (list of tuple of ints): Output shapes.
+
+    Returns:
+        list of arrays: Splitted outputs.
+    """
+    outputs = []
+    for oshape in oshapes:
+        osize = prod(oshape)
+        outputs.append(vec[:osize].reshape(oshape))
+        vec = vec[osize:]
+
+    return outputs
+
+
+def rss(input, axes=(0, )):
+    """Root sum of squares.
+
+    Args:
+        input (array): Input array.
+        axes (None or tuple of ints): Axes to perform operation.
+
+    Returns:
+        array: Result.
+    """
+    xp = backend.get_array_module(input)
+    return xp.sum(xp.abs(input)**2, axis=axes)**0.5
+
+
 def resize(input, oshape, ishift=None, oshift=None):
     """Resize with zero-padding or cropping.
 
@@ -72,30 +117,26 @@ def resize(input, oshape, ishift=None, oshift=None):
         array: Zero-padded or cropped result.
     """
 
-    ishape_exp, oshape_exp = _expand_shapes(input.shape, oshape)
+    ishape1, oshape1 = _expand_shapes(input.shape, oshape)
 
-    if ishape_exp == oshape_exp:
+    if ishape1 == oshape1:
         return input.reshape(oshape)
 
     if ishift is None:
-        ishift = [max(i // 2 - o // 2, 0)
-                  for i, o in zip(ishape_exp, oshape_exp)]
+        ishift = [max(i // 2 - o // 2, 0) for i, o in zip(ishape1, oshape1)]
 
     if oshift is None:
-        oshift = [max(o // 2 - i // 2, 0)
-                  for i, o in zip(ishape_exp, oshape_exp)]
+        oshift = [max(o // 2 - i // 2, 0) for i, o in zip(ishape1, oshape1)]
 
-    copy_shape = [min(i - si, o - so) for i, si, o,
-                  so in zip(ishape_exp, ishift, oshape_exp, oshift)]
+    copy_shape = [min(i - si, o - so)
+                  for i, si, o, so in zip(ishape1, ishift, oshape1, oshift)]
     islice = tuple([slice(si, si + c) for si, c in zip(ishift, copy_shape)])
     oslice = tuple([slice(so, so + c) for so, c in zip(oshift, copy_shape)])
 
-    device = backend.get_device(input)
-    xp = device.xp
-    with device:
-        output = xp.zeros(oshape_exp, dtype=input.dtype)
-        input = input.reshape(ishape_exp)
-        output[oslice] = input[islice]
+    xp = backend.get_array_module(input)
+    output = xp.zeros(oshape1, dtype=input.dtype)
+    input = input.reshape(ishape1)
+    output[oslice] = input[islice]
 
     return output.reshape(oshape)
 
@@ -111,10 +152,7 @@ def flip(input, axes=None):
         array: Flipped result.
     """
 
-    if axes is None:
-        axes = range(input.ndim)
-    else:
-        axes = _normalize_axes(axes, input.ndim)
+    axes = _normalize_axes(axes, input.ndim)
 
     slc = []
     for d in range(input.ndim):
@@ -124,9 +162,7 @@ def flip(input, axes=None):
             slc.append(slice(None))
 
     slc = tuple(slc)
-    device = backend.get_device(input)
-    with device:
-        output = input[slc]
+    output = input[slc]
 
     return output
 
@@ -147,14 +183,12 @@ def circshift(input, shifts, axes=None):
         axes = range(input.ndim)
 
     assert(len(axes) == len(shifts))
-    device = backend.get_device(input)
-    xp = device.xp
+    xp = backend.get_array_module(input)
 
-    with device:
-        for axis, shift in zip(axes, shifts):
-            input = xp.roll(input, shift, axis=axis)
+    for axis, shift in zip(axes, shifts):
+        input = xp.roll(input, shift, axis=axis)
 
-        return input
+    return input
 
 
 def downsample(input, factors, shift=None):
@@ -173,10 +207,7 @@ def downsample(input, factors, shift=None):
         shift = [0] * len(factors)
 
     slc = tuple(slice(s, None, f) for s, f in zip(shift, factors))
-
-    device = backend.get_device(input)
-    with device:
-        return input[slc]
+    return input[slc]
 
 
 def upsample(input, oshape, factors, shift=None):
@@ -196,11 +227,9 @@ def upsample(input, oshape, factors, shift=None):
 
     slc = tuple(slice(s, None, f) for s, f in zip(shift, factors))
 
-    device = backend.get_device(input)
-    xp = device.xp
-    with device:
-        output = xp.zeros(oshape, dtype=input.dtype)
-        output[slc] = input
+    xp = backend.get_array_module(input)
+    output = xp.zeros(oshape, dtype=input.dtype)
+    output[slc] = input
 
     return output
 
@@ -328,10 +357,8 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
     n = y.size
     f_y = f(y)
     b = randn(y.shape, dtype=y.dtype, device=device)
-    with device:
-        divf_y = xp.real(xp.vdot(b, (f(y + eps * b) - f_y))) / eps
-        sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + \
-            2 * sigma**2 * divf_y / n
+    divf_y = xp.real(xp.vdot(b, (f(y + eps * b) - f_y))) / eps
+    sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + 2 * sigma**2 * divf_y / n
 
     return sure
 
@@ -404,15 +431,12 @@ def axpy(y, a, x):
         x (array): Input array.
 
     """
-    device = backend.get_device(x)
-    x = backend.to_device(x, device)
-    a = backend.to_device(a, device)
+    xp = backend.get_array_module(y)
 
-    with device:
-        if device == backend.cpu_device:
-            _axpy(y, a, x, out=y)
-        else:
-            _axpy_cuda(a, x, y)
+    if xp == np:
+        _axpy(y, a, x, out=y)
+    else:
+        _axpy_cuda(a, x, y)
 
 
 def xpay(y, a, x):
@@ -423,16 +447,12 @@ def xpay(y, a, x):
         a (scalar): Input scalar.
         x (array): Input array.
     """
+    xp = backend.get_array_module(y)
 
-    device = backend.get_device(y)
-    x = backend.to_device(x, device)
-    a = backend.to_device(a, device)
-
-    with device:
-        if device == backend.cpu_device:
-            _xpay(y, a, x, out=y)
-        else:
-            _xpay_cuda(a, x, y)
+    if xp == np:
+        _xpay(y, a, x, out=y)
+    else:
+        _xpay_cuda(a, x, y)
 
 
 @nb.vectorize(nopython=True, cache=True)  # pragma: no cover
