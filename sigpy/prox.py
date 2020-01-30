@@ -11,7 +11,8 @@ class Prox(object):
     r"""Abstraction for proximal operator.
 
     Prox can be called on a float (:math:`\alpha`) and
-    an array (:math:`x`) to perform a proximal operation.
+    a NumPy or CuPy array (:math:`x`) to perform a proximal operation.
+    The output must be on the same device as input.
 
     .. math::
         \text{prox}_{\alpha g} (y) =
@@ -24,7 +25,7 @@ class Prox(object):
         repr_str (string or None): default: class name.
 
     Attributes:
-        shape: Input/output shape.
+        shape (list): Input/output shape.
 
     """
 
@@ -37,23 +38,33 @@ class Prox(object):
             self.repr_str = repr_str
 
     def _check_input(self, input):
-
         if list(input.shape) != self.shape:
             raise ValueError(
                 'input shape mismatch for {s}, got {input_shape}.'.format(
                     s=self, input_shape=input.shape))
 
     def _check_output(self, output):
-
         if list(output.shape) != self.shape:
             raise ValueError(
                 'output shape mismatch, for {s}, got {output_shape}.'.format(
                     s=self, output_shape=output.shape))
 
     def __call__(self, alpha, input):
-        self._check_input(input)
-        output = self._prox(alpha, input)
-        self._check_output(output)
+        try:
+            self._check_input(input)
+            idevice = backend.get_device(input)
+            with idevice:
+                output = self._prox(alpha, input)
+
+            self._check_output(output)
+            odevice = backend.get_device(output)
+            if odevice != idevice:
+                raise RuntimeError(
+                    'Input/output device mismatch, got {} and {}.'.format(
+                        idevice, odevice))
+        except Exception as e:
+            raise RuntimeError('Error occurs in {}.'.format(self)) from e
+
         return output
 
     def __repr__(self):
@@ -74,14 +85,11 @@ class Conj(Prox):
     """
 
     def __init__(self, prox):
-
         self.prox = prox
         super().__init__(prox.shape)
 
     def _prox(self, alpha, input):
-
-        with backend.get_device(input):
-            return input - alpha * self.prox(1 / alpha, input / alpha)
+        return input - alpha * self.prox(1 / alpha, input / alpha)
 
 
 class NoOp(Prox):
@@ -178,16 +186,14 @@ class L2Reg(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        with backend.get_device(input):
-            output = input.copy()
-            if self.y is not None:
-                output += (self.lamda * alpha) * self.y
+        output = input.copy()
+        if self.y is not None:
+            output += (self.lamda * alpha) * self.y
 
-            output /= 1 + self.lamda * alpha
+        output /= 1 + self.lamda * alpha
 
-            if self.proxh is not None:
-                return self.proxh(
-                    alpha / (1 + self.lamda * alpha), output)
+        if self.proxh is not None:
+            return self.proxh(alpha / (1 + self.lamda * alpha), output)
 
         return output
 
@@ -213,9 +219,7 @@ class L2Proj(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        with backend.get_device(input):
-            return thresh.l2_proj(
-                self.epsilon, input - self.y, self.axes) + self.y
+        return thresh.l2_proj(self.epsilon, input - self.y, self.axes) + self.y
 
 
 class L1Reg(Prox):
@@ -279,8 +283,5 @@ class BoxConstraint(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        device = backend.get_device(input)
-        xp = device.xp
-
-        with device:
-            return xp.clip(input, self.lower, self.upper)
+        xp = backend.get_array_module(input)
+        return xp.clip(input, self.lower, self.upper)
