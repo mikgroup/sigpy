@@ -1475,7 +1475,8 @@ class ConvolveData(Linop):
         super().__init__(output_shape, data_shape)
 
     def _apply(self, input):
-        return conv.convolve(input, self.filt, mode=self.mode,
+        filt = backend.to_device(self.filt, backend.get_device(input))
+        return conv.convolve(input, filt, mode=self.mode,
                              strides=self.strides,
                              multi_channel=self.multi_channel)
 
@@ -1520,8 +1521,9 @@ class ConvolveDataAdjoint(Linop):
         super().__init__(data_shape, output_shape)
 
     def _apply(self, input):
+        filt = backend.to_device(self.filt, backend.get_device(input))
         return conv.convolve_data_adjoint(
-            input, self.filt, self.oshape,
+            input, filt, self.oshape,
             mode=self.mode,
             strides=self.strides,
             multi_channel=self.multi_channel)
@@ -1614,8 +1616,9 @@ class ConvolveFilterAdjoint(Linop):
         super().__init__(filt_shape, output_shape)
 
     def _apply(self, input):
+        data = backend.to_device(self.data, backend.get_device(input))
         return conv.convolve_filter_adjoint(
-            input, self.data, self.oshape,
+            input, data, self.oshape,
             mode=self.mode, strides=self.strides,
             multi_channel=self.multi_channel)
 
