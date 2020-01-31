@@ -31,24 +31,20 @@ def interpolate(input, width, kernel, coord):
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
 
-    device = backend.get_device(input)
-    xp = device.xp
+    xp = backend.get_array_module(input)
     isreal = np.issubdtype(input.dtype, np.floating)
-    coord = backend.to_device(coord, device)
-    kernel = backend.to_device(kernel, device)
 
-    with device:
-        input = input.reshape([batch_size] + list(input.shape[-ndim:]))
-        coord = coord.reshape([npts, ndim])
-        output = xp.zeros([batch_size, npts], dtype=input.dtype)
+    input = input.reshape([batch_size] + list(input.shape[-ndim:]))
+    coord = coord.reshape([npts, ndim])
+    output = xp.zeros([batch_size, npts], dtype=input.dtype)
 
-        _interpolate = _select_interpolate(ndim, npts, device, isreal)
-        if device == backend.cpu_device:
-            _interpolate(output, input, width, kernel, coord)
-        else:  # pragma: no cover
-            _interpolate(input, width, kernel, coord, output, size=npts)
+    _interpolate = _select_interpolate(ndim, npts, xp, isreal)
+    if xp == np:
+        _interpolate(output, input, width, kernel, coord)
+    else:  # pragma: no cover
+        _interpolate(input, width, kernel, coord, output, size=npts)
 
-        return output.reshape(batch_shape + pts_shape)
+    return output.reshape(batch_shape + pts_shape)
 
 
 def gridding(input, shape, width, kernel, coord):
@@ -73,38 +69,35 @@ def gridding(input, shape, width, kernel, coord):
     pts_shape = coord.shape[:-1]
     npts = util.prod(pts_shape)
 
-    device = backend.get_device(input)
-    xp = device.xp
+    xp = backend.get_array_module(input)
     isreal = np.issubdtype(input.dtype, np.floating)
 
-    with device:
-        input = input.reshape([batch_size, npts])
-        coord = coord.reshape([npts, ndim])
-        output = xp.zeros(
-            [batch_size] + list(shape[-ndim:]), dtype=input.dtype)
+    input = input.reshape([batch_size, npts])
+    coord = coord.reshape([npts, ndim])
+    output = xp.zeros([batch_size] + list(shape[-ndim:]), dtype=input.dtype)
 
-        _gridding = _select_gridding(ndim, npts, device, isreal)
-        if device == backend.cpu_device:
-            _gridding(output, input, width, kernel, coord)
-        else:  # pragma: no cover
-            _gridding(input, width, kernel, coord, output, size=npts)
+    _gridding = _select_gridding(ndim, npts, xp, isreal)
+    if xp == np:
+        _gridding(output, input, width, kernel, coord)
+    else:  # pragma: no cover
+        _gridding(input, width, kernel, coord, output, size=npts)
 
-        return output.reshape(shape)
+    return output.reshape(shape)
 
 
-def _select_interpolate(ndim, npts, device, isreal):
+def _select_interpolate(ndim, npts, xp, isreal):
     if ndim == 1:
-        if device == backend.cpu_device:
+        if xp == np:
             _interpolate = _interpolate1
         else:  # pragma: no cover
             _interpolate = _interpolate1_cuda
     elif ndim == 2:
-        if device == backend.cpu_device:
+        if xp == np:
             _interpolate = _interpolate2
         else:  # pragma: no cover
             _interpolate = _interpolate2_cuda
     elif ndim == 3:
-        if device == backend.cpu_device:
+        if xp == np:
             _interpolate = _interpolate3
         else:  # pragma: no cover
             _interpolate = _interpolate3_cuda
@@ -115,9 +108,9 @@ def _select_interpolate(ndim, npts, device, isreal):
     return _interpolate
 
 
-def _select_gridding(ndim, npts, device, isreal):
+def _select_gridding(ndim, npts, xp, isreal):
     if ndim == 1:
-        if device == backend.cpu_device:
+        if xp == np:
             _gridding = _gridding1
         else:  # pragma: no cover
             if isreal:
@@ -125,7 +118,7 @@ def _select_gridding(ndim, npts, device, isreal):
             else:
                 _gridding = _gridding1_cuda_complex
     elif ndim == 2:
-        if device == backend.cpu_device:
+        if xp == np:
             _gridding = _gridding2
         else:  # pragma: no cover
             if isreal:
@@ -133,7 +126,7 @@ def _select_gridding(ndim, npts, device, isreal):
             else:
                 _gridding = _gridding2_cuda_complex
     elif ndim == 3:
-        if device == backend.cpu_device:
+        if xp == np:
             _gridding = _gridding3
         else:  # pragma: no cover
             if isreal:
