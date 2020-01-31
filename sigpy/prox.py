@@ -36,24 +36,21 @@ class Prox(object):
         else:
             self.repr_str = repr_str
 
-    def _check_input(self, input):
-
-        if list(input.shape) != self.shape:
-            raise ValueError(
-                'input shape mismatch for {s}, got {input_shape}.'.format(
-                    s=self, input_shape=input.shape))
-
-    def _check_output(self, output):
-
-        if list(output.shape) != self.shape:
-            raise ValueError(
-                'output shape mismatch, for {s}, got {output_shape}.'.format(
-                    s=self, output_shape=output.shape))
+    def _check_shape(self, input):
+        for i1, i2 in zip(input.shape, self.shape):
+            if i2 != -1 and i1 != i2:
+                raise ValueError(
+                    'shape mismatch for {s}, got {input_shape}.'.format(
+                        s=self, input_shape=input.shape))
 
     def __call__(self, alpha, input):
-        self._check_input(input)
-        output = self._prox(alpha, input)
-        self._check_output(output)
+        try:
+            self._check_shape(input)
+            output = self._prox(alpha, input)
+            self._check_shape(output)
+        except Exception as e:
+            raise RuntimeError('Exceptions from {}.'.format(self)) from e
+
         return output
 
     def __repr__(self):
