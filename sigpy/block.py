@@ -40,110 +40,108 @@ def array_to_blocks(input, blk_shape, blk_strides):
                 s in zip(input.shape[-D:], blk_shape, blk_strides)]
     batch_shape = list(input.shape[:-D])
     batch_size = util.prod(batch_shape)
-    device = backend.get_device(input)
-    xp = device.xp
-    with device:
-        output = xp.zeros([batch_size] + num_blks + blk_shape,
-                          dtype=input.dtype)
-        input = input.reshape([batch_size] + list(input.shape[-D:]))
+    xp = backend.get_array_module(input)
+    output = xp.zeros([batch_size] + num_blks + blk_shape,
+                      dtype=input.dtype)
+    input = input.reshape([batch_size] + list(input.shape[-D:]))
 
-        if D == 1:
-            if device == backend.cpu_device:
-                _array_to_blocks1(output, input,
-                                  batch_size,
-                                  blk_shape[-1],
-                                  blk_strides[-1],
-                                  num_blks[-1])
-            else:  # pragma: no cover
-                _array_to_blocks1_cuda(input,
-                                       batch_size,
-                                       blk_shape[-1],
-                                       blk_strides[-1],
-                                       num_blks[-1],
-                                       output,
-                                       size=batch_size *
-                                       num_blks[-1] * blk_shape[-1])
-        elif D == 2:
-            if device == backend.cpu_device:
-                _array_to_blocks2(output, input,
-                                  batch_size, blk_shape[-1], blk_shape[-2],
-                                  blk_strides[-1], blk_strides[-2],
-                                  num_blks[-1], num_blks[-2])
-            else:  # pragma: no cover
-                _array_to_blocks2_cuda(input,
-                                       batch_size,
-                                       blk_shape[-1], blk_shape[-2],
-                                       blk_strides[-1], blk_strides[-2],
-                                       num_blks[-1], num_blks[-2],
-                                       output,
-                                       size=batch_size *
-                                       num_blks[-1] * num_blks[-2] *
-                                       blk_shape[-1] * blk_shape[-2])
-        elif D == 3:
-            if device == backend.cpu_device:
-                _array_to_blocks3(output,
-                                  input,
-                                  batch_size,
-                                  blk_shape[-1],
-                                  blk_shape[-2],
-                                  blk_shape[-3],
-                                  blk_strides[-1],
-                                  blk_strides[-2],
-                                  blk_strides[-3],
-                                  num_blks[-1],
-                                  num_blks[-2],
-                                  num_blks[-3])
-            else:  # pragma: no cover
-                _array_to_blocks3_cuda(input,
-                                       batch_size,
-                                       blk_shape[-1], blk_shape[-2],
-                                       blk_shape[-3],
-                                       blk_strides[-1], blk_strides[-2],
-                                       blk_strides[-3],
-                                       num_blks[-1], num_blks[-2],
-                                       num_blks[-3],
-                                       output,
-                                       size=batch_size *
-                                       num_blks[-1] * num_blks[-2] *
-                                       num_blks[-3] *
-                                       blk_shape[-1] * blk_shape[-2] *
-                                       blk_shape[-3])
-        elif D == 4:
-            if device == backend.cpu_device:
-                _array_to_blocks4(output,
-                                  input,
-                                  batch_size,
-                                  blk_shape[-1],
-                                  blk_shape[-2],
-                                  blk_shape[-3],
-                                  blk_shape[-4],
-                                  blk_strides[-1],
-                                  blk_strides[-2],
-                                  blk_strides[-3],
-                                  blk_strides[-4],
-                                  num_blks[-1],
-                                  num_blks[-2],
-                                  num_blks[-3],
-                                  num_blks[-4])
-            else:  # pragma: no cover
-                _array_to_blocks4_cuda(input,
-                                       batch_size,
-                                       blk_shape[-1], blk_shape[-2],
-                                       blk_shape[-3], blk_shape[-4],
-                                       blk_strides[-1], blk_strides[-2],
-                                       blk_strides[-3], blk_strides[-4],
-                                       num_blks[-1], num_blks[-2],
-                                       num_blks[-3], num_blks[-4],
-                                       output,
-                                       size=batch_size *
-                                       num_blks[-1] * num_blks[-2] *
-                                       num_blks[-3] * num_blks[-4] *
-                                       blk_shape[-1] * blk_shape[-2] *
-                                       blk_shape[-3] * blk_shape[-4])
-        else:
-            raise ValueError('Only support D <= 4, got {}'.format(D))
+    if D == 1:
+        if xp == np:
+            _array_to_blocks1(output, input,
+                              batch_size,
+                              blk_shape[-1],
+                              blk_strides[-1],
+                              num_blks[-1])
+        else:  # pragma: no cover
+            _array_to_blocks1_cuda(input,
+                                   batch_size,
+                                   blk_shape[-1],
+                                   blk_strides[-1],
+                                   num_blks[-1],
+                                   output,
+                                   size=batch_size *
+                                   num_blks[-1] * blk_shape[-1])
+    elif D == 2:
+        if xp == np:
+            _array_to_blocks2(output, input,
+                              batch_size, blk_shape[-1], blk_shape[-2],
+                              blk_strides[-1], blk_strides[-2],
+                              num_blks[-1], num_blks[-2])
+        else:  # pragma: no cover
+            _array_to_blocks2_cuda(input,
+                                   batch_size,
+                                   blk_shape[-1], blk_shape[-2],
+                                   blk_strides[-1], blk_strides[-2],
+                                   num_blks[-1], num_blks[-2],
+                                   output,
+                                   size=batch_size *
+                                   num_blks[-1] * num_blks[-2] *
+                                   blk_shape[-1] * blk_shape[-2])
+    elif D == 3:
+        if xp == np:
+            _array_to_blocks3(output,
+                              input,
+                              batch_size,
+                              blk_shape[-1],
+                              blk_shape[-2],
+                              blk_shape[-3],
+                              blk_strides[-1],
+                              blk_strides[-2],
+                              blk_strides[-3],
+                              num_blks[-1],
+                              num_blks[-2],
+                              num_blks[-3])
+        else:  # pragma: no cover
+            _array_to_blocks3_cuda(input,
+                                   batch_size,
+                                   blk_shape[-1], blk_shape[-2],
+                                   blk_shape[-3],
+                                   blk_strides[-1], blk_strides[-2],
+                                   blk_strides[-3],
+                                   num_blks[-1], num_blks[-2],
+                                   num_blks[-3],
+                                   output,
+                                   size=batch_size *
+                                   num_blks[-1] * num_blks[-2] *
+                                   num_blks[-3] *
+                                   blk_shape[-1] * blk_shape[-2] *
+                                   blk_shape[-3])
+    elif D == 4:
+        if xp == np:
+            _array_to_blocks4(output,
+                              input,
+                              batch_size,
+                              blk_shape[-1],
+                              blk_shape[-2],
+                              blk_shape[-3],
+                              blk_shape[-4],
+                              blk_strides[-1],
+                              blk_strides[-2],
+                              blk_strides[-3],
+                              blk_strides[-4],
+                              num_blks[-1],
+                              num_blks[-2],
+                              num_blks[-3],
+                              num_blks[-4])
+        else:  # pragma: no cover
+            _array_to_blocks4_cuda(input,
+                                   batch_size,
+                                   blk_shape[-1], blk_shape[-2],
+                                   blk_shape[-3], blk_shape[-4],
+                                   blk_strides[-1], blk_strides[-2],
+                                   blk_strides[-3], blk_strides[-4],
+                                   num_blks[-1], num_blks[-2],
+                                   num_blks[-3], num_blks[-4],
+                                   output,
+                                   size=batch_size *
+                                   num_blks[-1] * num_blks[-2] *
+                                   num_blks[-3] * num_blks[-4] *
+                                   blk_shape[-1] * blk_shape[-2] *
+                                   blk_shape[-3] * blk_shape[-4])
+    else:
+        raise ValueError('Only support D <= 4, got {}'.format(D))
 
-        return output.reshape(batch_shape + num_blks + blk_shape)
+    return output.reshape(batch_shape + num_blks + blk_shape)
 
 
 def blocks_to_array(input, oshape, blk_shape, blk_strides):
@@ -166,149 +164,147 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
     num_blks = input.shape[-(2 * D):-D]
     batch_shape = list(oshape[:-D])
     batch_size = util.prod(batch_shape)
-    device = backend.get_device(input)
-    xp = device.xp
-    with device:
-        output = xp.zeros([batch_size] + list(oshape[-D:]),
-                          dtype=input.dtype)
-        input = input.reshape([batch_size] + list(input.shape[-2 * D:]))
+    xp = backend.get_array_module(input)
+    output = xp.zeros([batch_size] + list(oshape[-D:]),
+                      dtype=input.dtype)
+    input = input.reshape([batch_size] + list(input.shape[-2 * D:]))
 
-        if D == 1:
-            if device == backend.cpu_device:
-                _blocks_to_array1(output, input,
-                                  batch_size, blk_shape[-1],
-                                  blk_strides[-1],
-                                  num_blks[-1])
+    if D == 1:
+        if xp == np:
+            _blocks_to_array1(output, input,
+                              batch_size, blk_shape[-1],
+                              blk_strides[-1],
+                              num_blks[-1])
+        else:  # pragma: no cover
+            if np.issubdtype(input.dtype, np.floating):
+                _blocks_to_array1_cuda(input,
+                                       batch_size, blk_shape[-1],
+                                       blk_strides[-1],
+                                       num_blks[-1],
+                                       output,
+                                       size=batch_size *
+                                       num_blks[-1] * blk_shape[-1])
+            else:
+                _blocks_to_array1_cuda_complex(input,
+                                               batch_size, blk_shape[-1],
+                                               blk_strides[-1],
+                                               num_blks[-1],
+                                               output,
+                                               size=batch_size
+                                               * num_blks[-1] *
+                                               blk_shape[-1])
+    elif D == 2:
+        if xp == np:
+            _blocks_to_array2(output, input,
+                              batch_size, blk_shape[-1], blk_shape[-2],
+                              blk_strides[-1], blk_strides[-2],
+                              num_blks[-1], num_blks[-2])
+        else:  # pragma: no cover
+            if np.issubdtype(input.dtype, np.floating):
+                _blocks_to_array2_cuda(input,
+                                       batch_size,
+                                       blk_shape[-1], blk_shape[-2],
+                                       blk_strides[-1], blk_strides[-2],
+                                       num_blks[-1], num_blks[-2],
+                                       output,
+                                       size=batch_size *
+                                       num_blks[-1] * num_blks[-2] *
+                                       blk_shape[-1] * blk_shape[-2])
             else:  # pragma: no cover
-                if np.issubdtype(input.dtype, np.floating):
-                    _blocks_to_array1_cuda(input,
-                                           batch_size, blk_shape[-1],
-                                           blk_strides[-1],
-                                           num_blks[-1],
-                                           output,
-                                           size=batch_size *
-                                           num_blks[-1] * blk_shape[-1])
-                else:
-                    _blocks_to_array1_cuda_complex(input,
-                                                   batch_size, blk_shape[-1],
-                                                   blk_strides[-1],
-                                                   num_blks[-1],
-                                                   output,
-                                                   size=batch_size
-                                                   * num_blks[-1] *
-                                                   blk_shape[-1])
-        elif D == 2:
-            if device == backend.cpu_device:
-                _blocks_to_array2(output, input,
-                                  batch_size, blk_shape[-1], blk_shape[-2],
-                                  blk_strides[-1], blk_strides[-2],
-                                  num_blks[-1], num_blks[-2])
-            else:  # pragma: no cover
-                if np.issubdtype(input.dtype, np.floating):
-                    _blocks_to_array2_cuda(input,
-                                           batch_size,
-                                           blk_shape[-1], blk_shape[-2],
-                                           blk_strides[-1], blk_strides[-2],
-                                           num_blks[-1], num_blks[-2],
-                                           output,
-                                           size=batch_size *
-                                           num_blks[-1] * num_blks[-2] *
-                                           blk_shape[-1] * blk_shape[-2])
-                else:  # pragma: no cover
-                    _blocks_to_array2_cuda_complex(
-                        input,
-                        batch_size, blk_shape[-1], blk_shape[-2],
-                        blk_strides[-1], blk_strides[-2],
-                        num_blks[-1], num_blks[-2],
-                        output,
-                        size=batch_size * num_blks[-1] * num_blks[-2] *
-                        blk_shape[-1] * blk_shape[-2])
-        elif D == 3:
-            if device == backend.cpu_device:
-                _blocks_to_array3(output,
-                                  input,
-                                  batch_size, blk_shape[-1],
-                                  blk_shape[-2],
-                                  blk_shape[-3],
-                                  blk_strides[-1],
-                                  blk_strides[-2],
-                                  blk_strides[-3],
-                                  num_blks[-1],
-                                  num_blks[-2],
-                                  num_blks[-3])
-            else:  # pragma: no cover
-                if np.issubdtype(input.dtype, np.floating):
-                    _blocks_to_array3_cuda(
-                        input,
-                        batch_size,
-                        blk_shape[-1], blk_shape[-2], blk_shape[-3],
-                        blk_strides[-1], blk_strides[-2], blk_strides[-3],
-                        num_blks[-1], num_blks[-2], num_blks[-3],
-                        output,
-                        size=batch_size * num_blks[-1] * num_blks[-2] *
-                        num_blks[-3] * blk_shape[-1] * blk_shape[-2] *
-                        blk_shape[-3])
-                else:
-                    _blocks_to_array3_cuda_complex(
-                        input,
-                        batch_size,
-                        blk_shape[-1], blk_shape[-2], blk_shape[-3],
-                        blk_strides[-1], blk_strides[-2], blk_strides[-3],
-                        num_blks[-1], num_blks[-2], num_blks[-3],
-                        output,
-                        size=batch_size *
-                        num_blks[-1] * num_blks[-2] * num_blks[-3] *
-                        blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
-        elif D == 4:
-            if device == backend.cpu_device:
-                _blocks_to_array4(output,
-                                  input,
-                                  batch_size, blk_shape[-1],
-                                  blk_shape[-2],
-                                  blk_shape[-3],
-                                  blk_shape[-4],
-                                  blk_strides[-1],
-                                  blk_strides[-2],
-                                  blk_strides[-3],
-                                  blk_strides[-4],
-                                  num_blks[-1],
-                                  num_blks[-2],
-                                  num_blks[-3],
-                                  num_blks[-4])
-            else:  # pragma: no cover
-                if np.issubdtype(input.dtype, np.floating):
-                    _blocks_to_array4_cuda(
-                        input,
-                        batch_size, blk_shape[-1], blk_shape[-2],
-                        blk_shape[-3], blk_shape[-4],
-                        blk_strides[-1], blk_strides[-2],
-                        blk_strides[-3], blk_strides[-4],
-                        num_blks[-1], num_blks[-2],
-                        num_blks[-3], num_blks[-4],
-                        output,
-                        size=batch_size *
-                        num_blks[-1] * num_blks[-2] *
-                        num_blks[-3] * num_blks[-4] *
-                        blk_shape[-1] * blk_shape[-2] *
-                        blk_shape[-3] * blk_shape[-4])
-                else:
-                    _blocks_to_array4_cuda_complex(
-                        input,
-                        batch_size, blk_shape[-1], blk_shape[-2],
-                        blk_shape[-3], blk_shape[-4],
-                        blk_strides[-1], blk_strides[-2],
-                        blk_strides[-3], blk_strides[-4],
-                        num_blks[-1], num_blks[-2],
-                        num_blks[-3], num_blks[-4],
-                        output,
-                        size=batch_size * num_blks[-1] * num_blks[-2] *
-                        num_blks[-3] * num_blks[-4] *
-                        blk_shape[-1] * blk_shape[-2] *
-                        blk_shape[-3] * blk_shape[-4])
-        else:
-            raise ValueError('Only support D <= 4, got {}'.format(D))
+                _blocks_to_array2_cuda_complex(
+                    input,
+                    batch_size, blk_shape[-1], blk_shape[-2],
+                    blk_strides[-1], blk_strides[-2],
+                    num_blks[-1], num_blks[-2],
+                    output,
+                    size=batch_size * num_blks[-1] * num_blks[-2] *
+                    blk_shape[-1] * blk_shape[-2])
+    elif D == 3:
+        if xp == np:
+            _blocks_to_array3(output,
+                              input,
+                              batch_size, blk_shape[-1],
+                              blk_shape[-2],
+                              blk_shape[-3],
+                              blk_strides[-1],
+                              blk_strides[-2],
+                              blk_strides[-3],
+                              num_blks[-1],
+                              num_blks[-2],
+                              num_blks[-3])
+        else:  # pragma: no cover
+            if np.issubdtype(input.dtype, np.floating):
+                _blocks_to_array3_cuda(
+                    input,
+                    batch_size,
+                    blk_shape[-1], blk_shape[-2], blk_shape[-3],
+                    blk_strides[-1], blk_strides[-2], blk_strides[-3],
+                    num_blks[-1], num_blks[-2], num_blks[-3],
+                    output,
+                    size=batch_size * num_blks[-1] * num_blks[-2] *
+                    num_blks[-3] * blk_shape[-1] * blk_shape[-2] *
+                    blk_shape[-3])
+            else:
+                _blocks_to_array3_cuda_complex(
+                    input,
+                    batch_size,
+                    blk_shape[-1], blk_shape[-2], blk_shape[-3],
+                    blk_strides[-1], blk_strides[-2], blk_strides[-3],
+                    num_blks[-1], num_blks[-2], num_blks[-3],
+                    output,
+                    size=batch_size *
+                    num_blks[-1] * num_blks[-2] * num_blks[-3] *
+                    blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
+    elif D == 4:
+        if xp == np:
+            _blocks_to_array4(output,
+                              input,
+                              batch_size, blk_shape[-1],
+                              blk_shape[-2],
+                              blk_shape[-3],
+                              blk_shape[-4],
+                              blk_strides[-1],
+                              blk_strides[-2],
+                              blk_strides[-3],
+                              blk_strides[-4],
+                              num_blks[-1],
+                              num_blks[-2],
+                              num_blks[-3],
+                              num_blks[-4])
+        else:  # pragma: no cover
+            if np.issubdtype(input.dtype, np.floating):
+                _blocks_to_array4_cuda(
+                    input,
+                    batch_size, blk_shape[-1], blk_shape[-2],
+                    blk_shape[-3], blk_shape[-4],
+                    blk_strides[-1], blk_strides[-2],
+                    blk_strides[-3], blk_strides[-4],
+                    num_blks[-1], num_blks[-2],
+                    num_blks[-3], num_blks[-4],
+                    output,
+                    size=batch_size *
+                    num_blks[-1] * num_blks[-2] *
+                    num_blks[-3] * num_blks[-4] *
+                    blk_shape[-1] * blk_shape[-2] *
+                    blk_shape[-3] * blk_shape[-4])
+            else:
+                _blocks_to_array4_cuda_complex(
+                    input,
+                    batch_size, blk_shape[-1], blk_shape[-2],
+                    blk_shape[-3], blk_shape[-4],
+                    blk_strides[-1], blk_strides[-2],
+                    blk_strides[-3], blk_strides[-4],
+                    num_blks[-1], num_blks[-2],
+                    num_blks[-3], num_blks[-4],
+                    output,
+                    size=batch_size * num_blks[-1] * num_blks[-2] *
+                    num_blks[-3] * num_blks[-4] *
+                    blk_shape[-1] * blk_shape[-2] *
+                    blk_shape[-3] * blk_shape[-4])
+    else:
+        raise ValueError('Only support D <= 4, got {}'.format(D))
 
-        return output.reshape(oshape)
+    return output.reshape(oshape)
 
 
 @nb.jit(nopython=True, cache=True)  # pragma: no cover

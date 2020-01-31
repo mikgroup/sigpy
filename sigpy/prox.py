@@ -11,7 +11,7 @@ class Prox(object):
     r"""Abstraction for proximal operator.
 
     Prox can be called on a float (:math:`\alpha`) and
-    an array (:math:`x`) to perform a proximal operation.
+    a NumPy or CuPy array (:math:`x`) to perform a proximal operation.
 
     .. math::
         \text{prox}_{\alpha g} (y) =
@@ -36,24 +36,21 @@ class Prox(object):
         else:
             self.repr_str = repr_str
 
-    def _check_input(self, input):
-
-        if list(input.shape) != self.shape:
-            raise ValueError(
-                'input shape mismatch for {s}, got {input_shape}.'.format(
-                    s=self, input_shape=input.shape))
-
-    def _check_output(self, output):
-
-        if list(output.shape) != self.shape:
-            raise ValueError(
-                'output shape mismatch, for {s}, got {output_shape}.'.format(
-                    s=self, output_shape=output.shape))
+    def _check_shape(self, input):
+        for i1, i2 in zip(input.shape, self.shape):
+            if i2 != -1 and i1 != i2:
+                raise ValueError(
+                    'shape mismatch for {s}, got {input_shape}.'.format(
+                        s=self, input_shape=input.shape))
 
     def __call__(self, alpha, input):
-        self._check_input(input)
-        output = self._prox(alpha, input)
-        self._check_output(output)
+        try:
+            self._check_shape(input)
+            output = self._prox(alpha, input)
+            self._check_shape(output)
+        except Exception as e:
+            raise RuntimeError('Exceptions from {}.'.format(self)) from e
+
         return output
 
     def __repr__(self):
@@ -74,12 +71,10 @@ class Conj(Prox):
     """
 
     def __init__(self, prox):
-
         self.prox = prox
         super().__init__(prox.shape)
 
     def _prox(self, alpha, input):
-
         with backend.get_device(input):
             return input - alpha * self.prox(1 / alpha, input / alpha)
 
@@ -118,17 +113,19 @@ class Stack(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        if np.isscalar(alpha):
-            alphas = [alpha] * self.nops
-        else:
-            alphas = util.split(alpha, self.shapes)
+        with backend.get_device(input):
+            if np.isscalar(alpha):
+                alphas = [alpha] * self.nops
+            else:
+                alphas = util.split(alpha, self.shapes)
 
-        inputs = util.split(input, self.shapes)
-        outputs = [prox(alpha, input)
-                   for prox, input, alpha in zip(self.proxs, inputs, alphas)]
-        output = util.vec(outputs)
+            inputs = util.split(input, self.shapes)
+            outputs = [prox(alpha, input)
+                       for prox, input, alpha in zip(
+                               self.proxs, inputs, alphas)]
+            output = util.vec(outputs)
 
-        return output
+            return output
 
 
 class UnitaryTransform(Prox):
@@ -152,7 +149,6 @@ class UnitaryTransform(Prox):
         super().__init__(A.ishape)
 
     def _prox(self, alpha, input):
-
         return self.A.H(self.prox(alpha, self.A(input)))
 
 
@@ -236,7 +232,8 @@ class L1Reg(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        return thresh.soft_thresh(self.lamda * alpha, input)
+        with backend.get_device(input):
+            return thresh.soft_thresh(self.lamda * alpha, input)
 
 
 class L1Proj(Prox):
@@ -257,7 +254,8 @@ class L1Proj(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        return thresh.l1_proj(self.epsilon, input)
+        with backend.get_device(input):
+            return thresh.l1_proj(self.epsilon, input)
 
 
 class BoxConstraint(Prox):

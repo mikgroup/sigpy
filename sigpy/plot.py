@@ -73,6 +73,9 @@ class ImagePlot(object):
             c=None,
             hide_axes=False,
             mode=None,
+            colormap=None,
+            vmin_mag=None,
+            vmax_mag=None,
             title='',
             interpolation='nearest',
             save_basename='Figure',
@@ -100,9 +103,12 @@ class ImagePlot(object):
         self.title = title
         self.interpolation = interpolation
         self.mode = mode
+        self.colormap = colormap
         self.entering_slice = False
-        self.vmin = None
-        self.vmax = None
+        self.vmin = vmin_mag
+        self.vmax = vmax_mag
+        self.vmin_mag = vmin_mag
+        self.vmax_mag = vmax_mag
         self.save_basename = save_basename
         self.fps = fps
         self.help_text = None
@@ -251,8 +257,12 @@ class ImagePlot(object):
             self.fig.canvas.draw()
 
         elif event.key in ['m', 'p', 'r', 'i', 'l']:
-            self.vmin = None
-            self.vmax = None
+            if event.key in ['m', 'r', 'i']:
+                self.vmin = self.vmin_mag
+                self.vmax = self.vmax_mag
+            else:
+                self.vmin = None
+                self.vmax = None
             self.mode = event.key
 
             self.update_axes()
@@ -314,7 +324,6 @@ class ImagePlot(object):
                     ' %Y-%m-%d at %I.%M.%S %p.mp4')
             temp_basename = uuid.uuid4()
 
-            bbox = self.fig.get_tightbbox(self.fig.canvas.get_renderer())
             for i in range(self.shape[self.d]):
                 self.slices[self.d] = i
 
@@ -322,19 +331,17 @@ class ImagePlot(object):
                 self.update_image()
                 self.fig.canvas.draw()
                 self.fig.savefig('{} {:05d}.png'.format(temp_basename, i),
-                                 format='png', bbox_inches=bbox, pad_inches=0)
+                                 format='png', transparent=True,
+                                 bbox_inches='tight', pad_inches=0)
 
             subprocess.run(['ffmpeg',
-                            '-f', 'image2',
-                            '-s', '{}x{}'.format(
-                                int(bbox.width * self.fig.dpi),
-                                int(bbox.height * self.fig.dpi)),
                             '-r', str(self.fps),
                             '-i', '{} %05d.png'.format(temp_basename),
-                            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                            '-vf', 'crop=floor(iw/2)*2-10:floor(ih/2)*2-10',
+                            '-pix_fmt', 'yuv420p',
+                            '-crf', '1',
                             '-vcodec', 'libx264',
                             '-preset', 'veryslow',
-                            '-pix_fmt', 'yuv420p',
                             filename])
 
             for i in range(self.shape[self.d]):
@@ -426,11 +433,15 @@ class ImagePlot(object):
             self.vmax = imv.max()
 
         if self.axim is None:
+            if self.colormap is None:
+                colormap = 'gray'
+            else:
+                colormap = self.colormap
             self.axim = self.ax.imshow(
                 imv,
                 vmin=self.vmin,
                 vmax=self.vmax,
-                cmap='gray',
+                cmap=colormap,
                 origin='lower',
                 interpolation=self.interpolation,
                 aspect=1.0,
@@ -439,6 +450,9 @@ class ImagePlot(object):
                     imv.shape[1],
                     0,
                     imv.shape[0]])
+
+            if self.colormap is not None:
+                self.fig.colorbar(self.axim)
 
         else:
             self.axim.set_data(imv)
