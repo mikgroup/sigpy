@@ -66,6 +66,7 @@ class TestLinop(unittest.TestCase):
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
+        coord = coord.astype(np.float)
 
         A = linop.Sense(mps, coord=coord)
         check_linop_adjoint(A, dtype=np.complex)
@@ -81,6 +82,7 @@ class TestLinop(unittest.TestCase):
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
+        coord = coord.astype(np.float)
 
         A = linop.Sense(mps, coord=coord, coil_batch_size=1)
         check_linop_adjoint(A, dtype=np.complex)

@@ -26,20 +26,11 @@ def soft_thresh(lamda, input):
         array: soft-thresholded result.
 
     """
-    device = backend.get_device(input)
-    xp = device.xp
-
-    lamda = xp.real(lamda)
-    with device:
-        if device == backend.cpu_device:
-            output = _soft_thresh(lamda, input)
-        else:  # pragma: no cover
-            output = _soft_thresh_cuda(lamda, input)
-
-        if np.issubdtype(input.dtype, np.floating):
-            output = xp.real(output)
-
-    return output
+    xp = backend.get_array_module(input)
+    if xp == np:
+        return _soft_thresh(lamda, input)
+    else:  # pragma: no cover
+        return _soft_thresh_cuda(lamda, input)
 
 
 def hard_thresh(lamda, input):
@@ -53,13 +44,11 @@ def hard_thresh(lamda, input):
         array: hard-thresholded result.
 
     """
-    device = backend.get_device(input)
-
-    if device == backend.cpu_device:
+    xp = backend.get_array_module(input)
+    if xp == np:
         return _hard_thresh(lamda, input)
     else:  # pragma: no cover
-        with device:
-            return _hard_thresh_cuda(lamda, input)
+        return _hard_thresh_cuda(lamda, input)
 
 
 def l1_proj(eps, input):
@@ -77,21 +66,18 @@ def l1_proj(eps, input):
         the l1-ball for learning in high dimensions" 2008.
 
     """
-    device = backend.get_device(input)
-    xp = device.xp
+    xp = backend.get_array_module(input)
+    shape = input.shape
+    input = input.ravel()
 
-    with device:
-        shape = input.shape
-        input = input.ravel()
-
-        if xp.linalg.norm(input, 1) < eps:
-            return input
-        else:
-            shape = len(input)
-            s = xp.sort(xp.abs(input))[::-1]
-            st = (xp.cumsum(s) - eps) / (xp.arange(shape) + 1)
-            idx = xp.flatnonzero((s - st) > 0).max()
-            return soft_thresh(st[idx], input.reshape(shape))
+    if xp.linalg.norm(input, 1) < eps:
+        return input
+    else:
+        size = len(input)
+        s = xp.sort(xp.abs(input))[::-1]
+        st = (xp.cumsum(s) - eps) / (xp.arange(size) + 1)
+        idx = xp.flatnonzero((s - st) > 0).max()
+        return soft_thresh(st[idx], input.reshape(shape))
 
 
 def l2_proj(eps, input, axes=None):
@@ -107,12 +93,10 @@ def l2_proj(eps, input, axes=None):
     """
     axes = util._normalize_axes(axes, input.ndim)
 
-    device = backend.get_device(input)
-    xp = device.xp
-    with device:
-        norm = xp.sum(xp.abs(input)**2, axis=axes, keepdims=True)**0.5
-        mask = norm < eps
-        output = mask * input + (1 - mask) * (eps * input / (norm + mask))
+    xp = backend.get_array_module(input)
+    norm = xp.sum(xp.abs(input)**2, axis=axes, keepdims=True)**0.5
+    mask = norm < eps
+    output = mask * input + (1 - mask) * (eps * input / (norm + mask))
 
     return output
 
