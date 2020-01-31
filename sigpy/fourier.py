@@ -27,23 +27,20 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
         :func:`numpy.fft.fftn`
 
     """
-    device = backend.get_device(input)
-    xp = device.xp
+    xp = backend.get_array_module(input)
+    if not np.issubdtype(input.dtype, np.complexfloating):
+        input = input.astype(np.complex)
 
-    with device:
-        if not np.issubdtype(input.dtype, np.complexfloating):
-            input = input.astype(np.complex)
+    if center:
+        output = _fftc(input, oshape=oshape, axes=axes, norm=norm)
+    else:
+        output = xp.fft.fftn(input, s=oshape, axes=axes, norm=norm)
 
-        if center:
-            output = _fftc(input, oshape=oshape, axes=axes, norm=norm)
-        else:
-            output = xp.fft.fftn(input, s=oshape, axes=axes, norm=norm)
+    if np.issubdtype(input.dtype,
+                     np.complexfloating) and input.dtype != output.dtype:
+        output = output.astype(input.dtype, copy=False)
 
-        if np.issubdtype(input.dtype,
-                         np.complexfloating) and input.dtype != output.dtype:
-            output = output.astype(input.dtype, copy=False)
-
-        return output
+    return output
 
 
 def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
@@ -63,23 +60,20 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
         :func:`numpy.fft.ifftn`
 
     """
-    device = backend.get_device(input)
-    xp = device.xp
+    xp = backend.get_array_module(input)
+    if not np.issubdtype(input.dtype, np.complexfloating):
+        input = input.astype(np.complex)
 
-    with device:
-        if not np.issubdtype(input.dtype, np.complexfloating):
-            input = input.astype(np.complex)
+    if center:
+        output = _ifftc(input, oshape=oshape, axes=axes, norm=norm)
+    else:
+        output = xp.fft.ifftn(input, s=oshape, axes=axes, norm=norm)
 
-        if center:
-            output = _ifftc(input, oshape=oshape, axes=axes, norm=norm)
-        else:
-            output = xp.fft.ifftn(input, s=oshape, axes=axes, norm=norm)
+    if np.issubdtype(input.dtype,
+                     np.complexfloating) and input.dtype != output.dtype:
+        output = output.astype(input.dtype)
 
-        if np.issubdtype(input.dtype,
-                         np.complexfloating) and input.dtype != output.dtype:
-            output = output.astype(input.dtype)
-
-        return output
+    return output
 
 
 def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
@@ -113,31 +107,29 @@ def nufft(input, coord, oversamp=1.25, width=4.0, n=128):
         IEEE transactions on medical imaging, 24(6), 799-808.
 
     """
-    device = backend.get_device(input)
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
     os_shape = _get_oversamp_shape(input.shape, ndim, oversamp)
 
-    with device:
-        output = input.copy()
+    output = input.copy()
 
-        # Apodize
-        _apodize(output, ndim, oversamp, width, beta)
+    # Apodize
+    _apodize(output, ndim, oversamp, width, beta)
 
-        # Zero-pad
-        output /= util.prod(input.shape[-ndim:])**0.5
-        output = util.resize(output, os_shape)
+    # Zero-pad
+    output /= util.prod(input.shape[-ndim:])**0.5
+    output = util.resize(output, os_shape)
 
-        # FFT
-        output = fft(output, axes=range(-ndim, 0), norm=None)
+    # FFT
+    output = fft(output, axes=range(-ndim, 0), norm=None)
 
-        # Interpolate
-        coord = _scale_coord(backend.to_device(
-            coord, device), input.shape, oversamp)
-        kernel = _get_kaiser_bessel_kernel(n, width, beta, coord.dtype, device)
-        output = interp.interpolate(output, width, kernel, coord)
+    # Interpolate
+    coord = _scale_coord(coord, input.shape, oversamp)
+    kernel = _get_kaiser_bessel_kernel(n, width, beta, coord.dtype,
+                                       backend.get_device(input))
+    output = interp.interpolate(output, width, kernel, coord)
 
-        return output
+    return output
 
 
 def estimate_shape(coord):
@@ -184,7 +176,6 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
         :func:`sigpy.nufft.nufft`
 
     """
-    device = backend.get_device(input)
     ndim = coord.shape[-1]
     beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
     if oshape is None:
@@ -194,59 +185,54 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4.0, n=128):
 
     os_shape = _get_oversamp_shape(oshape, ndim, oversamp)
 
-    with device:
-        # Gridding
-        coord = _scale_coord(backend.to_device(
-            coord, device), oshape, oversamp)
-        kernel = _get_kaiser_bessel_kernel(n, width, beta, coord.dtype, device)
-        output = interp.gridding(input, os_shape, width, kernel, coord)
+    # Gridding
+    coord = _scale_coord(coord, oshape, oversamp)
+    kernel = _get_kaiser_bessel_kernel(n, width, beta, coord.dtype,
+                                       backend.get_device(input))
+    output = interp.gridding(input, os_shape, width, kernel, coord)
 
-        # IFFT
-        output = ifft(output, axes=range(-ndim, 0), norm=None)
+    # IFFT
+    output = ifft(output, axes=range(-ndim, 0), norm=None)
 
-        # Crop
-        output = util.resize(output, oshape)
-        output *= util.prod(os_shape[-ndim:]) / util.prod(oshape[-ndim:])**0.5
+    # Crop
+    output = util.resize(output, oshape)
+    output *= util.prod(os_shape[-ndim:]) / util.prod(oshape[-ndim:])**0.5
 
-        # Apodize
-        _apodize(output, ndim, oversamp, width, beta)
+    # Apodize
+    _apodize(output, ndim, oversamp, width, beta)
 
-        return output
+    return output
 
 
 def _fftc(input, oshape=None, axes=None, norm='ortho'):
 
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
-    device = backend.get_device(input)
-    xp = device.xp
+    xp = backend.get_array_module(input)
 
     if oshape is None:
         oshape = input.shape
 
-    with device:
-        tmp = util.resize(input, oshape)
-        tmp = xp.fft.ifftshift(tmp, axes=axes)
-        tmp = xp.fft.fftn(tmp, axes=axes, norm=norm)
-        output = xp.fft.fftshift(tmp, axes=axes)
-        return output
+    tmp = util.resize(input, oshape)
+    tmp = xp.fft.ifftshift(tmp, axes=axes)
+    tmp = xp.fft.fftn(tmp, axes=axes, norm=norm)
+    output = xp.fft.fftshift(tmp, axes=axes)
+    return output
 
 
 def _ifftc(input, oshape=None, axes=None, norm='ortho'):
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
-    device = backend.get_device(input)
-    xp = device.xp
+    xp = backend.get_array_module(input)
 
     if oshape is None:
         oshape = input.shape
 
-    with device:
-        tmp = util.resize(input, oshape)
-        tmp = xp.fft.ifftshift(tmp, axes=axes)
-        tmp = xp.fft.ifftn(tmp, axes=axes, norm=norm)
-        output = xp.fft.fftshift(tmp, axes=axes)
-        return output
+    tmp = util.resize(input, oshape)
+    tmp = xp.fft.ifftshift(tmp, axes=axes)
+    tmp = xp.fft.ifftn(tmp, axes=axes, norm=norm)
+    output = xp.fft.fftshift(tmp, axes=axes)
+    return output
 
 
 def _get_kaiser_bessel_kernel(n, width, beta, dtype, device):
@@ -275,16 +261,14 @@ def _get_kaiser_bessel_kernel(n, width, beta, dtype, device):
 
 def _scale_coord(coord, shape, oversamp):
     ndim = coord.shape[-1]
-    device = backend.get_device(coord)
-    scale = backend.to_device(
-        [ceil(oversamp * i) / i for i in shape[-ndim:]], device)
-    shift = backend.to_device(
-        [ceil(oversamp * i) // 2 for i in shape[-ndim:]], device)
+    output = coord.copy()
+    for i in range(-ndim, 0):
+        scale = ceil(oversamp * shape[i]) / shape[i]
+        shift = ceil(oversamp * shape[i]) // 2
+        output[..., i] *= scale
+        output[..., i] += shift
 
-    with device:
-        coord = scale * coord + shift
-
-    return coord
+    return output
 
 
 def _get_oversamp_shape(shape, ndim, oversamp):
@@ -292,19 +276,16 @@ def _get_oversamp_shape(shape, ndim, oversamp):
 
 
 def _apodize(input, ndim, oversamp, width, beta):
-    device = backend.get_device(input)
-    xp = device.xp
-
+    xp = backend.get_array_module(input)
     output = input
-    with device:
-        for a in range(-ndim, 0):
-            i = output.shape[a]
-            os_i = ceil(oversamp * i)
-            idx = xp.arange(i, dtype=output.dtype)
+    for a in range(-ndim, 0):
+        i = output.shape[a]
+        os_i = ceil(oversamp * i)
+        idx = xp.arange(i, dtype=output.dtype)
 
-            # Calculate apodization
-            apod = (beta**2 - (np.pi * width * (idx - i // 2) / os_i)**2)**0.5
-            apod /= xp.sinh(apod)
-            output *= apod.reshape([i] + [1] * (-a - 1))
+        # Calculate apodization
+        apod = (beta**2 - (np.pi * width * (idx - i // 2) / os_i)**2)**0.5
+        apod /= xp.sinh(apod)
+        output *= apod.reshape([i] + [1] * (-a - 1))
 
-        return output
+    return output
