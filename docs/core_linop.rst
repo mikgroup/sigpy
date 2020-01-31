@@ -44,6 +44,7 @@ Computing Related Linops
    :toctree: generated
    :nosignatures:
    
+   sigpy.linop.ToDevice
    sigpy.linop.AllReduce
    sigpy.linop.AllReduceAdjoint
 
