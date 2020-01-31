@@ -11,7 +11,7 @@ class Prox(object):
     r"""Abstraction for proximal operator.
 
     Prox can be called on a float (:math:`\alpha`) and
-    an array (:math:`x`) to perform a proximal operation.
+    a NumPy or CuPy array (:math:`x`) to perform a proximal operation.
 
     .. math::
         \text{prox}_{\alpha g} (y) =
@@ -74,12 +74,10 @@ class Conj(Prox):
     """
 
     def __init__(self, prox):
-
         self.prox = prox
         super().__init__(prox.shape)
 
     def _prox(self, alpha, input):
-
         with backend.get_device(input):
             return input - alpha * self.prox(1 / alpha, input / alpha)
 
@@ -118,17 +116,19 @@ class Stack(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        if np.isscalar(alpha):
-            alphas = [alpha] * self.nops
-        else:
-            alphas = util.split(alpha, self.shapes)
+        with backend.get_device(input):
+            if np.isscalar(alpha):
+                alphas = [alpha] * self.nops
+            else:
+                alphas = util.split(alpha, self.shapes)
 
-        inputs = util.split(input, self.shapes)
-        outputs = [prox(alpha, input)
-                   for prox, input, alpha in zip(self.proxs, inputs, alphas)]
-        output = util.vec(outputs)
+            inputs = util.split(input, self.shapes)
+            outputs = [prox(alpha, input)
+                       for prox, input, alpha in zip(
+                               self.proxs, inputs, alphas)]
+            output = util.vec(outputs)
 
-        return output
+            return output
 
 
 class UnitaryTransform(Prox):
@@ -152,7 +152,6 @@ class UnitaryTransform(Prox):
         super().__init__(A.ishape)
 
     def _prox(self, alpha, input):
-
         return self.A.H(self.prox(alpha, self.A(input)))
 
 
@@ -236,7 +235,8 @@ class L1Reg(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        return thresh.soft_thresh(self.lamda * alpha, input)
+        with backend.get_device(input):
+            return thresh.soft_thresh(self.lamda * alpha, input)
 
 
 class L1Proj(Prox):
@@ -257,7 +257,8 @@ class L1Proj(Prox):
         super().__init__(shape)
 
     def _prox(self, alpha, input):
-        return thresh.l1_proj(self.epsilon, input)
+        with backend.get_device(input):
+            return thresh.l1_proj(self.epsilon, input)
 
 
 class BoxConstraint(Prox):
