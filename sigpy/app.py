@@ -77,7 +77,7 @@ class App(object):
             self.pbar = tqdm(
                 total=self.alg.max_iter, desc=name, leave=self.leave_pbar)
 
-        while(not self.alg.done()):
+        while not self.alg.done():
             if self.record_time:
                 start_time = time.time()
 
