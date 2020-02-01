@@ -15,9 +15,9 @@ def array_to_blocks(input, blk_shape, blk_strides):
     """Extract blocks from an array in a sliding window manner.
 
     Args:
-        input (array): input array of shape [..., N_1, ..., N_D]
-        blk_shape (tuple): block shape of length D, with D <= 4.
-        blk_strides (tuple): block strides of length D.
+        input (array): input array of shape [..., N_1, ..., N_ndim]
+        blk_shape (tuple): block shape of length ndim, with ndim <= 4.
+        blk_strides (tuple): block strides of length ndim.
 
     Returns:
         array: array of shape [...] + num_blks + blk_shape, where
@@ -35,17 +35,17 @@ def array_to_blocks(input, blk_shape, blk_strides):
     if len(blk_shape) != len(blk_strides):
         raise ValueError('blk_shape must have the same length as blk_strides.')
 
-    D = len(blk_shape)
+    ndim = len(blk_shape)
     num_blks = [(i - b + s) // s for i, b,
-                s in zip(input.shape[-D:], blk_shape, blk_strides)]
-    batch_shape = list(input.shape[:-D])
+                s in zip(input.shape[-ndim:], blk_shape, blk_strides)]
+    batch_shape = list(input.shape[:-ndim])
     batch_size = util.prod(batch_shape)
     xp = backend.get_array_module(input)
     output = xp.zeros([batch_size] + num_blks + blk_shape,
                       dtype=input.dtype)
-    input = input.reshape([batch_size] + list(input.shape[-D:]))
+    input = input.reshape([batch_size] + list(input.shape[-ndim:]))
 
-    if D == 1:
+    if ndim == 1:
         if xp == np:
             _array_to_blocks1(output, input,
                               batch_size,
@@ -61,7 +61,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                    output,
                                    size=batch_size *
                                    num_blks[-1] * blk_shape[-1])
-    elif D == 2:
+    elif ndim == 2:
         if xp == np:
             _array_to_blocks2(output, input,
                               batch_size, blk_shape[-1], blk_shape[-2],
@@ -77,7 +77,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                    size=batch_size *
                                    num_blks[-1] * num_blks[-2] *
                                    blk_shape[-1] * blk_shape[-2])
-    elif D == 3:
+    elif ndim == 3:
         if xp == np:
             _array_to_blocks3(output,
                               input,
@@ -106,7 +106,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                    num_blks[-3] *
                                    blk_shape[-1] * blk_shape[-2] *
                                    blk_shape[-3])
-    elif D == 4:
+    elif ndim == 4:
         if xp == np:
             _array_to_blocks4(output,
                               input,
@@ -139,7 +139,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
                                    blk_shape[-1] * blk_shape[-2] *
                                    blk_shape[-3] * blk_shape[-4])
     else:
-        raise ValueError('Only support D <= 4, got {}'.format(D))
+        raise ValueError('Only support ndim <= 4, got {}'.format(ndim))
 
     return output.reshape(batch_shape + num_blks + blk_shape)
 
@@ -150,8 +150,8 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
     Args:
         input (array): input array of shape [...] + num_blks + blk_shape
         oshape (tuple): output shape.
-        blk_shape (tuple): block shape of length D.
-        blk_strides (tuple): block strides of length D.
+        blk_shape (tuple): block shape of length ndim.
+        blk_strides (tuple): block strides of length ndim.
 
     Returns:
         array: array of shape oshape.
@@ -160,16 +160,16 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
     if len(blk_shape) != len(blk_strides):
         raise ValueError('blk_shape must have the same length as blk_strides.')
 
-    D = len(blk_shape)
-    num_blks = input.shape[-(2 * D):-D]
-    batch_shape = list(oshape[:-D])
+    ndim = len(blk_shape)
+    num_blks = input.shape[-(2 * ndim):-ndim]
+    batch_shape = list(oshape[:-ndim])
     batch_size = util.prod(batch_shape)
     xp = backend.get_array_module(input)
-    output = xp.zeros([batch_size] + list(oshape[-D:]),
+    output = xp.zeros([batch_size] + list(oshape[-ndim:]),
                       dtype=input.dtype)
-    input = input.reshape([batch_size] + list(input.shape[-2 * D:]))
+    input = input.reshape([batch_size] + list(input.shape[-2 * ndim:]))
 
-    if D == 1:
+    if ndim == 1:
         if xp == np:
             _blocks_to_array1(output, input,
                               batch_size, blk_shape[-1],
@@ -193,7 +193,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                                                size=batch_size
                                                * num_blks[-1] *
                                                blk_shape[-1])
-    elif D == 2:
+    elif ndim == 2:
         if xp == np:
             _blocks_to_array2(output, input,
                               batch_size, blk_shape[-1], blk_shape[-2],
@@ -219,7 +219,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                     output,
                     size=batch_size * num_blks[-1] * num_blks[-2] *
                     blk_shape[-1] * blk_shape[-2])
-    elif D == 3:
+    elif ndim == 3:
         if xp == np:
             _blocks_to_array3(output,
                               input,
@@ -255,7 +255,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                     size=batch_size *
                     num_blks[-1] * num_blks[-2] * num_blks[-3] *
                     blk_shape[-1] * blk_shape[-2] * blk_shape[-3])
-    elif D == 4:
+    elif ndim == 4:
         if xp == np:
             _blocks_to_array4(output,
                               input,
@@ -302,7 +302,7 @@ def blocks_to_array(input, oshape, blk_shape, blk_strides):
                     blk_shape[-1] * blk_shape[-2] *
                     blk_shape[-3] * blk_shape[-4])
     else:
-        raise ValueError('Only support D <= 4, got {}'.format(D))
+        raise ValueError('Only support ndim <= 4, got {}'.format(ndim))
 
     return output.reshape(oshape)
 
