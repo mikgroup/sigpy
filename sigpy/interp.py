@@ -22,7 +22,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
 
     .. math ::
         y[j] = \sum_{i : \| i - c[j] \|_\infty \leq W / 2}
-               K(\frac{i - c[j]}{W / 2}) x[i]
+               K\left(\frac{i - c[j]}{W / 2}\right) x[i]
 
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
@@ -94,7 +94,7 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
 
     .. math ::
         x[i] = \sum_{j : \| i - c[j] \|_\infty \leq W / 2}
-               K(\frac{i - c[j]}{W / 2}) y[j]
+               K\left(\frac{i - c[j]}{W / 2}\right) y[j]
 
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
