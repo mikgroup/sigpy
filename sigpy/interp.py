@@ -17,24 +17,33 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     r"""Interpolation from array to points specified by coordinates.
 
     Let :math:`x` be the input, :math:`y` be the output,
-    :math:`c`: be the coordinates, :math:`W` be the width,
+    :math:`c`: be the coordinates, :math:`W` be the kernel width,
     and :math:`K`: be the interpolation kernel, then the function computes,
 
-    .. math :
+    .. math ::
         y[j] = \sum_{i : \| i - c[j] \|_\inf \leq W / 2}
                K((i - c[j]) / (W / 2)) x[i]
 
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
     'spline' uses the cardinal B-spline functions as kernels.
-    For example, kernel='spline' and param=1 performs linear interpolation.
-    See the reference wikipedia page for the function expressions.
+    The order of the spline can be specified using param.
+    For example, param=1 performs linear interpolation.
+    Concretely, for param=0, :math:`K(x) = 1`,
+    param=1, :math:`K(x) = 1 - |x|`, and
+    param=2, :math:`K(x) = 9 / 8 (1 - |x|)^2` for :math:`|x| > 1 / 3` and
+    :math:`K(x) = 3 / 4 (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
+
+    These function expressions are derived from the reference wikipedia
+    page by shifting and scaling the range to -1 to 1.
+    When the coordinates specifies a uniformly spaced grid,
+    it is recommended to use the original scaling with width=param + 1
+    so that the interpolation weights add up to one.
 
     'kaiser_bessel' uses the Kaiser-Bessel function as kernel.
-    It considers :math:`K(x) = I_0(\beta \sqrt{1 - (x^2})`
-    for x between -1 and 1, where :math:`I_0` is the modified
-    Bessel function of the first kind. Otherwise, returns 0.
-    The beta parameter can be specified with `param`.
+    Concretely, :math:`K(x) = I_0(\beta \sqrt{1 - (x^2}))`,
+    where :math:`I_0` is the modified Bessel function of the first kind.
+    The beta parameter can be specified with param.
     The modified Bessel function of the first kind is approximated
     using the power series, following the reference.
 
@@ -49,7 +58,8 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
         output (array): Output array.
 
     References:
-        https://en.wikipedia.org/wiki/Spline_wavelet#Cardinal_B-splines_of_small_orders
+        https://en.wikipedia.org/wiki/Spline_wavelet#Cardinal_B-splines_of_sma
+ll_orders
         http://people.math.sfu.ca/~cbm/aands/page_378.htm
     """
     ndim = coord.shape[-1]
@@ -79,24 +89,33 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     r"""Gridding of points specified by coordinates to array.
 
     Let :math:`y` be the input, :math:`x` be the output,
-    :math:`c`: be the coordinates, :math:`W` be the width,
+    :math:`c`: be the coordinates, :math:`W` be the kernel width,
     and :math:`K`: be the interpolation kernel, then the function computes,
 
     .. math :
         x[i] = \sum_{j : \| i - c[j] \|_\inf \leq W / 2}
                K((i - c[j]) / (W / 2)) y[j]
 
-    There are two types of kernels: "spline" and "kaiser_bessel".
+    There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
-    "spline" uses the cardinal B-spline functions as kernels.
-    For example, kernel="spline" and param=1 performs linear interpolation.
-    See the reference wikipedia page for the function expressions.
+    'spline' uses the cardinal B-spline functions as kernels.
+    The order of the spline can be specified using param.
+    For example, param=1 performs linear interpolation.
+    Concretely, for param=0, :math:`K(x) = 1`,
+    param=1, :math:`K(x) = 1 - |x|`, and
+    param=2, :math:`K(x) = 9 / 8 (1 - |x|)^2` for :math:`|x| > 1 / 3` and
+    :math:`K(x) = 3 / 4 (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
 
-    "kaiser_bessel" uses the Kaiser-Bessel function as kernel.
-    It considers :math:`K(x) = I_0(\beta \sqrt{1 - (x^2})`
-    for x between -1 and 1, where :math:`I_0` is the modified
-    Bessel function of the first kind. Otherwise, returns 0.
-    The beta parameter can be specified with `param`.
+    These function expressions are derived from the reference wikipedia
+    page by shifting and scaling the range to -1 to 1.
+    When the coordinates specifies a uniformly spaced grid,
+    it is recommended to use the original scaling with width=param + 1
+    so that the interpolation weights add up to one.
+
+    'kaiser_bessel' uses the Kaiser-Bessel function as kernel.
+    Concretely, :math:`K(x) = I_0(\beta \sqrt{1 - (x^2}))`,
+    where :math:`I_0` is the modified Bessel function of the first kind.
+    The beta parameter can be specified with param.
     The modified Bessel function of the first kind is approximated
     using the power series, following the reference.
 
@@ -110,6 +129,10 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     Returns:
         output (array): Output array.
 
+    References:
+        https://en.wikipedia.org/wiki/Spline_wavelet#Cardinal_B-splines_of_sma
+ll_orders
+        http://people.math.sfu.ca/~cbm/aands/page_378.htm
     """
     ndim = coord.shape[-1]
 
@@ -148,6 +171,11 @@ def _spline_kernel(x, order):
         return 1
     elif order == 1:
         return 1 - abs(x)
+    elif order == 2:
+        if abs(x) > 1 / 3:
+            return 9 / 8 * (1 - abs(x))**2
+        else:
+            return 3 / 4 * (1 - 3 * x**2)
 
 
 @nb.jit(nopython=True, cache=True)  # pragma: no cover
@@ -365,6 +393,10 @@ if config.cupy_enabled:  # pragma: no cover
             return 1;
         else if (order == 1)
             return 1 - fabsf(x);
+        else if (fabsf(x) > 1 / 3)
+            return 9 / 8 * (1 - fabsf(x)) * (1 - fabsf(x));
+        else
+            return 3 / 4 * (1 - 3 * x * x);
     }
     """
 
