@@ -41,7 +41,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     so that the interpolation weights add up to one.
 
     'kaiser_bessel' uses the Kaiser-Bessel function as kernel.
-    Concretely, :math:`K(x) = I_0(\beta \sqrt{1 - (x^2}))`,
+    Concretely, :math:`K(x) = I_0(\beta \sqrt{1 - x^2})`,
     where :math:`I_0` is the modified Bessel function of the first kind.
     The beta parameter can be specified with param.
     The modified Bessel function of the first kind is approximated
@@ -112,7 +112,7 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     so that the interpolation weights add up to one.
 
     'kaiser_bessel' uses the Kaiser-Bessel function as kernel.
-    Concretely, :math:`K(x) = I_0(\beta \sqrt{1 - (x^2}))`,
+    Concretely, :math:`K(x) = I_0(\beta \sqrt{1 - x^2})`,
     where :math:`I_0` is the modified Bessel function of the first kind.
     The beta parameter can be specified with param.
     The modified Bessel function of the first kind is approximated
