@@ -14,7 +14,7 @@ KERNELS = ['spline', 'kaiser_bessel']
 
 
 def interpolate(input, coord, kernel='spline', width=2, param=1):
-    """Interpolation from array to points specified by coordinates.
+    r"""Interpolation from array to points specified by coordinates.
 
     Let :math:`x` be the input, :math:`y` be the output,
     :math:`c`: be the coordinates, :math:`W` be the width,
@@ -76,7 +76,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
 
 
 def gridding(input, coord, shape, kernel="spline", width=2, param=1):
-    """Gridding of points specified by coordinates to array.
+    r"""Gridding of points specified by coordinates to array.
 
     Let :math:`y` be the input, :math:`x` be the output,
     :math:`c`: be the coordinates, :math:`W` be the width,
@@ -373,17 +373,28 @@ if config.cupy_enabled:  # pragma: no cover
 
         x = beta * sqrt(1 - x * x);
         S t = x / 3.75;
-        if (x < 3.75)
-            return 1 + 3.5156229 * pow(t, 2) + 3.0899424 * pow(t, 4) +
-                1.2067492 * pow(t, 6) + 0.2659732 * pow(t, 8) +
-                0.0360768 * pow(t, 10) + 0.0045813 * pow(t, 12);
-        else
-            return pow(x, -0.5) * exp(x) * (
-                0.39894228 + 0.01328592 * pow(t, -1) +
-                0.00225319 * pow(t, -2) - 0.00157565 * pow(t, -3) +
-                0.00916281 * pow(t, -4) - 0.02057706 * pow(t, -5) +
-                0.02635537 * pow(t, -6) - 0.01647633 * pow(t, -7) +
-                0.00392377 * pow(t, -8));
+        S t2 = t * t;
+        S t4 = t2 * t2;
+        S t6 = t4 * t4;
+        S t8 = t6 * t2;
+        if (x < 3.75) {
+            S t10 = t8 * t2;
+            S t12 = t10 * t2;
+            return 1 + 3.5156229 * t2 + 3.0899424 * t4 +
+                1.2067492 * t6 + 0.2659732 * t8 +
+                0.0360768 * t10 + 0.0045813 * t12;
+        } else {
+            S t3 = t * t2;
+            S t5 = t3 * t2;
+            S t7 = t5 * t2;
+
+            return exp(x) / sqrt(x) * (
+                0.39894228 + 0.01328592 / t +
+                0.00225319 / t2 - 0.00157565 / t3 +
+                0.00916281 / t4 - 0.02057706 / t5 +
+                0.02635537 / t6 - 0.01647633 / t7 +
+                0.00392377 / t8);
+        }
     }
     """
 
