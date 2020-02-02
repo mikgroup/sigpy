@@ -31,8 +31,8 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     For example, param=1 performs linear interpolation.
     Concretely, for param=0, :math:`K(x) = 1`,
     for param=1, :math:`K(x) = 1 - |x|`, and
-    for param=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2` for :math:`|x| > 1 / 3`
-    and :math:`K(x) = \frac{3}{4} (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
+    for param=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2` for :math:`|x| > \frac{1}{3}`
+    and :math:`K(x) = \frac{3}{4} (1 - 3 x^2)` for :math:`|x| < \frac{1}{3}`.
 
     These function expressions are derived from the reference wikipedia
     page by shifting and scaling the range to -1 to 1.
@@ -102,8 +102,8 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     For example, param=1 performs linear interpolation.
     Concretely, for param=0, :math:`K(x) = 1`,
     for param=1, :math:`K(x) = 1 - |x|`, and
-    for param=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2` for :math:`|x| > 1 / 3`
-    and :math:`K(x) = \frac{3}{4} (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
+    for param=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2` for :math:`|x| > \frac{1}{3}`
+    and :math:`K(x) = \frac{3}{4} (1 - 3 x^2)` for :math:`|x| < \frac{1}{3}`.
 
     These function expressions are derived from the reference wikipedia
     page by shifting and scaling the range to -1 to 1.
