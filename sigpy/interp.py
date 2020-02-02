@@ -251,7 +251,8 @@ def _get_interpolate(kernel):
                         w = wy * kernel((x - kx) / (width / 2), param)
 
                         for b in range(batch_size):
-                            output[b, i] += w * input[b, z % nz, y % ny, x % nx]
+                            output[b, i] += w * input[
+                                b, z % nz, y % ny, x % nx]
 
         return output
 
@@ -338,7 +339,8 @@ def _get_gridding(kernel):
                         w = wy * kernel((x - kx) / (width / 2), param)
 
                         for b in range(batch_size):
-                            output[b, z % nz, y % ny, x % nx] += w * input[b, i]
+                            output[b, z % nz, y % ny, x % nx] += w * input[
+                                b, i]
 
         return output
 
@@ -622,8 +624,8 @@ if config.cupy_enabled:  # pragma: no cover
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, i};
                             const T v = (T) w * input[input_idx];
-                            const int output_idx[] = {b, mod(z, nz), mod(y, ny),
-                                mod(x, nx)};
+                            const int output_idx[] = {
+                                b, mod(z, nz), mod(y, ny), mod(x, nx)};
                             atomicAdd(&output[output_idx], v);
                         }
                     }
@@ -748,8 +750,8 @@ if config.cupy_enabled:  # pragma: no cover
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, i};
                             const T v = (T) w * input[input_idx];
-                            const int output_idx[] = {b, mod(z, nz), mod(y, ny),
-                                mod(x, nx)};
+                            const int output_idx[] = {
+                                b, mod(z, nz), mod(y, ny), mod(x, nx)};
                             atomicAdd(reinterpret_cast<T::value_type*>(
                                 &(output[output_idx])), v.real());
                             atomicAdd(reinterpret_cast<T::value_type*>(
