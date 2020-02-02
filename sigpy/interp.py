@@ -21,7 +21,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     and :math:`K`: be the interpolation kernel, then the function computes,
 
     .. math ::
-        y[j] = \sum_{i : \| i - c[j] \|_\inf \leq W / 2}
+        y[j] = \sum_{i : \| i - c[j] \|_\infty \leq W / 2}
                K((i - c[j]) / (W / 2)) x[i]
 
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
@@ -30,9 +30,9 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     The order of the spline can be specified using param.
     For example, param=1 performs linear interpolation.
     Concretely, for param=0, :math:`K(x) = 1`,
-    param=1, :math:`K(x) = 1 - |x|`, and
-    param=2, :math:`K(x) = 9 / 8 (1 - |x|)^2` for :math:`|x| > 1 / 3` and
-    :math:`K(x) = 3 / 4 (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
+    for param=1, :math:`K(x) = 1 - |x|`, and
+    for param=2, :math:`K(x) = 9 / 8 (1 - |x|)^2` for :math:`|x| > 1 / 3`
+    and :math:`K(x) = 3 / 4 (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
 
     These function expressions are derived from the reference wikipedia
     page by shifting and scaling the range to -1 to 1.
@@ -91,8 +91,8 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     :math:`c`: be the coordinates, :math:`W` be the kernel width,
     and :math:`K`: be the interpolation kernel, then the function computes,
 
-    .. math :
-        x[i] = \sum_{j : \| i - c[j] \|_\inf \leq W / 2}
+    .. math ::
+        x[i] = \sum_{j : \| i - c[j] \|_\infty \leq W / 2}
                K((i - c[j]) / (W / 2)) y[j]
 
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
@@ -101,9 +101,9 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     The order of the spline can be specified using param.
     For example, param=1 performs linear interpolation.
     Concretely, for param=0, :math:`K(x) = 1`,
-    param=1, :math:`K(x) = 1 - |x|`, and
-    param=2, :math:`K(x) = 9 / 8 (1 - |x|)^2` for :math:`|x| > 1 / 3` and
-    :math:`K(x) = 3 / 4 (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
+    for param=1, :math:`K(x) = 1 - |x|`, and
+    for param=2, :math:`K(x) = 9 / 8 (1 - |x|)^2` for :math:`|x| > 1 / 3`
+    and :math:`K(x) = 3 / 4 (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
 
     These function expressions are derived from the reference wikipedia
     page by shifting and scaling the range to -1 to 1.
