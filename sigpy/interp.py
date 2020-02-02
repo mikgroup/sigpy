@@ -24,13 +24,13 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
         y[j] = \sum_{i : \| i - c[j] \|_\inf \leq W / 2}
                K((i - c[j]) / (W / 2)) x[i]
 
-    There are two types of kernels: "spline" and "kaiser_bessel".
+    There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
-    "spline" uses the cardinal B-spline functions as kernels.
-    For example, kernel="spline" and param=1 performs linear interpolation.
+    'spline' uses the cardinal B-spline functions as kernels.
+    For example, kernel='spline' and param=1 performs linear interpolation.
     See the reference wikipedia page for the function expressions.
 
-    "kaiser_bessel" uses the Kaiser-Bessel function as kernel.
+    'kaiser_bessel' uses the Kaiser-Bessel function as kernel.
     It considers :math:`K(x) = I_0(\beta \sqrt{1 - (x^2})`
     for x between -1 and 1, where :math:`I_0` is the modified
     Bessel function of the first kind. Otherwise, returns 0.
@@ -42,7 +42,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
         input (array): Input array of shape.
         coord (array): Coordinate array of shape [..., ndim]
         width (float): Interpolation kernel full-width.
-        kernel (str): Interpolation kernel, {"spline", "kaiser_bessel"}.
+        kernel (str): Interpolation kernel, {'spline', 'kaiser_bessel'}.
         param (float): Kernel parameter.
 
     Returns:
