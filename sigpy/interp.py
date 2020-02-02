@@ -22,7 +22,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
 
     .. math ::
         y[j] = \sum_{i : \| i - c[j] \|_\infty \leq W / 2}
-               K((i - c[j]) / (W / 2)) x[i]
+               K(\frac{i - c[j]}{W / 2}) x[i]
 
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
@@ -31,8 +31,8 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     For example, param=1 performs linear interpolation.
     Concretely, for param=0, :math:`K(x) = 1`,
     for param=1, :math:`K(x) = 1 - |x|`, and
-    for param=2, :math:`K(x) = 9 / 8 (1 - |x|)^2` for :math:`|x| > 1 / 3`
-    and :math:`K(x) = 3 / 4 (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
+    for param=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2` for :math:`|x| > 1 / 3`
+    and :math:`K(x) = \frac{3}{4} (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
 
     These function expressions are derived from the reference wikipedia
     page by shifting and scaling the range to -1 to 1.
@@ -93,7 +93,7 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
 
     .. math ::
         x[i] = \sum_{j : \| i - c[j] \|_\infty \leq W / 2}
-               K((i - c[j]) / (W / 2)) y[j]
+               K(\frac{i - c[j]}{W / 2}) y[j]
 
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
@@ -102,8 +102,8 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     For example, param=1 performs linear interpolation.
     Concretely, for param=0, :math:`K(x) = 1`,
     for param=1, :math:`K(x) = 1 - |x|`, and
-    for param=2, :math:`K(x) = 9 / 8 (1 - |x|)^2` for :math:`|x| > 1 / 3`
-    and :math:`K(x) = 3 / 4 (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
+    for param=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2` for :math:`|x| > 1 / 3`
+    and :math:`K(x) = \frac{3}{4} (1 - 3 x^2)` for :math:`|x| < 1 / 3`.
 
     These function expressions are derived from the reference wikipedia
     page by shifting and scaling the range to -1 to 1.
