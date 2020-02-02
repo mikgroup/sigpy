@@ -10,18 +10,47 @@ from sigpy import backend, config, util
 __all__ = ['interpolate', 'gridding']
 
 
-def interpolate(input, width, kernel, coord):
+KERNELS = ['spline', 'kaiser_bessel']
+
+
+def interpolate(input, coord, kernel='spline', width=2, param=1):
     """Interpolation from array to points specified by coordinates.
 
+    Let :math:`x` be the input, :math:`y` be the output,
+    :math:`c`: be the coordinates, :math:`W` be the width,
+    and :math:`K`: be the interpolation kernel, then the function computes,
+
+    .. math :
+        y[j] = \sum_{i : \| i - c[j] \|_\inf \leq W / 2}
+               K((i - c[j]) / (W / 2)) x[i]
+
+    There are two types of kernels: "spline" and "kaiser_bessel".
+
+    "spline" uses the cardinal B-spline functions as kernels.
+    For example, kernel="spline" and param=1 performs linear interpolation.
+    See the reference wikipedia page for the function expressions.
+
+    "kaiser_bessel" uses the Kaiser-Bessel function as kernel.
+    It considers :math:`K(x) = I_0(\beta \sqrt{1 - (x^2})`
+    for x between -1 and 1, where :math:`I_0` is the modified
+    Bessel function of the first kind. Otherwise, returns 0.
+    The beta parameter can be specified with `param`.
+    The modified Bessel function of the first kind is approximated
+    using the power series, following the reference.
+
     Args:
-        input (array): Input array of shape [..., ny, nx]
-        width (float): Interpolation kernel width.
-        kernel (array): Interpolation kernel.
+        input (array): Input array of shape.
         coord (array): Coordinate array of shape [..., ndim]
+        width (float): Interpolation kernel full-width.
+        kernel (str): Interpolation kernel, {"spline", "kaiser_bessel"}.
+        param (float): Kernel parameter.
 
     Returns:
-        output (array): Output array of coord.shape[:-1]
+        output (array): Output array.
 
+    References:
+        https://en.wikipedia.org/wiki/Spline_wavelet#Cardinal_B-splines_of_small_orders
+        http://people.math.sfu.ca/~cbm/aands/page_378.htm
     """
     ndim = coord.shape[-1]
 
@@ -32,30 +61,51 @@ def interpolate(input, width, kernel, coord):
     npts = util.prod(pts_shape)
 
     xp = backend.get_array_module(input)
-    isreal = np.issubdtype(input.dtype, np.floating)
 
     input = input.reshape([batch_size] + list(input.shape[-ndim:]))
     coord = coord.reshape([npts, ndim])
     output = xp.zeros([batch_size, npts], dtype=input.dtype)
 
-    _interpolate = _select_interpolate(ndim, npts, xp, isreal)
     if xp == np:
-        _interpolate(output, input, width, kernel, coord)
+        _interpolate[kernel][ndim - 1](output, input, coord, width, param)
     else:  # pragma: no cover
-        _interpolate(input, width, kernel, coord, output, size=npts)
+        _interpolate_cuda[kernel][ndim - 1](
+            input, coord, width, param, output, size=npts)
 
     return output.reshape(batch_shape + pts_shape)
 
 
-def gridding(input, shape, width, kernel, coord):
+def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     """Gridding of points specified by coordinates to array.
+
+    Let :math:`y` be the input, :math:`x` be the output,
+    :math:`c`: be the coordinates, :math:`W` be the width,
+    and :math:`K`: be the interpolation kernel, then the function computes,
+
+    .. math :
+        x[i] = \sum_{j : \| i - c[j] \|_\inf \leq W / 2}
+               K((i - c[j]) / (W / 2)) y[j]
+
+    There are two types of kernels: "spline" and "kaiser_bessel".
+
+    "spline" uses the cardinal B-spline functions as kernels.
+    For example, kernel="spline" and param=1 performs linear interpolation.
+    See the reference wikipedia page for the function expressions.
+
+    "kaiser_bessel" uses the Kaiser-Bessel function as kernel.
+    It considers :math:`K(x) = I_0(\beta \sqrt{1 - (x^2})`
+    for x between -1 and 1, where :math:`I_0` is the modified
+    Bessel function of the first kind. Otherwise, returns 0.
+    The beta parameter can be specified with `param`.
+    The modified Bessel function of the first kind is approximated
+    using the power series, following the reference.
 
     Args:
         input (array): Input array.
-        shape (array of ints): Output shape.
-        width (float): Interpolation kernel width.
-        kernel (array): Interpolation kernel.
         coord (array): Coordinate array of shape [..., ndim]
+        width (float): Interpolation kernel full-width.
+        kernel (str): Interpolation kernel, {"spline", "kaiser_bessel"}.
+        param (float): Kernel parameter.
 
     Returns:
         output (array): Output array.
@@ -76,598 +126,569 @@ def gridding(input, shape, width, kernel, coord):
     coord = coord.reshape([npts, ndim])
     output = xp.zeros([batch_size] + list(shape[-ndim:]), dtype=input.dtype)
 
-    _gridding = _select_gridding(ndim, npts, xp, isreal)
     if xp == np:
-        _gridding(output, input, width, kernel, coord)
+        _gridding[kernel][ndim - 1](output, input, coord, width, param)
     else:  # pragma: no cover
-        _gridding(input, width, kernel, coord, output, size=npts)
+        if isreal:
+            _gridding_cuda[kernel][ndim - 1](
+                input, coord, width, param, output, size=npts)
+        else:
+            _gridding_cuda_complex[kernel][ndim - 1](
+                input, coord, width, param, output, size=npts)
 
     return output.reshape(shape)
 
 
-def _select_interpolate(ndim, npts, xp, isreal):
-    if ndim == 1:
-        if xp == np:
-            _interpolate = _interpolate1
-        else:  # pragma: no cover
-            _interpolate = _interpolate1_cuda
-    elif ndim == 2:
-        if xp == np:
-            _interpolate = _interpolate2
-        else:  # pragma: no cover
-            _interpolate = _interpolate2_cuda
-    elif ndim == 3:
-        if xp == np:
-            _interpolate = _interpolate3
-        else:  # pragma: no cover
-            _interpolate = _interpolate3_cuda
-    else:
-        raise ValueError(
-            'Number of dimensions can only be 1, 2 or 3, got {}'.format(ndim))
+@nb.jit(nopython=True, cache=True)  # pragma: no cover
+def _spline_kernel(x, order):
+    if abs(x) > 1:
+        return 0
 
-    return _interpolate
-
-
-def _select_gridding(ndim, npts, xp, isreal):
-    if ndim == 1:
-        if xp == np:
-            _gridding = _gridding1
-        else:  # pragma: no cover
-            if isreal:
-                _gridding = _gridding1_cuda
-            else:
-                _gridding = _gridding1_cuda_complex
-    elif ndim == 2:
-        if xp == np:
-            _gridding = _gridding2
-        else:  # pragma: no cover
-            if isreal:
-                _gridding = _gridding2_cuda
-            else:
-                _gridding = _gridding2_cuda_complex
-    elif ndim == 3:
-        if xp == np:
-            _gridding = _gridding3
-        else:  # pragma: no cover
-            if isreal:
-                _gridding = _gridding3_cuda
-            else:
-                _gridding = _gridding3_cuda_complex
-    else:
-        raise ValueError(
-            'Number of dimensions can only be 1, 2 or 3, got {}'.format(ndim))
-
-    return _gridding
-
-
-@nb.jit(nopython=True)  # pragma: no cover
-def lin_interpolate(kernel, x):
-    if x >= 1:
-        return 0.0
-    n = len(kernel)
-    idx = int(x * n)
-    frac = x * n - idx
-
-    left = kernel[idx]
-    if idx == n - 1:
-        right = 0.0
-    else:
-        right = kernel[idx + 1]
-    return (1.0 - frac) * left + frac * right
+    if order == 0:
+        return 1
+    elif order == 1:
+        return 1 - abs(x)
 
 
 @nb.jit(nopython=True, cache=True)  # pragma: no cover
-def _interpolate1(output, input, width, kernel, coord):
-    batch_size, nx = input.shape
-    npts = coord.shape[0]
+def _kaiser_bessel_kernel(x, beta):
+    if abs(x) > 1:
+        return 0
 
-    for i in range(npts):
-
-        kx = coord[i, -1]
-
-        x0 = np.ceil(kx - width / 2)
-        x1 = np.floor(kx + width / 2)
-
-        for x in range(x0, x1 + 1):
-
-            w = lin_interpolate(kernel, abs(x - kx) / (width / 2))
-
-            for b in range(batch_size):
-                output[b, i] += w * input[b, x % nx]
-
-    return output
+    x = beta * (1 - x**2)**0.5
+    t = x / 3.75
+    if x < 3.75:
+        return 1 + 3.5156229 * t**2 + 3.0899424 * t**4 +\
+            1.2067492 * t**6 + 0.2659732 * t**8 +\
+            0.0360768 * t**10 + 0.0045813 * t**12
+    else:
+        return x**-0.5 * np.exp(x) * (
+            0.39894228 + 0.01328592 * t**-1 +
+            0.00225319 * t**-2 - 0.00157565 * t**-3 +
+            0.00916281 * t**-4 - 0.02057706 * t**-5 +
+            0.02635537 * t**-6 - 0.01647633 * t**-7 +
+            0.00392377 * t**-8)
 
 
-@nb.jit(nopython=True, cache=True)  # pragma: no cover
-def _gridding1(output, input, width, kernel, coord):
-    batch_size, nx = output.shape
-    npts = coord.shape[0]
+def _get_interpolate(kernel):
+    if kernel == 'spline':
+        kernel = _spline_kernel
+    elif kernel == 'kaiser_bessel':
+        kernel = _kaiser_bessel_kernel
 
-    for i in range(npts):
+    @nb.jit(nopython=True)  # pragma: no cover
+    def _interpolate1(output, input, coord, width, param):
+        batch_size, nx = input.shape
+        npts = coord.shape[0]
 
-        kx = coord[i, -1]
+        for i in range(npts):
 
-        x0 = np.ceil(kx - width / 2)
-        x1 = np.floor(kx + width / 2)
+            kx = coord[i, -1]
 
-        for x in range(x0, x1 + 1):
-
-            w = lin_interpolate(kernel, abs(x - kx) / (width / 2))
-
-            for b in range(batch_size):
-                output[b, x % nx] += w * input[b, i]
-
-    return output
-
-
-@nb.jit(nopython=True, cache=True)  # pragma: no cover
-def _interpolate2(output, input, width, kernel, coord):
-
-    batch_size, ny, nx = input.shape
-    npts = coord.shape[0]
-
-    for i in range(npts):
-
-        kx, ky = coord[i, -1], coord[i, -2]
-
-        x0, y0 = (np.ceil(kx - width / 2),
-                  np.ceil(ky - width / 2))
-
-        x1, y1 = (np.floor(kx + width / 2),
-                  np.floor(ky + width / 2))
-
-        for y in range(y0, y1 + 1):
-            wy = lin_interpolate(kernel, abs(y - ky) / (width / 2))
+            x0 = np.ceil(kx - width / 2)
+            x1 = np.floor(kx + width / 2)
 
             for x in range(x0, x1 + 1):
-                w = wy * lin_interpolate(kernel, abs(x - kx) / (width / 2))
+
+                w = kernel((x - kx) / (width / 2), param)
 
                 for b in range(batch_size):
-                    output[b, i] += w * input[b, y % ny, x % nx]
+                    output[b, i] += w * input[b, x % nx]
 
-    return output
+        return output
+
+    @nb.jit(nopython=True)  # pragma: no cover
+    def _interpolate2(output, input, coord, width, param):
+
+        batch_size, ny, nx = input.shape
+        npts = coord.shape[0]
+
+        for i in range(npts):
+
+            kx, ky = coord[i, -1], coord[i, -2]
+
+            x0, y0 = (np.ceil(kx - width / 2),
+                      np.ceil(ky - width / 2))
+
+            x1, y1 = (np.floor(kx + width / 2),
+                      np.floor(ky + width / 2))
+
+            for y in range(y0, y1 + 1):
+                wy = kernel((y - ky) / (width / 2), param)
+
+                for x in range(x0, x1 + 1):
+                    w = wy * kernel((x - kx) / (width / 2), param)
+
+                    for b in range(batch_size):
+                        output[b, i] += w * input[b, y % ny, x % nx]
+
+        return output
+
+    @nb.jit(nopython=True)  # pragma: no cover
+    def _interpolate3(output, input, coord, width, param):
+        batch_size, nz, ny, nx = input.shape
+        npts = coord.shape[0]
+
+        for i in range(npts):
+
+            kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
+
+            x0, y0, z0 = (np.ceil(kx - width / 2),
+                          np.ceil(ky - width / 2),
+                          np.ceil(kz - width / 2))
+
+            x1, y1, z1 = (np.floor(kx + width / 2),
+                          np.floor(ky + width / 2),
+                          np.floor(kz + width / 2))
+
+            for z in range(z0, z1 + 1):
+                wz = kernel((z - kz) / (width / 2), param)
+
+                for y in range(y0, y1 + 1):
+                    wy = wz * kernel((y - ky) / (width / 2), param)
+
+                    for x in range(x0, x1 + 1):
+                        w = wy * kernel((x - kx) / (width / 2), param)
+
+                        for b in range(batch_size):
+                            output[b, i] += w * input[b, z % nz, y % ny, x % nx]
+
+        return output
+
+    return _interpolate1, _interpolate2, _interpolate3
 
 
-@nb.jit(nopython=True, cache=True)  # pragma: no cover
-def _gridding2(output, input, width, kernel, coord):
-    batch_size, ny, nx = output.shape
-    npts = coord.shape[0]
+def _get_gridding(kernel):
+    if kernel == 'spline':
+        kernel = _spline_kernel
+    elif kernel == 'kaiser_bessel':
+        kernel = _kaiser_bessel_kernel
 
-    for i in range(npts):
+    @nb.jit(nopython=True)  # pragma: no cover
+    def _gridding1(output, input, coord, width, param):
+        batch_size, nx = output.shape
+        npts = coord.shape[0]
 
-        kx, ky = coord[i, -1], coord[i, -2]
+        for i in range(npts):
 
-        x0, y0 = (np.ceil(kx - width / 2),
-                  np.ceil(ky - width / 2))
+            kx = coord[i, -1]
 
-        x1, y1 = (np.floor(kx + width / 2),
-                  np.floor(ky + width / 2))
-
-        for y in range(y0, y1 + 1):
-            wy = lin_interpolate(kernel, abs(y - ky) / (width / 2))
+            x0 = np.ceil(kx - width / 2)
+            x1 = np.floor(kx + width / 2)
 
             for x in range(x0, x1 + 1):
-                w = wy * lin_interpolate(kernel, abs(x - kx) / (width / 2))
+
+                w = kernel((x - kx) / (width / 2), param)
 
                 for b in range(batch_size):
-                    output[b, y % ny, x % nx] += w * input[b, i]
+                    output[b, x % nx] += w * input[b, i]
 
-    return output
+        return output
 
+    @nb.jit(nopython=True)  # pragma: no cover
+    def _gridding2(output, input, coord, width, param):
+        batch_size, ny, nx = output.shape
+        npts = coord.shape[0]
 
-@nb.jit(nopython=True, cache=True)  # pragma: no cover
-def _interpolate3(output, input, width, kernel, coord):
-    batch_size, nz, ny, nx = input.shape
-    npts = coord.shape[0]
+        for i in range(npts):
 
-    for i in range(npts):
+            kx, ky = coord[i, -1], coord[i, -2]
 
-        kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
+            x0, y0 = (np.ceil(kx - width / 2),
+                      np.ceil(ky - width / 2))
 
-        x0, y0, z0 = (np.ceil(kx - width / 2),
-                      np.ceil(ky - width / 2),
-                      np.ceil(kz - width / 2))
-
-        x1, y1, z1 = (np.floor(kx + width / 2),
-                      np.floor(ky + width / 2),
-                      np.floor(kz + width / 2))
-
-        for z in range(z0, z1 + 1):
-            wz = lin_interpolate(kernel, abs(z - kz) / (width / 2))
+            x1, y1 = (np.floor(kx + width / 2),
+                      np.floor(ky + width / 2))
 
             for y in range(y0, y1 + 1):
-                wy = wz * lin_interpolate(kernel, abs(y - ky) / (width / 2))
+                wy = kernel((y - ky) / (width / 2), param)
 
                 for x in range(x0, x1 + 1):
-                    w = wy * lin_interpolate(kernel, abs(x - kx) / (width / 2))
+                    w = wy * kernel((x - kx) / (width / 2), param)
 
                     for b in range(batch_size):
-                        output[b, i] += w * input[b, z % nz, y % ny, x % nx]
+                        output[b, y % ny, x % nx] += w * input[b, i]
 
-    return output
+        return output
+
+    @nb.jit(nopython=True)  # pragma: no cover
+    def _gridding3(output, input, coord, width, param):
+        batch_size, nz, ny, nx = output.shape
+        npts = coord.shape[0]
+
+        for i in range(npts):
+
+            kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
+
+            x0, y0, z0 = (np.ceil(kx - width / 2),
+                          np.ceil(ky - width / 2),
+                          np.ceil(kz - width / 2))
+
+            x1, y1, z1 = (np.floor(kx + width / 2),
+                          np.floor(ky + width / 2),
+                          np.floor(kz + width / 2))
+
+            for z in range(z0, z1 + 1):
+                wz = kernel((z - kz) / (width / 2), param)
+
+                for y in range(y0, y1 + 1):
+                    wy = wz * kernel((y - ky) / (width / 2), param)
+
+                    for x in range(x0, x1 + 1):
+                        w = wy * kernel((x - kx) / (width / 2), param)
+
+                        for b in range(batch_size):
+                            output[b, z % nz, y % ny, x % nx] += w * input[b, i]
+
+        return output
+
+    return _gridding1, _gridding2, _gridding3
 
 
-@nb.jit(nopython=True, cache=True)  # pragma: no cover
-def _gridding3(output, input, width, kernel, coord):
-    batch_size, nz, ny, nx = output.shape
-    npts = coord.shape[0]
-
-    for i in range(npts):
-
-        kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
-
-        x0, y0, z0 = (np.ceil(kx - width / 2),
-                      np.ceil(ky - width / 2),
-                      np.ceil(kz - width / 2))
-
-        x1, y1, z1 = (np.floor(kx + width / 2),
-                      np.floor(ky + width / 2),
-                      np.floor(kz + width / 2))
-
-        for z in range(z0, z1 + 1):
-            wz = lin_interpolate(kernel, abs(z - kz) / (width / 2))
-
-            for y in range(y0, y1 + 1):
-                wy = wz * lin_interpolate(kernel, abs(y - ky) / (width / 2))
-
-                for x in range(x0, x1 + 1):
-                    w = wy * lin_interpolate(kernel, abs(x - kx) / (width / 2))
-
-                    for b in range(batch_size):
-                        output[b, z % nz, y % ny, x % nx] += w * input[b, i]
-
-    return output
-
+_interpolate = {}
+_gridding = {}
+for kernel in KERNELS:
+    _interpolate[kernel] = _get_interpolate(kernel)
+    _gridding[kernel] = _get_gridding(kernel)
 
 if config.cupy_enabled:  # pragma: no cover
     import cupy as cp
 
-    lin_interpolate_cuda = """
-    __device__ inline S lin_interpolate(const S* kernel, int n, S x) {
-        if (x >= 1)
-           return 0;
-        const int idx = x * n;
-        const S frac = x * n - idx;
+    _spline_kernel_cuda = """
+    __device__ inline S kernel(S x, S order) {
+        if (fabsf(x) > 1)
+            return 0;
 
-        const S left = kernel[idx];
-        S right = 0;
-        if (idx != n - 1)
-            right = kernel[idx + 1];
-
-        return (1 - frac) * left + frac * right;
+        if (order == 0)
+            return 1;
+        else if (order == 1)
+            return 1 - fabsf(x);
     }
     """
+
+    _kaiser_bessel_kernel_cuda = """
+    __device__ inline S kernel(S x, S beta) {
+        if (fabsf(x) > 1)
+            return 0;
+
+        x = beta * sqrt(1 - x * x);
+        S t = x / 3.75;
+        if (x < 3.75)
+            return 1 + 3.5156229 * pow(t, 2) + 3.0899424 * pow(t, 4) +
+                1.2067492 * pow(t, 6) + 0.2659732 * pow(t, 8) +
+                0.0360768 * pow(t, 10) + 0.0045813 * pow(t, 12);
+        else
+            return pow(x, -0.5) * exp(x) * (
+                0.39894228 + 0.01328592 * pow(t, -1) +
+                0.00225319 * pow(t, -2) - 0.00157565 * pow(t, -3) +
+                0.00916281 * pow(t, -4) - 0.02057706 * pow(t, -5) +
+                0.02635537 * pow(t, -6) - 0.01647633 * pow(t, -7) +
+                0.00392377 * pow(t, -8));
+    }
+    """
+
     mod_cuda = """
     __device__ inline int mod(int x, int n) {
         return (x % n + n) % n;
     }
     """
 
-    _interpolate1_cuda = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord',
-        'raw T output',
-        """
-        const int batch_size = input.shape()[0];
-        const int nx = input.shape()[1];
+    def _get_interpolate_cuda(kernel):
+        if kernel == 'spline':
+            kernel = _spline_kernel_cuda
+        elif kernel == 'kaiser_bessel':
+            kernel = _kaiser_bessel_kernel_cuda
 
-        const int coord_idx[] = {i, 0};
-        const S kx = coord[coord_idx];
-        const int x0 = ceil(kx - width / 2.0);
-        const int x1 = floor(kx + width / 2.0);
+        _interpolate1_cuda = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T output',
+            """
+            const int batch_size = input.shape()[0];
+            const int nx = input.shape()[1];
 
-        for (int x = x0; x < x1 + 1; x++) {
-            const S w = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) x - kx) / (width / 2.0));
-            for (int b = 0; b < batch_size; b++) {
-                const int input_idx[] = {b, mod(x, nx)};
-                const T v = (T) w * input[input_idx];
-                const int output_idx[] = {b, i};
-                output[output_idx] += v;
-            }
-        }
-        """,
-        name='interpolate1',
-        preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
+            const int coord_idx[] = {i, 0};
+            const S kx = coord[coord_idx];
+            const int x0 = ceil(kx - width / 2.0);
+            const int x1 = floor(kx + width / 2.0);
 
-    _gridding1_cuda = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord',
-        'raw T output',
-        """
-        const int batch_size = output.shape()[0];
-        const int nx = output.shape()[1];
-
-        const int coord_idx[] = {i, 0};
-        const S kx = coord[coord_idx];
-        const int x0 = ceil(kx - width / 2.0);
-        const int x1 = floor(kx + width / 2.0);
-
-        for (int x = x0; x < x1 + 1; x++) {
-            const S w = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) x - kx) / (width / 2.0));
-            for (int b = 0; b < batch_size; b++) {
-                const int input_idx[] = {b, i};
-                const T v = (T) w * input[input_idx];
-                const int output_idx[] = {b, mod(x, nx)};
-                atomicAdd(&output[output_idx], v);
-            }
-        }
-        """,
-        name='gridding1',
-        preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
-
-    _gridding1_cuda_complex = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord',
-        'raw T output',
-        """
-        const int batch_size = output.shape()[0];
-        const int nx = output.shape()[1];
-
-        const int coord_idx[] = {i, 0};
-        const S kx = coord[coord_idx];
-        const int x0 = ceil(kx - width / 2.0);
-        const int x1 = floor(kx + width / 2.0);
-
-        for (int x = x0; x < x1 + 1; x++) {
-            const S w = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) x - kx) / (width / 2.0));
-            for (int b = 0; b < batch_size; b++) {
-                const int input_idx[] = {b, i};
-                const T v = (T) w * input[input_idx];
-                const int output_idx[] = {b, mod(x, nx)};
-                atomicAdd(
-                    reinterpret_cast<T::value_type*>(
-                        &(output[output_idx])), v.real());
-                atomicAdd(
-                    reinterpret_cast<T::value_type*>(
-                        &(output[output_idx])) + 1, v.imag());
-            }
-        }
-        """,
-        name='gridding1_complex',
-        preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
-
-    _interpolate2_cuda = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord',
-        'raw T output',
-        """
-        const int batch_size = input.shape()[0];
-        const int ny = input.shape()[1];
-        const int nx = input.shape()[2];
-
-        const int coordx_idx[] = {i, 1};
-        const S kx = coord[coordx_idx];
-        const int coordy_idx[] = {i, 0};
-        const S ky = coord[coordy_idx];
-
-        const int x0 = ceil(kx - width / 2.0);
-        const int y0 = ceil(ky - width / 2.0);
-
-        const int x1 = floor(kx + width / 2.0);
-        const int y1 = floor(ky + width / 2.0);
-
-        for (int y = y0; y < y1 + 1; y++) {
-            const S wy = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) y - ky) / (width / 2.0));
             for (int x = x0; x < x1 + 1; x++) {
-                const S w = wy * lin_interpolate(&kernel[0], kernel.size(),
-                    fabsf((S) x - kx) / (width / 2.0));
+                const S w = kernel(
+                    ((S) x - kx) / (width / 2.0), param);
                 for (int b = 0; b < batch_size; b++) {
-                    const int input_idx[] = {b, mod(y, ny), mod(x, nx)};
+                    const int input_idx[] = {b, mod(x, nx)};
                     const T v = (T) w * input[input_idx];
                     const int output_idx[] = {b, i};
                     output[output_idx] += v;
                 }
             }
-        }
-        """,
-        name='interpolate2',
-        preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
+            """,
+            name='interpolate1',
+            preamble=kernel + mod_cuda,
+            reduce_dims=False)
 
-    _gridding2_cuda = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord', 'raw T output', """
-        const int batch_size = output.shape()[0];
-        const int ny = output.shape()[1];
-        const int nx = output.shape()[2];
+        _interpolate2_cuda = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T output',
+            """
+            const int batch_size = input.shape()[0];
+            const int ny = input.shape()[1];
+            const int nx = input.shape()[2];
 
-        const int coordx_idx[] = {i, 1};
-        const S kx = coord[coordx_idx];
-        const int coordy_idx[] = {i, 0};
-        const S ky = coord[coordy_idx];
+            const int coordx_idx[] = {i, 1};
+            const S kx = coord[coordx_idx];
+            const int coordy_idx[] = {i, 0};
+            const S ky = coord[coordy_idx];
 
-        const int x0 = ceil(kx - width / 2.0);
-        const int y0 = ceil(ky - width / 2.0);
+            const int x0 = ceil(kx - width / 2.0);
+            const int y0 = ceil(ky - width / 2.0);
 
-        const int x1 = floor(kx + width / 2.0);
-        const int y1 = floor(ky + width / 2.0);
+            const int x1 = floor(kx + width / 2.0);
+            const int y1 = floor(ky + width / 2.0);
 
-        for (int y = y0; y < y1 + 1; y++) {
-            const S wy = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) y - ky) / (width / 2.0));
-            for (int x = x0; x < x1 + 1; x++) {
-                const S w = wy * lin_interpolate(&kernel[0], kernel.size(),
-                    fabsf((S) x - kx) / (width / 2.0));
-                for (int b = 0; b < batch_size; b++) {
-                    const int input_idx[] = {b, i};
-                    const T v = (T) w * input[input_idx];
-                    const int output_idx[] = {b, mod(y, ny), mod(x, nx)};
-                    atomicAdd(&output[output_idx], v);
-                }
-            }
-        }
-        """, name='gridding2', preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
-
-    _gridding2_cuda_complex = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord',
-        'raw T output',
-        """
-        const int batch_size = output.shape()[0];
-        const int ny = output.shape()[1];
-        const int nx = output.shape()[2];
-
-        const int coordx_idx[] = {i, 1};
-        const S kx = coord[coordx_idx];
-        const int coordy_idx[] = {i, 0};
-        const S ky = coord[coordy_idx];
-
-        const int x0 = ceil(kx - width / 2.0);
-        const int y0 = ceil(ky - width / 2.0);
-
-        const int x1 = floor(kx + width / 2.0);
-        const int y1 = floor(ky + width / 2.0);
-
-        for (int y = y0; y < y1 + 1; y++) {
-            const S wy = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) y - ky) / (width / 2.0));
-            for (int x = x0; x < x1 + 1; x++) {
-                const S w = wy * lin_interpolate(&kernel[0], kernel.size(),
-                    fabsf((S) x - kx) / (width / 2.0));
-                for (int b = 0; b < batch_size; b++) {
-                    const int input_idx[] = {b, i};
-                    const T v = (T) w * input[input_idx];
-                    const int output_idx[] = {b, mod(y, ny), mod(x, nx)};
-                    atomicAdd(reinterpret_cast<T::value_type*>(
-                        &(output[output_idx])), v.real());
-                    atomicAdd(reinterpret_cast<T::value_type*>(
-                        &(output[output_idx])) + 1, v.imag());
-                }
-            }
-        }
-        """,
-        name='gridding2_complex',
-        preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
-
-    _interpolate3_cuda = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord', 'raw T output', """
-        const int batch_size = input.shape()[0];
-        const int nz = input.shape()[1];
-        const int ny = input.shape()[2];
-        const int nx = input.shape()[3];
-
-        const int coordz_idx[] = {i, 0};
-        const S kz = coord[coordz_idx];
-        const int coordy_idx[] = {i, 1};
-        const S ky = coord[coordy_idx];
-        const int coordx_idx[] = {i, 2};
-        const S kx = coord[coordx_idx];
-
-        const int x0 = ceil(kx - width / 2.0);
-        const int y0 = ceil(ky - width / 2.0);
-        const int z0 = ceil(kz - width / 2.0);
-
-        const int x1 = floor(kx + width / 2.0);
-        const int y1 = floor(ky + width / 2.0);
-        const int z1 = floor(kz + width / 2.0);
-
-        for (int z = z0; z < z1 + 1; z++) {
-            const S wz = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) z - kz) / (width / 2.0));
             for (int y = y0; y < y1 + 1; y++) {
-                const S wy = wz * lin_interpolate(&kernel[0], kernel.size(),
-                    fabsf((S) y - ky) / (width / 2.0));
+                const S wy = kernel(
+                    ((S) y - ky) / (width / 2.0), param);
                 for (int x = x0; x < x1 + 1; x++) {
-                    const S w = wy * lin_interpolate(&kernel[0], kernel.size(),
-                        fabsf((S) x - kx) / (width / 2.0));
+                    const S w = wy * kernel(
+                        ((S) x - kx) / (width / 2.0), param);
                     for (int b = 0; b < batch_size; b++) {
-                        const int input_idx[] = {b, mod(z, nz), mod(y, ny),
-                            mod(x, nx)};
+                        const int input_idx[] = {b, mod(y, ny), mod(x, nx)};
                         const T v = (T) w * input[input_idx];
                         const int output_idx[] = {b, i};
                         output[output_idx] += v;
                     }
                 }
             }
-        }
-        """, name='interpolate3', preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
+            """,
+            name='interpolate2',
+            preamble=kernel + mod_cuda,
+            reduce_dims=False)
 
-    _gridding3_cuda = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord', 'raw T output', """
-        const int batch_size = output.shape()[0];
-        const int nz = output.shape()[1];
-        const int ny = output.shape()[2];
-        const int nx = output.shape()[3];
+        _interpolate3_cuda = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            const int batch_size = input.shape()[0];
+            const int nz = input.shape()[1];
+            const int ny = input.shape()[2];
+            const int nx = input.shape()[3];
 
-        const int coordz_idx[] = {i, 0};
-        const S kz = coord[coordz_idx];
-        const int coordy_idx[] = {i, 1};
-        const S ky = coord[coordy_idx];
-        const int coordx_idx[] = {i, 2};
-        const S kx = coord[coordx_idx];
+            const int coordz_idx[] = {i, 0};
+            const S kz = coord[coordz_idx];
+            const int coordy_idx[] = {i, 1};
+            const S ky = coord[coordy_idx];
+            const int coordx_idx[] = {i, 2};
+            const S kx = coord[coordx_idx];
 
-        const int x0 = ceil(kx - width / 2.0);
-        const int y0 = ceil(ky - width / 2.0);
-        const int z0 = ceil(kz - width / 2.0);
+            const int x0 = ceil(kx - width / 2.0);
+            const int y0 = ceil(ky - width / 2.0);
+            const int z0 = ceil(kz - width / 2.0);
 
-        const int x1 = floor(kx + width / 2.0);
-        const int y1 = floor(ky + width / 2.0);
-        const int z1 = floor(kz + width / 2.0);
+            const int x1 = floor(kx + width / 2.0);
+            const int y1 = floor(ky + width / 2.0);
+            const int z1 = floor(kz + width / 2.0);
 
-        for (int z = z0; z < z1 + 1; z++) {
-            const S wz = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) z - kz) / (width / 2.0));
+            for (int z = z0; z < z1 + 1; z++) {
+                const S wz = kernel(
+                    ((S) z - kz) / (width / 2.0), param);
+                for (int y = y0; y < y1 + 1; y++) {
+                    const S wy = wz * kernel(
+                        ((S) y - ky) / (width / 2.0), param);
+                    for (int x = x0; x < x1 + 1; x++) {
+                        const S w = wy * kernel(
+                            ((S) x - kx) / (width / 2.0), param);
+                        for (int b = 0; b < batch_size; b++) {
+                            const int input_idx[] = {b, mod(z, nz), mod(y, ny),
+                                mod(x, nx)};
+                            const T v = (T) w * input[input_idx];
+                            const int output_idx[] = {b, i};
+                            output[output_idx] += v;
+                        }
+                    }
+                }
+            }
+            """, name='interpolate3', preamble=kernel + mod_cuda,
+            reduce_dims=False)
+
+        return _interpolate1_cuda, _interpolate2_cuda, _interpolate3_cuda
+
+    def _get_gridding_cuda(kernel):
+        if kernel == 'spline':
+            kernel = _spline_kernel_cuda
+        elif kernel == 'kaiser_bessel':
+            kernel = _kaiser_bessel_kernel_cuda
+
+        _gridding1_cuda = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T output',
+            """
+            const int batch_size = output.shape()[0];
+            const int nx = output.shape()[1];
+
+            const int coord_idx[] = {i, 0};
+            const S kx = coord[coord_idx];
+            const int x0 = ceil(kx - width / 2.0);
+            const int x1 = floor(kx + width / 2.0);
+
+            for (int x = x0; x < x1 + 1; x++) {
+                const S w = kernel(
+                    ((S) x - kx) / (width / 2.0), param);
+                for (int b = 0; b < batch_size; b++) {
+                    const int input_idx[] = {b, i};
+                    const T v = (T) w * input[input_idx];
+                    const int output_idx[] = {b, mod(x, nx)};
+                    atomicAdd(&output[output_idx], v);
+                }
+            }
+            """,
+            name='gridding1',
+            preamble=kernel + mod_cuda,
+            reduce_dims=False)
+
+        _gridding2_cuda = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            const int batch_size = output.shape()[0];
+            const int ny = output.shape()[1];
+            const int nx = output.shape()[2];
+
+            const int coordx_idx[] = {i, 1};
+            const S kx = coord[coordx_idx];
+            const int coordy_idx[] = {i, 0};
+            const S ky = coord[coordy_idx];
+
+            const int x0 = ceil(kx - width / 2.0);
+            const int y0 = ceil(ky - width / 2.0);
+
+            const int x1 = floor(kx + width / 2.0);
+            const int y1 = floor(ky + width / 2.0);
+
             for (int y = y0; y < y1 + 1; y++) {
-                const S wy = wz * lin_interpolate(&kernel[0], kernel.size(),
-                    fabsf((S) y - ky) / (width / 2.0));
+                const S wy = kernel(
+                    ((S) y - ky) / (width / 2.0), param);
                 for (int x = x0; x < x1 + 1; x++) {
-                    const S w = wy * lin_interpolate(&kernel[0], kernel.size(),
-                        fabsf((S) x - kx) / (width / 2.0));
+                    const S w = wy * kernel(
+                        ((S) x - kx) / (width / 2.0), param);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
-                        const int output_idx[] = {b, mod(z, nz), mod(y, ny),
-                            mod(x, nx)};
+                        const int output_idx[] = {b, mod(y, ny), mod(x, nx)};
                         atomicAdd(&output[output_idx], v);
                     }
                 }
             }
-        }
-        """, name='gridding3', preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
+            """, name='gridding2', preamble=kernel + mod_cuda,
+            reduce_dims=False)
 
-    _gridding3_cuda_complex = cp.ElementwiseKernel(
-        'raw T input, raw S width, raw S kernel, raw S coord',
-        'raw T output',
-        """
-        const int batch_size = output.shape()[0];
-        const int nz = output.shape()[1];
-        const int ny = output.shape()[2];
-        const int nx = output.shape()[3];
+        _gridding3_cuda = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            const int batch_size = output.shape()[0];
+            const int nz = output.shape()[1];
+            const int ny = output.shape()[2];
+            const int nx = output.shape()[3];
 
-        const int coordz_idx[] = {i, 0};
-        const S kz = coord[coordz_idx];
-        const int coordy_idx[] = {i, 1};
-        const S ky = coord[coordy_idx];
-        const int coordx_idx[] = {i, 2};
-        const S kx = coord[coordx_idx];
+            const int coordz_idx[] = {i, 0};
+            const S kz = coord[coordz_idx];
+            const int coordy_idx[] = {i, 1};
+            const S ky = coord[coordy_idx];
+            const int coordx_idx[] = {i, 2};
+            const S kx = coord[coordx_idx];
 
-        const int x0 = ceil(kx - width / 2.0);
-        const int y0 = ceil(ky - width / 2.0);
-        const int z0 = ceil(kz - width / 2.0);
+            const int x0 = ceil(kx - width / 2.0);
+            const int y0 = ceil(ky - width / 2.0);
+            const int z0 = ceil(kz - width / 2.0);
 
-        const int x1 = floor(kx + width / 2.0);
-        const int y1 = floor(ky + width / 2.0);
-        const int z1 = floor(kz + width / 2.0);
+            const int x1 = floor(kx + width / 2.0);
+            const int y1 = floor(ky + width / 2.0);
+            const int z1 = floor(kz + width / 2.0);
 
-        for (int z = z0; z < z1 + 1; z++) {
-            const S wz = lin_interpolate(&kernel[0], kernel.size(),
-                fabsf((S) z - kz) / (width / 2.0));
+            for (int z = z0; z < z1 + 1; z++) {
+                const S wz = kernel(
+                    ((S) z - kz) / (width / 2.0), param);
+                for (int y = y0; y < y1 + 1; y++) {
+                    const S wy = wz * kernel(
+                        ((S) y - ky) / (width / 2.0), param);
+                    for (int x = x0; x < x1 + 1; x++) {
+                        const S w = wy * kernel(
+                            ((S) x - kx) / (width / 2.0), param);
+                        for (int b = 0; b < batch_size; b++) {
+                            const int input_idx[] = {b, i};
+                            const T v = (T) w * input[input_idx];
+                            const int output_idx[] = {b, mod(z, nz), mod(y, ny),
+                                mod(x, nx)};
+                            atomicAdd(&output[output_idx], v);
+                        }
+                    }
+                }
+            }
+            """, name='gridding3', preamble=kernel + mod_cuda,
+            reduce_dims=False)
+
+        return _gridding1_cuda, _gridding2_cuda, _gridding3_cuda
+
+    def _get_gridding_cuda_complex(kernel):
+        if kernel == 'spline':
+            kernel = _spline_kernel_cuda
+        elif kernel == 'kaiser_bessel':
+            kernel = _kaiser_bessel_kernel_cuda
+
+        _gridding1_cuda_complex = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T output',
+            """
+            const int batch_size = output.shape()[0];
+            const int nx = output.shape()[1];
+
+            const int coord_idx[] = {i, 0};
+            const S kx = coord[coord_idx];
+            const int x0 = ceil(kx - width / 2.0);
+            const int x1 = floor(kx + width / 2.0);
+
+            for (int x = x0; x < x1 + 1; x++) {
+                const S w = kernel(
+                    ((S) x - kx) / (width / 2.0), param);
+                for (int b = 0; b < batch_size; b++) {
+                    const int input_idx[] = {b, i};
+                    const T v = (T) w * input[input_idx];
+                    const int output_idx[] = {b, mod(x, nx)};
+                    atomicAdd(
+                        reinterpret_cast<T::value_type*>(
+                            &(output[output_idx])), v.real());
+                    atomicAdd(
+                        reinterpret_cast<T::value_type*>(
+                            &(output[output_idx])) + 1, v.imag());
+                }
+            }
+            """,
+            name='gridding1_complex',
+            preamble=kernel + mod_cuda,
+            reduce_dims=False)
+        _gridding2_cuda_complex = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T output',
+            """
+            const int batch_size = output.shape()[0];
+            const int ny = output.shape()[1];
+            const int nx = output.shape()[2];
+
+            const int coordx_idx[] = {i, 1};
+            const S kx = coord[coordx_idx];
+            const int coordy_idx[] = {i, 0};
+            const S ky = coord[coordy_idx];
+
+            const int x0 = ceil(kx - width / 2.0);
+            const int y0 = ceil(ky - width / 2.0);
+
+            const int x1 = floor(kx + width / 2.0);
+            const int y1 = floor(ky + width / 2.0);
+
             for (int y = y0; y < y1 + 1; y++) {
-                const S wy = wz * lin_interpolate(&kernel[0], kernel.size(),
-                     fabsf((S) y - ky) / (width / 2.0));
+                const S wy = kernel(
+                    ((S) y - ky) / (width / 2.0), param);
                 for (int x = x0; x < x1 + 1; x++) {
-                    const S w = wy * lin_interpolate(&kernel[0], kernel.size(),
-                        fabsf((S) x - kx) / (width / 2.0));
+                    const S w = wy * kernel(
+                        ((S) x - kx) / (width / 2.0), param);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
-                        const int output_idx[] = {b, mod(z, nz), mod(y, ny),
-                            mod(x, nx)};
+                        const int output_idx[] = {b, mod(y, ny), mod(x, nx)};
                         atomicAdd(reinterpret_cast<T::value_type*>(
                             &(output[output_idx])), v.real());
                         atomicAdd(reinterpret_cast<T::value_type*>(
@@ -675,8 +696,69 @@ if config.cupy_enabled:  # pragma: no cover
                     }
                 }
             }
-        }
-        """,
-        name='gridding3_complex',
-        preamble=lin_interpolate_cuda + mod_cuda,
-        reduce_dims=False)
+            """,
+            name='gridding2_complex',
+            preamble=kernel + mod_cuda,
+            reduce_dims=False)
+
+        _gridding3_cuda_complex = cp.ElementwiseKernel(
+            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T output',
+            """
+            const int batch_size = output.shape()[0];
+            const int nz = output.shape()[1];
+            const int ny = output.shape()[2];
+            const int nx = output.shape()[3];
+
+            const int coordz_idx[] = {i, 0};
+            const S kz = coord[coordz_idx];
+            const int coordy_idx[] = {i, 1};
+            const S ky = coord[coordy_idx];
+            const int coordx_idx[] = {i, 2};
+            const S kx = coord[coordx_idx];
+
+            const int x0 = ceil(kx - width / 2.0);
+            const int y0 = ceil(ky - width / 2.0);
+            const int z0 = ceil(kz - width / 2.0);
+
+            const int x1 = floor(kx + width / 2.0);
+            const int y1 = floor(ky + width / 2.0);
+            const int z1 = floor(kz + width / 2.0);
+
+            for (int z = z0; z < z1 + 1; z++) {
+                const S wz = kernel(
+                    ((S) z - kz) / (width / 2.0), param);
+                for (int y = y0; y < y1 + 1; y++) {
+                    const S wy = wz * kernel(
+                         ((S) y - ky) / (width / 2.0), param);
+                    for (int x = x0; x < x1 + 1; x++) {
+                        const S w = wy * kernel(
+                            ((S) x - kx) / (width / 2.0), param);
+                        for (int b = 0; b < batch_size; b++) {
+                            const int input_idx[] = {b, i};
+                            const T v = (T) w * input[input_idx];
+                            const int output_idx[] = {b, mod(z, nz), mod(y, ny),
+                                mod(x, nx)};
+                            atomicAdd(reinterpret_cast<T::value_type*>(
+                                &(output[output_idx])), v.real());
+                            atomicAdd(reinterpret_cast<T::value_type*>(
+                                &(output[output_idx])) + 1, v.imag());
+                        }
+                    }
+                }
+            }
+            """,
+            name='gridding3_complex',
+            preamble=kernel + mod_cuda,
+            reduce_dims=False)
+
+        return _gridding1_cuda_complex, _gridding2_cuda_complex, \
+            _gridding3_cuda_complex
+
+    _interpolate_cuda = {}
+    _gridding_cuda = {}
+    _gridding_cuda_complex = {}
+    for kernel in KERNELS:
+        _interpolate_cuda[kernel] = _get_interpolate_cuda(kernel)
+        _gridding_cuda[kernel] = _get_gridding_cuda(kernel)
+        _gridding_cuda_complex[kernel] = _get_gridding_cuda_complex(kernel)
