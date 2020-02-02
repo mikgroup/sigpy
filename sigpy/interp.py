@@ -17,7 +17,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     r"""Interpolation from array to points specified by coordinates.
 
     Let :math:`x` be the input, :math:`y` be the output,
-    :math:`c`: be the coordinates, :math:`W` be the kernel width,
+    :math:`c` be the coordinates, :math:`W` be the kernel width,
     and :math:`K` be the interpolation kernel, then the function computes,
 
     .. math ::
@@ -89,7 +89,7 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     r"""Gridding of points specified by coordinates to array.
 
     Let :math:`y` be the input, :math:`x` be the output,
-    :math:`c`: be the coordinates, :math:`W` be the kernel width,
+    :math:`c` be the coordinates, :math:`W` be the kernel width,
     and :math:`K` be the interpolation kernel, then the function computes,
 
     .. math ::
