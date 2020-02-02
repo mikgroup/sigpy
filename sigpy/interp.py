@@ -58,8 +58,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
         output (array): Output array.
 
     References:
-        https://en.wikipedia.org/wiki/Spline_wavelet#Cardinal_B-splines_of_sma
-ll_orders
+        https://en.wikipedia.org/wiki/Spline_wavelet#Cardinal_B-splines_of_small_orders
         http://people.math.sfu.ca/~cbm/aands/page_378.htm
     """
     ndim = coord.shape[-1]
@@ -130,8 +129,7 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
         output (array): Output array.
 
     References:
-        https://en.wikipedia.org/wiki/Spline_wavelet#Cardinal_B-splines_of_sma
-ll_orders
+        https://en.wikipedia.org/wiki/Spline_wavelet#Cardinal_B-splines_of_small_orders
         http://people.math.sfu.ca/~cbm/aands/page_378.htm
     """
     ndim = coord.shape[-1]
