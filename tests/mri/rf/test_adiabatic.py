@@ -1,14 +1,12 @@
 import unittest
 import numpy as np
-import sigpy as sp
 import numpy.testing as npt
-import scipy.ndimage.filters as filt
-import sigpy.plot as pl
 
-from sigpy.mri import rf, linop, sim
+from sigpy.mri import rf
 
 if __name__ == '__main__':
     unittest.main()
+
 
 class TestAdiabatic(unittest.TestCase):
 
