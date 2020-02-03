@@ -53,7 +53,7 @@ def bir4(n, beta, kappa, theta, dw0):
     return a, om
 
 
-def hypsec(n=512, beta=800, mu=4.9, T=0.012):
+def hypsec(n=512, beta=800, mu=4.9, dur=0.012):
     r"""Generate a hyperbolic secant adiabatic pulse.
 
     mu * beta becomes the amplitude of the frequency sweep
@@ -62,7 +62,7 @@ def hypsec(n=512, beta=800, mu=4.9, T=0.012):
         n (int): number of samples (should be a multiple of 4).
         beta (float): AM waveform parameter.
         mu (float): a constant, determines amplitude of frequency sweep.
-        T (float): pulse time (s).
+        dur (float): pulse time (s).
 
     Returns:
         2-element tuple containing
@@ -76,7 +76,7 @@ def hypsec(n=512, beta=800, mu=4.9, T=0.012):
         Phys. Rev. A., 32:3435-3447.
      """
 
-    t = np.arange(-n // 2, n // 2) / n * T
+    t = np.arange(-n // 2, n // 2) / n * dur
 
     a = np.cosh(beta * t) ** -1
     om = -mu * beta * np.tanh(beta * t)
@@ -84,13 +84,13 @@ def hypsec(n=512, beta=800, mu=4.9, T=0.012):
     return a, om
 
 
-def wurst(n=512, N_fac=40, bw=40e3, T=2e-3):
+def wurst(n=512, n_fac=40, bw=40e3, dur=2e-3):
     r"""Generate a WURST (wideband, uniform rate, smooth truncation) adiabatic
      inversion pulse
 
     Args:
         n (int): number of samples (should be a multiple of 4).
-        N_fac (int): power to exponentiate to within AM term. ~20 or greater is
+        n_fac (int): power to exponentiate to within AM term. ~20 or greater is
          typical.
         bw (float): pulse bandwidth.
         T (float): pulse time (s).
@@ -108,22 +108,22 @@ def wurst(n=512, N_fac=40, bw=40e3, T=2e-3):
         J. Magn. Reson. Ser. A., 117:246-256.
      """
 
-    t = np.arange(0, n) * T / n
+    t = np.arange(0, n) * dur / n
 
-    a = 1 - np.power(np.abs(np.cos(np.pi * t / T)), N_fac)
+    a = 1 - np.power(np.abs(np.cos(np.pi * t / dur)), n_fac)
     om = np.linspace(-bw / 2, bw / 2, n) * 2 * np.pi
 
     return a, om
 
 
-def goia_wurst(n = 512, T = 3.5e-3, f = 0.9, n_b1 = 16, m_grad = 4,
-                b1_max = 817, bw = 20000):
+def goia_wurst(n=512, dur=3.5e-3, f=0.9, n_b1=16, m_grad=4,
+               b1_max=817, bw=20000):
     r"""Generate a GOIA (gradient offset independent adiabaticity) WURST
      inversion pulse
 
     Args:
         n (int): number of samples.
-        T (float): pulse duration (s).
+        dur (float): pulse duration (s).
         f (float): [0,1] gradient modulation factor
         n_b1 (int): order for B1 modulation
         m_grad (int): order for gradient modulation
@@ -144,11 +144,11 @@ def goia_wurst(n = 512, T = 3.5e-3, f = 0.9, n_b1 = 16, m_grad = 4,
 
     """
 
-    t = np.arange(0, n) * T / n
+    t = np.arange(0, n) * dur / n
 
-    a = b1_max*(1 - np.abs(np.sin(np.pi / 2 * (2 * t / T - 1))) ** n_b1)
-    g = (1 - f) + f * np.abs(np.sin(np.pi / 2 * (2 * t / T - 1))) ** m_grad
-    om = np.cumsum((a ** 2) / g) * T / n
+    a = b1_max*(1 - np.abs(np.sin(np.pi / 2 * (2 * t / dur - 1))) ** n_b1)
+    g = (1 - f) + f * np.abs(np.sin(np.pi / 2 * (2 * t / dur - 1))) ** m_grad
+    om = np.cumsum((a ** 2) / g) * dur / n
     om = om - om[n//2 + 1]
     om = g * om
     om = om / np.max(np.abs(om)) * bw / 2
@@ -156,18 +156,17 @@ def goia_wurst(n = 512, T = 3.5e-3, f = 0.9, n_b1 = 16, m_grad = 4,
     return a, om, g
 
 
-def bloch_siegert_fm(n = 512, T = 2e-3, B1p = 20., K = 42.,
-                     gamma = 2*np.pi*42.58):
+def bloch_siegert_fm(n=512, dur=2e-3, b1p=20., k=42.,
+                     gamma=2*np.pi*42.58):
     r"""
-
     U-shaped FM waveform for adiabatic Bloch-Siegert B1+ mapping and
     spatial encoding.
 
     Args:
         n (int): number of time points
-        T (float): duration in seconds
-        B1p (float): nominal amplitude of constant AM waveform
-        K (float): design parameter that affects max in-band
+        dur (float): duration in seconds
+        b1p (float): nominal amplitude of constant AM waveform
+        k (float): design parameter that affects max in-band
             perturbation
         gamma (float): gyromagnetic ratio
 
@@ -185,9 +184,9 @@ def bloch_siegert_fm(n = 512, T = 2e-3, B1p = 20., K = 42.,
 
     """
 
-    t = np.arange(1, n//2) * T / n
+    t = np.arange(1, n//2) * dur / n
 
-    om = gamma * B1p / np.sqrt((1 - gamma * B1p / K * t) ** -2 - 1)
+    om = gamma * b1p / np.sqrt((1 - gamma * b1p / k * t) ** -2 - 1)
     om = np.concatenate((om, om[::-1]))
 
     return om
