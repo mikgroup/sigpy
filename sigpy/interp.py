@@ -13,7 +13,7 @@ __all__ = ['interpolate', 'gridding']
 KERNELS = ['spline', 'kaiser_bessel']
 
 
-def interpolate(input, coord, kernel='spline', width=2, param=1):
+def interpolate(input, coord, kernel='spline', width=2, params=1):
     r"""Interpolation from array to points specified by coordinates.
 
     Let :math:`x` be the input, :math:`y` be the output,
@@ -27,24 +27,24 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
     'spline' uses the cardinal B-spline functions as kernels.
-    The order of the spline can be specified using param.
-    For example, param=1 performs linear interpolation.
-    Concretely, for param=0, :math:`K(x) = 1`,
-    for param=1, :math:`K(x) = 1 - |x|`, and
-    for param=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2`
+    The order of the spline can be specified using params.
+    For example, params=1 performs linear interpolation.
+    Concretely, for params=0, :math:`K(x) = 1`,
+    for params=1, :math:`K(x) = 1 - |x|`, and
+    for params=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2`
     for :math:`|x| > \frac{1}{3}`
     and :math:`K(x) = \frac{3}{4} (1 - 3 x^2)` for :math:`|x| < \frac{1}{3}`.
 
     These function expressions are derived from the reference wikipedia
     page by shifting and scaling the range to -1 to 1.
     When the coordinates specifies a uniformly spaced grid,
-    it is recommended to use the original scaling with width=param + 1
+    it is recommended to use the original scaling with width=params + 1
     so that the interpolation weights add up to one.
 
     'kaiser_bessel' uses the Kaiser-Bessel function as kernel.
     Concretely, :math:`K(x) = I_0(\beta \sqrt{1 - x^2})`,
     where :math:`I_0` is the modified Bessel function of the first kind.
-    The beta parameter can be specified with param.
+    The beta parameter can be specified with params.
     The modified Bessel function of the first kind is approximated
     using the power series, following the reference.
 
@@ -53,7 +53,7 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
         coord (array): Coordinate array of shape [..., ndim]
         width (float): Interpolation kernel full-width.
         kernel (str): Interpolation kernel, {'spline', 'kaiser_bessel'}.
-        param (float): Kernel parameter.
+        params (float or tuple of floats): Kernel parameter.
 
     Returns:
         output (array): Output array.
@@ -76,16 +76,21 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     coord = coord.reshape([npts, ndim])
     output = xp.zeros([batch_size, npts], dtype=input.dtype)
 
+    if np.isscalar(params):
+        params = xp.array([params] * ndim, coord.dtype)
+    else:
+        params = xp.array(params, coord.dtype)
+
     if xp == np:
-        _interpolate[kernel][ndim - 1](output, input, coord, width, param)
+        _interpolate[kernel][ndim - 1](output, input, coord, width, params)
     else:  # pragma: no cover
         _interpolate_cuda[kernel][ndim - 1](
-            input, coord, width, param, output, size=npts)
+            input, coord, width, params, output, size=npts)
 
     return output.reshape(batch_shape + pts_shape)
 
 
-def gridding(input, coord, shape, kernel="spline", width=2, param=1):
+def gridding(input, coord, shape, kernel="spline", width=2, params=1):
     r"""Gridding of points specified by coordinates to array.
 
     Let :math:`y` be the input, :math:`x` be the output,
@@ -99,24 +104,24 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     There are two types of kernels: 'spline' and 'kaiser_bessel'.
 
     'spline' uses the cardinal B-spline functions as kernels.
-    The order of the spline can be specified using param.
-    For example, param=1 performs linear interpolation.
-    Concretely, for param=0, :math:`K(x) = 1`,
-    for param=1, :math:`K(x) = 1 - |x|`, and
-    for param=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2`
+    The order of the spline can be specified using params.
+    For example, params=1 performs linear interpolation.
+    Concretely, for params=0, :math:`K(x) = 1`,
+    for params=1, :math:`K(x) = 1 - |x|`, and
+    for params=2, :math:`K(x) = \frac{9}{8} (1 - |x|)^2`
     for :math:`|x| > \frac{1}{3}`
     and :math:`K(x) = \frac{3}{4} (1 - 3 x^2)` for :math:`|x| < \frac{1}{3}`.
 
     These function expressions are derived from the reference wikipedia
     page by shifting and scaling the range to -1 to 1.
     When the coordinates specifies a uniformly spaced grid,
-    it is recommended to use the original scaling with width=param + 1
+    it is recommended to use the original scaling with width=params + 1
     so that the interpolation weights add up to one.
 
     'kaiser_bessel' uses the Kaiser-Bessel function as kernel.
     Concretely, :math:`K(x) = I_0(\beta \sqrt{1 - x^2})`,
     where :math:`I_0` is the modified Bessel function of the first kind.
-    The beta parameter can be specified with param.
+    The beta parameter can be specified with params.
     The modified Bessel function of the first kind is approximated
     using the power series, following the reference.
 
@@ -125,7 +130,7 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
         coord (array): Coordinate array of shape [..., ndim]
         width (float): Interpolation kernel full-width.
         kernel (str): Interpolation kernel, {"spline", "kaiser_bessel"}.
-        param (float): Kernel parameter.
+        params (float): Kernel parameter.
 
     Returns:
         output (array): Output array.
@@ -149,15 +154,20 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     coord = coord.reshape([npts, ndim])
     output = xp.zeros([batch_size] + list(shape[-ndim:]), dtype=input.dtype)
 
+    if np.isscalar(params):
+        params = xp.array([params] * ndim, coord.dtype)
+    else:
+        params = xp.array(params, coord.dtype)
+
     if xp == np:
-        _gridding[kernel][ndim - 1](output, input, coord, width, param)
+        _gridding[kernel][ndim - 1](output, input, coord, width, params)
     else:  # pragma: no cover
         if isreal:
             _gridding_cuda[kernel][ndim - 1](
-                input, coord, width, param, output, size=npts)
+                input, coord, width, params, output, size=npts)
         else:
             _gridding_cuda_complex[kernel][ndim - 1](
-                input, coord, width, param, output, size=npts)
+                input, coord, width, params, output, size=npts)
 
     return output.reshape(shape)
 
@@ -205,7 +215,7 @@ def _get_interpolate(kernel):
         kernel = _kaiser_bessel_kernel
 
     @nb.jit(nopython=True)  # pragma: no cover
-    def _interpolate1(output, input, coord, width, param):
+    def _interpolate1(output, input, coord, width, params):
         batch_size, nx = input.shape
         npts = coord.shape[0]
 
@@ -218,7 +228,7 @@ def _get_interpolate(kernel):
 
             for x in range(x0, x1 + 1):
 
-                w = kernel((x - kx) / (width / 2), param)
+                w = kernel((x - kx) / (width / 2), params[-1])
 
                 for b in range(batch_size):
                     output[b, i] += w * input[b, x % nx]
@@ -226,7 +236,7 @@ def _get_interpolate(kernel):
         return output
 
     @nb.jit(nopython=True)  # pragma: no cover
-    def _interpolate2(output, input, coord, width, param):
+    def _interpolate2(output, input, coord, width, params):
 
         batch_size, ny, nx = input.shape
         npts = coord.shape[0]
@@ -242,10 +252,10 @@ def _get_interpolate(kernel):
                       np.floor(ky + width / 2))
 
             for y in range(y0, y1 + 1):
-                wy = kernel((y - ky) / (width / 2), param)
+                wy = kernel((y - ky) / (width / 2), params[-2])
 
                 for x in range(x0, x1 + 1):
-                    w = wy * kernel((x - kx) / (width / 2), param)
+                    w = wy * kernel((x - kx) / (width / 2), params[-1])
 
                     for b in range(batch_size):
                         output[b, i] += w * input[b, y % ny, x % nx]
@@ -253,7 +263,7 @@ def _get_interpolate(kernel):
         return output
 
     @nb.jit(nopython=True)  # pragma: no cover
-    def _interpolate3(output, input, coord, width, param):
+    def _interpolate3(output, input, coord, width, params):
         batch_size, nz, ny, nx = input.shape
         npts = coord.shape[0]
 
@@ -270,13 +280,13 @@ def _get_interpolate(kernel):
                           np.floor(kz + width / 2))
 
             for z in range(z0, z1 + 1):
-                wz = kernel((z - kz) / (width / 2), param)
+                wz = kernel((z - kz) / (width / 2), params[-3])
 
                 for y in range(y0, y1 + 1):
-                    wy = wz * kernel((y - ky) / (width / 2), param)
+                    wy = wz * kernel((y - ky) / (width / 2), params[-2])
 
                     for x in range(x0, x1 + 1):
-                        w = wy * kernel((x - kx) / (width / 2), param)
+                        w = wy * kernel((x - kx) / (width / 2), params[-1])
 
                         for b in range(batch_size):
                             output[b, i] += w * input[
@@ -294,7 +304,7 @@ def _get_gridding(kernel):
         kernel = _kaiser_bessel_kernel
 
     @nb.jit(nopython=True)  # pragma: no cover
-    def _gridding1(output, input, coord, width, param):
+    def _gridding1(output, input, coord, width, params):
         batch_size, nx = output.shape
         npts = coord.shape[0]
 
@@ -307,7 +317,7 @@ def _get_gridding(kernel):
 
             for x in range(x0, x1 + 1):
 
-                w = kernel((x - kx) / (width / 2), param)
+                w = kernel((x - kx) / (width / 2), params[-1])
 
                 for b in range(batch_size):
                     output[b, x % nx] += w * input[b, i]
@@ -315,7 +325,7 @@ def _get_gridding(kernel):
         return output
 
     @nb.jit(nopython=True)  # pragma: no cover
-    def _gridding2(output, input, coord, width, param):
+    def _gridding2(output, input, coord, width, params):
         batch_size, ny, nx = output.shape
         npts = coord.shape[0]
 
@@ -330,10 +340,10 @@ def _get_gridding(kernel):
                       np.floor(ky + width / 2))
 
             for y in range(y0, y1 + 1):
-                wy = kernel((y - ky) / (width / 2), param)
+                wy = kernel((y - ky) / (width / 2), params[-2])
 
                 for x in range(x0, x1 + 1):
-                    w = wy * kernel((x - kx) / (width / 2), param)
+                    w = wy * kernel((x - kx) / (width / 2), params[-1])
 
                     for b in range(batch_size):
                         output[b, y % ny, x % nx] += w * input[b, i]
@@ -341,7 +351,7 @@ def _get_gridding(kernel):
         return output
 
     @nb.jit(nopython=True)  # pragma: no cover
-    def _gridding3(output, input, coord, width, param):
+    def _gridding3(output, input, coord, width, params):
         batch_size, nz, ny, nx = output.shape
         npts = coord.shape[0]
 
@@ -358,13 +368,13 @@ def _get_gridding(kernel):
                           np.floor(kz + width / 2))
 
             for z in range(z0, z1 + 1):
-                wz = kernel((z - kz) / (width / 2), param)
+                wz = kernel((z - kz) / (width / 2), params[-3])
 
                 for y in range(y0, y1 + 1):
-                    wy = wz * kernel((y - ky) / (width / 2), param)
+                    wy = wz * kernel((y - ky) / (width / 2), params[-2])
 
                     for x in range(x0, x1 + 1):
-                        w = wy * kernel((x - kx) / (width / 2), param)
+                        w = wy * kernel((x - kx) / (width / 2), params[-1])
 
                         for b in range(batch_size):
                             output[b, z % nz, y % ny, x % nx] += w * input[
@@ -445,7 +455,7 @@ if config.cupy_enabled:  # pragma: no cover
             kernel = _kaiser_bessel_kernel_cuda
 
         _interpolate1_cuda = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T input, raw S coord, raw S width, raw S params',
             'raw T output',
             """
             const int batch_size = input.shape()[0];
@@ -458,7 +468,7 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width / 2.0), param);
+                    ((S) x - kx) / (width / 2.0), params[0]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, mod(x, nx)};
                     const T v = (T) w * input[input_idx];
@@ -472,7 +482,7 @@ if config.cupy_enabled:  # pragma: no cover
             reduce_dims=False)
 
         _interpolate2_cuda = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T input, raw S coord, raw S width, raw S params',
             'raw T output',
             """
             const int batch_size = input.shape()[0];
@@ -492,10 +502,10 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width / 2.0), param);
+                    ((S) y - ky) / (width / 2.0), params[0]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width / 2.0), param);
+                        ((S) x - kx) / (width / 2.0), params[1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, mod(y, ny), mod(x, nx)};
                         const T v = (T) w * input[input_idx];
@@ -510,7 +520,7 @@ if config.cupy_enabled:  # pragma: no cover
             reduce_dims=False)
 
         _interpolate3_cuda = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            'raw T input, raw S coord, raw S width, raw S params', 'raw T output', """
             const int batch_size = input.shape()[0];
             const int nz = input.shape()[1];
             const int ny = input.shape()[2];
@@ -533,13 +543,13 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width / 2.0), param);
+                    ((S) z - kz) / (width / 2.0), params[0]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                        ((S) y - ky) / (width / 2.0), param);
+                        ((S) y - ky) / (width / 2.0), params[1]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width / 2.0), param);
+                            ((S) x - kx) / (width / 2.0), params[2]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, mod(z, nz), mod(y, ny),
                                 mod(x, nx)};
@@ -562,7 +572,7 @@ if config.cupy_enabled:  # pragma: no cover
             kernel = _kaiser_bessel_kernel_cuda
 
         _gridding1_cuda = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T input, raw S coord, raw S width, raw S params',
             'raw T output',
             """
             const int batch_size = output.shape()[0];
@@ -575,7 +585,7 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width / 2.0), param);
+                    ((S) x - kx) / (width / 2.0), params[0]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
@@ -589,7 +599,7 @@ if config.cupy_enabled:  # pragma: no cover
             reduce_dims=False)
 
         _gridding2_cuda = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            'raw T input, raw S coord, raw S width, raw S params', 'raw T output', """
             const int batch_size = output.shape()[0];
             const int ny = output.shape()[1];
             const int nx = output.shape()[2];
@@ -607,10 +617,10 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width / 2.0), param);
+                    ((S) y - ky) / (width / 2.0), params[0]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width / 2.0), param);
+                        ((S) x - kx) / (width / 2.0), params[1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
@@ -623,7 +633,7 @@ if config.cupy_enabled:  # pragma: no cover
             reduce_dims=False)
 
         _gridding3_cuda = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            'raw T input, raw S coord, raw S width, raw S params', 'raw T output', """
             const int batch_size = output.shape()[0];
             const int nz = output.shape()[1];
             const int ny = output.shape()[2];
@@ -646,13 +656,13 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width / 2.0), param);
+                    ((S) z - kz) / (width / 2.0), params[0]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                        ((S) y - ky) / (width / 2.0), param);
+                        ((S) y - ky) / (width / 2.0), params[1]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width / 2.0), param);
+                            ((S) x - kx) / (width / 2.0), params[2]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, i};
                             const T v = (T) w * input[input_idx];
@@ -675,7 +685,7 @@ if config.cupy_enabled:  # pragma: no cover
             kernel = _kaiser_bessel_kernel_cuda
 
         _gridding1_cuda_complex = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T input, raw S coord, raw S width, raw S params',
             'raw T output',
             """
             const int batch_size = output.shape()[0];
@@ -688,7 +698,7 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width / 2.0), param);
+                    ((S) x - kx) / (width / 2.0), params[0]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
@@ -706,7 +716,7 @@ if config.cupy_enabled:  # pragma: no cover
             preamble=kernel + mod_cuda,
             reduce_dims=False)
         _gridding2_cuda_complex = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T input, raw S coord, raw S width, raw S params',
             'raw T output',
             """
             const int batch_size = output.shape()[0];
@@ -726,10 +736,10 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width / 2.0), param);
+                    ((S) y - ky) / (width / 2.0), params[0]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width / 2.0), param);
+                        ((S) x - kx) / (width / 2.0), params[1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
@@ -747,7 +757,7 @@ if config.cupy_enabled:  # pragma: no cover
             reduce_dims=False)
 
         _gridding3_cuda_complex = cp.ElementwiseKernel(
-            'raw T input, raw S coord, raw S width, raw S param',
+            'raw T input, raw S coord, raw S width, raw S params',
             'raw T output',
             """
             const int batch_size = output.shape()[0];
@@ -772,13 +782,13 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width / 2.0), param);
+                    ((S) z - kz) / (width / 2.0), params[0]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                         ((S) y - ky) / (width / 2.0), param);
+                         ((S) y - ky) / (width / 2.0), params[1]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width / 2.0), param);
+                            ((S) x - kx) / (width / 2.0), params[2]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, i};
                             const T v = (T) w * input[input_idx];

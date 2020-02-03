@@ -47,7 +47,7 @@ def pipe_menon_dcf(coord, device=sp.cpu_device, max_iter=30,
         w = xp.ones(coord.shape[:-1], dtype=coord.dtype)
         img_shape = sp.estimate_shape(coord)
 
-        G = sp.linop.Gridding(img_shape, coord, param=beta,
+        G = sp.linop.Gridding(img_shape, coord, params=beta,
                               width=width, kernel='kaiser_bessel')
         with tqdm(total=max_iter, desc="PipeMenonDCF",
                   disable=not show_pbar) as pbar:
