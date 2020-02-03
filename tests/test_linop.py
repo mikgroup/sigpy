@@ -169,6 +169,27 @@ class TestLinop(unittest.TestCase):
         self.check_linop_adjoint(A)
         self.check_linop_pickleable(A)
 
+    def test_DiagOnDevice(self):
+        shape = [5]
+        I = linop.Identity(shape)
+        x = util.randn([10])
+
+        A = linop.DiagOnDevice([I, I])
+        npt.assert_allclose(A(x), x)
+        self.check_linop_linear(A)
+        self.check_linop_adjoint(A)
+        self.check_linop_pickleable(A)
+
+        shape = [5, 3]
+        I = linop.Identity(shape)
+        x = util.randn([5, 6])
+
+        A = linop.DiagOnDevice([I, I], iaxis=1, oaxis=1)
+        npt.assert_allclose(A(x), x)
+        self.check_linop_linear(A)
+        self.check_linop_adjoint(A)
+        self.check_linop_pickleable(A)
+
     def test_FFT(self):
         for ndim in [1, 2, 3]:
             for n in [3, 4, 5, 6]:

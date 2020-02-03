@@ -633,6 +633,89 @@ class Diag(Linop):
                     oaxis=self.iaxis, iaxis=self.oaxis)
 
 
+class DiagOnDevice(Diag):
+    """Diagonally stack linear operators but with fine control of run device.
+
+    Create a Linop that splits input, applies linops independently,
+    and concatenates outputs. This is a special case in which the devices to
+    run are specified by the operator rather than the input.
+    In matrix form, given matrices {A1, ..., An}, returns diag([A1, ..., An]).
+
+    Args:
+        linops (list of Linops): list of linops with the same input and
+            output shape.
+        axis (int or None): If None, inputs/outputs are vectorized
+            and concatenated.
+        run_device: a sigpy.Device to run the operation on
+        in_device: a sigpy.Device specifiying the device location of the input
+        out_device: an sigpy.Device specifying the device the output
+            should be stored
+
+    """
+
+    def __init__(self, linops, iaxis=None, oaxis=None,
+                 run_device=backend.cpu_device, in_device=backend.cpu_device,
+                 out_device=backend.cpu_device):
+        self.run_device = run_device
+        self.in_device = in_device
+        self.out_device = out_device
+
+        super().__init__(linops, iaxis=iaxis, oaxis=oaxis)
+
+    def _apply(self, input):
+        # Allocate space for output
+        output = self.out_device.xp.empty(self.oshape, dtype=input.dtype)
+
+        for n, linop in enumerate(self.linops):
+            if n == 0:
+                istart = 0
+                ostart = 0
+            else:
+                istart = self.iindices[n - 1]
+                ostart = self.oindices[n - 1]
+
+            if n == self.nops - 1:
+                iend = None
+                oend = None
+            else:
+                iend = self.iindices[n]
+                oend = self.oindices[n]
+
+            if self.iaxis is None:
+                op_input = input[istart:iend].reshape(linop.ishape)
+                op_input = backend.to_device(op_input, self.run_device)
+                output_n = backend.to_device(linop(op_input).ravel(),
+                                             self.out_device)
+            else:
+                ndim = len(linop.ishape)
+                axis = self.iaxis % ndim
+                islc = tuple([slice(None)] * axis + [slice(istart, iend)] +
+                             [slice(None)] * (ndim - axis - 1))
+
+                op_input = input[islc]
+                op_input = backend.to_device(op_input, self.run_device)
+                output_n = backend.to_device(linop(op_input), self.out_device)
+
+            if self.oaxis is None:
+                output[ostart:oend] = output_n
+            else:
+                ndim = len(linop.oshape)
+                axis = self.oaxis % ndim
+                oslc = tuple([slice(None)] * axis + [slice(ostart, oend)] +
+                             [slice(None)] * (ndim - axis - 1))
+
+                output[oslc] = output_n
+
+        return output
+
+    def _adjoint_linop(self):
+        return DiagOnDevice([op.H for op in self.linops], oaxis=self.iaxis,
+                            iaxis=self.oaxis,
+                            run_device=self.run_device,
+                            in_device=self.out_device,
+                            out_device=self.in_device)
+
+
 class Reshape(Linop):
     """Reshape input to given output shape.
 
