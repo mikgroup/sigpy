@@ -17,7 +17,7 @@ def to_pytorch(array, requires_grad=True):  # pragma: no cover
 
     Args:
         array (numpy/cupy array): input.
-
+        requires_grad(bool): Set .requires_grad output tensor
     Returns:
         PyTorch tensor.
 
@@ -38,7 +38,7 @@ def to_pytorch(array, requires_grad=True):  # pragma: no cover
         tensor = from_dlpack(array.toDlpack())
 
     tensor.requires_grad = requires_grad
-    return tensor
+    return tensor.contiguous()
 
 
 def from_pytorch(tensor, iscomplex=False):  # pragma: no cover
@@ -59,11 +59,11 @@ def from_pytorch(tensor, iscomplex=False):  # pragma: no cover
 
     device = tensor.device
     if device.type == 'cpu':
-        output = tensor.detach().numpy()
+        output = tensor.detach().contiguous().numpy()
     else:
         if config.cupy_enabled:
             import cupy as cp
-            output = cp.fromDlpack(to_dlpack(tensor))
+            output = cp.fromDlpack(to_dlpack(tensor.contiguous()))
         else:
             raise TypeError('CuPy not installed, '
                             'but trying to convert GPU PyTorch Tensor.')
@@ -74,16 +74,12 @@ def from_pytorch(tensor, iscomplex=False):  # pragma: no cover
                              'specified, but got {}'.format(output.shape))
 
         with backend.get_device(output):
-            if output.flags['C_CONTIGUOUS']:
-                if output.dtype == np.float32:
-                    output = output.view(np.complex64)
-                elif output.dtype == np.float64:
-                    output = output.view(np.complex128)
+            if output.dtype == np.float32:
+                output = output.view(np.complex64)
+            elif output.dtype == np.float64:
+                output = output.view(np.complex128)
 
-                output = output.reshape(output.shape[:-1])
-            else:
-                output = output[..., 0] + 1j * output[..., 1]
-
+            output = output.reshape(output.shape[:-1])
 
     return output
 
