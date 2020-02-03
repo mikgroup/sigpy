@@ -165,7 +165,7 @@ def abrm_hp(rf, gamgdt, xx, dom0dt=0):
         return a, b
 
 
-def abrm_ptx(rf, x, g, dt, sens=None):
+def abrm_ptx(b1, x, g, dt, fmap=None, sens=None):
     r"""N-dim RF pulse simulation
 
     Assumes that x has inverse spatial units of g, and g has gamma*dt applied.
@@ -174,28 +174,35 @@ def abrm_ptx(rf, x, g, dt, sens=None):
     sens = [Nc, dim, dim].
 
     Args:
-         rf (array): rf waveform input.
+         b1 (array): rf waveform input.
          x (array): spatial locations.
          g (array): gradient array.
          dt (float): hardware dwell time (s).
+         fmap (array): off-resonance map (Hz).
          sens (array or None): B1+ sensitivity matrix. If None, creates matrix
-            of 1's.
+            of 1's. Input size [Nc dim dim]
 
 
     Returns:
-        2-element tuple containing
+        4-element tuple containing
 
         - **a** (*array*): SLR alpha parameter.
         - **b** (*array*): SLR beta parameter.
+        - **m** (*array*): transverse magnetization.
+        - **mz** (*array*): longitudinal magnetization.
 
     References:
         Pauly, J., Le Roux, Patrick., Nishimura, D., and Macovski, A.(1991).
         'Parameter Relations for the Shinnar-LeRoux Selective Excitation
         Pulse Design Algorithm'.
         IEEE Transactions on Medical Imaging, Vol 10, No 1, 53-65.
+
+        Grissom, W., Xu, D., Kerr, A., Fessler, J. and Noll, D. (2009). 'Fast
+        large-tip-angle multidimensional and parallel RF pulse design in MRI'
+        IEEE Trans Med Imaging, Vol 28, No 10, 1548-59.
      """
 
-    device = backend.get_device(rf)
+    device = backend.get_device(b1)
     xp = device.xp
     with device:
 
@@ -204,20 +211,23 @@ def abrm_ptx(rf, x, g, dt, sens=None):
 
         dim = int(xp.sqrt(x.shape[0]))
         Ns = dim * dim
-        Nc = rf.shape[0]
-        Nt = rf.shape[1]
+        Nc = b1.shape[0]
+        Nt = b1.shape[1]
         dim = int(xp.sqrt(x.shape[0]))
 
         if sens is None:
             sens = xp.ones((dim*dim, Nc))
         else:
+            sens = xp.transpose(sens)
             sens = xp.reshape(sens, (dim*dim, Nc))
 
-        bxy = sens @ rf
-
+        bxy = sens @ b1
         bz = x @ xp.transpose(g)
 
-        # TODO: add off-resonance
+        if fmap is not None and xp.sum(xp.abs(fmap)) != 0:
+            rep_b0 = xp.repeat(xp.expand_dims(fmap.flatten(),  0), Nt, axis=0)
+            bz += xp.transpose(rep_b0/gam*2*xp.pi)
+
         statea = xp.ones((Ns, 1))
         stateb = xp.zeros((Ns, 1))
         a = xp.ones(xp.shape(x)[0], dtype=complex)
