@@ -5,7 +5,7 @@ import numpy as np
 
 __all__ = ['mb_phs_tab', 'mb_rf', 'dz_pins']
 
-from sigpy.mri.rf.trajgrad import trapgrad
+from sigpy.mri.rf.trajgrad import trap_grad
 import sigpy.mri.rf.slr as slr
 
 
@@ -152,7 +152,7 @@ def dz_pins(tb, sl_sep, sl_thick, g_max, g_slew, dt, b1_max = 0.18,
 
     # design the blip trapezoid
     g_area = 1 / sl_sep / gambar
-    [gz_blip, _] = trapgrad(g_area, g_max, g_slew, dt)
+    [gz_blip, _] = trap_grad(g_area, g_max, g_slew, dt)
 
     # Calculate the block/hard RF pulse width based on b1_max
     hpw = int(np.ceil(np.max(np.abs(rf_soft)) / (2 * np.pi * gambar * b1_max * dt)))
