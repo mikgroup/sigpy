@@ -11,8 +11,9 @@ __all__ = ['stspa']
 
 
 def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
-          pinst=float('inf'), pavg=float('inf'), phase_update_interval=0,
-          explicit=False, max_iter=1000, tol=1E-6):
+          pinst=float('inf'), pavg=float('inf'),
+          phase_update_interval=float('inf'), explicit=False, max_iter=1000,
+          tol=1E-6):
     """Small tip spatial domain method for multicoil parallel excitation.
        Allows for constrained or unconstrained designs.
 
@@ -51,46 +52,24 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
     xp = device.xp
     with device:
 
-        pulses = xp.zeros((sens.shape[0], coord.shape[0]), xp.complex)
+        pulses = xp.zeros((Nc, Nt), xp.complex)
+
         # set up the system matrix
         if explicit:
-            # reshape pulses to be Nc * Nt, 1 - all 1 vector
-            pulses = xp.concatenate(pulses)
-            # add empty dimension to make (Nt, 1)
-            pulses = xp.transpose(xp.expand_dims(pulses, axis=0))
-
-            # explicit matrix design linop
             A = rf.linop.PtxSpatialExplicit(sens, coord, dt,
-                                                   target.shape, B0)
-
-            # explicit AND constrained, must reshape A output for PDHG
-            if pinst != float('inf') or pavg != float('inf'):
-                A = sp.linop.Reshape(target.shape, A.oshape) * A
-
-        # using non-explicit formulation
+                                            target.shape, B0)
         else:
             A = sp.mri.linop.Sense(sens, coord, weights=None, tseg=tseg,
                                    ishape=target.shape).H
 
         # Unconstrained, use conjugate gradient
         if pinst == float('inf') and pavg == float('inf'):
+            I = sp.linop.Identity((Nc, coord.shape[0]))
+            b = A.H * target
 
-            if explicit:
-                I = sp.linop.Identity((coord.shape[0] * Nc, 1))
-                b = A.H * xp.transpose(xp.expand_dims(xp.concatenate(target),
-                                                      axis=0))
-
-                alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
-                                                      b, pulses, P=None,
-                                                      max_iter=max_iter, tol=tol)
-
-            else:
-                I = sp.linop.Identity((Nc, coord.shape[0]))
-                b = A.H * target
-
-                alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
-                                                      b, pulses, P=None,
-                                                      max_iter=max_iter, tol=tol)
+            alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
+                                                  b, pulses, P=None,
+                                                  max_iter=max_iter, tol=tol)
 
         # Constrained case, use primal dual hybrid gradient
         else:
@@ -126,23 +105,14 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
         while not alg_method.done():
 
             # phase_update switch
-            if (alg_method.iter % phase_update_interval == 0) and (
-                    alg_method.iter > 0):
-                # put correct m into alg_method (Ax=b notation)
-                if explicit:
-                    b = A.H * xp.transpose(
-                        xp.expand_dims(xp.concatenate(target), axis=0))
-                else:
-                    target = xp.abs(target) * xp.exp(
-                        1j * xp.angle(
-                            xp.reshape(A * alg_method.x, target.shape)))
-                    b = A.H * target
+            if (alg_method.iter > 0) and \
+                    (alg_method.iter % phase_update_interval == 0):
+                target = xp.abs(target) * xp.exp(
+                    1j * xp.angle(
+                        xp.reshape(A * alg_method.x, target.shape)))
+                b = A.H * target
                 alg_method.b = b
 
             alg_method.update()
-
-        # reshape explicit pulses so output is always [Nc Nt]
-        if explicit:
-            pulses = xp.reshape(pulses, (Nc, Nt))
 
         return pulses

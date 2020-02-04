@@ -64,5 +64,12 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None):
         AFullExplicit = AFullExplicit[:, coord.shape[0]:]
         A = sp.linop.MatMul((coord.shape[0] * Nc, 1), AFullExplicit)
 
+        # Finally, adjustment of input/output dimensions to be consistent with
+        # the existing Sense linop operator. [Nc x Nt] in, [dim x dim] out
+        Ro = sp.linop.Reshape(ishape=A.oshape, oshape=sens.shape[-2:])
+        Ri = sp.linop.Reshape(ishape=(Nc, coord.shape[0]),
+                              oshape=(coord.shape[0] * Nc, 1))
+        A = Ro * A * Ri
+
         A.repr_str = 'spatial pulse system matrix'
         return A
