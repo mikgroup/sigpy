@@ -126,7 +126,7 @@ def nufft(input, coord, oversamp=1.25, width=4):
     # Interpolate
     coord = _scale_coord(coord, input.shape, oversamp)
     output = interp.interpolate(
-        output, coord, kernel='kaiser_bessel', width=width, params=beta)
+        output, coord, kernel='kaiser_bessel', widths=width, params=beta)
     output /= width**ndim
 
     return output

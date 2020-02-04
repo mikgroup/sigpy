@@ -959,7 +959,7 @@ class Interpolate(Linop):
         ishape (tuple of ints): Input shape = batch_shape + grd_shape
         coord (array): Coordinates, values from - nx / 2 to nx / 2 - 1.
                 ndim can only be 1, 2 or 3, of shape pts_shape + [ndim]
-        width (float): Width of interp. kernel in grid size.
+        widths (float): Widths of interp. kernel in grid size.
         kernel (str): Interpolation kernel, {'spline', 'kaiser_bessel'}.
         params (float): Kernel parameter.
 
@@ -968,12 +968,12 @@ class Interpolate(Linop):
 
     """
 
-    def __init__(self, ishape, coord, kernel='spline', width=2, params=1):
+    def __init__(self, ishape, coord, kernel='spline', widths=2, params=1):
         ndim = coord.shape[-1]
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
-        self.width = width
+        self.widths = widths
         self.kernel = kernel
         self.params = params
 
@@ -985,12 +985,12 @@ class Interpolate(Linop):
             coord = backend.to_device(self.coord, device)
             return interp.interpolate(input, coord,
                                       kernel=self.kernel,
-                                      width=self.width, params=self.params)
+                                      widths=self.widths, params=self.params)
 
     def _adjoint_linop(self):
         return Gridding(
             self.ishape, self.coord,
-            kernel=self.kernel, width=self.width, params=self.params)
+            kernel=self.kernel, widths=self.widths, params=self.params)
 
 
 class Gridding(Linop):
@@ -1001,7 +1001,7 @@ class Gridding(Linop):
         ishape (tuple of ints): Input shape = batch_shape + grd_shape
         coord (array): Coordinates, values from - nx / 2 to nx / 2 - 1.
                 ndim can only be 1, 2 or 3. of shape pts_shape + [ndim]
-        width (float): Width of interp. kernel in grid size.
+        widths (float): Widths of interp. kernel in grid size.
         kernel (str): Interpolation kernel, {'spline', 'kaiser_bessel'}.
         params (float): Kernel parameter.
 
@@ -1010,13 +1010,13 @@ class Gridding(Linop):
 
     """
 
-    def __init__(self, oshape, coord, kernel='spline', width=2, params=1):
+    def __init__(self, oshape, coord, kernel='spline', widths=2, params=1):
         ndim = coord.shape[-1]
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.kernel = kernel
-        self.width = width
+        self.widths = widths
         self.params = params
 
         super().__init__(oshape, ishape)
@@ -1027,12 +1027,12 @@ class Gridding(Linop):
             coord = backend.to_device(self.coord, device)
             return interp.gridding(input, coord, self.oshape,
                                    kernel=self.kernel,
-                                   width=self.width, params=self.params)
+                                   widths=self.widths, params=self.params)
 
     def _adjoint_linop(self):
         return Interpolate(self.oshape, self.coord,
                            kernel=self.kernel,
-                           width=self.width, params=self.params)
+                           widths=self.widths, params=self.params)
 
 
 class Resize(Linop):
