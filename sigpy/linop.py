@@ -959,23 +959,23 @@ class Interpolate(Linop):
         ishape (tuple of ints): Input shape = batch_shape + grd_shape
         coord (array): Coordinates, values from - nx / 2 to nx / 2 - 1.
                 ndim can only be 1, 2 or 3, of shape pts_shape + [ndim]
-        widths (float): Widths of interp. kernel in grid size.
+        width (float): Width of interp. kernel in grid size.
         kernel (str): Interpolation kernel, {'spline', 'kaiser_bessel'}.
-        params (float): Kernel parameter.
+        param (float): Kernel parameter.
 
     See Also:
         :func:`sigpy.interpolate`
 
     """
 
-    def __init__(self, ishape, coord, kernel='spline', widths=2, params=1):
+    def __init__(self, ishape, coord, kernel='spline', width=2, param=1):
         ndim = coord.shape[-1]
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
-        self.widths = widths
+        self.width = width
         self.kernel = kernel
-        self.params = params
+        self.param = param
 
         super().__init__(oshape, ishape)
 
@@ -985,12 +985,12 @@ class Interpolate(Linop):
             coord = backend.to_device(self.coord, device)
             return interp.interpolate(input, coord,
                                       kernel=self.kernel,
-                                      widths=self.widths, params=self.params)
+                                      width=self.width, param=self.param)
 
     def _adjoint_linop(self):
         return Gridding(
             self.ishape, self.coord,
-            kernel=self.kernel, widths=self.widths, params=self.params)
+            kernel=self.kernel, width=self.width, param=self.param)
 
 
 class Gridding(Linop):
@@ -1001,23 +1001,23 @@ class Gridding(Linop):
         ishape (tuple of ints): Input shape = batch_shape + grd_shape
         coord (array): Coordinates, values from - nx / 2 to nx / 2 - 1.
                 ndim can only be 1, 2 or 3. of shape pts_shape + [ndim]
-        widths (float): Widths of interp. kernel in grid size.
+        width (float): Width of interp. kernel in grid size.
         kernel (str): Interpolation kernel, {'spline', 'kaiser_bessel'}.
-        params (float): Kernel parameter.
+        param (float): Kernel parameter.
 
     See Also:
         :func:`sigpy.gridding`
 
     """
 
-    def __init__(self, oshape, coord, kernel='spline', widths=2, params=1):
+    def __init__(self, oshape, coord, kernel='spline', width=2, param=1):
         ndim = coord.shape[-1]
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
 
         self.coord = coord
         self.kernel = kernel
-        self.widths = widths
-        self.params = params
+        self.width = width
+        self.param = param
 
         super().__init__(oshape, ishape)
 
@@ -1027,12 +1027,12 @@ class Gridding(Linop):
             coord = backend.to_device(self.coord, device)
             return interp.gridding(input, coord, self.oshape,
                                    kernel=self.kernel,
-                                   widths=self.widths, params=self.params)
+                                   width=self.width, param=self.param)
 
     def _adjoint_linop(self):
         return Interpolate(self.oshape, self.coord,
                            kernel=self.kernel,
-                           widths=self.widths, params=self.params)
+                           width=self.width, param=self.param)
 
 
 class Resize(Linop):

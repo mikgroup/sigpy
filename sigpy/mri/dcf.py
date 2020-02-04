@@ -9,7 +9,7 @@ __all__ = ['pipe_menon_dcf']
 
 
 def pipe_menon_dcf(coord, device=sp.cpu_device, max_iter=30,
-                   n=128, beta=8, widths=4, show_pbar=True):
+                   n=128, beta=8, width=4, show_pbar=True):
     r"""Compute Pipe Menon density compensation factor.
 
     Perform the following iteration:
@@ -26,7 +26,7 @@ def pipe_menon_dcf(coord, device=sp.cpu_device, max_iter=30,
         max_iter (int): number of iterations.
         n (int): Kaiser-Bessel sampling numbers for gridding operator.
         beta (float): Kaiser-Bessel kernel parameter.
-        widths (float): Kaiser-Bessel kernel widths.
+        width (float): Kaiser-Bessel kernel width.
         show_pbar (bool): show progress bar.
 
     Returns:
@@ -47,8 +47,8 @@ def pipe_menon_dcf(coord, device=sp.cpu_device, max_iter=30,
         w = xp.ones(coord.shape[:-1], dtype=coord.dtype)
         img_shape = sp.estimate_shape(coord)
 
-        G = sp.linop.Gridding(img_shape, coord, params=beta,
-                              widths=widths, kernel='kaiser_bessel')
+        G = sp.linop.Gridding(img_shape, coord, param=beta,
+                              width=width, kernel='kaiser_bessel')
         with tqdm(total=max_iter, desc="PipeMenonDCF",
                   disable=not show_pbar) as pbar:
             for it in range(max_iter):
