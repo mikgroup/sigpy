@@ -77,6 +77,7 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
             lipschitz = xp.linalg.svd(A * A.H *
                                       xp.ones(A.H.ishape, xp.complex),
                                       compute_uv=False)[0]
+            lipschitz = sum(lipschitz)/len(lipschitz)
             tau = 1.0 / lipschitz
             sigma = 0.01
             lamda = 0.01
