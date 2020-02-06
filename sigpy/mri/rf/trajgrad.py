@@ -3,11 +3,12 @@
 
 import numpy as np
 
-__all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch']
+__all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch',
+           'stack_of']
 
 
 def min_trap_grad(area, gmax, dgdt, dt):
-    """Minimal duration trapezoidal gradient designer.
+    r"""Minimal duration trapezoidal gradient designer.
 
     Args:
         area (float): pulse area in (g*sec)/cm
@@ -45,7 +46,7 @@ def min_trap_grad(area, gmax, dgdt, dt):
 
 
 def trap_grad(area, gmax, dgdt, dt, *args):
-    """General trapezoidal gradient designer. Min total time.
+    r"""General trapezoidal gradient designer. Min total time.
 
     Args:
         area (float): pulse area in (g*sec)/cm
@@ -102,7 +103,7 @@ def trap_grad(area, gmax, dgdt, dt, *args):
 
 def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
                   rewinder=False):
-    """Variable density spiral designer. Produces trajectory, gradients,
+    r"""Variable density spiral designer. Produces trajectory, gradients,
     and slew rate.
 
     Args:
@@ -309,7 +310,7 @@ def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
 
 
 def spiral_arch(fov, N, gts, gslew, gamp):
-    """Analytic Archimedean spiral designer. Produces trajectory, gradients,
+    r"""Analytic Archimedean spiral designer. Produces trajectory, gradients,
     and slew rate.
 
     Args:
@@ -396,3 +397,26 @@ def spiral_arch(fov, N, gts, gslew, gamp):
     t = np.linspace(0, len(g), num=len(g) + 1)  # time vector
 
     return g, k, t, s
+
+
+def stack_of(k, num, zres):
+    r"""Function for creating a 3D stack of ____ trajectory from a 2D [Nt 2]
+    trajectory.
+
+    Args:
+        k (array): 2D array in [2 x Nt]. Will be bottom of stack.
+        num (int): number of layers of stack.
+        zres (float): spacing between stacks in cm.
+    """
+
+    z = np.linspace(- num * zres / 2, num * zres / 2, num)
+    kout = np.zeros((k.shape[0]*num, 3))
+
+    for ii in range(num):
+        kr = k[0:] * np.exp(2 * np.pi * 1j * ii / num)
+        z_coord = np.expand_dims(np.ones(len(kr)) * z[ii], axis=1)
+        krz = np.concatenate((kr, z_coord), axis=1)
+
+        kout[ii*len(krz):(ii+1)*len(krz), :] = krz
+
+    return kout
