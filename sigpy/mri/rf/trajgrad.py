@@ -4,7 +4,7 @@
 import numpy as np
 
 __all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch',
-           'stack_of']
+           'stack_of', 'traj_array2complex', 'traj_complex2array']
 
 
 def min_trap_grad(area, gmax, dgdt, dt):
@@ -382,17 +382,9 @@ def spiral_arch(fov, N, gts, gslew, gamp):
     s = np.pad(s, (0, 1), 'constant')
 
     # change from (real, imag) notation to (Nt, 2) notation
-    ktemp = np.zeros((len(k), 2))
-    ktemp[:, 0], ktemp[:, 1] = np.real(k), np.imag(k)
-    k = ktemp
-
-    gtemp = np.zeros((len(g), 2))
-    gtemp[:, 0], gtemp[:, 1] = np.real(g), np.imag(g)
-    g = gtemp
-
-    stemp = np.zeros((len(s), 2))
-    stemp[:, 0], stemp[:, 1] = np.real(s), np.imag(s)
-    s = stemp
+    k = traj_complex2array(k)
+    g = traj_complex2array(g)
+    s = traj_complex2array(s)
 
     t = np.linspace(0, len(g), num=len(g) + 1)  # time vector
 
@@ -412,11 +404,35 @@ def stack_of(k, num, zres):
     z = np.linspace(- num * zres / 2, num * zres / 2, num)
     kout = np.zeros((k.shape[0]*num, 3))
 
+    # will perform a complex rotation on our trajectory
+    k = traj_array2complex(k)
+
     for ii in range(num):
         kr = k[0:] * np.exp(2 * np.pi * 1j * ii / num)
         z_coord = np.expand_dims(np.ones(len(kr)) * z[ii], axis=1)
-        krz = np.concatenate((kr, z_coord), axis=1)
+        krz = np.concatenate((traj_complex2array(kr), z_coord), axis=1)
 
         kout[ii*len(krz):(ii+1)*len(krz), :] = krz
 
+    return kout
+
+
+def traj_complex2array(k):
+    r"""Function to convert complex convention trajectory to [Nt 2] trajectory
+
+    Args:
+        k (complex array): Nt vector
+    """
+    kout = np.zeros((len(k), 2))
+    kout[:, 0], kout[:, 1] = np.real(k), np.imag(k)
+    return kout
+
+
+def traj_array2complex(k):
+    r"""Function to convert [Nt Nd] convention traj to complex convention
+
+    Args:
+        k (complex array): Nt vector
+    """
+    kout = k[:, 0] + 1j * k[:, 1]
     return kout
