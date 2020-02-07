@@ -51,9 +51,9 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     Args:
         input (array): Input array of shape.
         coord (array): Coordinate array of shape [..., ndim]
-        width (float): Interpolation kernel full-width.
+        width (float or tuple of floats): Interpolation kernel full-width.
         kernel (str): Interpolation kernel, {'spline', 'kaiser_bessel'}.
-        param (float): Kernel parameter.
+        param (float or tuple of floats): Kernel parameter.
 
     Returns:
         output (array): Output array.
@@ -75,6 +75,16 @@ def interpolate(input, coord, kernel='spline', width=2, param=1):
     input = input.reshape([batch_size] + list(input.shape[-ndim:]))
     coord = coord.reshape([npts, ndim])
     output = xp.zeros([batch_size, npts], dtype=input.dtype)
+
+    if np.isscalar(param):
+        param = xp.array([param] * ndim, coord.dtype)
+    else:
+        param = xp.array(param, coord.dtype)
+
+    if np.isscalar(width):
+        width = xp.array([width] * ndim, coord.dtype)
+    else:
+        width = xp.array(width, coord.dtype)
 
     if xp == np:
         _interpolate[kernel][ndim - 1](output, input, coord, width, param)
@@ -123,9 +133,9 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     Args:
         input (array): Input array.
         coord (array): Coordinate array of shape [..., ndim]
-        width (float): Interpolation kernel full-width.
+        width (float or tuple of floats): Interpolation kernel full-width.
         kernel (str): Interpolation kernel, {"spline", "kaiser_bessel"}.
-        param (float): Kernel parameter.
+        param (float or tuple of floats): Kernel parameter.
 
     Returns:
         output (array): Output array.
@@ -148,6 +158,16 @@ def gridding(input, coord, shape, kernel="spline", width=2, param=1):
     input = input.reshape([batch_size, npts])
     coord = coord.reshape([npts, ndim])
     output = xp.zeros([batch_size] + list(shape[-ndim:]), dtype=input.dtype)
+
+    if np.isscalar(param):
+        param = xp.array([param] * ndim, coord.dtype)
+    else:
+        param = xp.array(param, coord.dtype)
+
+    if np.isscalar(width):
+        width = xp.array([width] * ndim, coord.dtype)
+    else:
+        width = xp.array(width, coord.dtype)
 
     if xp == np:
         _gridding[kernel][ndim - 1](output, input, coord, width, param)
@@ -210,15 +230,14 @@ def _get_interpolate(kernel):
         npts = coord.shape[0]
 
         for i in range(npts):
-
             kx = coord[i, -1]
 
-            x0 = np.ceil(kx - width / 2)
-            x1 = np.floor(kx + width / 2)
+            x0 = np.ceil(kx - width[-1] / 2)
+            x1 = np.floor(kx + width[-1] / 2)
 
             for x in range(x0, x1 + 1):
 
-                w = kernel((x - kx) / (width / 2), param)
+                w = kernel((x - kx) / (width[-1] / 2), param[-1])
 
                 for b in range(batch_size):
                     output[b, i] += w * input[b, x % nx]
@@ -232,20 +251,19 @@ def _get_interpolate(kernel):
         npts = coord.shape[0]
 
         for i in range(npts):
-
             kx, ky = coord[i, -1], coord[i, -2]
 
-            x0, y0 = (np.ceil(kx - width / 2),
-                      np.ceil(ky - width / 2))
+            x0, y0 = (np.ceil(kx - width[-1] / 2),
+                      np.ceil(ky - width[-2] / 2))
 
-            x1, y1 = (np.floor(kx + width / 2),
-                      np.floor(ky + width / 2))
+            x1, y1 = (np.floor(kx + width[-1] / 2),
+                      np.floor(ky + width[-2] / 2))
 
             for y in range(y0, y1 + 1):
-                wy = kernel((y - ky) / (width / 2), param)
+                wy = kernel((y - ky) / (width[-2] / 2), param[-2])
 
                 for x in range(x0, x1 + 1):
-                    w = wy * kernel((x - kx) / (width / 2), param)
+                    w = wy * kernel((x - kx) / (width[-1] / 2), param[-1])
 
                     for b in range(batch_size):
                         output[b, i] += w * input[b, y % ny, x % nx]
@@ -258,25 +276,24 @@ def _get_interpolate(kernel):
         npts = coord.shape[0]
 
         for i in range(npts):
-
             kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
 
-            x0, y0, z0 = (np.ceil(kx - width / 2),
-                          np.ceil(ky - width / 2),
-                          np.ceil(kz - width / 2))
+            x0, y0, z0 = (np.ceil(kx - width[-1] / 2),
+                          np.ceil(ky - width[-2] / 2),
+                          np.ceil(kz - width[-3] / 2))
 
-            x1, y1, z1 = (np.floor(kx + width / 2),
-                          np.floor(ky + width / 2),
-                          np.floor(kz + width / 2))
+            x1, y1, z1 = (np.floor(kx + width[-1] / 2),
+                          np.floor(ky + width[-2] / 2),
+                          np.floor(kz + width[-3] / 2))
 
             for z in range(z0, z1 + 1):
-                wz = kernel((z - kz) / (width / 2), param)
+                wz = kernel((z - kz) / (width[-3] / 2), param[-3])
 
                 for y in range(y0, y1 + 1):
-                    wy = wz * kernel((y - ky) / (width / 2), param)
+                    wy = wz * kernel((y - ky) / (width[-2] / 2), param[-2])
 
                     for x in range(x0, x1 + 1):
-                        w = wy * kernel((x - kx) / (width / 2), param)
+                        w = wy * kernel((x - kx) / (width[-1] / 2), param[-1])
 
                         for b in range(batch_size):
                             output[b, i] += w * input[
@@ -299,15 +316,12 @@ def _get_gridding(kernel):
         npts = coord.shape[0]
 
         for i in range(npts):
-
             kx = coord[i, -1]
 
-            x0 = np.ceil(kx - width / 2)
-            x1 = np.floor(kx + width / 2)
-
+            x0 = np.ceil(kx - width[-1] / 2)
+            x1 = np.floor(kx + width[-1] / 2)
             for x in range(x0, x1 + 1):
-
-                w = kernel((x - kx) / (width / 2), param)
+                w = kernel((x - kx) / (width[-1] / 2), param[-1])
 
                 for b in range(batch_size):
                     output[b, x % nx] += w * input[b, i]
@@ -320,20 +334,17 @@ def _get_gridding(kernel):
         npts = coord.shape[0]
 
         for i in range(npts):
-
             kx, ky = coord[i, -1], coord[i, -2]
 
-            x0, y0 = (np.ceil(kx - width / 2),
-                      np.ceil(ky - width / 2))
+            x0, y0 = (np.ceil(kx - width[-1] / 2),
+                      np.ceil(ky - width[-2] / 2))
 
-            x1, y1 = (np.floor(kx + width / 2),
-                      np.floor(ky + width / 2))
-
+            x1, y1 = (np.floor(kx + width[-1] / 2),
+                      np.floor(ky + width[-2] / 2))
             for y in range(y0, y1 + 1):
-                wy = kernel((y - ky) / (width / 2), param)
-
+                wy = kernel((y - ky) / (width[-2] / 2), param[-2])
                 for x in range(x0, x1 + 1):
-                    w = wy * kernel((x - kx) / (width / 2), param)
+                    w = wy * kernel((x - kx) / (width[-1] / 2), param[-1])
 
                     for b in range(batch_size):
                         output[b, y % ny, x % nx] += w * input[b, i]
@@ -349,22 +360,23 @@ def _get_gridding(kernel):
 
             kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
 
-            x0, y0, z0 = (np.ceil(kx - width / 2),
-                          np.ceil(ky - width / 2),
-                          np.ceil(kz - width / 2))
+            x0, y0, z0 = (np.ceil(kx - width[-1] / 2),
+                          np.ceil(ky - width[-2] / 2),
+                          np.ceil(kz - width[-3] / 2))
 
-            x1, y1, z1 = (np.floor(kx + width / 2),
-                          np.floor(ky + width / 2),
-                          np.floor(kz + width / 2))
+            x1, y1, z1 = (np.floor(kx + width[-1] / 2),
+                          np.floor(ky + width[-2] / 2),
+                          np.floor(kz + width[-3] / 2))
 
             for z in range(z0, z1 + 1):
-                wz = kernel((z - kz) / (width / 2), param)
+                wz = kernel((z - kz) / (width[-3] / 2), param[-3])
 
                 for y in range(y0, y1 + 1):
-                    wy = wz * kernel((y - ky) / (width / 2), param)
+                    wy = wz * kernel((y - ky) / (width[-2] / 2), param[-2])
 
                     for x in range(x0, x1 + 1):
-                        w = wy * kernel((x - kx) / (width / 2), param)
+                        w = wy * kernel(
+                            (x - kx) / (width[-1] / 2), param[-1])
 
                         for b in range(batch_size):
                             output[b, z % nz, y % ny, x % nx] += w * input[
@@ -448,17 +460,18 @@ if config.cupy_enabled:  # pragma: no cover
             'raw T input, raw S coord, raw S width, raw S param',
             'raw T output',
             """
+            const int ndim = 1;
             const int batch_size = input.shape()[0];
             const int nx = input.shape()[1];
 
             const int coord_idx[] = {i, 0};
             const S kx = coord[coord_idx];
-            const int x0 = ceil(kx - width / 2.0);
-            const int x1 = floor(kx + width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int x1 = floor(kx + width[0] / 2.0);
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width / 2.0), param);
+                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[0]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, mod(x, nx)};
                     const T v = (T) w * input[input_idx];
@@ -475,6 +488,7 @@ if config.cupy_enabled:  # pragma: no cover
             'raw T input, raw S coord, raw S width, raw S param',
             'raw T output',
             """
+            const int ndim = 2;
             const int batch_size = input.shape()[0];
             const int ny = input.shape()[1];
             const int nx = input.shape()[2];
@@ -484,18 +498,18 @@ if config.cupy_enabled:  # pragma: no cover
             const int coordy_idx[] = {i, 0};
             const S ky = coord[coordy_idx];
 
-            const int x0 = ceil(kx - width / 2.0);
-            const int y0 = ceil(ky - width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int y0 = ceil(ky - width[ndim - 2] / 2.0);
 
-            const int x1 = floor(kx + width / 2.0);
-            const int y1 = floor(ky + width / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
+            const int y1 = floor(ky + width[ndim - 2] / 2.0);
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width / 2.0), param);
+                    ((S) y - ky) / (width[ndim - 2] / 2.0), param[0]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width / 2.0), param);
+                        ((S) x - kx) / (width[ndim - 1] / 2.0), param[1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, mod(y, ny), mod(x, nx)};
                         const T v = (T) w * input[input_idx];
@@ -511,6 +525,7 @@ if config.cupy_enabled:  # pragma: no cover
 
         _interpolate3_cuda = cp.ElementwiseKernel(
             'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            const int ndim = 3;
             const int batch_size = input.shape()[0];
             const int nz = input.shape()[1];
             const int ny = input.shape()[2];
@@ -523,23 +538,23 @@ if config.cupy_enabled:  # pragma: no cover
             const int coordx_idx[] = {i, 2};
             const S kx = coord[coordx_idx];
 
-            const int x0 = ceil(kx - width / 2.0);
-            const int y0 = ceil(ky - width / 2.0);
-            const int z0 = ceil(kz - width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int y0 = ceil(ky - width[ndim - 2] / 2.0);
+            const int z0 = ceil(kz - width[ndim - 3] / 2.0);
 
-            const int x1 = floor(kx + width / 2.0);
-            const int y1 = floor(ky + width / 2.0);
-            const int z1 = floor(kz + width / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
+            const int y1 = floor(ky + width[ndim - 2] / 2.0);
+            const int z1 = floor(kz + width[ndim - 3] / 2.0);
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width / 2.0), param);
+                    ((S) z - kz) / (width[ndim - 3] / 2.0), param[0]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                        ((S) y - ky) / (width / 2.0), param);
+                        ((S) y - ky) / (width[ndim - 2] / 2.0), param[1]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width / 2.0), param);
+                            ((S) x - kx) / (width[ndim - 1] / 2.0), param[2]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, mod(z, nz), mod(y, ny),
                                 mod(x, nx)};
@@ -565,17 +580,18 @@ if config.cupy_enabled:  # pragma: no cover
             'raw T input, raw S coord, raw S width, raw S param',
             'raw T output',
             """
+            const int ndim = 1;
             const int batch_size = output.shape()[0];
             const int nx = output.shape()[1];
 
             const int coord_idx[] = {i, 0};
             const S kx = coord[coord_idx];
-            const int x0 = ceil(kx - width / 2.0);
-            const int x1 = floor(kx + width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width / 2.0), param);
+                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[0]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
@@ -590,6 +606,7 @@ if config.cupy_enabled:  # pragma: no cover
 
         _gridding2_cuda = cp.ElementwiseKernel(
             'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            const int ndim = 2;
             const int batch_size = output.shape()[0];
             const int ny = output.shape()[1];
             const int nx = output.shape()[2];
@@ -599,18 +616,18 @@ if config.cupy_enabled:  # pragma: no cover
             const int coordy_idx[] = {i, 0};
             const S ky = coord[coordy_idx];
 
-            const int x0 = ceil(kx - width / 2.0);
-            const int y0 = ceil(ky - width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int y0 = ceil(ky - width[ndim - 2] / 2.0);
 
-            const int x1 = floor(kx + width / 2.0);
-            const int y1 = floor(ky + width / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
+            const int y1 = floor(ky + width[ndim - 2] / 2.0);
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width / 2.0), param);
+                    ((S) y - ky) / (width[ndim - 2] / 2.0), param[0]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width / 2.0), param);
+                        ((S) x - kx) / (width[ndim - 1] / 2.0), param[1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
@@ -624,6 +641,7 @@ if config.cupy_enabled:  # pragma: no cover
 
         _gridding3_cuda = cp.ElementwiseKernel(
             'raw T input, raw S coord, raw S width, raw S param', 'raw T output', """
+            const int ndim = 3;
             const int batch_size = output.shape()[0];
             const int nz = output.shape()[1];
             const int ny = output.shape()[2];
@@ -636,23 +654,23 @@ if config.cupy_enabled:  # pragma: no cover
             const int coordx_idx[] = {i, 2};
             const S kx = coord[coordx_idx];
 
-            const int x0 = ceil(kx - width / 2.0);
-            const int y0 = ceil(ky - width / 2.0);
-            const int z0 = ceil(kz - width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int y0 = ceil(ky - width[ndim - 2] / 2.0);
+            const int z0 = ceil(kz - width[ndim - 3] / 2.0);
 
-            const int x1 = floor(kx + width / 2.0);
-            const int y1 = floor(ky + width / 2.0);
-            const int z1 = floor(kz + width / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
+            const int y1 = floor(ky + width[ndim - 2] / 2.0);
+            const int z1 = floor(kz + width[ndim - 3] / 2.0);
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width / 2.0), param);
+                    ((S) z - kz) / (width[ndim - 3] / 2.0), param[0]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                        ((S) y - ky) / (width / 2.0), param);
+                        ((S) y - ky) / (width[ndim - 2] / 2.0), param[1]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width / 2.0), param);
+                            ((S) x - kx) / (width[ndim - 1] / 2.0), param[2]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, i};
                             const T v = (T) w * input[input_idx];
@@ -678,17 +696,18 @@ if config.cupy_enabled:  # pragma: no cover
             'raw T input, raw S coord, raw S width, raw S param',
             'raw T output',
             """
+            const int ndim = 1;
             const int batch_size = output.shape()[0];
             const int nx = output.shape()[1];
 
             const int coord_idx[] = {i, 0};
             const S kx = coord[coord_idx];
-            const int x0 = ceil(kx - width / 2.0);
-            const int x1 = floor(kx + width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width / 2.0), param);
+                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[0]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
@@ -709,6 +728,7 @@ if config.cupy_enabled:  # pragma: no cover
             'raw T input, raw S coord, raw S width, raw S param',
             'raw T output',
             """
+            const int ndim = 2;
             const int batch_size = output.shape()[0];
             const int ny = output.shape()[1];
             const int nx = output.shape()[2];
@@ -718,18 +738,18 @@ if config.cupy_enabled:  # pragma: no cover
             const int coordy_idx[] = {i, 0};
             const S ky = coord[coordy_idx];
 
-            const int x0 = ceil(kx - width / 2.0);
-            const int y0 = ceil(ky - width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int y0 = ceil(ky - width[ndim - 2] / 2.0);
 
-            const int x1 = floor(kx + width / 2.0);
-            const int y1 = floor(ky + width / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
+            const int y1 = floor(ky + width[ndim - 2] / 2.0);
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width / 2.0), param);
+                    ((S) y - ky) / (width[ndim - 2] / 2.0), param[0]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width / 2.0), param);
+                        ((S) x - kx) / (width[ndim - 1] / 2.0), param[1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
@@ -750,6 +770,7 @@ if config.cupy_enabled:  # pragma: no cover
             'raw T input, raw S coord, raw S width, raw S param',
             'raw T output',
             """
+            const int ndim = 3;
             const int batch_size = output.shape()[0];
             const int nz = output.shape()[1];
             const int ny = output.shape()[2];
@@ -762,23 +783,23 @@ if config.cupy_enabled:  # pragma: no cover
             const int coordx_idx[] = {i, 2};
             const S kx = coord[coordx_idx];
 
-            const int x0 = ceil(kx - width / 2.0);
-            const int y0 = ceil(ky - width / 2.0);
-            const int z0 = ceil(kz - width / 2.0);
+            const int x0 = ceil(kx - width[ndim - 1] / 2.0);
+            const int y0 = ceil(ky - width[ndim - 2] / 2.0);
+            const int z0 = ceil(kz - width[ndim - 3] / 2.0);
 
-            const int x1 = floor(kx + width / 2.0);
-            const int y1 = floor(ky + width / 2.0);
-            const int z1 = floor(kz + width / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
+            const int y1 = floor(ky + width[ndim - 2] / 2.0);
+            const int z1 = floor(kz + width[ndim - 3] / 2.0);
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width / 2.0), param);
+                    ((S) z - kz) / (width[ndim - 3] / 2.0), param[0]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                         ((S) y - ky) / (width / 2.0), param);
+                         ((S) y - ky) / (width[ndim - 2] / 2.0), param[1]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width / 2.0), param);
+                            ((S) x - kx) / (width[ndim - 1] / 2.0), param[2]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, i};
                             const T v = (T) w * input[input_idx];

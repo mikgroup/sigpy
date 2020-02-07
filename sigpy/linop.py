@@ -1071,8 +1071,9 @@ class Interpolate(Linop):
                                       width=self.width, param=self.param)
 
     def _adjoint_linop(self):
-        return Gridding(self.ishape, self.coord,
-                        kernel=self.kernel, width=self.width, param=self.param)
+        return Gridding(
+            self.ishape, self.coord,
+            kernel=self.kernel, width=self.width, param=self.param)
 
 
 class Gridding(Linop):
