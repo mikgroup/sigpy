@@ -58,26 +58,3 @@ class TestPtx(unittest.TestCase):
                           explicit=False, max_iter=100, tol=1E-4)
 
         npt.assert_array_almost_equal(A*pulses, self.target, 1E-3)
-
-    def test_stspa_phase_update(self):
-
-        dim = self.img_shape[0]
-        traj = sp.mri.spiral(fov=1, N=dim, f_sampling=1, R=0.75,
-                             ninterleaves=1, alpha=1, gm=0.03, sm=200)
-
-        A = linop.Sense(self.sens, coord=traj, ishape=self.target.shape).H
-
-        pulses_nop = rf.stspa(self.target, self.sens, traj, self.dt, alpha=1,
-                              B0=None, pinst=float('inf'), pavg=float('inf'),
-                              phase_update_interval=200,
-                              explicit=False, max_iter=100, tol=1E-9)
-        pulses_wip = rf.stspa(self.target, self.sens, traj, self.dt, alpha=1,
-                              B0=None, pinst=float('inf'), pavg=float('inf'),
-                              phase_update_interval=2,
-                              explicit=False, max_iter=100, tol=1E-9)
-
-        err_nop = np.sum(np.sum(A*pulses_nop-self.target))
-        err_wip = np.sum(np.sum(A*pulses_wip-self.target))
-
-        # we expect less error if phase updates are used
-        npt.assert_array_less(np.abs(err_wip), np.abs(err_nop))
