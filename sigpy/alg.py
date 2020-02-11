@@ -4,6 +4,7 @@ and implements commonly used methods, such as gradient methods,
 Newton's method, and the augmented Lagrangian method.
 """
 import numpy as np
+import sigpy as sp
 from sigpy import backend, util
 
 
@@ -569,6 +570,37 @@ class NewtonsMethod(Alg):
 
             backend.copyto(self.x, x_new)
             self.residual = self.lamda2**0.5
+
+    def _done(self):
+        return self.iter >= self.max_iter or self.residual <= self.tol
+
+
+class GerchbergSaxton(Alg):
+
+    def __init__(self, A, y, max_iter=500, tol=0, lamb=0):
+        self.A = A
+        self.y = y
+        self.x, self.residual, rank, s = np.linalg.lstsq(A, y, rcond=None)
+        self.x = np.linalg.pinv(A) @ y
+        self.max_iter = max_iter
+        self.phs = 0
+        self.iter = 0
+        self.tol = tol
+        self.lamb = lamb
+
+    def _update(self):
+        device = backend.get_device(self.y)
+        xp = device.xp
+        with device:
+            y_hat = self.y * xp.exp(1j * xp.angle(xp.matmul(self.A, self.x)))
+            n_col = self.A.shape[1]
+            x_new, self.residual, rank, s = xp.linalg.lstsq(self.A.T @ self.A +
+                                                            self.lamb *
+                                                            xp.identity(n_col),
+                                                            self.A.T @ y_hat,
+                                                            rcond=None)
+            backend.copyto(self.x, x_new)
+        self.iter += 1
 
     def _done(self):
         return self.iter >= self.max_iter or self.residual <= self.tol
