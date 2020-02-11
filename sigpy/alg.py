@@ -578,10 +578,12 @@ class NewtonsMethod(Alg):
 class GerchbergSaxton(Alg):
 
     def __init__(self, A, y, max_iter=500, tol=0, lamb=0):
+        #self.x = np.zeros()
+        #alg_init = ConjugateGradient(A.H, y, self.x)
         self.A = A
         self.y = y
-        self.x, self.residual, rank, s = np.linalg.lstsq(A, y, rcond=None)
-        self.x = np.linalg.pinv(A) @ y
+        #self.x, self.residual, rank, s = np.linalg.lstsq(A, y, rcond=None)
+        self.x = self.A.H * self.y
         self.max_iter = max_iter
         self.phs = 0
         self.iter = 0
@@ -592,15 +594,15 @@ class GerchbergSaxton(Alg):
         device = backend.get_device(self.y)
         xp = device.xp
         with device:
-            y_hat = self.y * xp.exp(1j * xp.angle(xp.matmul(self.A, self.x)))
-            n_col = self.A.shape[1]
-            x_new, self.residual, rank, s = xp.linalg.lstsq(self.A.T @ self.A +
-                                                            self.lamb *
-                                                            xp.identity(n_col),
-                                                            self.A.T @ y_hat,
-                                                            rcond=None)
-            backend.copyto(self.x, x_new)
+            y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
+
+            I = sp.linop.Identity(self.A.ishape)
+            alg_intern = ConjugateGradient(self.A.H * self.A + self.lamb * I,
+                                           self.A.H * y_hat, self.x)
+
+            while (not alg_intern.done()):
+                alg_intern.update()
         self.iter += 1
 
     def _done(self):
-        return self.iter >= self.max_iter or self.residual <= self.tol
+        return self.iter >= self.max_iter
