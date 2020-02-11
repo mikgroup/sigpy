@@ -164,7 +164,23 @@ class TestAlg(unittest.TestCase):
                 alg_method = alg.NewtonsMethod(
                     gradf, inv_hessf, x,
                     beta=beta, f=f)
-                while (not alg_method.done()):
+                while(not alg_method.done()):
                     alg_method.update()
 
+
                 npt.assert_allclose(x, x_numpy)
+
+    def test_GerchbergSaxton(self):
+        n = 10
+        lamda = 0.1
+        A, x_numpy, y = self.Ax_y_setup(n, lamda)
+
+        alg_method = alg.GerchbergSaxton(np.csingle(A), np.csingle(y),
+                                         max_iter=100, tol=10E-9, lamb=0.1)
+
+        while(not alg_method.done()):
+            alg_method.update()
+
+        phs = np.conj(np.transpose(x_numpy) * alg_method.x /
+                      abs(np.transpose(x_numpy) * alg_method.x))
+        npt.assert_allclose(alg_method.x * phs, x_numpy, rtol=1e-5)
