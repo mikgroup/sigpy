@@ -578,11 +578,9 @@ class NewtonsMethod(Alg):
 class GerchbergSaxton(Alg):
 
     def __init__(self, A, y, max_iter=500, tol=0, lamb=0):
-        #self.x = np.zeros()
-        #alg_init = ConjugateGradient(A.H, y, self.x)
+
         self.A = A
         self.y = y
-        #self.x, self.residual, rank, s = np.linalg.lstsq(A, y, rcond=None)
         self.x = self.A.H * self.y
         self.max_iter = max_iter
         self.phs = 0
