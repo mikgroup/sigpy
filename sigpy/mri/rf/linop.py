@@ -5,7 +5,7 @@ import sigpy as sp
 from sigpy import backend
 
 
-def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None):
+def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
     """Explicit spatial-domain pulse design linear operator.
     Linear operator relates rf pulses to desired magnetization.
     Linear operator dimensions will be Ns * Nt
@@ -17,6 +17,8 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None):
         dt (float): hardware sampling dt
         img_shape (None or tuple): image shape.
         B0 (array): 2D array, B0 inhomogeneity map
+        ret_array (bool): if true, return explicit numpy array.
+            Else return linop.
 
 
     References:
@@ -25,6 +27,9 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None):
         Spatial Domain Method for the Design of RF Pulses in Multicoil
         Parallel Excitation. Magnetic resonance in medicine, 56, 620-629.
     """
+    three_d = False
+    if coord.ndim == 3:
+        three_d = True
     device = backend.get_device(sens)
     xp = device.xp
     with device:
@@ -39,6 +44,10 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None):
         # make x and y into proper grid layout
         x = x * xp.ones(img_shape)
         y = y * xp.ones(img_shape)
+
+        if three_d:
+            z = xp.ogrid[-img_shape[2] / 2: img_shape[2] - img_shape[2] / 2]
+            z = z * xp.ones(img_shape)
 
         # create explicit Ns * Nt system matrix
         if B0 is None:
@@ -72,4 +81,8 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None):
         A = Ro * A * Ri
 
         A.repr_str = 'spatial pulse system matrix'
-        return A
+
+        if ret_array:
+            return A.linops[1].mat
+        else:
+            return A
