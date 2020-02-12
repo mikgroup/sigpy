@@ -435,10 +435,17 @@ class EspiritCalib(sp.app.App):
             AHA *= (sp.prod(img_shape) / kernel_width**img_ndim)
             self.mps = xp.ones(ksp.shape[::-1] + (1, ), dtype=ksp.dtype)
 
+            def forward(x):
+                with self.device:
+                    return AHA @ x
+
+            def normalize(x):
+                with self.device:
+                    return xp.sum(xp.abs(x)**2,
+                                  axis=-2, keepdims=True)**0.5
+
             alg = sp.alg.PowerMethod(
-                lambda x: AHA @ x, self.mps,
-                norm_func=lambda x: xp.sum(xp.abs(x)**2,
-                                           axis=-2, keepdims=True)**0.5,
+                forward, self.mps, norm_func=normalize,
                 max_iter=max_iter)
 
         super().__init__(alg, show_pbar=show_pbar)
