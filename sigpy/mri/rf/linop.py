@@ -28,7 +28,7 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
         Parallel Excitation. Magnetic resonance in medicine, 56, 620-629.
     """
     three_d = False
-    if coord.ndim == 3:
+    if len(img_shape) >= 3:
         three_d = True
     device = backend.get_device(sens)
     xp = device.xp
@@ -50,21 +50,36 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
             z = z * xp.ones(img_shape)
 
         # create explicit Ns * Nt system matrix
-        if B0 is None:
-            AExplicit = xp.exp(1j * (xp.outer(xp.concatenate(x), coord[:, 0]) +
-                                     xp.outer(xp.concatenate(y), coord[:, 1])))
-        else:
-            AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(xp.concatenate(B0)
-                                                             * (t - T)) +
-                               1j * (xp.outer(xp.concatenate(x), coord[:, 0])
-                                     + xp.outer(xp.concatenate(y),
-                                                coord[:, 1])))
+        if not three_d:
+            if B0 is None:
+                AExplicit = xp.exp(1j * (xp.outer(xp.concatenate(x), coord[:, 0]) +
+                                         xp.outer(xp.concatenate(y), coord[:, 1])))
+            else:
+                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(xp.concatenate(B0)
+                                                                 * (t - T)) +
+                                   1j * (xp.outer(xp.concatenate(x), coord[:, 0])
+                                         + xp.outer(xp.concatenate(y),
+                                                    coord[:, 1])))
 
+        else:
+            if B0 is None:
+                AExplicit = xp.exp(1j * (xp.outer(xp.concatenate(x), coord[:, 0]) +
+                                         xp.outer(xp.concatenate(y), coord[:, 1]) +
+                                         xp.outer(xp.concatenate(z), coord[:, 2])))
+            else:
+                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(xp.concatenate(B0)
+                                                                 * (t - T)) +
+                                   1j * (xp.outer(xp.concatenate(x), coord[:, 0])
+                                         + xp.outer(xp.concatenate(y), coord[:, 1])
+                                         + xp.outer(xp.concatenate(z), coord[:, 2])))
         AFullExplicit = xp.empty(AExplicit.shape)
 
         # add sensitivities
         for ii in range(Nc):
-            tmp = xp.concatenate(sens[ii, :, :])
+            if three_d:
+                tmp = xp.concatenate(xp.concatenate(sens[ii, :, :, :]))
+            else:
+                tmp = xp.concatenate(sens[ii, :, :])
             D = xp.transpose(xp.tile(tmp, [coord.shape[0], 1]))
             AFullExplicit = xp.concatenate((AFullExplicit, D * AExplicit),
                                            axis=1)
@@ -75,7 +90,7 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
 
         # Finally, adjustment of input/output dimensions to be consistent with
         # the existing Sense linop operator. [Nc x Nt] in, [dim x dim] out
-        Ro = sp.linop.Reshape(ishape=A.oshape, oshape=sens.shape[-2:])
+        Ro = sp.linop.Reshape(ishape=A.oshape, oshape=sens.shape[1:])
         Ri = sp.linop.Reshape(ishape=(Nc, coord.shape[0]),
                               oshape=(coord.shape[0] * Nc, 1))
         A = Ro * A * Ri
