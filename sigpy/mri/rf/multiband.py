@@ -6,7 +6,7 @@ import numpy as np
 __all__ = ['mb_phs_tab', 'mb_rf', 'dz_pins']
 
 from sigpy.mri.rf.trajgrad import trap_grad
-import sigpy.mri.rf.slr as slr
+from sigpy.mri.rf import slr as slr
 
 
 def mb_rf(pulse_in, n_bands = 3, band_sep = 5, phs_0_pt = 'None'):
