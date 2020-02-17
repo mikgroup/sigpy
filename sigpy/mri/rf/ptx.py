@@ -4,7 +4,7 @@
 """
 
 import sigpy as sp
-import sigpy.mri.rf as rf
+from sigpy.mri import rf as rf
 from sigpy import backend
 
 __all__ = ['stspa']
