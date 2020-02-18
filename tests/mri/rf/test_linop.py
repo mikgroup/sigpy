@@ -26,8 +26,9 @@ def check_linop_adjoint(A, dtype=np.float, device=sp.cpu_device):
 class TestLinop(unittest.TestCase):
 
     def test_spatial_explicit_model(self):
-        img_shape = [16, 16]
-        mps_shape = [8, 16, 16]
+        dim = 3
+        img_shape = [dim, dim, dim]
+        mps_shape = [8, dim, dim, dim]
 
         fov = 22.4
         N = 32
@@ -37,6 +38,7 @@ class TestLinop(unittest.TestCase):
         dt = 4e-6
 
         g, k, t, s, dens = rf.spiral_varden(fov, N, gts, gslew, amp, 75, 75, 2)
+        k = rf.stack_of(k, 3, 0.1)
 
         mps = sp.randn(mps_shape, dtype=np.complex)
 
