@@ -38,16 +38,16 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
         # create time vector
         t = xp.expand_dims(xp.linspace(0, T, coord.shape[0]), axis=1)
 
-        x, y = xp.ogrid[-img_shape[0] / 2: img_shape[0] - img_shape[0] / 2,
-                        -img_shape[1] / 2: img_shape[1] - img_shape[1] / 2]
-
-        # make x and y into proper grid layout
-        x = x * xp.ones(img_shape)
-        y = y * xp.ones(img_shape)
-
+        x_ = xp.linspace(-img_shape[0] / 2,
+                         img_shape[0] - img_shape[0] / 2, img_shape[0])
+        y_ = xp.linspace(-img_shape[1] / 2,
+                         img_shape[1] - img_shape[1] / 2, img_shape[1])
         if three_d:
-            z = xp.ogrid[-img_shape[2] / 2: img_shape[2] - img_shape[2] / 2]
-            z = z * xp.ones(img_shape)
+            z_ = xp.linspace(-img_shape[2] / 2,
+                             img_shape[2] - img_shape[2] / 2, img_shape[2])
+            x, y, z = xp.meshgrid(x_, y_, z_, indexing='ij')
+        else:
+            x, y = xp.meshgrid(x_, y_, indexing='ij')
 
         # create explicit Ns * Nt system matrix
         if not three_d:
