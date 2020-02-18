@@ -101,7 +101,7 @@ class TestPtx(unittest.TestCase):
         npt.assert_array_almost_equal(A*pulses, target, 1E-3)
 
     def test_stspa_3d_explicit(self):
-        Nz = 3
+        Nz = 4
         target, sens = self.problem_3d(3, Nz)
         dim = target.shape[0]
 
