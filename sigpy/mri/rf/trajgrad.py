@@ -119,7 +119,8 @@ def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
         rewinder (Boolean): if True, include rewinder. If false, exclude.
 
     References:
-        Code and algorithm courtesy of Doug Noll, U. of Michigan E.E.
+        Code and algorithm based on spiralgradlx66 from
+        Doug Noll, U. of Michigan BME
 
     """
     fsgcm = gamp  # fullscale g/cm
@@ -404,7 +405,7 @@ def stack_of(k, num, zres):
     z = np.linspace(- num * zres / 2, num * zres / 2, num)
     kout = np.zeros((k.shape[0]*num, 3))
 
-    # will perform a complex rotation on our trajectory
+    # we will be performing a complex rotation on our trajectory
     k = traj_array2complex(k)
 
     for ii in range(num):
