@@ -119,7 +119,7 @@ def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
         rewinder (Boolean): if True, include rewinder. If false, exclude.
 
     References:
-        Code and algorithm based on spiralgradlx66 from
+        Code and algorithm based on spiralgradlx6 from
         Doug Noll, U. of Michigan BME
 
     """
