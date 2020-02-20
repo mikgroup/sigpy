@@ -1623,3 +1623,30 @@ class ConvolveFilterAdjoint(Linop):
         return ConvolveFilter(self.oshape, self.data,
                               mode=self.mode, strides=self.strides,
                               multi_channel=self.multi_channel)
+
+
+def minibatch(A, ncol):
+    """Function to minibatch a non-composed linear operator. Returns a
+    subset of the columns, along with the corresponding indices relative to A.
+
+        Args:
+            A (linop): sigpy Linear operator
+            ncol (int): number of columns to include in minibatch.
+    """
+    # first, extract the numpy array from the Linop
+    if A.repr_str == 'pTx spatial explicit':
+        Anum = A.linops[1].mat
+    else:
+        Anum = A
+
+
+    a_col_num = Anum.shape[0]
+    rng = np.random.default_rng()
+    inds = rng.choice(a_col_num, ncol, replace=False)
+    inds = np.sort(inds)
+    Anum = Anum[inds, :]
+
+    # finally, "rebundle" A as a linop again
+    Aout = MatMul(A.ishape, Anum)
+
+    return Aout, inds
