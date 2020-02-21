@@ -180,11 +180,11 @@ class TestAlg(unittest.TestCase):
         A = linop.MatMul(y.shape, A)
 
         alg_method = alg.GerchbergSaxton(A, y,
-                                         max_iter=100, tol=10E-9, lamb=0.1)
+                                         max_iter=100, tol=10E-9, lamb=lamda, minibatch=False)
 
         while(not alg_method.done()):
             alg_method.update()
 
         phs = np.conj(x_numpy * alg_method.x /
                       abs(x_numpy * alg_method.x))
-        npt.assert_allclose(alg_method.x * phs, x_numpy, rtol=1e-5)
+        npt.assert_allclose(alg_method.x * phs, x_numpy, rtol=1e-6)

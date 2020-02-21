@@ -576,10 +576,20 @@ class NewtonsMethod(Alg):
 
 
 class GerchbergSaxton(Alg):
+    """Gerchberg-Saxton method
 
-    def __init__(self, A, y, max_iter=500, tol=0, lamb=0):
+    Args:
+        A (linop): a matmul linop containing the system matrix.
+        y (array): observations.
+        max_iter (int): maximum number of iterations.
+        tol (float): optimization stopping tolerance.
+        lamb (float): Tikhonov regularization value.
+
+    """
+    def __init__(self, A, y, max_iter=500, tol=0, lamb=0, minibatch=False, minisize=10):
 
         self.A = A
+        self.Aholder = A
         self.y = y
         self.x = self.A.H * self.y
         self.max_iter = max_iter
@@ -587,20 +597,37 @@ class GerchbergSaxton(Alg):
         self.iter = 0
         self.tol = tol
         self.lamb = lamb
+        self.residual = np.infty
+        self.minibatch = minibatch
+        self.minisize = minisize
 
     def _update(self):
         device = backend.get_device(self.y)
         xp = device.xp
         with device:
-            y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
+            if self.minibatch:
+                self.A, inds = sp.linop.minibatch(self.Aholder, self.minisize)
+                yholder = np.expand_dims(self.y.flatten()[inds], 1)
+                y_hat = yholder * xp.exp(1j * xp.angle(self.A * self.x))
 
-            I = sp.linop.Identity(self.A.ishape)
-            alg_intern = ConjugateGradient(self.A.H * self.A + self.lamb * I,
-                                           self.A.H * y_hat, self.x)
+                I = sp.linop.Identity(self.A.ishape)
+                alg_intern = ConjugateGradient(
+                   self.A.H * self.A + self.lamb * I,
+                   self.A.H * y_hat, self.x, max_iter=5)
+
+            else:
+                y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
+
+                I = sp.linop.Identity(self.A.ishape)
+                alg_intern = ConjugateGradient(self.A.H * self.A + self.lamb * I,
+                                              self.A.H * y_hat, self.x, max_iter=5)
 
             while (not alg_intern.done()):
-                alg_intern.update()
+               alg_intern.update()
+               self.x = alg_intern.x
+
         self.iter += 1
+        self.residual = xp.sum(abs(self.Aholder * self.x - self.y))
 
     def _done(self):
-        return self.iter >= self.max_iter
+        return self.iter >= self.max_iter or self.residual <= self.tol
