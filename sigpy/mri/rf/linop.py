@@ -38,11 +38,14 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
         # create time vector
         t = xp.expand_dims(xp.linspace(0, T, coord.shape[0]), axis=1)
 
+        # row-major order
+        # x L to R, y T to B
         x_ = xp.linspace(-img_shape[0] / 2,
                          img_shape[0] - img_shape[0] / 2, img_shape[0])
-        y_ = xp.linspace(-img_shape[1] / 2,
-                         img_shape[1] - img_shape[1] / 2, img_shape[1])
+        y_ = xp.linspace(img_shape[1] / 2,
+                         -(img_shape[1] - img_shape[1] / 2), img_shape[1])
         if three_d:
+            # z B to T
             z_ = xp.linspace(-img_shape[2] / 2,
                              img_shape[2] - img_shape[2] / 2, img_shape[2])
             x, y, z = xp.meshgrid(x_, y_, z_, indexing='ij')
@@ -52,34 +55,34 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
         # create explicit Ns * Nt system matrix
         if not three_d:
             if B0 is None:
-                AExplicit = xp.exp(1j * (xp.outer(xp.concatenate(x), coord[:, 0]) +
-                                         xp.outer(xp.concatenate(y), coord[:, 1])))
+                AExplicit = xp.exp(1j * (xp.outer(x.flatten(), coord[:, 0]) +
+                                         xp.outer(y.flatten(), coord[:, 1])))
             else:
-                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(xp.concatenate(B0)
+                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(B0.flatten()
                                                                  * (t - T)) +
-                                   1j * (xp.outer(xp.concatenate(x), coord[:, 0])
-                                         + xp.outer(xp.concatenate(y),
+                                   1j * (xp.outer(x.flatten(), coord[:, 0])
+                                         + xp.outer(y.flatten(),
                                                     coord[:, 1])))
 
         else:
             if B0 is None:
-                AExplicit = xp.exp(1j * (xp.outer(xp.concatenate(x), coord[:, 0]) +
-                                         xp.outer(xp.concatenate(y), coord[:, 1]) +
-                                         xp.outer(xp.concatenate(z), coord[:, 2])))
+                AExplicit = xp.exp(1j * (xp.outer(x.flatten(), coord[:, 0]) +
+                                         xp.outer(y.flatten(), coord[:, 1]) +
+                                         xp.outer(z.flatten(), coord[:, 2])))
             else:
-                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(xp.concatenate(B0)
+                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(B0.flatten()
                                                                  * (t - T)) +
-                                   1j * (xp.outer(xp.concatenate(x), coord[:, 0])
-                                         + xp.outer(xp.concatenate(y), coord[:, 1])
-                                         + xp.outer(xp.concatenate(z), coord[:, 2])))
+                                   1j * (xp.outer(x.flatten(), coord[:, 0])
+                                         + xp.outer(y.flatten(), coord[:, 1])
+                                         + xp.outer(z.flatten(), coord[:, 2])))
         AFullExplicit = xp.empty(AExplicit.shape)
 
         # add sensitivities
         for ii in range(Nc):
             if three_d:
-                tmp = xp.concatenate(xp.concatenate(sens[ii, :, :, :]))
+                tmp = xp.squeeze(sens[ii, :, :, :]).flatten()
             else:
-                tmp = xp.concatenate(sens[ii, :, :])
+                tmp = sens[ii,:, :].flatten()
             D = xp.transpose(xp.tile(tmp, [coord.shape[0], 1]))
             AFullExplicit = xp.concatenate((AFullExplicit, D * AExplicit),
                                            axis=1)
@@ -95,7 +98,7 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
                               oshape=(coord.shape[0] * Nc, 1))
         A = Ro * A * Ri
 
-        A.repr_str = 'spatial pulse system matrix'
+        A.repr_str = 'pTx spatial explicit'
 
         if ret_array:
             return A.linops[1].mat
