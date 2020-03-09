@@ -586,7 +586,8 @@ class GerchbergSaxton(Alg):
         lamb (float): Tikhonov regularization value.
 
     """
-    def __init__(self, A, y, max_iter=500, tol=0, lamb=0, minibatch=False, minisize=10):
+    def __init__(self, A, y, max_iter=500, tol=0, lamb=0, minibatch=False,
+                 minisize=10, errmap=None, currentm=None, inner=True):
 
         self.A = A
         self.Aholder = A
@@ -600,14 +601,22 @@ class GerchbergSaxton(Alg):
         self.residual = np.infty
         self.minibatch = minibatch
         self.minisize = minisize
+        self.errmap = errmap
+        self.currentm = currentm
+        self.inner = inner
 
     def _update(self):
         device = backend.get_device(self.y)
         xp = device.xp
         with device:
             if self.minibatch:
-                self.A, inds = sp.linop.minibatch(self.Aholder, self.minisize)
+                self.A, inds = sp.linop.minibatch(self.Aholder, self.minisize,
+                                                  mask=self.y, hist_dist=True,
+                                                  errmap=self.errmap,
+                                                  currentm=self.currentm,
+                                                  inner=self.inner)
                 yholder = np.expand_dims(self.y.flatten()[inds], 1)
+
                 y_hat = yholder * xp.exp(1j * xp.angle(self.A * self.x))
 
                 I = sp.linop.Identity(self.A.ishape)
@@ -616,6 +625,7 @@ class GerchbergSaxton(Alg):
                    self.A.H * y_hat, self.x, max_iter=5)
 
             else:
+
                 y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
 
                 I = sp.linop.Identity(self.A.ishape)
@@ -627,7 +637,7 @@ class GerchbergSaxton(Alg):
                self.x = alg_intern.x
 
         self.iter += 1
-        self.residual = xp.sum(abs(self.Aholder * self.x - self.y))
+        self.residual = xp.sum(abs(abs(self.Aholder * self.x) - self.y))
 
     def _done(self):
         return self.iter >= self.max_iter or self.residual <= self.tol

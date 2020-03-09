@@ -5,6 +5,7 @@ such as FFT, NUFFT, and wavelet, and array manipulation operators,
 such as reshape, transpose, and resize.
 """
 import numpy as np
+import cv2
 
 from sigpy import backend, block, fourier, util, interp, conv, wavelet
 
@@ -1625,13 +1626,19 @@ class ConvolveFilterAdjoint(Linop):
                               multi_channel=self.multi_channel)
 
 
-def minibatch(A, ncol):
+def minibatch(A, ncol, mask=None, hist_dist=False, errmap=None, currentm=None, inner=True):
     """Function to minibatch a non-composed linear operator. Returns a
     subset of the columns, along with the corresponding indices relative to A.
+    If mask is included, only select columns corresponding to nonzero y
+    indices.
 
         Args:
             A (linop): sigpy Linear operator
             ncol (int): number of columns to include in minibatch.
+            mask (array): area in y within which indices are selected.
+            hist_dist (bool): return a minibatch distribution clustered around
+                areas that are less than the intended value
+            errmap (array): absolute error.
     """
     # first, extract the numpy array from the Linop
     if A.repr_str == 'pTx spatial explicit':
@@ -1639,10 +1646,29 @@ def minibatch(A, ncol):
     else:
         Anum = A
 
-
     a_col_num = Anum.shape[0]
     rng = np.random.default_rng()
-    inds = rng.choice(a_col_num, ncol, replace=False)
+    if mask is not None:
+        # necessary to create mask for erosion if not uniform 1 target
+        binary_targ = np.where(abs(mask) > 0, 1, 0).astype('float64')
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        if inner:
+            mask = cv2.erode(binary_targ, kernel, iterations=3) * mask
+        else:
+            maskhole = cv2.erode(mask,kernel,iterations=4)
+            mask = mask - maskhole
+
+
+
+        mask = mask.flatten()
+        mask_inds = mask.nonzero()[0]
+        if ncol < len(mask_inds):
+            inds = rng.choice(mask_inds, ncol, replace=False)
+        else:
+            # asking for more indices than exist in mask
+            inds = mask_inds
+    else:
+        inds = rng.choice(a_col_num, ncol, replace=False)
     inds = np.sort(inds)
     Anum = Anum[inds, :]
 
