@@ -101,14 +101,13 @@ def trap_grad(area, gmax, dgdt, dt, *args):
     return trap, ramppts
 
 
-def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
+def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
                   rewinder=False):
     r"""Variable density spiral designer. Produces trajectory, gradients,
     and slew rate.
-
     Args:
-        opfov (float): imaging field of view (cm).
-        opxres (float): imaging resolution (cm).
+        fov (float): imaging field of view (cm).
+        res (float): imaging resolution (cm).
         gts (float): sample time in sec.
         gslew (float): max slew rate in T/m/s.
         gamp (float): max gradient amplitude in T/m/s.
@@ -117,26 +116,25 @@ def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
             (should be >= densamp/2).
         nl (float): degree of undersampling outer region.
         rewinder (Boolean): if True, include rewinder. If false, exclude.
-
     References:
         Code and algorithm based on spiralgradlx6 from
         Doug Noll, U. of Michigan BME
-
     """
     fsgcm = gamp  # fullscale g/cm
     risetime = gamp / gslew * 10000  # us
     ts = gts  # sampling time
     gts = gts  # gradient sampling time
-    targetk = opxres / 2
+    N = np.floor(fov/res)
+    targetk = N / 2
     A = 32766  # output scaling of waveform (fullscale)
 
     max_dec_ratio = 32
     gam = 4257.0
     S = (gts / 1e-6) * A / risetime
     dr = ts / gts
-    omf = 2.0 * np.pi * opfov / (1 / (gam * fsgcm * gts))
-    om = 2.0 * np.pi / nl * opfov / (1 / (gam * fsgcm * gts))
-    distance = 1.0 / (opfov * gam * fsgcm * gts / A)
+    OMF = 2.0 * np.pi * fov / (1 / (gam * fsgcm * gts))
+    OM = 2.0 * np.pi / nl * fov / (1 / (gam * fsgcm * gts))
+    distance = 1.0 / (fov * gam * fsgcm * gts / A)
 
     ac = A
     loop = 1
@@ -149,8 +147,8 @@ def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
 
     while loop > 0:
         loop = 0
-        om = om / dec_ratio
-        omf = omf / dec_ratio
+        om = OM / dec_ratio
+        omf = OMF / dec_ratio
         s = S / dec_ratio
         g0 = 0
         gx = g0
@@ -266,7 +264,7 @@ def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
     for i in range(len(ggx)):
         g.append(complex(ggx[i], ggy[i]) / A * fsgcm)
     dt = gts * 1000
-    delk = 1 / 4.258 / opfov  # (g ms)/cm
+    delk = 1 / 4.258 / fov  # (g ms)/cm
 
     # ramp down
     l2 = len(g) - 1
@@ -303,23 +301,23 @@ def spiral_varden(opfov, opxres, gts, gslew, gamp, densamp, dentrans, nl,
     g = gtemp
 
     # calculate trajectory, slew rate factor from designed gradient
-    k = np.cumsum(g, axis=0) * dt / delk / opfov  # trajectory
+    k = np.cumsum(g, axis=0) * dt / delk / fov  # trajectory
     t = np.linspace(0, len(g), num=len(g) + 1)  # time vector
     s = np.diff(g, axis=0) / (gts * 1000)  # slew rate factor
 
     return g, k, t, s, dens
 
 
-def spiral_arch(fov, N, gts, gslew, gamp):
+def spiral_arch(fov, res, gts, gslew, gamp):
     r"""Analytic Archimedean spiral designer. Produces trajectory, gradients,
-    and slew rate.
+    and slew rate. Gradient returned has units mT/m.
 
     Args:
         fov (float): imaging field of view in m.
-        N (float): effective matrix size.
+        res (float): resolution, in m.
         gts (float): sample time in s.
-        gslew (float): max slew rate in T/m/s.
-        gamp (float): max gradient amplitude in T/m.
+        gslew (float): max slew rate in mT/m/ms.
+        gamp (float): max gradient amplitude in mT/m.
 
     References:
         Glover, G. H.(1999).
@@ -330,20 +328,19 @@ def spiral_arch(fov, N, gts, gslew, gamp):
         Handbook of MRI Pulse Sequences. Elsevier.
     """
 
-    gam = 267.522 * 1e6  # rad/s/Tesla
-    gambar = gam / 2 / np.pi  # Hz/T
-    dx = fov / N  # m, resolution
+    gam = 267.522 * 1e6 / 1000  # rad/s/mT
+    gambar = gam / 2 / np.pi  # Hz/mT
+    N = int(fov / res)  # effective matrix size
     lam = 1 / (2 * np.pi * fov)
     beta = gambar * gslew / lam
 
     kmax = N / (2 * fov)
-    dr = 1 / (2 * kmax)
     a_2 = (9 * beta / 4) ** (1 / 3)  # rad ** (1/3) / s ** (2/3)
-    Lambda = 5
+    lamb = 5
     theta_max = kmax / lam
     Ts = (3 * gam * gamp / (4 * np.pi * lam * a_2 ** 2)) ** 3
     theta_s = 0.5 * beta * Ts ** 2
-    theta_s /= (Lambda + beta / (2 * a_2) * Ts ** (4 / 3))
+    theta_s /= (lamb + beta / (2 * a_2) * Ts ** (4 / 3))
     t_g = np.pi * lam * (theta_max ** 2 - theta_s ** 2) / (gam * gamp)
     n_s = int(np.round(Ts / gts))
     n_g = int(np.round(t_g / gts))
@@ -358,7 +355,7 @@ def spiral_arch(fov, N, gts, gslew, gamp):
         t_g = np.linspace(Ts + gts, tacq, n_g)
 
         theta_1 = beta / 2 * t_s ** 2
-        theta_1 /= (Lambda + beta / (2 * a_2) * t_s ** (4 / 3))
+        theta_1 /= (lamb + beta / (2 * a_2) * t_s ** (4 / 3))
         theta_2 = theta_s ** 2 + gam / (np.pi * lam) * gamp * (t_g - Ts)
         theta_2 = np.sqrt(theta_2)
 
@@ -368,11 +365,11 @@ def spiral_arch(fov, N, gts, gslew, gamp):
 
     else:
 
-        tacq = 2 * np.pi * fov / 3 * np.sqrt(np.pi / (gam * gslew * dx ** 3))
+        tacq = 2 * np.pi * fov / 3 * np.sqrt(np.pi / (gam * gslew * res ** 3))
         n_t = int(np.round(tacq / gts))
         t_s = np.linspace(0, tacq, n_t)
         theta_1 = beta / 2 * t_s ** 2
-        theta_1 /= (Lambda + beta / (2 * a_2) * t_s ** (4 / 3))
+        theta_1 /= (lamb + beta / (2 * a_2) * t_s ** (4 / 3))
 
         k = lam * theta_1 * (np.cos(theta_1) + 1j * np.sin(theta_1))
 
