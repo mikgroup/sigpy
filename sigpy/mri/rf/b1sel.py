@@ -11,6 +11,7 @@ __all__ = ['dz_b1_rf', 'dz_b1_gslider_rf', 'dz_b1_hadamard_rf']
 def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi/6, pbw=0.3,
              pbc=2, d1=0.01, d2=0.01, os=8, split_and_reflect=True):
     """Design a B1-selective excitation pulse following Grissom JMR 2014
+
     Args:
         dt (float): hardware sampling dwell time in s.
         tb (int): time-bandwidth product.
@@ -20,7 +21,8 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi/6, pbw=0.3,
         pbc (float): center of passband in Gauss.
         d1 (float): passband ripple level in M0**-1.
         d2 (float): stopband ripple level in M0**-1.
-        splitAndReflect (bool): option to split and reflect designed pulse.
+        os (int): matrix scaling factor.
+        split_and_reflect (bool): option to split and reflect designed pulse.
 
     Split-and-reflect preserves pulse selectivity when scaled to excite large
     tip-angles.
@@ -121,7 +123,7 @@ def dz_b1_gslider_rf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi/6,
         pbc (float): center of passband in Gauss.
         d1 (float): passband ripple level in M0**-1.
         d2 (float): stopband ripple level in M0**-1.
-        splitAndReflect (bool): option to split and reflect designed pulse.
+        split_and_reflect (bool): option to split and reflect designed pulse.
 
     Split-and-reflect preserves pulse selectivity when scaled to excite large
      tip-angles.
@@ -150,7 +152,7 @@ def dz_b1_gslider_rf(dt=2e-6, G=5, tb=12, ptype='st', flip=np.pi/6,
     # calculate number of samples in pulse
     n = np.int(np.ceil(T/dt/2)*2)
 
-    om = 2*np.pi*4257*pbc  # modulation frequency to center profile at pbc gauss
+    om = 2*np.pi*4257*pbc  # modulation frequency to center profile at pbc
     t = np.arange(0, n)*T/n - T/2
 
     om1 = np.zeros((2*n, G))
