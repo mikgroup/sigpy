@@ -576,7 +576,9 @@ class NewtonsMethod(Alg):
 
 
 class GerchbergSaxton(Alg):
-    """Gerchberg-Saxton method
+    """Gerchberg-Saxton method, also called the variable exchange method.
+    Iterative method for recovery of a signal from the amplitude of linear
+    measurements |Ax|.
 
     Args:
         A (linop): a matmul linop containing the system matrix.
@@ -587,7 +589,7 @@ class GerchbergSaxton(Alg):
 
     """
     def __init__(self, A, y, max_iter=500, tol=0, lamb=0, minibatch=False,
-                 minisize=10, errmap=None, currentm=None, inner=True):
+                 minisize=10, currentm=None):
 
         self.A = A
         self.Aholder = A
@@ -601,40 +603,32 @@ class GerchbergSaxton(Alg):
         self.residual = np.infty
         self.minibatch = minibatch
         self.minisize = minisize
-        self.errmap = errmap
         self.currentm = currentm
-        self.inner = inner
 
     def _update(self):
         device = backend.get_device(self.y)
         xp = device.xp
         with device:
             if self.minibatch:
-                self.A, inds = sp.linop.minibatch(self.Aholder, self.minisize,
-                                                  mask=self.y, hist_dist=True,
-                                                  errmap=self.errmap,
-                                                  currentm=self.currentm,
-                                                  inner=self.inner)
+                self.A, inds = sp.mri.rf.shim.minibatch(self.Aholder,
+                                                        self.minisize,
+                                                        mask=self.y,
+                                                        currentm=self.currentm)
                 yholder = np.expand_dims(self.y.flatten()[inds], 1)
 
                 y_hat = yholder * xp.exp(1j * xp.angle(self.A * self.x))
 
-                I = sp.linop.Identity(self.A.ishape)
-                alg_intern = ConjugateGradient(
-                   self.A.H * self.A + self.lamb * I,
-                   self.A.H * y_hat, self.x, max_iter=5)
-
             else:
-
                 y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
 
-                I = sp.linop.Identity(self.A.ishape)
-                alg_intern = ConjugateGradient(self.A.H * self.A + self.lamb * I,
-                                              self.A.H * y_hat, self.x, max_iter=5)
+            I = sp.linop.Identity(self.A.ishape)
+            system = self.A.H * self.A + self.lamb * I
+            b = self.A.H * y_hat
+            alg_intern = ConjugateGradient(system, b, self.x, max_iter=5)
 
             while (not alg_intern.done()):
-               alg_intern.update()
-               self.x = alg_intern.x
+                alg_intern.update()
+                self.x = alg_intern.x
 
         self.iter += 1
         self.residual = xp.sum(abs(abs(self.Aholder * self.x) - self.y))
