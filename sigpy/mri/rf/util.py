@@ -3,6 +3,7 @@
 """
 
 import numpy as np
+import struct
 
 __all__ = ['dinf']
 
@@ -38,3 +39,64 @@ def dinf(d1=0.01, d2=0.01):
         + (a4 * l10d1 * l10d1 + a5 * l10d1 + a6)
 
     return d
+
+
+def signa(wav, filename, scale = -1):
+    """Write a binary waveform in the GE format.
+
+    Args:
+        wav (array): waveform, may be complex-valued.
+        filename (string): filename to write to.
+        scale (float): scaling factor to apply (default = waveform's max)
+
+    Adapted from John Pauly's RF Tools signa() MATLAB function
+
+    """
+        
+    wmax = int('7ffe', 16)
+    
+    if np.iscomplexobj(wav) == False:
+    
+        if scale == -1:
+            scale = 1 / np.max(np.abs(wav))
+            
+        # scale up to fit in a short integer
+        wav = wav * scale * wmax
+    
+        # mask off low bit, since it would be an EOS otherwise
+        wav = 2 * np.round(wav / 2)
+
+        fid = open(filename, 'wb')
+        
+        for x in np.nditer(wav):
+            fid.write(struct.pack('>h', int(x.item())))
+    
+        fid.close()
+    
+    else:
+            
+        if scale == -1:
+            scale = 1 / np.max((np.max(np.abs(np.real(wav))), np.max(np.abs(np.imag(wav)))))
+            
+        # scale up to fit in a short integer
+        wav = wav * scale * wmax
+    
+        # mask off low bit, since it would be an EOS otherwise
+        wav = 2 * np.round(wav / 2)
+            
+        fid = open(filename + '.r', 'wb')
+    
+        for x in np.nditer(wav):
+            fid.write(struct.pack('>h', np.real(x)))
+        
+        fid.close()
+        
+        fid = open(filename + '.i', 'wb')
+        
+        for x in np.nditer(wav):
+            fid.write(struct.pack('>h', np.imag(x)))
+        
+        fid.close()
+        
+        
+    
