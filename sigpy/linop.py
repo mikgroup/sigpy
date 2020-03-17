@@ -1377,15 +1377,17 @@ def FiniteDifference(ishape, axes=None):
     """Linear operator that computes finite difference gradient.
 
     Args:
-       ishape (tuple of ints): Input shape.
+        ishape (tuple of ints): Input shape.
+        axes (tuple or list): Axes to circularly shift. All axes are used if
+            None.
 
     """
     I = Identity(ishape)
-    axes = util._normalize_axes(axes, len(ishape))
     ndim = len(ishape)
+    axes = util._normalize_axes(axes, ndim)
     linops = []
     for i in axes:
-        D = I - Circshift(ishape, [0] * i + [1] + [0] * (ndim - i - 1))
+        D = I - Circshift(ishape, [1], axes=[i])
         R = Reshape([1] + list(ishape), ishape)
         linops.append(R * D)
 
