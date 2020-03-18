@@ -45,7 +45,7 @@ def signa(wav, filename, scale = -1):
     """Write a binary waveform in the GE format.
 
     Args:
-        wav (array): waveform, may be complex-valued.
+        wav (array): waveform (gradient or RF), may be complex-valued.
         filename (string): filename to write to.
         scale (float): scaling factor to apply (default = waveform's max)
 
@@ -99,4 +99,58 @@ def signa(wav, filename, scale = -1):
         fid.close()
         
         
+def ge_rf_params(rf, dt = 4e-6):
+    """Calculate RF pulse parameters for deployment
+    on a GE scanner. 
+    
+    Args: 
+        rf (array): RF pulse samples
+        dt (scalar): RF dwell time (seconds)
+        
+    Adapted from Adam Kerr's rf_save() MATLAB function
+    
+    """
+    
+    print('GE RF Pulse Parameters:')
+    
+    n = len(rf)
+    rfn = rf / np.max(np.abs(rf))
+    
+    abswidth = np.sum(np.abs(rfn)) / n
+    print('abswidth = ', abswidth)
+    
+    effwidth = np.sum(np.abs(rfn)**2) / n
+    print('effwidth = ', effwidth)
+    
+    print('area = ', abswidth)
+    
+    pon = np.abs(rfn) > 0
+    temp_pw = 0
+    max_pw = 0
+    for i in range(0, len(rfn)):
+        if pon[i] == 0 & temp_pw > 0:
+            max_pw = np.max(max_pw, temp_pw)
+            temp_pw = 0
+    max_pw = max_pw / n
+    
+    dty_cyc = np.sum(np.abs(rfn) > 0.2236) / n
+    if dty_cyc < max_pw:
+        dty_cyc = max_pw
+    print('dtycyc = ', dty_cyc)
+    print('maxpw = ', max_pw)
+    
+    max_b1 = np.max(np.abs(rf))
+    print('max_b1 = ', max_b1)
+    
+    int_b1_sqr = np.sum(np.abs(rf)**2) * dt * 1e3
+    print('int_b1_sqr = ', int_b1_sqr)
+    
+    rms_b1 = np.sqrt(np.sum(np.abs(rf)**2)) / n
+    print('max_rms_b1 = ', rms_b1)
+    
+    
+    
+    
+    
+    
     
