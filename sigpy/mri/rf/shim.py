@@ -39,7 +39,7 @@ def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
     return alg_method.x
 
 
-def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True):
+def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True):
     """Function to minibatch a non-composed linear operator. Returns a
     subset of the columns, along with the corresponding indices relative to A.
     If mask is included, only select columns corresponding to nonzero y
@@ -52,10 +52,11 @@ def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True):
             currentm (array): current magnitude |B1+| shim.
             pdf_dist (bool): use a spatially varying centroid centered
                 multivariate gaussian pdf for sample selection.
+            linop_o (bool): return a sigpy Linop. Else return a numpy ndarray.
     """
 
     # first, extract the numpy array from the Linop
-    if A.repr_str == 'pTx spatial explicit':
+    if hasattr(A, 'repr_str') and A.repr_str == 'pTx spatial explicit':
         Anum = A.linops[1].mat
     else:
         Anum = A
@@ -111,10 +112,11 @@ def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True):
     samps[inds] = 1
     Anum = Anum[inds, :]
 
-    # finally, "rebundle" A as a linop again
-    Aout = sp.linop.MatMul(A.ishape, Anum)
+    # finally, "rebundle" A as a linop again if desired
+    if linop_o:
+        Anum = sp.linop.MatMul(A.ishape, Anum)
 
-    return Aout, inds
+    return Anum, inds
 
 
 def multivariate_gaussian(n, mu, sigma):
