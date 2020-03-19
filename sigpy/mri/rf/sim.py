@@ -174,9 +174,9 @@ def abrm_ptx(b1, x, g, dt, fmap=None, sens=None):
     sens = [Nc, dim, dim].
 
     Args:
-         b1 (array): rf waveform input.
-         x (array): spatial locations.
-         g (array): gradient array.
+         b1 (array): rf waveform input samples in radians.
+         x (array): spatial locations (m).
+         g (array): gradient array (mT/m with gamma*dt applied).
          dt (float): hardware dwell time (s).
          fmap (array): off-resonance map (Hz).
          sens (array or None): B1+ sensitivity matrix. If None, creates matrix
@@ -206,8 +206,7 @@ def abrm_ptx(b1, x, g, dt, fmap=None, sens=None):
     xp = device.xp
     with device:
 
-        gambar = 42570000  # gamma / 2pi in Hz / T
-        gam = gambar * 2 * xp.pi / 10000  # gamma in radians / g
+        gam = 267.522 * 1e6 / 1000  # rad/s/mT
 
         dim = int(xp.sqrt(x.shape[0]))
         Ns = dim * dim
