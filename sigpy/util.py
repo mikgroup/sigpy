@@ -429,9 +429,8 @@ def axpy(y, a, x):
 
     Args:
         y (array): Output array.
-        a (scalar): Input scalar.
+        a (array): Input array.
         x (array): Input array.
-
     """
     xp = backend.get_array_module(y)
 
@@ -446,7 +445,7 @@ def xpay(y, a, x):
 
     Args:
         y (array): Output array.
-        a (scalar): Input scalar.
+        a (array): Input array.
         x (array): Input array.
     """
     xp = backend.get_array_module(y)
@@ -484,4 +483,4 @@ if config.cupy_enabled:  # pragma: no cover
         """
         y = x + (T) a * y;
         """,
-        name='axpy')
+        name='xpay')
