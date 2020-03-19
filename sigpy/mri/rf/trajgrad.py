@@ -104,18 +104,20 @@ def trap_grad(area, gmax, dgdt, dt, *args):
 def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
                   rewinder=False):
     r"""Variable density spiral designer. Produces trajectory, gradients,
-    and slew rate.
+    and slew rate. Gradient units returned are in g/cm, g/cm/s
+
     Args:
         fov (float): imaging field of view (cm).
-        res (float): imaging resolution (cm).
-        gts (float): sample time in sec.
-        gslew (float): max slew rate in T/m/s.
-        gamp (float): max gradient amplitude in T/m/s.
+        res (float): imaging isotropic resolution (cm).
+        gts (float): gradient sample time in sec.
+        gslew (float): max slew rate in g/cm/s.
+        gamp (float): max gradient amplitude in g/cm.
         densamp (float):  duration of full density sampling (# of samples).
         dentrans (float): duration of transition from higher to lower
             (should be >= densamp/2).
         nl (float): degree of undersampling outer region.
         rewinder (Boolean): if True, include rewinder. If false, exclude.
+
     References:
         Code and algorithm based on spiralgradlx6 from
         Doug Noll, U. of Michigan BME
@@ -242,7 +244,7 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
                 oldky = tky
 
                 if np.remainder(m, dr) == 0:
-                    m = int(m / dr)  # JBM added int
+                    m = int(m / dr)
                     absk = np.abs(kxt + 1j * kyt) / distance
 
                     if m > len(dens) - 1:
