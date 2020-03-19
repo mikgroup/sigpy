@@ -193,7 +193,7 @@ class GradientMethod(Alg):
                 backend.copyto(self.z, self.x +
                                ((t_old - 1) / self.t) * (self.x - x_old))
 
-            self.resid = xp.linalg.norm(self.x - x_old).item() / self.alpha
+            self.resid = xp.linalg.norm((self.x - x_old) / self.alpha).item()
 
     def _done(self):
         return (self.iter >= self.max_iter) or self.resid <= self.tol

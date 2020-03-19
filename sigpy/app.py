@@ -296,10 +296,12 @@ class LinearLeastSquares(App):
             max_eig = MaxEig(AHA, dtype=self.x.dtype, device=self.x_device,
                              max_iter=self.max_power_iter,
                              show_pbar=self.show_pbar).run()
-            if max_eig == 0:
-                self.alpha = 1
-            else:
-                self.alpha = 1 / max_eig
+            with self.x_device:
+                if max_eig == 0:
+                    self.alpha = self.x_device.xp.array(1, self.x.real.dtype)
+                else:
+                    self.alpha = self.x_device.xp.array(1 / max_eig,
+                                                        self.x.real.dtype)
 
         self.alg = GradientMethod(
             gradf,
@@ -338,7 +340,8 @@ class LinearLeastSquares(App):
 
         if self.tau is None:
             if self.sigma is None:
-                self.sigma = 1
+                with self.y_device:
+                    self.sigma = self.y_device.xp.array(1, self.y.real.dtype)
 
             S = linop.Multiply(A.oshape, self.sigma)
             AHA = A.H * S * A
@@ -349,7 +352,9 @@ class LinearLeastSquares(App):
                 max_iter=self.max_power_iter,
                 show_pbar=self.show_pbar).run()
 
-            self.tau = 1 / max_eig
+            with self.x_device:
+                self.tau = self.x_device.xp.array(1 / max_eig,
+                                                  self.x.real.dtype)
         elif self.sigma is None:
             T = linop.Multiply(A.ishape, self.tau)
             AAH = A * T * A.H
@@ -361,7 +366,9 @@ class LinearLeastSquares(App):
                 max_iter=self.max_power_iter,
                 show_pbar=self.show_pbar).run()
 
-            self.sigma = 1 / max_eig
+            with self.y_device:
+                self.sigma = self.y_device.xp.array(1 / max_eig,
+                                                    self.y.real.dtype)
 
         with self.y_device:
             u = self.y_device.xp.zeros(A.oshape, dtype=self.y.dtype)
