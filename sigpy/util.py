@@ -471,10 +471,10 @@ if config.cupy_enabled:  # pragma: no cover
     import cupy as cp
 
     _axpy_cuda = cp.ElementwiseKernel(
-        'S a, T x',
+        'T z, T x',
         'T y',
         """
-        y += (T) a * x;
+        y += z * x;
         """,
         name='axpy')
 
@@ -484,4 +484,4 @@ if config.cupy_enabled:  # pragma: no cover
         """
         y = x + (T) a * y;
         """,
-        name='axpy')
+        name='xpay')
