@@ -128,16 +128,16 @@ if config.cupy_enabled:  # pragma: no cover
     import cupy as cp
 
     _soft_thresh_cuda = cp.ElementwiseKernel(
-        'S lamda, T input',
+        'T lamda, T input',
         'T output',
         """
-        S abs_input = abs(input);
+        T abs_input = abs(input);
         T sign;
         if (abs_input == 0)
             sign = 0;
         else
             sign = input / (T) abs_input;
-        S mag = abs_input - lamda;
+        T mag = abs_input - lamda;
         mag = (abs(mag) + mag) / 2.;
 
         output = (T) mag * sign;
@@ -145,10 +145,10 @@ if config.cupy_enabled:  # pragma: no cover
         name='soft_thresh')
 
     _hard_thresh_cuda = cp.ElementwiseKernel(
-        'S lamda, T input',
+        'T lamda, T input',
         'T output',
         """
-        S abs_input = abs(input);
+        T abs_input = abs(input);
         if (abs_input > lamda)
             output = input;
         else
