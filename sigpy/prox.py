@@ -114,7 +114,7 @@ class Stack(Prox):
 
     def _prox(self, alpha, input):
         with backend.get_device(input):
-            if np.isscalar(alpha):
+            if np.ndim(alpha) == 0:
                 alphas = [alpha] * self.nops
             else:
                 alphas = util.split(alpha, self.shapes)
