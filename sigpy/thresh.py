@@ -30,7 +30,7 @@ def soft_thresh(lamda, input):
     if xp == np:
         return _soft_thresh(lamda, input)
     else:  # pragma: no cover
-        return _soft_thresh_cuda(lamda, input)
+        return _soft_thresh_cuda(xp.array(lamda).astype(input.dtype), input)
 
 
 def hard_thresh(lamda, input):
@@ -48,7 +48,7 @@ def hard_thresh(lamda, input):
     if xp == np:
         return _hard_thresh(lamda, input)
     else:  # pragma: no cover
-        return _hard_thresh_cuda(lamda, input)
+        return _hard_thresh_cuda(xp.array(lamda).astype(input.dtype), input)
 
 
 def l1_proj(eps, input):

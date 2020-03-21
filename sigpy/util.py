@@ -438,7 +438,7 @@ def axpy(y, a, x):
     if xp == np:
         _axpy(y, a, x, out=y)
     else:
-        _axpy_cuda(a, x, y)
+        _axpy_cuda(xp.array(a).astype(x.dtype), x, y)
 
 
 def xpay(y, a, x):
@@ -454,7 +454,7 @@ def xpay(y, a, x):
     if xp == np:
         _xpay(y, a, x, out=y)
     else:
-        _xpay_cuda(a, x, y)
+        _xpay_cuda(xp.array(a).astype(x.dtype), x, y)
 
 
 @nb.vectorize(nopython=True, cache=True)  # pragma: no cover
