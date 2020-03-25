@@ -26,10 +26,14 @@ def soft_thresh(lamda, input):
         array: soft-thresholded result.
 
     """
-    xp = backend.get_array_module(input)
+    device = backend.get_device(input)
+    xp = device.xp
     if xp == np:
         return _soft_thresh(lamda, input)
     else:  # pragma: no cover
+        if np.isscalar(lamda):
+            lamda = backend.to_device(lamda, device)
+
         return _soft_thresh_cuda(lamda, input)
 
 
@@ -44,10 +48,14 @@ def hard_thresh(lamda, input):
         array: hard-thresholded result.
 
     """
-    xp = backend.get_array_module(input)
+    device = backend.get_device(input)
+    xp = device.xp
     if xp == np:
         return _hard_thresh(lamda, input)
     else:  # pragma: no cover
+        if np.isscalar(lamda):
+            lamda = backend.to_device(lamda, device)
+
         return _hard_thresh_cuda(lamda, input)
 
 
