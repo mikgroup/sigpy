@@ -646,7 +646,8 @@ class Reshape(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        return input.reshape(self.oshape)
+        with backend.get_device(input):
+            return input.reshape(self.oshape)
 
     def _adjoint_linop(self):
         return Reshape(self.ishape, self.oshape)
@@ -1050,8 +1051,9 @@ class Resize(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        return util.resize(input, self.oshape,
-                           ishift=self.ishift, oshift=self.oshift)
+        with backend.get_device(input):
+            return util.resize(input, self.oshape,
+                               ishift=self.ishift, oshift=self.oshift)
 
     def _adjoint_linop(self):
         return Resize(self.ishape, self.oshape,
