@@ -3,7 +3,7 @@
 
 import numpy as np
 
-__all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch',
+__all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch', 'epi',
            'stack_of', 'traj_array2complex', 'traj_complex2array']
 
 
@@ -42,7 +42,7 @@ def min_trap_grad(area, gmax, dgdt, dt):
         # negative-area trap requested?
         trap, ramppts = 0, 0
 
-    return trap, ramppts
+    return np.expand_dims(trap, axis=0), ramppts
 
 
 def trap_grad(area, gmax, dgdt, dt, *args):
@@ -98,7 +98,7 @@ def trap_grad(area, gmax, dgdt, dt, *args):
     else:
         trap, ramppts = 0, 0
 
-    return trap, ramppts
+    return np.expand_dims(trap, axis=0), ramppts
 
 
 def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
@@ -278,10 +278,10 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
 
     # rewinder
     if rewinder:
-        rewx, ramppts = trap_grad(abs(np.real(sum(g))) * gts,
-                                  gamp, gslew * 50, gts)
-        rewy, ramppts = trap_grad(abs(np.imag(sum(g))) * gts,
-                                  gamp, gslew * 50, gts)
+        rewx, ramppts = np.squeeze(trap_grad(abs(np.real(sum(g))) * gts,
+                                  gamp, gslew * 50, gts))
+        rewy, ramppts = np.squeeze(trap_grad(abs(np.imag(sum(g))) * gts,
+                                  gamp, gslew * 50, gts))
 
         # append rewinder gradient
         if len(rewx) > len(rewy):
@@ -387,6 +387,154 @@ def spiral_arch(fov, res, gts, gslew, gamp):
     s = traj_complex2array(s)
 
     t = np.linspace(0, len(g), num=len(g) + 1)  # time vector
+
+    return g, k, t, s
+
+
+def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
+    r"""Basic EPI trajectory designer.
+
+    Args:
+        fov (float): imaging field of view in cm.
+        N (int): # of pixels (square). N = etl*nl, where etl = echo-train-len
+            and nl = # leaves (shots). nl default 1.
+        etl (int): echo train length.
+        dt (float): sample time in s.
+        gamp (float): max gradient amplitude in mT/m.
+        gslew (float): max slew rate in mT/m/ms.
+        offset (int): used for multi-shot EPI goes from 0 to #shots-1
+        dirx (int): x direction of EPI -1 left to right, 1 right to left
+        diry (int): y direction of EPI -1 bottom-top, 1 top-bottom
+
+
+    References:
+        From Antonis Matakos' contrib to Jeff Fessler's IRT.
+    """
+    nshot = N / etl
+    s = gslew * dt * 1000
+
+    scaley = 20
+
+    # make the various gradient waveforms
+    gamma = 4.2575  # kHz/Gauss
+    g = (1 / (1000 * dt)) / (gamma * fov)  # Gauss/cm
+    if g > gamp:
+        g = gamp
+        print('max g reduced to {}'.format(g))
+
+    # readout trapezoid
+    gxro = g * np.ones((1, N))  # plateau of readout trapezoid
+    areapd = np.sum(gxro) * dt
+
+    ramp = np.expand_dims(np.linspace(s, g, int(g/s)), axis=0)
+    gxro = np.concatenate((np.expand_dims(np.array([0]), axis=1), ramp, gxro,
+                           np.fliplr(ramp)), axis=1)
+    # x prewinder. make sure res_kpre is even. Handle even N by changing prew.
+
+    if N % 2 == 0:
+        area = (np.sum(gxro) - dirx * g) * dt
+    else:
+        area = np.sum(gxro) * dt
+    gxprew2 = dirx * trap_grad(area / 2 + dirx * g * dt,
+                               gamp, gslew * 1000, dt)[0]
+    gxprew = dirx * trap_grad(area / 2, gamp, gslew * 1000, dt)[0]
+
+    # JBM
+    gxprew = np.concatenate((np.zeros((1, (gxprew.size + ramp.size) % 2)),
+                            gxprew), axis=1)
+
+    # partial dephaser (one cycle of phase across each voxel)
+    gxpd = -trap_grad(areapd / 2, gamp, gslew * 1000, dt)[0]
+    gxpd = np.concatenate((np.zeros((1, gxpd.size % 2)), gxpd), axis=1)
+
+    # phase-encode trapezoids before/after gx
+    # handle even N by changing prewinder
+    if N % 2 == 0:
+        areayprew = areapd / 2 - offset * g * dt
+    else:
+        areayprew = (areapd - g * dt) / 2 - offset * g * dt
+
+    gyprew = diry * trap_grad(areayprew, gamp, gslew / scaley * 1000, dt)[0]
+    gyprew = np.concatenate((np.zeros((1, gyprew.size % 2)), gyprew), axis=1)
+
+    lx = gxpd.size
+    ly = gyprew.size
+    if lx > ly:
+        gyprew = np.concatenate((gyprew, np.zeros((1, lx - ly))), axis=1)
+    else:
+        gxpd = np.concatenate((gxpd, np.zeros((1, ly - lx))), axis=1)
+
+    # gy readout gradient elements
+    # changed readout patterns to create interleaved EPIs
+    areagyblip = areapd / etl
+    gyblip = trap_grad(areagyblip, gamp, gslew / scaley * 1000, dt)[0]
+    gyro = np.concatenate((np.zeros((1, gxro.size - gyblip.size)), gyblip),
+                          axis=1)
+    gyro2 = 0
+
+    # put together gx and gy
+
+    gxro = -dirx * gxro
+    gx = gxprew
+
+    gyro = -diry * gyro
+    gyro2 = -diry * gyro2
+    gy = np.expand_dims(np.array([0]), axis=1)
+    lx = gx.size
+    ly = gy.size
+    if lx > ly:
+        gy = np.concatenate((gy, np.zeros((1, lx - ly))), axis=1)
+    else:
+        gx = np.concatenate((gx, np.zeros((1, ly - lx))), axis=1)
+
+    gy = np.concatenate((gy, np.zeros((1, int(gyblip.size/2)))), axis=1)
+
+    for ee in range(1, etl-1):
+        flip = ((-1) ** (ee + 1))
+        gx = np.concatenate((gx,  flip * gxro), axis=1)
+        gy = np.concatenate((gy, gyro), axis=1)
+
+    if etl == 1:
+        ee = 1
+    else:
+        ee += 1
+
+    # concatenate with added 0 to limit max s
+    gx = np.concatenate((gx, (-1 ** (ee + 1) * gxro),
+                         np.expand_dims(np.array([0]), axis=1)), axis=1)
+    gy = np.concatenate((gy, np.zeros((1, gx.size - gy.size))), axis=1)
+
+    # add rephasers at end of gx and gy readout
+    areagx = np.sum(gx) * dt
+    gxrep = trap_grad(-areagx, gamp, gslew * 1000, dt)[0]
+    gx = np.concatenate((gx, gxrep), axis=1)
+
+    areagy = np.sum(gy) * dt  # units = G/cm*s
+    gyrep = trap_grad(-areagy, gamp, gslew / scaley * 1000, dt)[0]
+    gy = np.concatenate((gy, gyrep), axis=1)
+
+    # make sure length of gx and gy are same, and even
+    lx = gx.size
+    ly = gy.size
+    if lx > ly:
+        gy = np.concatenate((gy, np.zeros((1, lx - ly))), axis=1)
+    else:
+        gx = np.concatenate((gx, np.zeros((1, ly - lx))), axis=1)
+
+    gx = np.concatenate((gx, np.zeros((1, gx.size % 2))), axis=1)
+    gy = np.concatenate((gy, np.zeros((1, gy.size % 2))), axis=1)
+    g = np.concatenate((gx, gy), axis=0)
+
+    sx = np.diff(gx, axis=1) / (dt * 1000)
+    sy = np.diff(gy, axis=1) / (dt * 1000)
+    s = np.concatenate((sx, sy), axis=0)
+
+    # TODO: might need to add interpolation to make more accurate k
+    kx = np.cumsum(gx, axis=1) * gamma * dt * 1000
+    ky = np.cumsum(gy, axis=1) * gamma * dt * 1000
+    k = np.concatenate((kx, ky), axis=0)
+
+    t = np.linspace(0, kx.size, kx.size) * dt
 
     return g, k, t, s
 
