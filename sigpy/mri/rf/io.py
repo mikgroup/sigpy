@@ -5,7 +5,7 @@
 import numpy as np
 import struct
 
-__all__ = ['signa', 'ge_rf_params']
+__all__ = ['signa', 'ge_rf_params', 'philips_rf_params']
 
 
 def signa(wav, filename, scale=-1):
@@ -115,3 +115,31 @@ def ge_rf_params(rf, dt=4e-6):
 
     rms_b1 = np.sqrt(np.sum(np.abs(rf) ** 2)) / n
     print('max_rms_b1 = ', rms_b1)
+
+
+def philips_rf_params(rf):
+    """Calculate RF pulse parameters for deployment
+    on a Philips scanner.
+
+    Args:
+        rf (array): RF pulse samples (assumed real-valued)
+
+    """
+
+    print('Philips RF Pulse Parameters')
+
+    n = len(rf)
+    rfn = rf / np.max(np.abs(rf))
+
+    am_c_teff = np.sum(rfn * 32767) / (32767 * n)
+    print('am_c_teff = ', am_c_teff)
+
+    am_c_trms = np.sum((rfn * 32767) ** 2) / (32767 ** 2 * n)
+    print('am_c_trms = ', am_c_trms)
+
+    am_c_tabs = np.sum(np.abs(rfn) * 32767) / (32767 * n)
+    print('am_c_tabs = ', am_c_tabs)
+
+    # assume that the isodelay point is at the peak
+    am_c_sym = np.argmax(np.abs(rfn)) / n
+    print('am_c_sym = ', am_c_sym)
