@@ -514,6 +514,153 @@ class ADMM(Alg):
         self.u += self.A(self.x) + self.B(self.z) - self.c
 
 
+class SDMM(Alg):
+    r"""Simultaneous Direction Method of Multipliers.
+
+    """
+    def __init__(self, A, d, lam, L, c, cMax, cNorm, mu, rho, rhoMax,
+                 rhoNorm, eps_pri, eps_dual, max_cg_iter=30, max_iter=1000):
+        self.A = A
+        self.d = d
+        self.lam = lam
+        self.L = L
+        self.c = c
+        self.cMax = cMax
+        self.cNorm = cNorm
+        self.mu = mu
+        self.rho = rho
+        self.rhoMax = rhoMax
+        self.rhoNorm = rhoNorm
+        self.eps_pri = eps_pri
+        self.eps_dual = eps_dual
+        self. max_cg_iter = max_cg_iter
+        self.stop = False  # stop criterion collector variable
+        super().__init__(max_iter)
+
+        M = len(self.L)
+        # flatten out into single vector if multiple channel problem
+        self.x = np.expand_dims(np.zeros(self.A.ishape,
+                                         dtype=np.complex).flatten(), axis=0)
+        self.z, self.u = [], []
+
+        for ii in range(M):
+            self.z.append(np.transpose(L[ii] @ np.transpose(self.x)))
+            self.u.append(np.expand_dims(np.zeros(np.shape(L[ii])[0],
+                                                  dtype=np.complex),
+                                         axis=0))
+        if cMax is not None:
+            self.zMax = self.x
+            self.uMax = np.zeros(np.shape(self.x), dtype=np.complex)
+        if cNorm is not None:
+            self.zNorm = self.x
+            self.uNorm = np.zeros(np.shape(self.x), dtype=np.complex)
+
+    def prox_rhog(self, v, c):
+        if np.real(np.linalg.norm(v) ** 2) > c:
+            z = v * np.sqrt(c) / np.sqrt(np.real(np.linalg.norm(v)))
+        else:
+            z = v
+        return z
+
+    def prox_rhog_max(self, v, c):
+        z = v
+        indices = np.where((abs(z) ** 2 > c))
+        z[indices] = np.sqrt(c) * z[indices] / abs(z[indices])
+        return z
+
+    def prox_muf(self, v, mu, A, x, d, lam, nCGiters):
+        d = np.hstack((d, np.sqrt(1 / mu) * v, np.sqrt(lam) * x))
+        Am = self.Amult(x, A, mu, lam)
+        int_method = ConjugateGradient(Am.H * Am, Am.H * d, x,
+                                       max_iter=nCGiters)
+
+        while not int_method.done():
+            int_method.update()
+
+        return int_method.x
+
+    def Amult(self, x, A, mu, lam):
+        M = sp.linop.Multiply(x.shape, np.ones(x.shape) * np.sqrt(1/mu))
+        L = sp.linop.Multiply(x.shape, np.ones(x.shape) * np.sqrt(lam))
+        Rao = sp.linop.Reshape((1, A.oshape[0] * A.oshape[1]), ishape=A.oshape)
+        Rai = sp.linop.Reshape((A.ishape), ishape=x.shape)
+        A = Rao * A * Rai
+        Y = sp.linop.Vstack((A, M, L))
+        Ry = sp.linop.Reshape((1, Y.oshape[0]), Y.oshape)
+        Y = Ry * Y
+        return Y
+
+    def _update(self):
+
+        # evaluate objective
+        v = self.x
+        for ii in range(len(self.L)):
+            v -= np.transpose(self.mu / self.rho[ii] * np.transpose(self.L[ii]) @ \
+                np.transpose((np.transpose(self.L[ii] @ np.transpose(self.x)) - self.z[ii] + self.u[ii])))
+        if self.cMax is not None:
+            v = v - self.mu / self.rhoMax * (self.x - self.zMax + self.uMax)
+        if self.cNorm is not None:
+            v = v - self.mu / self.rhoNorm * (self.x - self.zNorm + self.uNorm)
+
+        self.x = self.prox_muf(v, self.mu, self.A, self.x, self.d, self.lam,
+                               self.max_cg_iter)
+
+        # run through constraints
+        z_old = self.z
+        for ii in range(len(self.L)):
+            self.z[ii] = self.prox_rhog(np.transpose(np.transpose(self.L[ii] @ np.transpose(self.x)) + self.u[ii]), self.c[ii])
+            self.u[ii] += np.transpose(self.L[ii] @ np.transpose(self.x) - self.z[ii])
+
+        if self.cMax is not None:
+            zMax_old = self.zMax
+            self.zMax = self.prox_rhog_max(self.x + self.uMax, self.cMax)
+            self.uMax = self.uMax + self.x - self.zMax
+        if self.cNorm is not None:
+            zNorm_old = self.zNorm
+            self.zNorm = self.prox_rhog(self.x + self.uNorm, self.cNorm)
+            self.uNorm += self.x - self.zNorm
+
+        # check the stopping criteria
+        self.stop = True
+        rMax, sMax = 0, 0
+        for ii in range(len(self.L)):
+            # primal residual
+            r = np.transpose(self.L[ii] @ np.transpose(self.x) - self.z[ii])
+            # dual residual
+            dz = self.z[ii] - z_old[ii]
+            s = 1 / self.rho[ii] * np.transpose(self.L[ii]) * dz
+            if np.linalg.norm(r) > self.eps_pri or\
+                    np.linalg.norm(s) > self.eps_dual:
+                self.stop = False
+            if np.linalg.norm(r) > rMax:
+                rMax = np.linalg.norm(r)
+            if np.linalg.norm(s) > sMax:
+                sMax = np.linalg.norm(s)
+        if self.cNorm is not None:
+            r = self.x - self.zNorm
+            s = 1 / self.rhoNorm * (self.zNorm - zNorm_old)
+            if np.linalg.norm(r) > self.eps_pri or\
+                    np.linalg.norm(s) > self.eps_dual:
+                self.stop = False
+            if np.linalg.norm(r) > rMax:
+                rMax = np.linalg.norm(r)
+            if np.linalg.norm(s) > sMax:
+                sMax = np.linalg.norm(s)
+        if self.cMax is not None:
+            r = self.x - self.zMax
+            s = 1 / self.rhoMax * (self.zMax - zMax_old)
+            if np.linalg.norm(r) > self.eps_pri or\
+                    np.linalg.norm(s) > self.eps_dual:
+                self.stop = False
+            if np.linalg.norm(r) > rMax:
+                rMax = np.linalg.norm(r)
+            if np.linalg.norm(s) > sMax:
+                sMax = np.linalg.norm(s)
+
+    def _done(self):
+        return self.iter >= self.max_iter or self.stop
+
+
 class NewtonsMethod(Alg):
     """Newton's Method.
 
@@ -589,7 +736,7 @@ class GerchbergSaxton(Alg):
 
     """
     def __init__(self, A, y, max_iter=500, tol=0, lamb=0, minibatch=False,
-                 minisize=10, currentm=None):
+                 minisize=10, currentm=None, redfact=10):
 
         self.A = A
         self.Aholder = A
@@ -604,6 +751,7 @@ class GerchbergSaxton(Alg):
         self.minibatch = minibatch
         self.minisize = minisize
         self.currentm = currentm
+        self.redfact = redfact
 
     def _update(self):
         device = backend.get_device(self.y)
@@ -613,7 +761,8 @@ class GerchbergSaxton(Alg):
                 self.A, inds = sp.mri.rf.shim.minibatch(self.Aholder,
                                                         self.minisize,
                                                         mask=self.y,
-                                                        currentm=self.currentm)
+                                                        currentm=self.currentm,
+                                                        redfact=self.redfact)
                 yholder = np.expand_dims(self.y.flatten()[inds], 1)
 
                 y_hat = yholder * xp.exp(1j * xp.angle(self.A * self.x))
