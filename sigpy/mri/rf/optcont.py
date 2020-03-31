@@ -8,18 +8,18 @@ __all__ = ['blochsim', 'deriv']
 
 def blochsim(rf, x, g):
     r"""1D RF pulse simulation, with simultaneous RF + gradient rotations.
+    Assume x has inverse spatial units of g, and g has gamma*dt applied and
+    assume x = [...,Ndim], g = [Ndim,Nt].
 
      Args:
          rf (array): rf waveform input.
          x (array): spatial locations.
-         balanced (bool): toggles application of rewinder.
+         g (array): gradient waveform.
 
      Returns:
          array: SLR alpha parameter
          array: SLR beta parameter
      """
-    # assume x has inverse spatial units of g, and g has gamma*dt applied
-    # assume x = [...,Ndim], g = [Ndim,Nt]
 
     device = backend.get_device(rf)
     xp = device.xp
@@ -29,10 +29,10 @@ def blochsim(rf, x, g):
         for mm in range(0, xp.size(rf), 1):  # loop over time
 
             # apply RF
-            C = xp.cos(xp.abs(rf[mm]) / 2)
-            S = 1j * xp.exp(1j * xp.angle(rf[mm])) * xp.sin(xp.abs(rf[mm]) / 2)
-            at = a * C - b * xp.conj(S)
-            bt = a * S + b * C
+            c = xp.cos(xp.abs(rf[mm]) / 2)
+            s = 1j * xp.exp(1j * xp.angle(rf[mm])) * xp.sin(xp.abs(rf[mm]) / 2)
+            at = a * c - b * xp.conj(s)
+            bt = a * s + b * c
             a = at
             b = bt
 
@@ -55,6 +55,22 @@ def blochsim(rf, x, g):
 
 
 def deriv(rf, x, g, auxa, auxb, af, bf):
+    r"""1D RF pulse simulation, with simultaneous RF + gradient rotations.
+
+     Args:
+         rf (array): rf waveform input.
+         x (array): spatial locations.
+         g (array): gradient waveform.
+         auxa (None or array): auxa
+         auxb (array): auxb
+         af (array): forward sim a.
+         bf( array): forward sim b.
+
+     Returns:
+         array: SLR alpha parameter
+         array: SLR beta parameter
+     """
+
     device = backend.get_device(rf)
     xp = device.xp
     with device:
@@ -79,10 +95,10 @@ def deriv(rf, x, g, auxa, auxb, af, bf):
             br = br * z
 
             # strip off the curent rf rotation from forward sim
-            C = xp.cos(xp.abs(rf[mm]) / 2)
-            S = 1j * xp.exp(1j * xp.angle(rf[mm])) * xp.sin(xp.abs(rf[mm]) / 2)
-            at = af * C + bf * xp.conj(S)
-            bt = -af * S + bf * C
+            c = xp.cos(xp.abs(rf[mm]) / 2)
+            s = 1j * xp.exp(1j * xp.angle(rf[mm])) * xp.sin(xp.abs(rf[mm]) / 2)
+            at = af * c + bf * xp.conj(s)
+            bt = -af * s + bf * c
             af = at
             bf = bt
 
@@ -96,8 +112,8 @@ def deriv(rf, x, g, auxa, auxb, af, bf):
                 drf[mm] += xp.sum(da2 + xp.conj(da1))
 
             # add current rf rotation to backward sim
-            art = ar * C - xp.conj(br) * S
-            brt = br * C + xp.conj(ar) * S
+            art = ar * c - xp.conj(br) * s
+            brt = br * c + xp.conj(ar) * s
             ar = art
             br = brt
 
