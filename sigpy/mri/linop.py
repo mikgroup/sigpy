@@ -69,7 +69,7 @@ def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
     else:
         F = sp.linop.NUFFT(S.oshape, coord)
         time = len(coord) * tseg['dt']
-        b, ct = sp.mri.util.tseg_off_res_B_Ct(tseg['b0'], tseg['n_bins'],
+        b, ct = sp.mri.util.tseg_off_res_b_ct(tseg['b0'], tseg['n_bins'],
                                               tseg['lseg'], tseg['dt'], time)
         for ii in range(tseg['lseg']):
             Bi = sp.linop.Multiply(F.oshape, b[:, ii])
