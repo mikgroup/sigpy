@@ -8,15 +8,14 @@ from sigpy import backend
 def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
     """Explicit spatial-domain pulse design linear operator.
     Linear operator relates rf pulses to desired magnetization.
-    Linear operator dimensions will be Ns * Nt
+    Equivalent matrix has dimensions [Ns Nt].
 
     Args:
-        sens (array): sensitivity maps [Nc dim dim]
-        B0 (array): 2D array, B0 inhomogeneity map
+        sens (array): sensitivity maps. [Nc dim dim]
         coord (None or array): coordinates. [Nt 2]
-        dt (float): hardware sampling dt
+        dt (float): hardware sampling dt.
         img_shape (None or tuple): image shape.
-        B0 (array): 2D array, B0 inhomogeneity map
+        B0 (array): 2D array, B0 inhomogeneity map.
         ret_array (bool): if true, return explicit numpy array.
             Else return linop.
 
@@ -30,6 +29,7 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
     three_d = False
     if len(img_shape) >= 3:
         three_d = True
+
     device = backend.get_device(sens)
     xp = device.xp
     with device:
@@ -53,18 +53,7 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
             x, y = xp.meshgrid(x_, y_, indexing='ij')
 
         # create explicit Ns * Nt system matrix
-        if not three_d:
-            if B0 is None:
-                AExplicit = xp.exp(1j * (xp.outer(x.flatten(), coord[:, 0]) +
-                                         xp.outer(y.flatten(), coord[:, 1])))
-            else:
-                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(B0.flatten()
-                                                                 * (t - T)) +
-                                   1j * (xp.outer(x.flatten(), coord[:, 0])
-                                         + xp.outer(y.flatten(),
-                                                    coord[:, 1])))
-
-        else:
+        if three_d:
             if B0 is None:
                 AExplicit = xp.exp(1j * (xp.outer(x.flatten(), coord[:, 0]) +
                                          xp.outer(y.flatten(), coord[:, 1]) +
@@ -75,6 +64,16 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
                                    1j * (xp.outer(x.flatten(), coord[:, 0])
                                          + xp.outer(y.flatten(), coord[:, 1])
                                          + xp.outer(z.flatten(), coord[:, 2])))
+        else:
+            if B0 is None:
+                AExplicit = xp.exp(1j * (xp.outer(x.flatten(), coord[:, 0]) +
+                                         xp.outer(y.flatten(), coord[:, 1])))
+            else:
+                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(B0.flatten()
+                                                                 * (t - T)) +
+                                   1j * (xp.outer(x.flatten(), coord[:, 0])
+                                         + xp.outer(y.flatten(),
+                                                    coord[:, 1])))
         AFullExplicit = xp.empty(AExplicit.shape)
 
         # add sensitivities
