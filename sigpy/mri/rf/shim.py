@@ -39,7 +39,7 @@ def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
     return alg_method.x
 
 
-def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True):
+def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True, redfact=1):
     """Function to minibatch a non-composed linear operator. Returns a
     subset of the columns, along with the corresponding indices relative to A.
     If mask is included, only select columns corresponding to nonzero y
@@ -53,6 +53,7 @@ def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True):
             pdf_dist (bool): use a spatially varying centroid centered
                 multivariate gaussian pdf for sample selection.
             linop_o (bool): return a sigpy Linop. Else return a numpy ndarray.
+            redfact (float): takes 1/redfact * col in minibatch.
     """
 
     # first, extract the numpy array from the Linop
@@ -90,7 +91,7 @@ def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True):
             p[p > 1] = 1
             p = p * centered_pdf  # apply centered multivariate pdf
             p = p / sum(p)
-            ncol = int(len(np.nonzero(p)[0])/10)
+            ncol = int(len(np.nonzero(p)[0])/redfact)
 
         # else: just use uniform random distribution
         else:
