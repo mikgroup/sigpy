@@ -429,8 +429,8 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     ramp = np.expand_dims(np.linspace(s, g, int(g/s)), axis=0)
     gxro = np.concatenate((np.expand_dims(np.array([0]), axis=1), ramp, gxro,
                            np.fliplr(ramp)), axis=1)
+    import sigpy.plot as pl
     # x prewinder. make sure res_kpre is even. Handle even N by changing prew.
-
     if N % 2 == 0:
         area = (np.sum(gxro) - dirx * g) * dt
     else:
@@ -439,7 +439,6 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
                                gamp, gslew * 1000, dt)[0]
     gxprew = dirx * trap_grad(area / 2, gamp, gslew * 1000, dt)[0]
 
-    # JBM
     gxprew = np.concatenate((np.zeros((1, (gxprew.size + ramp.size) % 2)),
                             gxprew), axis=1)
 
@@ -470,7 +469,7 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     gyblip = trap_grad(areagyblip, gamp, gslew / scaley * 1000, dt)[0]
     gyro = np.concatenate((np.zeros((1, gxro.size - gyblip.size)), gyblip),
                           axis=1)
-    gyro2 = 0
+    gyro2 = np.expand_dims(np.array([0]), axis=1)
 
     # put together gx and gy
 
@@ -489,7 +488,7 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
 
     gy = np.concatenate((gy, np.zeros((1, int(gyblip.size/2)))), axis=1)
 
-    for ee in range(1, etl-1):
+    for ee in range(1, etl):
         flip = ((-1) ** (ee + 1))
         gx = np.concatenate((gx,  flip * gxro), axis=1)
         gy = np.concatenate((gy, gyro), axis=1)
