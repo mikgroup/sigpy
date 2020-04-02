@@ -8,7 +8,7 @@ import cv2
 from sigpy.mri import rf as rf
 
 
-__all__ = ['calc_shims', 'minibatch', 'multivariate_gaussian']
+__all__ = ['calc_shims', 'minibatch', 'minibatch_orthogonal', 'multivariate_gaussian']
 
 
 def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
@@ -99,7 +99,7 @@ def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True, re
             mask_inds = mask.nonzero()[0]
             p = np.squeeze(np.ones((len(mask_inds),1))/len(mask_inds))
 
-        if ncol < 20:
+        if ncol < 2:
             inds = mask_inds
         elif ncol < len(mask_inds):
             inds = rng.choice(mask_inds, ncol, replace=False, p=p)
@@ -119,6 +119,19 @@ def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True, re
 
     return Anum, inds
 
+def minibatch_orthogonal(A, ncol, mask=None, currentm=None,  linop_o=True, redfact=1):
+    # first, extract the numpy array from the Linop
+    if hasattr(A, 'repr_str') and A.repr_str == 'pTx spatial explicit':
+        Anum = A.linops[1].mat
+    else:
+        Anum = A
+
+    a_col_num = Anum.shape[0]
+    rng = np.random.default_rng()
+    if mask is not None:
+        n = mask.shape[0]
+        mask = mask.flatten()
+        mask_inds = mask.nonzero()[0]
 
 def multivariate_gaussian(n, mu, sigma):
     """Return the multivariate Gaussian distribution on array pos.
