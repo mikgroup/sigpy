@@ -10,7 +10,7 @@ import sigpy as sp
 
 
 def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
-          coil_batch_size=None, comm=None, transp_fft=False):
+          coil_batch_size=None, comm=None, transp_nufft=False):
     """Sense linear operator.
 
     Args:
@@ -61,18 +61,19 @@ def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
         if coord is None:
             F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
         else:
-            F = sp.linop.NUFFT(S.oshape, coord)
+            if transp_nufft == False:
+                F = sp.linop.NUFFT(S.oshape, coord)
+            else: 
+                F = sp.linop.NUFFT(S.oshape, -coord).H
         
-        if transp_fft == False:
-            A = F * S
-        else:
-            A = F.H * S
+        A = F * S
 
     # If B0 provided, perform time-segmented off-resonance compensation
     else:
-        F = sp.linop.NUFFT(S.oshape, coord)
-        if transp_fft == True:
-            F = F.H
+        if transp_nufft == False:
+            F = sp.linop.NUFFT(S.oshape, coord)
+        else: 
+            F = sp.linop.NUFFT(S.oshape, -coord).H
         time = len(coord) * tseg['dt']
         b, ct = sp.mri.util.tseg_off_res_b_ct(tseg['b0'], tseg['n_bins'],
                                               tseg['lseg'], tseg['dt'], time)
