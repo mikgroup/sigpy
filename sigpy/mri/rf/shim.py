@@ -5,10 +5,13 @@
 import sigpy as sp
 import numpy as np
 import cv2
+
+from scipy.sparse import csr_matrix
 from sigpy.mri import rf as rf
 
 
-__all__ = ['calc_shims', 'minibatch', 'minibatch_orthogonal', 'multivariate_gaussian']
+
+__all__ = ['calc_shims', 'minibatch', 'prob_minibatch', 'multivariate_gaussian', 'gaussian_1d', 'init_optimal_spectral']
 
 
 def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
@@ -39,8 +42,8 @@ def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
     return alg_method.x
 
 
-def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True, redfact=1):
-    """Function to minibatch a non-composed linear operator. Returns a
+def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, sigfact=1, linop_o=True, redfact=1):
+    """Function to minibatch col of a non-composed linear operator. Returns a
     subset of the columns, along with the corresponding indices relative to A.
     If mask is included, only select columns corresponding to nonzero y
     indices.
@@ -75,7 +78,7 @@ def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True, re
             cy = int(centroid["m01"] / centroid["m00"])
             # Mean vector and covariance matrix
             mu = np.array([cx, cy])
-            sigma = np.array([[n, 0], [0, n]])
+            sigma = np.array([[n*sigfact, 0], [0, sigfact*40]])
 
             centered_pdf = multivariate_gaussian(n, mu, sigma)
             centered_pdf = centered_pdf.flatten()
@@ -119,19 +122,56 @@ def minibatch(A, ncol, mask=None, currentm=None, pdf_dist=True, linop_o=True, re
 
     return Anum, inds
 
-def minibatch_orthogonal(A, ncol, mask=None, currentm=None,  linop_o=True, redfact=1):
-    # first, extract the numpy array from the Linop
+
+def prob_minibatch(A, currentm, linop_o=True):
+    """Histogram-based minibatching.
+        Args:
+            A (linop): sigpy Linear operator
+            ncol (int): number of rows to drop out.
+            currentm (array): current magnitude |B1+| shim.
+            pdf_dist (bool): use a spatially varying centroid centered
+                multivariate gaussian pdf for sample selection.
+            linop_o (bool): return a sigpy Linop. Else return a numpy ndarray.
+            redfact (float): takes 1/redfact * col in minibatch.
+    """
+
     if hasattr(A, 'repr_str') and A.repr_str == 'pTx spatial explicit':
         Anum = A.linops[1].mat
     else:
         Anum = A
 
-    a_col_num = Anum.shape[0]
+    mask = np.ma.masked_greater(abs(currentm), 0)
+    mask = mask.filled(1)
+
+    m = 1
+    sigma = 1
+    gaussian = lambda x: 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-0.5 * ((x-m) /sigma) ** 2)
+    vectorized_gaussian = np.vectorize(gaussian)
+    p = vectorized_gaussian(abs(currentm)) * mask
+    # import sigpy.plot as pl
+    # pl.ImagePlot(p)
+
+    mask_inds = np.nonzero(p.flatten())[0]
+    p = p.flatten()
+    p = p[mask_inds] / sum(p)
     rng = np.random.default_rng()
-    if mask is not None:
-        n = mask.shape[0]
-        mask = mask.flatten()
-        mask_inds = mask.nonzero()[0]
+
+    redfact = 10
+    ncol = int(len(np.nonzero(p)[0]) / redfact)
+    inds = rng.choice(mask_inds, ncol, replace=False, p=p)
+
+    inds = np.sort(inds)
+    n = mask.shape[0]
+    samps = np.zeros((n * n, 1))
+    samps[inds] = 1
+    Anum = Anum[inds, :]
+
+    # finally, "rebundle" A as a linop again if desired
+    if linop_o:
+        Anum = sp.linop.MatMul(A.ishape, Anum)
+
+    return Anum, inds
+
 
 def multivariate_gaussian(n, mu, sigma):
     """Return the multivariate Gaussian distribution on array pos.
@@ -159,3 +199,49 @@ def multivariate_gaussian(n, mu, sigma):
     fac = np.einsum('...k,kl,...l->...', pos-mu, sigma_inv, pos-mu)
 
     return np.exp(-fac / 2) / n
+
+
+def gaussian_1d(x, m, sigma):
+    f_x = 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-0.5 * ((x-m)/sigma) ** 2)
+    return f_x
+
+def init_optimal_spectral(A, b0):
+    # convert to numpy linop
+    if hasattr(A, 'repr_str') and A.repr_str == 'pTx spatial explicit':
+        Anum = A.linops[1].mat
+    else:
+        Anum = A
+
+    b0 = b0.flatten()
+    n = np.shape(Anum)[1]
+    Anumt = np.transpose(Anum)
+
+    m = len(b0)
+
+    y = b0 ** 2
+
+    # normalize the measurements
+    delta = m / n
+    ymean = y / np.mean(y)
+
+    # apply pre-processing function
+    yplus = max(y)
+    T = (yplus - 1) / (yplus + np.sqrt(delta) - 1)
+
+    # unnormalize
+    #T = T * ymean
+    #T = np.transpose(np.expand_dims(T, axis=1))
+
+    #Y = np.zeros((n, 1))
+    # for mm in range(m):
+    #     col = Anum[mm, :]
+    #     aat = col * np.transpose(col)
+    #     Tbi = T[mm]
+    #     Y = Y + (1 / m) * T[mm] * aat
+
+    Y = (1 / m) * Anumt @ Anum
+
+    w, v = np.linalg.eig(Y)
+
+    return np.expand_dims(v[:,0], 1)
+
