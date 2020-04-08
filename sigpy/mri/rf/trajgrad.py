@@ -4,7 +4,7 @@
 import numpy as np
 
 __all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch', 'epi',
-           'stack_of', 'traj_array2complex', 'traj_complex2array']
+           'rosette', 'stack_of', 'traj_array2complex', 'traj_complex2array']
 
 
 def min_trap_grad(area, gmax, dgdt, dt):
@@ -534,6 +534,53 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     k = np.concatenate((kx, ky), axis=0)
 
     t = np.linspace(0, kx.size, kx.size) * dt
+
+    return g, k, t, s
+
+
+def rosette(kmax, w1, w2, dt, T, gamp=None, gslew=None):
+    r"""Basic rosette trajectory designer.
+
+    Args:
+        kmax (float): 1/m.
+        w1 (float): rotational frequency (Hz).
+        w2 (float): center sampling frequency (Hz).
+        dt (float): sample time (s).
+        T (float): total duration (s).
+        gamp (float): max gradient amplitude (mT/m).
+        gslew (float): max slew rate (mT/m/ms).
+
+    References:
+        D. C. Noll, 'Multi-shot rosette trajectories for spectrally selective
+        MR imaging.' IEEE Trans. Med Imaging 16, 372-377 (1997).
+    """
+
+    # check if violates gradient or slew rate constraints
+    gam = 267.522 * 1e6 / 1000  # rad/s/mT
+    gambar = gam / 2 / np.pi  # Hz/mT
+    if gamp is not None:
+        if (1 / gambar) * kmax * w1 > gamp:
+            print("gmax exceeded, decrease rosette kmax or w1")
+            return
+    if gslew is not None:
+        if (1 / gambar) * kmax * (w1 ** 2 + w2 ** 2) / 1000 > gslew:
+            print("smax exceeded, dcrease rosette kmax, w1, or w2")
+            return
+    t = np.linspace(0, T, T / dt)
+    k = kmax * np.sin(w1 * t) * np.exp(1j * w2 * t)
+
+    # end of trajectory calculation; prepare outputs
+    g = np.diff(k, 1, axis=0) / (dt * gambar)  # gradient
+    g = np.pad(g, (0, 1), 'constant')
+    s = np.diff(g, 1, axis=0) / (dt * 1000)  # slew rate factor
+    s = np.pad(s, (0, 1), 'constant')
+
+    # change from (real, imag) notation to (Nt, 2) notation
+    k = traj_complex2array(k)
+    g = traj_complex2array(g)
+    s = traj_complex2array(s)
+
+    t = np.linspace(0, len(g), num=len(g) + 1)  # time vector
 
     return g, k, t, s
 
