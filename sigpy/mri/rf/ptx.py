@@ -11,9 +11,8 @@ __all__ = ['stspa', 'wstspa']
 
 
 def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
-          pinst=float('inf'), pavg=float('inf'),
-          phase_update_interval=float('inf'), explicit=False, max_iter=1000,
-          tol=1E-6):
+          st=None, phase_update_interval=float('inf'), explicit=False,
+          max_iter=1000, tol=1E-6):
     """Small tip spatial domain method for multicoil parallel excitation.
        Allows for constrained or unconstrained designs.
 
@@ -29,8 +28,12 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
             correction. Parameters are 'b0' (array), 'dt' (float),
             'lseg' (int), and 'n_bins' (int). Lseg is the number of
             time segments used, and n_bins is the number of histogram bins.
-        pinst (float): maximum instantaneous power.
-        pavg (float): maximum average power.
+        st (None or Dictionary): 'subject to' constraint parameters. Parameters
+            are avg power 'cNorm' (float), peak power 'cMax' (float),
+            'mu' (float), 'rhoNorm' (float), 'rhoMax' (float), 'cgiter' (int),
+            'max_iter' (int), 'L' (list of arrays), 'c' (float), 'rho' (float),
+            and 'lam' (float). These parameters are explained in detail in the
+            SDMM documentation.
         phase_update_interval (int): number of iters between exclusive phase
             updates. If 0, no phase updates performed.
         explicit (bool): Use explicit matrix.
@@ -63,7 +66,7 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
                                    ishape=target.shape).H
 
         # Unconstrained, use conjugate gradient
-        if pinst == float('inf') and pavg == float('inf'):
+        if st is None:
             I = sp.linop.Identity((Nc, coord.shape[0]))
             b = A.H * target
 
@@ -71,36 +74,15 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
                                                   b, pulses, P=None,
                                                   max_iter=max_iter, tol=tol)
 
-        # Constrained case, use primal dual hybrid gradient
+        # Constrained case, use SDMM
         else:
-            u = xp.zeros(target.shape, xp.complex)
-            lipschitz = xp.linalg.svd(A * A.H *
-                                      xp.ones(A.H.ishape, xp.complex),
-                                      compute_uv=False)[0]
-            lipschitz = sum(lipschitz)/len(lipschitz)
-            tau = 1.0 / lipschitz
-            sigma = 0.01
-            lamda = 0.01
-
-            # build proxg, includes all constraints:
-            def proxg(alpha, pulses):
-                # instantaneous power constraint
-                func = (pulses / (1 + lamda * alpha)) * \
-                       xp.minimum(pinst / xp.abs(pulses) ** 2, 1)
-                # avg power constraint for each of Nc channels
-                for i in range(pulses.shape[0]):
-                    norm = xp.linalg.norm(func[i], 2, axis=0)
-                    func[i] *= xp.minimum(pavg /
-                                          (norm ** 2 / len(pulses[i])), 1)
-
-                return func
-
-            alg_method = sp.alg.PrimalDualHybridGradient(
-                lambda alpha, u: (u - alpha * target) / (1 + alpha),
-                lambda alpha, pulses: proxg(alpha, pulses),
-                lambda pulses: A * pulses,
-                lambda pulses: A.H * pulses,
-                pulses, u, tau, sigma, max_iter=max_iter, tol=tol)
+            # vectorize target for SDMM
+            d = xp.expand_dims(target.flatten(), axis=0)
+            alg_method = sp.alg.SDMM(A, d, st['lam'], st['L'], st['c'],
+                                     st['cMax'], st['cNorm'], st['mu'],
+                                     st['rho'], st['rhoMax'], st['rhoNorm'],
+                                     10**-5, 10**-2, st['cgiter'],
+                                     st['max_iter'])
 
         # perform the design: apply optimization method to find solution pulse
         while not alg_method.done():
