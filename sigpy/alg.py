@@ -736,12 +736,12 @@ class GerchbergSaxton(Alg):
 
     """
     def __init__(self, A, y, max_iter=500, tol=0, lamb=0, minibatch=False,
-                 minisize=10, currentm=None, redfact=10):
+                 minisize=10, sigfact=1, currentm=None):
 
         self.A = A
         self.Aholder = A
         self.y = y
-        self.x = self.A.H * self.y
+        self.x = sp.mri.rf.shim.init_optimal_spectral(self.A, self.y)
         self.max_iter = max_iter
         self.phs = 0
         self.iter = 0
@@ -751,7 +751,7 @@ class GerchbergSaxton(Alg):
         self.minibatch = minibatch
         self.minisize = minisize
         self.currentm = currentm
-        self.redfact = redfact
+        self.sigfact = sigfact
 
     def _update(self):
         device = backend.get_device(self.y)
@@ -762,8 +762,8 @@ class GerchbergSaxton(Alg):
                                                         self.minisize,
                                                         mask=self.y,
                                                         currentm=self.currentm,
-                                                        redfact=self.redfact)
-                yholder = np.expand_dims(self.y.flatten()[inds], 1)
+                                                        sigfact=self.sigfact)
+                yholder = xp.expand_dims(self.y.flatten()[inds], 1)
 
                 y_hat = yholder * xp.exp(1j * xp.angle(self.A * self.x))
 
@@ -775,7 +775,7 @@ class GerchbergSaxton(Alg):
             b = self.A.H * y_hat
             alg_intern = ConjugateGradient(system, b, self.x, max_iter=5)
 
-            while (not alg_intern.done()):
+            while not alg_intern.done():
                 alg_intern.update()
                 self.x = alg_intern.x
 
