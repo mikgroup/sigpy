@@ -98,6 +98,8 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
 
             alg_method.update()
 
+        if st is not None:
+            pulses = xp.reshape(alg_method.x, [Nc, Nt])
         return pulses
 
 
