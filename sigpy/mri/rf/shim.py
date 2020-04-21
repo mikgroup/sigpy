@@ -78,7 +78,6 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
                 # get PDF sigma and centroid
                 nonzero = xp.nonzero(mask)
                 nonzero_x, nonzero_y = nonzero[0], nonzero[1]
-                sigfact = 2
                 rx = (max(nonzero_x) - min(nonzero_x)) * sigfact
                 ry = (max(nonzero_y) - min(nonzero_y)) * sigfact
                 # crude centroid estimation
