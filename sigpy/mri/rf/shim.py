@@ -9,8 +9,8 @@ from sigpy import backend
 from sigpy.mri import rf as rf
 
 
-__all__ = ['calc_shims', 'minibatch', 'prob_minibatch',
-           'multivariate_gaussian', 'gaussian_1d', 'init_optimal_spectral']
+__all__ = ['calc_shims', 'minibatch', 'multivariate_gaussian', 'gaussian_1d',
+           'init_optimal_spectral']
 
 
 def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
