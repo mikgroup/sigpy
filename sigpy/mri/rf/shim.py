@@ -109,11 +109,11 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
             else:
                 mask = mask.flatten()
                 mask_inds = mask.nonzero()[0]
-                p = xp.squeeze(xp.ones((len(mask_inds),1))/len(mask_inds))
+                p = xp.squeeze(xp.ones((mask_inds.size,1))/mask_inds.size)
 
             if ncol < 2:
                 inds = mask_inds
-            elif ncol < len(mask_inds):
+            elif ncol < mask_inds.size:
                 # replace = False is preferable, but not implemented in cupy
                 inds = xp.random.choice(mask_inds, ncol, replace=True, p=p)
             else:
@@ -182,7 +182,7 @@ def init_optimal_spectral(A, b0, preproc=False):
         n = Anum.shape[1]
         Anumt = xp.transpose(Anum)
 
-        m = len(b0)
+        m = b0.size
         y = b0 ** 2
 
         # normalize the measurements

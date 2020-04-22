@@ -780,7 +780,7 @@ class GerchbergSaxton(Alg):
                 self.x = alg_intern.x
 
         self.iter += 1
-        self.residual = xp.sum(abs(abs(self.Aholder * self.x) - self.y))
+        self.residual = xp.sum(xp.absolute(xp.absolute(self.Aholder * self.x) - self.y))
 
     def _done(self):
         return self.iter >= self.max_iter or self.residual <= self.tol
