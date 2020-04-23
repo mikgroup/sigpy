@@ -7,8 +7,6 @@ import numpy as np
 
 from sigpy import backend
 from sigpy.mri import rf as rf
-from scipy.ndimage import center_of_mass
-
 
 
 __all__ = ['calc_shims', 'minibatch', 'multivariate_gaussian', 'gaussian_1d',
@@ -68,7 +66,6 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
             Anum = A.linops[1].mat
         else:
             Anum = A
-        Anum = sp.to_device(Anum, device)
 
         a_col_num = Anum.shape[0]
         if mask is not None:
@@ -80,10 +77,11 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
                 # get PDF sigma and centroid
                 nonzero = xp.nonzero(mask)
                 nonzero_x, nonzero_y = nonzero[0], nonzero[1]
-                rx = (max(nonzero_x) - min(nonzero_x)) * sigfact
-                ry = (max(nonzero_y) - min(nonzero_y)) * sigfact
-                # center of mass of mask
-                cx, cy = center_of_mass(mask)
+                rx = (xp.amax(nonzero_x) - xp.amin(nonzero_x)) * sigfact
+                ry = (xp.amax(nonzero_y) - xp.amin(nonzero_y)) * sigfact
+                # crude centroid estimation
+                cx = (xp.amax(nonzero_x) + xp.amin(nonzero_x)) / 2
+                cy = (xp.amax(nonzero_y) + xp.amin(nonzero_y)) / 2
                 mu = xp.array([cx, cy])
                 sigma = xp.zeros((2, 2))
                 sigma[0, 0] = rx
@@ -99,23 +97,23 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
                 mask_inds = mask.nonzero()[0]
 
                 centered_pdf = centered_pdf[mask_inds]
-                m = abs(m[mask_inds])
-                p = abs(1-m)/m
+                m = xp.absolute(m[mask_inds])
+                p = xp.absolute(1-m)/m
                 p[p < 0] = 0
                 p[p > 1] = 1
                 p = p * centered_pdf  # apply centered multivariate pdf
-                p = p / sum(p)
+                p = p / xp.sum(p)
                 ncol = ncol
 
             # else: just use uniform random distribution
             else:
                 mask = mask.flatten()
                 mask_inds = mask.nonzero()[0]
-                p = xp.squeeze(xp.ones((len(mask_inds),1))/len(mask_inds))
+                p = xp.squeeze(xp.ones((mask_inds.size,1))/mask_inds.size)
 
             if ncol < 2:
                 inds = mask_inds
-            elif ncol < len(mask_inds):
+            elif ncol < mask_inds.size:
                 # replace = False is preferable, but not implemented in cupy
                 inds = xp.random.choice(mask_inds, ncol, replace=True, p=p)
             else:
@@ -184,7 +182,7 @@ def init_optimal_spectral(A, b0, preproc=False):
         n = Anum.shape[1]
         Anumt = xp.transpose(Anum)
 
-        m = len(b0)
+        m = b0.size
         y = b0 ** 2
 
         # normalize the measurements
@@ -192,7 +190,7 @@ def init_optimal_spectral(A, b0, preproc=False):
         ymean = y / xp.mean(y)
 
         # apply pre-processing function
-        yplus = max(y)
+        yplus = xp.amax(y)
         if preproc:
             T = (yplus - 1) / (yplus + xp.sqrt(delta) - 1)
 
