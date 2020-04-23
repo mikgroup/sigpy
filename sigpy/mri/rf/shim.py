@@ -7,6 +7,8 @@ import numpy as np
 
 from sigpy import backend
 from sigpy.mri import rf as rf
+from scipy.ndimage import center_of_mass
+
 
 
 __all__ = ['calc_shims', 'minibatch', 'multivariate_gaussian', 'gaussian_1d',
@@ -80,9 +82,8 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
                 nonzero_x, nonzero_y = nonzero[0], nonzero[1]
                 rx = (max(nonzero_x) - min(nonzero_x)) * sigfact
                 ry = (max(nonzero_y) - min(nonzero_y)) * sigfact
-                # crude centroid estimation
-                cx = (max(nonzero_x) + min(nonzero_x)) / 2
-                cy = (max(nonzero_y) + min(nonzero_y)) / 2
+                # center of mass of mask
+                cx, cy = center_of_mass(mask)
                 mu = xp.array([cx, cy])
                 sigma = xp.zeros((2, 2))
                 sigma[0, 0] = rx
