@@ -7,6 +7,7 @@ import numpy as np
 
 from sigpy import backend
 from sigpy.mri import rf as rf
+from scipy.ndimage import center_of_mass
 
 
 __all__ = ['calc_shims', 'minibatch', 'multivariate_gaussian', 'gaussian_1d',
@@ -77,15 +78,14 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
                 # get PDF sigma and centroid
                 nonzero = xp.nonzero(mask)
                 nonzero_x, nonzero_y = nonzero[0], nonzero[1]
-                rx = (xp.amax(nonzero_x) - xp.amin(nonzero_x)) * sigfact
-                ry = (xp.amax(nonzero_y) - xp.amin(nonzero_y)) * sigfact
-                # crude centroid estimation
-                cx = (xp.amax(nonzero_x) + xp.amin(nonzero_x)) / 2
-                cy = (xp.amax(nonzero_y) + xp.amin(nonzero_y)) / 2
+                rx = (xp.amax(nonzero_x) - xp.amin(nonzero_x))
+                ry = (xp.amax(nonzero_y) - xp.amin(nonzero_y))
+                # mask center of mass
+                cx, cy = center_of_mass(mask)
                 mu = xp.array([cx, cy])
                 sigma = xp.zeros((2, 2))
-                sigma[0, 0] = rx
-                sigma[1, 1] = ry
+                sigma[0, 0] = rx * sigfact
+                sigma[1, 1] = ry * sigfact
 
                 # create the 2D pdf from with columns will be pulled
                 centered_pdf = multivariate_gaussian(n, mu, sigma, device)
