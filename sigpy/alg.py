@@ -735,8 +735,8 @@ class GerchbergSaxton(Alg):
         lamb (float): Tikhonov regularization value.
 
     """
-    def __init__(self, A, y, max_iter=500, tol=0, lamb=0, minibatch=False,
-                 minisize=10, sigfact=1, currentm=None):
+    def __init__(self, A, y, max_iter=500, tol=0, max_tol=0, lamb=0,
+                 minibatch=False, minisize=10, sigfact=1):
 
         self.A = A
         self.Aholder = A
@@ -746,11 +746,12 @@ class GerchbergSaxton(Alg):
         self.phs = 0
         self.iter = 0
         self.tol = tol
+        self.max_tol = max_tol
         self.lamb = lamb
         self.residual = np.infty
+        self.max_dif = np.infty
         self.minibatch = minibatch
         self.minisize = minisize
-        self.currentm = currentm
         self.sigfact = sigfact
 
     def _update(self):
@@ -761,7 +762,6 @@ class GerchbergSaxton(Alg):
                 self.A, inds = sp.mri.rf.shim.minibatch(self.Aholder,
                                                         self.minisize,
                                                         mask=self.y,
-                                                        currentm=self.currentm,
                                                         sigfact=self.sigfact)
                 yholder = xp.expand_dims(self.y.flatten()[inds], 1)
 
@@ -780,7 +780,10 @@ class GerchbergSaxton(Alg):
                 self.x = alg_intern.x
 
         self.iter += 1
-        self.residual = xp.sum(abs(abs(self.Aholder * self.x) - self.y))
+        self.residual = xp.sum(xp.absolute(xp.absolute(self.Aholder * self.x) - self.y))
+        self.max_dif = xp.amax(xp.absolute(xp.absolute(self.Aholder * self.x) - self.y))
 
     def _done(self):
-        return self.iter >= self.max_iter or self.residual <= self.tol
+        over_iter = self.iter >= self.max_iter
+        under_tol = self.residual <= self.tol and self.max_dif <= self.max_tol
+        return over_iter or under_tol
