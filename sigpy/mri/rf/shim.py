@@ -42,7 +42,7 @@ def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
     return alg_method.x
 
 
-def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
+def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
               sigfact=2):
     """Function to minibatch col of a non-composed linear operator. Returns a
     subset of the columns, along with the corresponding indices relative to A.
@@ -53,7 +53,6 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
             A (linop): sigpy Linear operator
             ncol (int): number of columns to include in minibatch.
             mask (array): area in y within which indices are selected.
-            currentm (array): current magnitude |B1+| shim.
             pdf_dist (bool): use a spatially varying centroid centered
                 multivariate gaussian pdf for sample selection.
             linop_o (bool): return a sigpy Linop. Else return a numpy ndarray.
@@ -87,22 +86,16 @@ def minibatch(A, ncol, mask, currentm=None, pdf_dist=True, linop_o=True,
                 sigma[0, 0] = rx * sigfact
                 sigma[1, 1] = ry * sigfact
 
-                # create the 2D pdf from with columns will be pulled
+                # create the 2D pdf from with columns will be pulledgit 
                 centered_pdf = multivariate_gaussian(n, mu, sigma, device)
                 centered_pdf = sp.to_device(centered_pdf, device)
                 centered_pdf = centered_pdf.flatten()
 
-                m = currentm.flatten()
                 mask = mask.flatten()
                 mask_inds = mask.nonzero()[0]
 
                 centered_pdf = centered_pdf[mask_inds]
-                m = xp.absolute(m[mask_inds])
-                p = xp.absolute(1-m)/m
-                p[p < 0] = 0
-                p[p > 1] = 1
-                p = p * centered_pdf  # apply centered multivariate pdf
-                p = p / xp.sum(p)
+                p = centered_pdf / xp.sum(centered_pdf)
                 ncol = ncol
 
             # else: just use uniform random distribution
