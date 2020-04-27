@@ -429,15 +429,19 @@ def axpy(y, a, x):
 
     Args:
         y (array): Output array.
-        a (scalar): Input scalar.
+        a (scalar or array): Input scalar.
         x (array): Input array.
 
     """
-    xp = backend.get_array_module(y)
+    device = backend.get_device(y)
+    xp = device.xp
 
     if xp == np:
         _axpy(y, a, x, out=y)
     else:
+        if np.isscalar(a):
+            a = backend.to_device(a, device)
+
         _axpy_cuda(a, x, y)
 
 
@@ -446,14 +450,18 @@ def xpay(y, a, x):
 
     Args:
         y (array): Output array.
-        a (scalar): Input scalar.
+        a (scalar or array): Input scalar.
         x (array): Input array.
     """
-    xp = backend.get_array_module(y)
+    device = backend.get_device(y)
+    xp = device.xp
 
     if xp == np:
         _xpay(y, a, x, out=y)
     else:
+        if np.isscalar(a):
+            a = backend.to_device(a, device)
+
         _xpay_cuda(a, x, y)
 
 
@@ -484,4 +492,4 @@ if config.cupy_enabled:  # pragma: no cover
         """
         y = x + (T) a * y;
         """,
-        name='axpy')
+        name='xpay')
