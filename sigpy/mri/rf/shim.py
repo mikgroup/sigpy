@@ -83,8 +83,8 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
                 cx, cy = center_of_mass(mask)
                 mu = xp.array([cy, cx])
                 sigma = xp.zeros((2, 2))
-                sigma[0, 0] = rx * sigfact
-                sigma[1, 1] = ry * sigfact
+                sigma[0, 0] = ry * sigfact
+                sigma[1, 1] = rx * sigfact
 
                 # create the 2D pdf from with columns will be pulledgit 
                 centered_pdf = multivariate_gaussian(n, mu, sigma, device)
