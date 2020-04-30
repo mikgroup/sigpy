@@ -786,4 +786,4 @@ class GerchbergSaxton(Alg):
     def _done(self):
         over_iter = self.iter >= self.max_iter
         under_tol = self.residual <= self.tol and self.max_dif <= self.max_tol
-        return over_iter or under_tol
+        return over_iter # or under_tol

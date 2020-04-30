@@ -81,7 +81,7 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
                 ry = (xp.amax(nonzero_y) - xp.amin(nonzero_y))
                 # mask center of mass
                 cx, cy = center_of_mass(mask)
-                mu = xp.array([cx, cy])
+                mu = xp.array([cy, cx])
                 sigma = xp.zeros((2, 2))
                 sigma[0, 0] = rx * sigfact
                 sigma[1, 1] = ry * sigfact
