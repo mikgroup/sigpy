@@ -11,7 +11,7 @@ from scipy.ndimage import center_of_mass
 
 
 __all__ = ['calc_shims', 'minibatch', 'multivariate_gaussian', 'gaussian_1d',
-           'init_optimal_spectral']
+           'init_optimal_spectral', 'init_circ_polar']
 
 
 def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
@@ -50,7 +50,7 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
     indices.
 
         Args:
-            A (linop): sigpy Linear operator
+            A (linop): sigpy Linear operator.
             ncol (int): number of columns to include in minibatch.
             mask (array): area in y within which indices are selected.
             pdf_dist (bool): use a spatially varying centroid centered
@@ -161,9 +161,16 @@ def gaussian_1d(x, m, sigma):
     return f_x
 
 
-def init_optimal_spectral(A, b0, preproc=False):
+def init_optimal_spectral(A, sens, preproc=False):
+    """Function to return shim weights based on an optimal spectral method, an
+    eigenvetor-based method.
+
+        Args:
+            A (linop): sigpy Linear operator.
+            sens (array): sensitivity maps. [Nc dim_x dim_y]
+    """
     # convert to numpy linop
-    device = backend.get_device(b0)
+    device = backend.get_device(sens)
     xp = device.xp
     with device:
         if hasattr(A, 'repr_str') and A.repr_str == 'pTx spatial explicit':
@@ -171,12 +178,12 @@ def init_optimal_spectral(A, b0, preproc=False):
         else:
             Anum = A
 
-        b0 = b0.flatten()
+        sens = sens.flatten()
         n = Anum.shape[1]
         Anumt = xp.transpose(Anum)
 
-        m = b0.size
-        y = b0 ** 2
+        m = sens.size
+        y = sens ** 2
 
         # normalize the measurements
         delta = m / n
@@ -204,3 +211,21 @@ def init_optimal_spectral(A, b0, preproc=False):
 
         return xp.expand_dims(v[:,0], 1)
 
+
+def init_circ_polar(sens):
+    """Function to return circularly polarized shim weights. Provides shim
+    weights that set the phase to be even in the middle of the sens profiles.
+
+        Args:
+            sens (array): sensitivity maps. [Nc dim_x dim_y]
+    """
+    dim = sens.shape[1]
+    device = backend.get_device(sens)
+    xp = device.xp
+    with device:
+        # As a rough approximation, assume that the center of sens profile is
+        # also the center of the object within the profile to be imaged.
+        phs = xp.angle(sens[:, xp.int(dim / 2), xp.int(dim / 2)])
+        phs_wt = xp.exp(-phs * 1j)
+
+    return phs_wt
