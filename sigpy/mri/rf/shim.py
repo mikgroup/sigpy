@@ -163,7 +163,7 @@ def gaussian_1d(x, m, sigma):
 
 def init_optimal_spectral(A, sens, preproc=False):
     """Function to return shim weights based on an optimal spectral method, an
-    eigenvetor-based method.
+    eigenvetor-based method. From PhasePack: A Phase Retrieval Library.
 
         Args:
             A (linop): sigpy Linear operator.
