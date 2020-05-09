@@ -91,7 +91,6 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
 
                 # create the 2D pdf from with columns will be pulledgit 
                 centered_pdf = multivariate_gaussian(n, mu, sigma, device)
-                centered_pdf = sp.to_device(centered_pdf, device)
                 centered_pdf = centered_pdf.flatten()
 
                 mask = mask.flatten()
