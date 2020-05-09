@@ -209,7 +209,7 @@ def init_optimal_spectral(A, sens, preproc=False):
 
         w, v = xp.linalg.eigh(Y)
 
-        return xp.expand_dims(v[:,0], 1)
+        return xp.expand_dims(v[:, 0], 1)
 
 
 def init_circ_polar(sens):
