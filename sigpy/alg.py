@@ -735,13 +735,16 @@ class GerchbergSaxton(Alg):
         lamb (float): Tikhonov regularization value.
 
     """
-    def __init__(self, A, y, max_iter=500, tol=0, max_tol=0, lamb=0,
+    def __init__(self, A, y, x0=None, max_iter=500, tol=0, max_tol=0, lamb=0,
                  minibatch=False, minisize=10, sigfact=1):
 
         self.A = A
         self.Aholder = A
         self.y = y
-        self.x = sp.mri.rf.shim.init_optimal_spectral(self.A, self.y)
+        if x0 is None:
+            self.x = sp.mri.rf.shim.init_optimal_spectral(self.A, self.y)
+        else:
+            self.x = x0
         self.max_iter = max_iter
         self.phs = 0
         self.iter = 0
