@@ -110,7 +110,6 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
             # columns.
             if ncol < n * n * 0.005:
                 inds = mask_inds
-                print('Small area to shim. Using regular GS instead of GSm')
             elif ncol < mask_inds.size:
                 # replace = False is preferable, but not implemented in cupy
                 inds = xp.random.choice(mask_inds, ncol, replace=True, p=p)
