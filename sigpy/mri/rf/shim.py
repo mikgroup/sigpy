@@ -77,12 +77,15 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
                 # get PDF sigma and centroid
                 nonzero = xp.nonzero(mask)
                 nonzero_x, nonzero_y = nonzero[0], nonzero[1]
-                rx = (xp.amax(nonzero_x) - xp.amin(nonzero_x))
-                ry = (xp.amax(nonzero_y) - xp.amin(nonzero_y))
+                max_x, max_y = xp.amax(nonzero_x), xp.amax(nonzero_y)
+                min_x, min_y = xp.amin(nonzero_x), xp.amin(nonzero_y)
+
+                rx = max_x - min_x
+                ry = max_y - min_y
 
                 #TODO center of mass function doesn't work on gpu
-                cx = (xp.amax(nonzero_x) + xp.amin(nonzero_x)) / 2
-                cy = (xp.amax(nonzero_y) + xp.amin(nonzero_y)) / 2
+                cx = (max_x + min_x) / 2
+                cy = (max_y + min_y) / 2
 
                 mu = xp.array([cy, cx])
                 sigma = xp.zeros((2, 2))
