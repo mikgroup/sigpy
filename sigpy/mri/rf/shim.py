@@ -93,7 +93,7 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
                 centered_pdf = multivariate_gaussian(n, mu, sigma, device)
                 centered_pdf = xp.flatten(centered_pdf)
 
-                mask = xp.flatten(mask)
+                mask = mask.flatten()
                 mask = mask.astype(xp.int)
                 mask_inds = xp.nonzero(mask)[0]
 
@@ -103,7 +103,7 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
 
             # else: just use uniform random distribution
             else:
-                mask = xp.flatten(mask)
+                mask = mask.flatten()
                 mask = mask.astype(xp.int)
                 mask_inds = xp.nonzero(mask)[0]
                 p = xp.squeeze(xp.ones((mask_inds.size,1))/mask_inds.size)
