@@ -91,11 +91,11 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
 
                 # create the 2D pdf from with columns will be pulledgit 
                 centered_pdf = multivariate_gaussian(n, mu, sigma, device)
-                centered_pdf = centered_pdf.flatten()
+                centered_pdf = xp.flatten(centered_pdf)
 
-                mask = mask.flatten()
-                mask = mask.astype(int)
-                mask_inds = mask.nonzero()[0]
+                mask = xp.flatten(mask)
+                mask = mask.astype(xp.int)
+                mask_inds = xp.nonzero(mask)[0]
 
                 centered_pdf = centered_pdf[mask_inds]
                 p = centered_pdf / xp.sum(centered_pdf)
@@ -103,16 +103,16 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
 
             # else: just use uniform random distribution
             else:
-                mask = mask.flatten()
-                mask = mask.astype(int)
-                mask_inds = mask.nonzero()[0]
+                mask = xp.flatten(mask)
+                mask = mask.astype(xp.int)
+                mask_inds = xp.nonzero(mask)[0]
                 p = xp.squeeze(xp.ones((mask_inds.size,1))/mask_inds.size)
 
             # do not minibatch in the case of very small numbers of nonzero
             # columns.
             if ncol < n * n * 0.005:
                 inds = mask_inds
-            elif ncol < mask_inds.size:
+            elif ncol < xp.size(mask_inds):
                 # replace = False is preferable, but not implemented in cupy
                 inds = xp.random.choice(mask_inds, ncol, replace=True, p=p)
             else:
