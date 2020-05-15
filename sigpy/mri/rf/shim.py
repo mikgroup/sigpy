@@ -94,6 +94,7 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
                 centered_pdf = centered_pdf.flatten()
 
                 mask = mask.flatten()
+                mask = mask.astype(int)
                 mask_inds = mask.nonzero()[0]
 
                 centered_pdf = centered_pdf[mask_inds]
@@ -103,6 +104,7 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
             # else: just use uniform random distribution
             else:
                 mask = mask.flatten()
+                mask = mask.astype(int)
                 mask_inds = mask.nonzero()[0]
                 p = xp.squeeze(xp.ones((mask_inds.size,1))/mask_inds.size)
 
@@ -232,4 +234,4 @@ def init_circ_polar(sens):
         phs = xp.angle(sens[:, xp.int(dim / 2), xp.int(dim / 2)])
         phs_wt = xp.exp(-phs * 1j)
 
-    return phs_wt
+    return xp.expand_dims(phs_wt, 1)
