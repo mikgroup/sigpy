@@ -7,10 +7,10 @@ import sigpy as sp
 from sigpy.mri import rf as rf
 from sigpy import backend
 
-__all__ = ['stspa', 'wstspa']
+__all__ = ['stspa', 'wstspa', 'additive_angle']
 
 
-def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
+def stspa(target, sens, coord, dt, roi=None, alpha=0, B0=None, tseg=None,
           st=None, phase_update_interval=float('inf'), explicit=False,
           max_iter=1000, tol=1E-6):
     """Small tip spatial domain method for multicoil parallel excitation.
@@ -21,6 +21,7 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
         sens (array): sensitivity maps. [Nc dim dim]
         coord (array): coordinates for noncartesian trajectories. [Nt 2]
         dt (float): hardware sampling dwell time.
+        roi (array): array for error weighting, specify spatial ROI. [dim dim]
         alpha (float): regularization term, if unconstrained.
         B0 (array): B0 inhomogeneity map [dim dim]. For explicit matrix
             building.
@@ -65,10 +66,19 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
             A = sp.mri.linop.Sense(sens, coord, weights=None, tseg=tseg,
                                    ishape=target.shape).H
 
+        # handle the Ns * Ns error weighting ROI matrix
+        W = sp.linop.Multiply(A.oshape, xp.ones(target.shape))
+        if roi is not None:
+            W = sp.linop.Multiply(A.oshape, roi)
+
+        # apply ROI
+        A = W * A
+
         # Unconstrained, use conjugate gradient
         if st is None:
             I = sp.linop.Identity((Nc, coord.shape[0]))
-            b = A.H * target
+            b = A.H * W * target
+            #b = A.H * target
 
             alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
                                                   b, pulses, P=None,
@@ -77,6 +87,7 @@ def stspa(target, sens, coord, dt, alpha=0, B0=None, tseg=None,
         # Constrained case, use SDMM
         else:
             # vectorize target for SDMM
+            target = W * target
             d = xp.expand_dims(target.flatten(), axis=0)
             alg_method = sp.alg.SDMM(A, d, st['lam'], st['L'], st['c'],
                                      st['cMax'], st['cNorm'], st['mu'],
