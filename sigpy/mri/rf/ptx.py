@@ -7,7 +7,7 @@ import sigpy as sp
 from sigpy.mri import rf as rf
 from sigpy import backend
 
-__all__ = ['stspa', 'wstspa', 'additive_angle']
+__all__ = ['stspa', 'wstspa']
 
 
 def stspa(target, sens, coord, dt, roi=None, alpha=0, B0=None, tseg=None,
