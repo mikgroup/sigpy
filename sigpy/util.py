@@ -2,9 +2,8 @@
 """Utility functions.
 """
 import numpy as np
-import numba as nb
 
-from sigpy import backend, config
+from sigpy import backend
 
 
 __all__ = ['prod', 'vec', 'split', 'rss', 'resize',
@@ -429,16 +428,11 @@ def axpy(y, a, x):
 
     Args:
         y (array): Output array.
-        a (scalar): Input scalar.
+        a (scalar or array): Input scalar.
         x (array): Input array.
 
     """
-    xp = backend.get_array_module(y)
-
-    if xp == np:
-        _axpy(y, a, x, out=y)
-    else:
-        _axpy_cuda(a, x, y)
+    y += a * x
 
 
 def xpay(y, a, x):
@@ -446,42 +440,8 @@ def xpay(y, a, x):
 
     Args:
         y (array): Output array.
-        a (scalar): Input scalar.
+        a (scalar or array): Input scalar.
         x (array): Input array.
     """
-    xp = backend.get_array_module(y)
-
-    if xp == np:
-        _xpay(y, a, x, out=y)
-    else:
-        _xpay_cuda(a, x, y)
-
-
-@nb.vectorize(nopython=True, cache=True)  # pragma: no cover
-def _axpy(y, a, x):
-    return a * x + y
-
-
-@nb.vectorize(nopython=True, cache=True)  # pragma: no cover
-def _xpay(y, a, x):
-    return x + a * y
-
-
-if config.cupy_enabled:  # pragma: no cover
-    import cupy as cp
-
-    _axpy_cuda = cp.ElementwiseKernel(
-        'S a, T x',
-        'T y',
-        """
-        y += (T) a * x;
-        """,
-        name='axpy')
-
-    _xpay_cuda = cp.ElementwiseKernel(
-        'S a, T x',
-        'T y',
-        """
-        y = x + (T) a * y;
-        """,
-        name='axpy')
+    y *= a
+    y += x

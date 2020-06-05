@@ -339,11 +339,13 @@ class PrimalDualHybridGradient(Alg):
 
         if self.gamma_primal > 0:
             xp = self.x_device.xp
-            self.tau_min = xp.amin(xp.abs(tau)).item()
+            with self.x_device:
+                self.tau_min = xp.amin(xp.abs(tau)).item()
 
         if self.gamma_dual > 0:
             xp = self.u_device.xp
-            self.sigma_min = xp.amin(xp.abs(sigma)).item()
+            with self.u_device:
+                self.sigma_min = xp.amin(xp.abs(sigma)).item()
 
         self.resid = np.infty
 

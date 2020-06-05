@@ -57,7 +57,7 @@ def poisson(img_shape, accel, K=30, calib=[0, 0], dtype=np.complex,
 
     mask = mask.reshape(img_shape).astype(dtype)
     if return_density:
-        return mask, r
+        return mask, R
     else:
         return mask
 
