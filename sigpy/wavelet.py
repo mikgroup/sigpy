@@ -187,7 +187,10 @@ def fwt(input, wave_name='db4', axes=None, level=None, apply_zpad=True):
     y[approx_idx] = fwt(y[approx_idx], wave_name=wave_name,
                         axes=axes, level=level-1, apply_zpad=False)
 
-    return xp.linalg.norm(input) * y/xp.linalg.norm(y)
+    nrm = xp.linalg.norm(y)
+    if (nrm > 0):
+        return xp.linalg.norm(input) * y/nrm
+    return y
 
 
 def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
@@ -242,4 +245,7 @@ def iwt(input, oshape, wave_name='db4', axes=None, level=None, inplace=False):
                       for k in range(len(input.shape))])
 
     res = y[crop_idx]
-    return xp.linalg.norm(input) * res/xp.linalg.norm(res)
+    nrm = xp.linalg.norm(res)
+    if (nrm > 0):
+        return xp.linalg.norm(input) * res/nrm
+    return res
