@@ -40,7 +40,7 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
     """
 
     # calculate beta filter ripple
-    [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
+    [bsf, d1, d2] = slr.calc_ripples(ptype, d1, d2)
 
     # calculate pulse duration
     b = 4257 * pbw
@@ -141,7 +141,7 @@ def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
     """
 
     # calculate beta filter ripple
-    [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
+    [bsf, d1, d2] = slr.calc_ripples(ptype, d1, d2)
     # if ptype == 'st':
     bsf = flip
 
@@ -159,7 +159,7 @@ def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
     dom = np.zeros((2 * n, g))
     for gind in range(1, g + 1):
         # design filter
-        h = bsf*slr.dzgSliderB(n, g, gind, tb, d1, d2, np.pi, n // 4)
+        h = bsf*slr.dz_gslider_b(n, g, gind, tb, d1, d2, np.pi, n // 4)
 
         # modulate filter to center and add it to a time-reversed and modulated
         # copy, then take the imaginary part to get an odd filter
@@ -213,7 +213,7 @@ def dz_b1_hadamard_rf(dt=2e-6, g=8, tb=16, ptype='st', flip=np.pi / 6,
     """
 
     # calculate beta filter ripple
-    [bsf, d1, d2] = slr.calcRipples(ptype, d1, d2)
+    [bsf, d1, d2] = slr.calc_ripples(ptype, d1, d2)
     bsf = flip
 
     # calculate pulse duration
@@ -231,7 +231,7 @@ def dz_b1_hadamard_rf(dt=2e-6, g=8, tb=16, ptype='st', flip=np.pi / 6,
     dom = np.zeros((2 * n, g))
     for gind in range(1, g + 1):
         # design filter
-        h = bsf*slr.dzHadamardB(n, g, gind, tb, d1, d2, n // 4)
+        h = bsf*slr.dz_hadamard_b(n, g, gind, tb, d1, d2, n // 4)
 
         # modulate filter to center and add it to a time-reversed and modulated
         # copy, then take the imaginary part to get an odd filter
