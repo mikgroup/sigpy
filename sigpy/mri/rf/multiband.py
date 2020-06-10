@@ -177,7 +177,7 @@ def dz_pins(tb, sl_sep, sl_thick, g_max, g_slew, dt, b1_max=0.18,
     rf = np.concatenate((rf, rf_soft[-1] * np.ones(hpw)))
     rf = rf / (np.sum(rf) * 2 * np.pi * gambar * dt) * np.sum(rf_soft)
 
-    g = np.concatenate((np.zeros(hpw), gz_blip))
+    g = np.concatenate([np.zeros(hpw), np.squeeze(gz_blip)])
     g = np.tile(g, n_pulses - 1)
     g = np.concatenate((g, np.zeros(hpw)))
 
