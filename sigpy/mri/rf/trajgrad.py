@@ -69,16 +69,16 @@ def trap_grad(area, gmax, dgdt, dt, *args):
             if triareamax > np.abs(area):
                 # triangle pulse
                 newgmax = np.sqrt(np.abs(area) * dgdt)
-                ramppts = np.ceil(newgmax/dgdt/dt)
+                ramppts = int(np.ceil(newgmax/dgdt/dt))
                 ramp_up = np.linspace(0, ramppts, num=ramppts)/ramppts
                 ramp_dn = np.linspace(ramppts, 0, num=ramppts)/ramppts
                 pulse = np.concatenate((ramp_up, ramp_dn))
             else:
                 # trapezoid pulse
-                nflat = np.ceil((area - triareamax)/gmax / dt / 2) * 2
+                nflat = int(np.ceil((area - triareamax)/gmax / dt / 2) * 2)
                 ramp_up = np.linspace(0, ramppts, num=ramppts) / ramppts
                 ramp_dn = np.linspace(ramppts, 0, num=ramppts) / ramppts
-                pulse = np.concatenate((ramp_up, np.ones(int(nflat)), ramp_dn))
+                pulse = np.concatenate((ramp_up, np.ones(nflat), ramp_dn))
 
             trap = pulse * (area / (sum(pulse) * dt))
 
@@ -90,7 +90,7 @@ def trap_grad(area, gmax, dgdt, dt, *args):
             flat_top = np.max(flat)
 
             # make attack and decay ramps
-            ramppts = np.ceil(np.max(flat) / dgdt / dt)
+            ramppts = int(np.ceil(np.max(flat) / dgdt / dt))
             ramp_up = np.linspace(0, ramppts, num=ramppts) / ramppts * flat_top
             ramp_dn = np.linspace(ramppts, 0, num=ramppts) / ramppts * flat_top
             trap = np.concatenate((ramp_up, flat, ramp_dn))
@@ -340,25 +340,25 @@ def spiral_arch(fov, res, gts, gslew, gamp):
     a_2 = (9 * beta / 4) ** (1 / 3)  # rad ** (1/3) / s ** (2/3)
     lamb = 5
     theta_max = kmax / lam
-    Ts = (3 * gam * gamp / (4 * np.pi * lam * a_2 ** 2)) ** 3
-    theta_s = 0.5 * beta * Ts ** 2
-    theta_s /= (lamb + beta / (2 * a_2) * Ts ** (4 / 3))
+    ts = (3 * gam * gamp / (4 * np.pi * lam * a_2 ** 2)) ** 3
+    theta_s = 0.5 * beta * ts ** 2
+    theta_s /= (lamb + beta / (2 * a_2) * ts ** (4 / 3))
     t_g = np.pi * lam * (theta_max ** 2 - theta_s ** 2) / (gam * gamp)
-    n_s = int(np.round(Ts / gts))
+    n_s = int(np.round(ts / gts))
     n_g = int(np.round(t_g / gts))
 
     if theta_max > theta_s:
         print(' Spiral trajectory is slewrate limited or amplitude limited')
 
         n_t = n_s + n_g
-        tacq = Ts + t_g
+        tacq = ts + t_g
 
-        t_s = np.linspace(0, Ts, n_s)
-        t_g = np.linspace(Ts + gts, tacq, n_g)
+        t_s = np.linspace(0, ts, n_s)
+        t_g = np.linspace(ts + gts, tacq, n_g)
 
         theta_1 = beta / 2 * t_s ** 2
         theta_1 /= (lamb + beta / (2 * a_2) * t_s ** (4 / 3))
-        theta_2 = theta_s ** 2 + gam / (np.pi * lam) * gamp * (t_g - Ts)
+        theta_2 = theta_s ** 2 + gam / (np.pi * lam) * gamp * (t_g - ts)
         theta_2 = np.sqrt(theta_2)
 
         k1 = lam * theta_1 * (np.cos(theta_1) + 1j * np.sin(theta_1))
@@ -391,12 +391,12 @@ def spiral_arch(fov, res, gts, gslew, gamp):
     return g, k, t, s
 
 
-def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
+def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     r"""Basic EPI trajectory designer.
 
     Args:
         fov (float): imaging field of view in cm.
-        N (int): # of pixels (square). N = etl*nl, where etl = echo-train-len
+        n (int): # of pixels (square). N = etl*nl, where etl = echo-train-len
             and nl = # leaves (shots). nl default 1.
         etl (int): echo train length.
         dt (float): sample time in s.
@@ -410,7 +410,6 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     References:
         From Antonis Matakos' contrib to Jeff Fessler's IRT.
     """
-    nshot = N / etl
     s = gslew * dt * 1000
 
     scaley = 20
@@ -423,15 +422,15 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
         print('max g reduced to {}'.format(g))
 
     # readout trapezoid
-    gxro = g * np.ones((1, N))  # plateau of readout trapezoid
+    gxro = g * np.ones((1, n))  # plateau of readout trapezoid
     areapd = np.sum(gxro) * dt
 
     ramp = np.expand_dims(np.linspace(s, g, int(g/s)), axis=0)
     gxro = np.concatenate((np.expand_dims(np.array([0]), axis=1), ramp, gxro,
                            np.fliplr(ramp)), axis=1)
-    import sigpy.plot as pl
+
     # x prewinder. make sure res_kpre is even. Handle even N by changing prew.
-    if N % 2 == 0:
+    if n % 2 == 0:
         area = (np.sum(gxro) - dirx * g) * dt
     else:
         area = np.sum(gxro) * dt
@@ -448,7 +447,7 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
 
     # phase-encode trapezoids before/after gx
     # handle even N by changing prewinder
-    if N % 2 == 0:
+    if n % 2 == 0:
         areayprew = areapd / 2 - offset * g * dt
     else:
         areayprew = (areapd - g * dt) / 2 - offset * g * dt
@@ -528,7 +527,6 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     sy = np.diff(gy, axis=1) / (dt * 1000)
     s = np.concatenate((sx, sy), axis=0)
 
-    # TODO: might need to add interpolation to make more accurate k
     kx = np.cumsum(gx, axis=1) * gamma * dt * 1000
     ky = np.cumsum(gy, axis=1) * gamma * dt * 1000
     k = np.concatenate((kx, ky), axis=0)
@@ -538,7 +536,7 @@ def epi(fov, N, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     return g, k, t, s
 
 
-def rosette(kmax, w1, w2, dt, T, gamp=None, gslew=None):
+def rosette(kmax, w1, w2, dt, dur, gamp=None, gslew=None):
     r"""Basic rosette trajectory designer.
 
     Args:
@@ -546,7 +544,7 @@ def rosette(kmax, w1, w2, dt, T, gamp=None, gslew=None):
         w1 (float): rotational frequency (Hz).
         w2 (float): center sampling frequency (Hz).
         dt (float): sample time (s).
-        T (float): total duration (s).
+        dur (float): total duration (s).
         gamp (float): max gradient amplitude (mT/m).
         gslew (float): max slew rate (mT/m/ms).
 
@@ -566,7 +564,7 @@ def rosette(kmax, w1, w2, dt, T, gamp=None, gslew=None):
         if (1 / gambar) * kmax * (w1 ** 2 + w2 ** 2) / 1000 > gslew:
             print("smax exceeded, dcrease rosette kmax, w1, or w2")
             return
-    t = np.linspace(0, T, T / dt)
+    t = np.linspace(0, dur, dur / dt)
     k = kmax * np.sin(w1 * t) * np.exp(1j * w2 * t)
 
     # end of trajectory calculation; prepare outputs
@@ -606,7 +604,7 @@ def stack_of(k, num, zres):
         z_coord = np.expand_dims(np.ones(len(kr)) * z[ii], axis=1)
         krz = np.concatenate((traj_complex2array(kr), z_coord), axis=1)
 
-        kout[ii*len(krz):(ii+1)*len(krz), :] = krz
+        kout[ii*len(krz):(ii + 1) * len(krz), :] = krz
 
     return kout
 
