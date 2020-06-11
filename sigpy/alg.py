@@ -737,58 +737,40 @@ class GerchbergSaxton(Alg):
         lamb (float): Tikhonov regularization value.
 
     """
-    def __init__(self, A, y, x0=None, max_iter=500, tol=0, max_tol=0, lamb=0,
-                 minibatch=False, minisize=10, sigfact=1):
+    def __init__(self, A, y, x0, max_iter=500, tol=0, max_tol=0, lamb=0):
 
         self.A = A
         self.Aholder = A
         self.y = y
-        if x0 is None:
-            self.x = sp.mri.rf.shim.init_optimal_spectral(self.A, self.y)
-        else:
-            self.x = x0
+        self.x = x0
         self.max_iter = max_iter
-        self.phs = 0
         self.iter = 0
         self.tol = tol
         self.max_tol = max_tol
         self.lamb = lamb
         self.residual = np.infty
-        self.max_dif = np.infty
-        self.minibatch = minibatch
-        self.minisize = minisize
-        self.sigfact = sigfact
 
     def _update(self):
         device = backend.get_device(self.y)
         xp = device.xp
         with device:
-            if self.minibatch:
-                self.A, inds = sp.mri.rf.shim.minibatch(self.Aholder,
-                                                        self.minisize,
-                                                        mask=self.y,
-                                                        sigfact=self.sigfact)
-                yholder = xp.expand_dims(self.y.flatten()[inds], 1)
 
-                y_hat = yholder * xp.exp(1j * xp.angle(self.A * self.x))
-
-            else:
-                y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
-
+            y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
             I = sp.linop.Identity(self.A.ishape)
             system = self.A.H * self.A + self.lamb * I
             b = self.A.H * y_hat
-            alg_intern = ConjugateGradient(system, b, self.x, max_iter=5)
 
-            while not alg_intern.done():
-                alg_intern.update()
-                self.x = alg_intern.x
+            alg_internal = ConjugateGradient(system, b, self.x, max_iter=5)
 
+            while not alg_internal.done():
+                alg_internal.update()
+                self.x = alg_internal.x
+
+        self.residual = xp.sum(xp.absolute(xp.absolute(self.A * self.x)
+                                           - self.y))
         self.iter += 1
-        self.residual = xp.sum(xp.absolute(xp.absolute(self.Aholder * self.x) - self.y))
-        self.max_dif = xp.amax(xp.absolute(xp.absolute(self.Aholder * self.x) - self.y))
 
     def _done(self):
         over_iter = self.iter >= self.max_iter
-        under_tol = self.residual <= self.tol and self.max_dif <= self.max_tol
-        return over_iter # or under_tol
+        under_tol = self.residual <= self.tol
+        return over_iter or under_tol
