@@ -79,8 +79,6 @@ class TestSlr(unittest.TestCase):
         tb_ref = 8  # time-bandwidth of ref pulse
         [pulses, _] = rf.slr.dz_recursive_rf(nseg, tb, n, se_seq, tb_ref)
 
-        mxy = np.zeros((np.size(np.arange(-4 * tb, 4 * tb, 0.01)), nseg),
-                       dtype=complex)
         mz = np.ones(np.size(np.arange(-4 * tb, 4 * tb, 0.01)))
         for ii in range(0, nseg):
             [a, b] = rf.sim.abrm(pulses[:, ii],
@@ -93,3 +91,26 @@ class TestSlr(unittest.TestCase):
                             mxy[int(len(mxy) / 2 + len(mxy) / 3)]])
 
             npt.assert_almost_equal(abs(pts), np.array([0, 0.5, 0]), decimal=1)
+
+    def test_gslider(self):
+        n = 512
+        g = 5
+        ex_flip = 90 * np.pi / 180
+        tb = 12
+        d1 = 0.01
+        d2 = 0.01
+        phi = np.pi
+
+        pulses = rf.slr.dz_gslider_rf(n, g, ex_flip, phi, tb, d1, d2,
+                                      cancel_alpha_phs=True)
+
+        for gind in range(1, g + 1):
+            [a, b] = rf.sim.abrm(pulses[:, gind - 1],
+                                 np.arange(-2 * tb, 2 * tb, 0.01), True)
+            mxy = 2 * np.multiply(np.conj(a), b)
+
+            pts = np.array([mxy[int(len(mxy) / 2 - len(mxy) / 3)],
+                            mxy[int(len(mxy) / 2)],
+                            mxy[int(len(mxy) / 2 + len(mxy) / 3)]])
+
+            npt.assert_almost_equal(abs(pts), np.array([0, 1, 0]), decimal=2)
