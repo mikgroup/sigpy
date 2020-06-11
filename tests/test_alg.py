@@ -174,13 +174,14 @@ class TestAlg(unittest.TestCase):
         n = 10
         lamda = 0.1
         A, x_numpy, y = self.Ax_y_setup(n, lamda)
+        y = np.expand_dims(np.csingle(y), 1)
         x_numpy = np.expand_dims(x_numpy, 1)
         A = np.csingle(A)
-        y = np.expand_dims(np.csingle(y), 1)
         A = linop.MatMul(y.shape, A)
+        x0 = np.zeros(A.ishape, dtype=np.complex)
 
-        alg_method = alg.GerchbergSaxton(A, y,
-                                         max_iter=100, tol=10E-9, lamb=lamda, minibatch=False)
+        alg_method = alg.GerchbergSaxton(A, y, x0, max_iter=100, tol=10E-9,
+                                         lamb=lamda)
 
         while(not alg_method.done()):
             alg_method.update()
