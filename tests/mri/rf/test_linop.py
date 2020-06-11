@@ -30,14 +30,10 @@ class TestLinop(unittest.TestCase):
         img_shape = [dim, dim, dim]
         mps_shape = [8, dim, dim, dim]
 
-        fov = 22.4
-        N = 32
-        gts = 6.4e-6
-        gslew = 9000 / 100
-        amp = 3
         dt = 4e-6
 
-        g, k, t, s, dens = rf.spiral_varden(fov, N, gts, gslew, amp, 75, 75, 2)
+        k = sp.mri.spiral(fov=dim / 2, N=dim, f_sampling=1, R=1,
+                          ninterleaves=1, alpha=1, gm=0.03, sm=200)
         k = rf.stack_of(k, 3, 0.1)
 
         mps = sp.randn(mps_shape, dtype=np.complex)

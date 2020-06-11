@@ -63,7 +63,7 @@ class TestPtx(unittest.TestCase):
                         weights=None, ishape=target.shape).H
 
         pulses = rf.stspa(target, sens, traj, dt=4e-6, alpha=1,
-                          B0=None, pinst=float('inf'), pavg=float('inf'),
+                          b0=None, st=None,
                           explicit=False, max_iter=100, tol=1E-4)
 
         npt.assert_array_almost_equal(A*pulses, target, 1E-3)
@@ -72,15 +72,19 @@ class TestPtx(unittest.TestCase):
 
         target, sens = self.problem_2d(8)
 
-        dim = target.shape[0]
-        traj = sp.mri.spiral(fov=dim / 2, N=dim,
-                             f_sampling=1, R=1, ninterleaves=1, alpha=1,
-                             gm=0.03, sm=200)
+        fov = 0.55
+        gts = 6.4e-6
+        gslew = 190
+        gamp = 40
+        R = 1
+        dx = 0.025  # in m
+        # construct a trajectory
+        g, k, t, s = rf.spiral_arch(fov / R, dx, gts, gslew, gamp)
 
-        A = linop.Sense(sens, coord=traj, ishape=target.shape).H
+        A = linop.Sense(sens, coord=k, ishape=target.shape).H
 
-        pulses = rf.stspa(target, sens, traj, dt=4e-6, alpha=1,
-                          B0=None, pinst=float('inf'), pavg=float('inf'),
+        pulses = rf.stspa(target, sens, k, dt=4e-6, alpha=1,
+                          b0=None, st=None,
                           explicit=False, max_iter=100, tol=1E-4)
 
         npt.assert_array_almost_equal(A*pulses, target, 1E-3)
@@ -92,27 +96,26 @@ class TestPtx(unittest.TestCase):
         k1 = k1 / dim
 
         A = rf.PtxSpatialExplicit(sens, k1, dt=4e-6, img_shape=target.shape,
-                                  B0=None)
-        pulses = sp.mri.rf.stspa(target, sens, pavg=np.Inf,
-                                 pinst=np.Inf, coord=k1, dt=4e-6,
+                                  b0=None)
+        pulses = sp.mri.rf.stspa(target, sens, st=None, coord=k1, dt=4e-6,
                                  max_iter=100, alpha=10, tol=1E-4,
                                  phase_update_interval=200, explicit=True)
 
         npt.assert_array_almost_equal(A*pulses, target, 1E-3)
 
     def test_stspa_3d_explicit(self):
-        Nz = 4
-        target, sens = self.problem_3d(3, Nz)
+        nz = 4
+        target, sens = self.problem_3d(3, nz)
         dim = target.shape[0]
 
         g, k1, t, s = rf.spiral_arch(0.24, dim, 4e-6, 200, 0.035)
         k1 = k1 / dim
 
-        k1 = rf.stack_of(k1, Nz, 0.1)
+        k1 = rf.stack_of(k1, nz, 0.1)
         A = rf.linop.PtxSpatialExplicit(sens, k1, dt=4e-6,
-                                        img_shape=target.shape, B0=None)
+                                        img_shape=target.shape, b0=None)
 
-        pulses = sp.mri.rf.stspa(target, sens, pavg=np.Inf, pinst=np.Inf,
+        pulses = sp.mri.rf.stspa(target, sens, st=None,
                                  coord=k1,
                                  dt=4e-6, max_iter=30, alpha=10, tol=1E-3,
                                  phase_update_interval=200, explicit=True)
@@ -120,18 +123,18 @@ class TestPtx(unittest.TestCase):
         npt.assert_array_almost_equal(A*pulses, target, 1E-3)
 
     def test_stspa_3d_nonexplicit(self):
-        Nz = 3
-        target, sens = self.problem_3d(3, Nz)
+        nz = 3
+        target, sens = self.problem_3d(3, nz)
         dim = target.shape[0]
 
         g, k1, t, s = rf.spiral_arch(0.24, dim, 4e-6, 200, 0.035)
         k1 = k1 / dim
 
-        k1 = rf.stack_of(k1, Nz, 0.1)
+        k1 = rf.stack_of(k1, nz, 0.1)
         A = sp.mri.linop.Sense(sens, k1, weights=None, tseg=None,
                                ishape=target.shape).H
 
-        pulses = sp.mri.rf.stspa(target, sens, pavg=np.Inf, pinst=np.Inf,
+        pulses = sp.mri.rf.stspa(target, sens, st=None,
                                  coord=k1,
                                  dt=4e-6, max_iter=30, alpha=10, tol=1E-3,
                                  phase_update_interval=200, explicit=False)
