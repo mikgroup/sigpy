@@ -5,17 +5,17 @@ import sigpy as sp
 from sigpy import backend
 
 
-def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
+def PtxSpatialExplicit(sens, coord, dt, img_shape, b0=None, ret_array=False):
     """Explicit spatial-domain pulse design linear operator.
     Linear operator relates rf pulses to desired magnetization.
     Equivalent matrix has dimensions [Ns Nt].
 
     Args:
-        sens (array): sensitivity maps. [Nc dim dim]
-        coord (None or array): coordinates. [Nt 2]
+        sens (array): sensitivity maps. [nc dim dim]
+        coord (None or array): coordinates. [nt 2]
         dt (float): hardware sampling dt.
         img_shape (None or tuple): image shape.
-        B0 (array): 2D array, B0 inhomogeneity map.
+        b0 (array): 2D array, B0 inhomogeneity map.
         ret_array (bool): if true, return explicit numpy array.
             Else return linop.
 
@@ -33,10 +33,11 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
     device = backend.get_device(sens)
     xp = device.xp
     with device:
-        Nc = sens.shape[0]
-        T = dt * coord.shape[0]  # duration of pulse, in seconds
+        nc = sens.shape[0]
+        dur = dt * coord.shape[0]  # duration of pulse, in s
+
         # create time vector
-        t = xp.expand_dims(xp.linspace(0, T, coord.shape[0]), axis=1)
+        t = xp.expand_dims(xp.linspace(0, dur, coord.shape[0]), axis=1)
 
         # row-major order
         # x L to R, y T to B
@@ -45,39 +46,39 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
         y_ = xp.linspace(img_shape[1] / 2,
                          -(img_shape[1] - img_shape[1] / 2), img_shape[1])
         if three_d:
-            # z B to T
+
             z_ = xp.linspace(-img_shape[2] / 2,
                              img_shape[2] - img_shape[2] / 2, img_shape[2])
             x, y, z = xp.meshgrid(x_, y_, z_, indexing='ij')
         else:
             x, y = xp.meshgrid(x_, y_, indexing='ij')
 
-        # create explicit Ns * Nt system matrix
+        # create explicit Ns * Nt system matrix, for 3d or 2d problem
         if three_d:
-            if B0 is None:
+            if b0 is None:
                 AExplicit = xp.exp(1j * (xp.outer(x.flatten(), coord[:, 0]) +
                                          xp.outer(y.flatten(), coord[:, 1]) +
                                          xp.outer(z.flatten(), coord[:, 2])))
             else:
-                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(B0.flatten()
-                                                                 * (t - T)) +
+                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(b0.flatten()
+                                                                 * (t - dur)) +
                                    1j * (xp.outer(x.flatten(), coord[:, 0])
                                          + xp.outer(y.flatten(), coord[:, 1])
                                          + xp.outer(z.flatten(), coord[:, 2])))
         else:
-            if B0 is None:
+            if b0 is None:
                 AExplicit = xp.exp(1j * (xp.outer(x.flatten(), coord[:, 0]) +
                                          xp.outer(y.flatten(), coord[:, 1])))
             else:
-                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(B0.flatten()
-                                                                 * (t - T)) +
+                AExplicit = xp.exp(1j * 2 * xp.pi * xp.transpose(b0.flatten()
+                                                                 * (t - dur)) +
                                    1j * (xp.outer(x.flatten(), coord[:, 0])
                                          + xp.outer(y.flatten(),
                                                     coord[:, 1])))
-        AFullExplicit = xp.empty(AExplicit.shape)
 
-        # add sensitivities
-        for ii in range(Nc):
+        # add sensitivities to system matrix
+        AFullExplicit = xp.empty(AExplicit.shape)
+        for ii in range(nc):
             if three_d:
                 tmp = xp.squeeze(sens[ii, :, :, :]).flatten()
             else:
@@ -88,17 +89,18 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, B0=None, ret_array=False):
 
         # remove 1st empty AExplicit entries
         AFullExplicit = AFullExplicit[:, coord.shape[0]:]
-        A = sp.linop.MatMul((coord.shape[0] * Nc, 1), AFullExplicit)
+        A = sp.linop.MatMul((coord.shape[0] * nc, 1), AFullExplicit)
 
         # Finally, adjustment of input/output dimensions to be consistent with
-        # the existing Sense linop operator. [Nc x Nt] in, [dim x dim] out
+        # the existing Sense linop operator. [nc x nt] in, [dim x dim] out
         Ro = sp.linop.Reshape(ishape=A.oshape, oshape=sens.shape[1:])
-        Ri = sp.linop.Reshape(ishape=(Nc, coord.shape[0]),
-                              oshape=(coord.shape[0] * Nc, 1))
+        Ri = sp.linop.Reshape(ishape=(nc, coord.shape[0]),
+                              oshape=(coord.shape[0] * nc, 1))
         A = Ro * A * Ri
 
         A.repr_str = 'pTx spatial explicit'
 
+        # output a sigpy linop or a numpy array
         if ret_array:
             return A.linops[1].mat
         else:
