@@ -4,7 +4,8 @@
 import numpy as np
 
 __all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch', 'epi',
-           'rosette', 'stack_of', 'traj_array2complex', 'traj_complex2array']
+           'rosette', 'stack_of', 'traj_array_to_complex',
+           'traj_complex_to_array']
 
 
 def min_trap_grad(area, gmax, dgdt, dt):
@@ -382,9 +383,9 @@ def spiral_arch(fov, res, gts, gslew, gamp):
     s = np.pad(s, (0, 1), 'constant')
 
     # change from (real, imag) notation to (Nt, 2) notation
-    k = traj_complex2array(k)
-    g = traj_complex2array(g)
-    s = traj_complex2array(s)
+    k = traj_complex_to_array(k)
+    g = traj_complex_to_array(g)
+    s = traj_complex_to_array(s)
 
     t = np.linspace(0, len(g), num=len(g) + 1)  # time vector
 
@@ -392,7 +393,7 @@ def spiral_arch(fov, res, gts, gslew, gamp):
 
 
 def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
-    r"""Basic EPI trajectory designer.
+    r"""Basic EPI single-shot trajectory designer.
 
     Args:
         fov (float): imaging field of view in cm.
@@ -574,9 +575,9 @@ def rosette(kmax, w1, w2, dt, dur, gamp=None, gslew=None):
     s = np.pad(s, (0, 1), 'constant')
 
     # change from (real, imag) notation to (Nt, 2) notation
-    k = traj_complex2array(k)
-    g = traj_complex2array(g)
-    s = traj_complex2array(s)
+    k = traj_complex_to_array(k)
+    g = traj_complex_to_array(g)
+    s = traj_complex_to_array(s)
 
     t = np.linspace(0, len(g), num=len(g) + 1)  # time vector
 
@@ -597,19 +598,19 @@ def stack_of(k, num, zres):
     kout = np.zeros((k.shape[0]*num, 3))
 
     # we will be performing a complex rotation on our trajectory
-    k = traj_array2complex(k)
+    k = traj_array_to_complex(k)
 
     for ii in range(num):
         kr = k[0:] * np.exp(2 * np.pi * 1j * ii / num)
         z_coord = np.expand_dims(np.ones(len(kr)) * z[ii], axis=1)
-        krz = np.concatenate((traj_complex2array(kr), z_coord), axis=1)
+        krz = np.concatenate((traj_complex_to_array(kr), z_coord), axis=1)
 
         kout[ii*len(krz):(ii + 1) * len(krz), :] = krz
 
     return kout
 
 
-def traj_complex2array(k):
+def traj_complex_to_array(k):
     r"""Function to convert complex convention trajectory to [Nt 2] trajectory
 
     Args:
@@ -620,8 +621,8 @@ def traj_complex2array(k):
     return kout
 
 
-def traj_array2complex(k):
-    r"""Function to convert [Nt Nd] convention traj to complex convention
+def traj_array_to_complex(k):
+    r"""Function to convert [Nt 2] convention traj to complex convention
 
     Args:
         k (complex array): Nt vector
