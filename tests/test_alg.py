@@ -189,3 +189,37 @@ class TestAlg(unittest.TestCase):
         phs = np.conj(x_numpy * alg_method.x /
                       abs(x_numpy * alg_method.x))
         npt.assert_allclose(alg_method.x * phs, x_numpy, rtol=1e-6)
+
+    def test_SDMM(self):
+        n = 5
+        lamda = 0.1
+        A, x_numpy, y = self.Ax_y_setup(n, lamda)
+        y = np.expand_dims(y, 1)
+        A = linop.MatMul(np.expand_dims(x_numpy, 1).shape, A)
+
+        c_norm = None
+        c_max = None
+        mu = 10**8  # big mu ok since no constraints used
+        rho_norm = 1
+        rho_max = 1
+        lam = 0.1
+        cg_iters = 5
+        max_iter = 10
+
+        L = []
+        c = [1]
+        rho = [1]
+        for ii in range(len(y) - 1):
+            c.append(0.00012 ** 2)
+            rho.append(0.001)
+
+        alg_method = alg.SDMM(A, y, lam, L=L, c=c, c_max=c_max,
+                              c_norm=c_norm, mu=mu, rho=rho, rho_max=rho_max,
+                              rho_norm=rho_norm, eps_pri=10 ** -5,
+                              eps_dual=10 ** -2, max_cg_iter=cg_iters,
+                              max_iter=max_iter)
+
+        while not alg_method.done():
+            alg_method.update()
+
+        npt.assert_allclose(np.squeeze(abs(alg_method.x)), x_numpy)
