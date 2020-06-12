@@ -88,10 +88,9 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, b0=None, tseg=None,
             target = W * target
             d = xp.expand_dims(target.flatten(), axis=0)
             alg_method = sp.alg.SDMM(A, d, st['lam'], st['L'], st['c'],
-                                     st['cMax'], st['cNorm'], st['mu'],
-                                     st['rho'], st['rhoMax'], st['rhoNorm'],
-                                     10**-5, 10**-2, st['cgiter'],
-                                     st['max_iter'])
+                                     st['mu'], st['rho'], st['rhoMax'],
+                                     st['rhoNorm'], 10**-5, 10**-2, st['cMax'],
+                                     st['cNorm'], st['cgiter'], st['max_iter'])
 
         # perform the design: apply optimization method to find solution pulse
         while not alg_method.done():

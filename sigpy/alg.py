@@ -520,66 +520,76 @@ class SDMM(Alg):
     r"""Simultaneous Direction Method of Multipliers.
 
     """
-    def __init__(self, A, d, lam, L, c, cMax, cNorm, mu, rho, rhoMax,
-                 rhoNorm, eps_pri, eps_dual, max_cg_iter=30, max_iter=1000):
+    def __init__(self, A, d, lam, L, c, mu, rho, rhoMax, rhoNorm,
+                 eps_pri=10**-5, eps_dual=10**-2, cMax=None, cNorm=None,
+                 max_cg_iter=30, max_iter=1000):
         self.A = A
         self.d = d
         self.lam = lam
         self.L = L
         self.c = c
-        self.cMax = cMax
-        self.cNorm = cNorm
         self.mu = mu
         self.rho = rho
         self.rhoMax = rhoMax
         self.rhoNorm = rhoNorm
         self.eps_pri = eps_pri
         self.eps_dual = eps_dual
+        self.cMax = cMax
+        self.cNorm = cNorm
         self. max_cg_iter = max_cg_iter
         self.stop = False  # stop criterion collector variable
+        self.device = backend.get_device(d)
         super().__init__(max_iter)
 
         M = len(self.L)
         # flatten out into single vector if multiple channel problem
-        self.x = np.expand_dims(np.zeros(self.A.ishape,
-                                         dtype=np.complex).flatten(), axis=0)
-        self.z, self.u = [], []
+        with self.device:
+            xp = self.device.xp
+            self.x = xp.zeros(self.A.ishape, dtype=np.complex).flatten()
+            self.x = xp.expand_dims(self.x, axis=0)
+            self.z, self.u = [], []
 
-        for ii in range(M):
-            self.z.append(np.transpose(L[ii] @ np.transpose(self.x)))
-            self.u.append(np.expand_dims(np.zeros(np.shape(L[ii])[0],
-                                                  dtype=np.complex),
-                                         axis=0))
-        if cMax is not None:
-            self.zMax = self.x
-            self.uMax = np.zeros(np.shape(self.x), dtype=np.complex)
-        if cNorm is not None:
-            self.zNorm = self.x
-            self.uNorm = np.zeros(np.shape(self.x), dtype=np.complex)
+            for ii in range(M):
+                self.z.append(xp.transpose(L[ii] @ xp.transpose(self.x)))
+                self.u.append(xp.expand_dims(xp.zeros(xp.shape(L[ii])[0],
+                                                      dtype=xp.complex),
+                                             axis=0))
+            if cMax is not None:
+                self.zMax = self.x
+                self.uMax = xp.zeros(xp.shape(self.x), dtype=xp.complex)
+            if cNorm is not None:
+                self.zNorm = self.x
+                self.uNorm = xp.zeros(xp.shape(self.x), dtype=xp.complex)
 
     def prox_rhog(self, v, c):
-        if np.real(np.linalg.norm(v) ** 2) > c:
-            z = v * np.sqrt(c) / np.sqrt(np.real(np.linalg.norm(v)))
-        else:
-            z = v
-        return z
+        with self.device:
+            xp = self.device.xp
+            if xp.real(xp.linalg.norm(v) ** 2) > c:
+                z = v * xp.sqrt(c) / xp.sqrt(xp.real(xp.linalg.norm(v)))
+            else:
+                z = v
+            return z
 
     def prox_rhog_max(self, v, c):
-        z = v
-        indices = np.where((abs(z) ** 2 > c))
-        z[indices] = np.sqrt(c) * z[indices] / abs(z[indices])
-        return z
+        with self.device:
+            xp = self.device.xp
+            z = v
+            indices = xp.where((abs(z) ** 2 > c))
+            z[indices] = xp.sqrt(c) * z[indices] / xp.absolute(z[indices])
+            return z
 
     def prox_muf(self, v, mu, A, x, d, lam, nCGiters):
-        d = np.hstack((d, np.sqrt(1 / mu) * v, np.sqrt(lam) * x))
-        Am = self.Amult(x, A, mu, lam)
-        int_method = ConjugateGradient(Am.H * Am, Am.H * d, x,
-                                       max_iter=nCGiters)
+        with self.device:
+            xp = self.device.xp
+            d = xp.hstack((d, xp.sqrt(1 / mu) * v, xp.sqrt(lam) * x))
+            Am = self.Amult(x, A, mu, lam)
+            int_method = ConjugateGradient(Am.H * Am, Am.H * d, x,
+                                           max_iter=nCGiters)
 
-        while not int_method.done():
-            int_method.update()
+            while not int_method.done():
+                int_method.update()
 
-        return int_method.x
+            return int_method.x
 
     def Amult(self, x, A, mu, lam):
         M = sp.linop.Multiply(x.shape, np.ones(x.shape) * np.sqrt(1/mu))
@@ -593,71 +603,72 @@ class SDMM(Alg):
         return Y
 
     def _update(self):
+        with self.device:
+            xp = self.device.xp
+            # evaluate objective
+            v = self.x
+            for ii in range(len(self.L)):
+                v -= xp.transpose(self.mu / self.rho[ii] * xp.transpose(self.L[ii]) @ \
+                    xp.transpose((xp.transpose(self.L[ii] @ xp.transpose(self.x)) - self.z[ii] + self.u[ii])))
+            if self.cMax is not None:
+                v = v - self.mu / self.rhoMax * (self.x - self.zMax + self.uMax)
+            if self.cNorm is not None:
+                v = v - self.mu / self.rhoNorm * (self.x - self.zNorm + self.uNorm)
 
-        # evaluate objective
-        v = self.x
-        for ii in range(len(self.L)):
-            v -= np.transpose(self.mu / self.rho[ii] * np.transpose(self.L[ii]) @ \
-                np.transpose((np.transpose(self.L[ii] @ np.transpose(self.x)) - self.z[ii] + self.u[ii])))
-        if self.cMax is not None:
-            v = v - self.mu / self.rhoMax * (self.x - self.zMax + self.uMax)
-        if self.cNorm is not None:
-            v = v - self.mu / self.rhoNorm * (self.x - self.zNorm + self.uNorm)
+            self.x = self.prox_muf(v, self.mu, self.A, self.x, self.d, self.lam,
+                                   self.max_cg_iter)
 
-        self.x = self.prox_muf(v, self.mu, self.A, self.x, self.d, self.lam,
-                               self.max_cg_iter)
+            # run through constraints
+            z_old = self.z
+            for ii in range(len(self.L)):
+                self.z[ii] = self.prox_rhog(xp.transpose(xp.transpose(self.L[ii] @ xp.transpose(self.x)) + self.u[ii]), self.c[ii])
+                self.u[ii] += xp.transpose(self.L[ii] @ xp.transpose(self.x) - self.z[ii])
 
-        # run through constraints
-        z_old = self.z
-        for ii in range(len(self.L)):
-            self.z[ii] = self.prox_rhog(np.transpose(np.transpose(self.L[ii] @ np.transpose(self.x)) + self.u[ii]), self.c[ii])
-            self.u[ii] += np.transpose(self.L[ii] @ np.transpose(self.x) - self.z[ii])
+            if self.cMax is not None:
+                zMax_old = self.zMax
+                self.zMax = self.prox_rhog_max(self.x + self.uMax, self.cMax)
+                self.uMax = self.uMax + self.x - self.zMax
+            if self.cNorm is not None:
+                zNorm_old = self.zNorm
+                self.zNorm = self.prox_rhog(self.x + self.uNorm, self.cNorm)
+                self.uNorm += self.x - self.zNorm
 
-        if self.cMax is not None:
-            zMax_old = self.zMax
-            self.zMax = self.prox_rhog_max(self.x + self.uMax, self.cMax)
-            self.uMax = self.uMax + self.x - self.zMax
-        if self.cNorm is not None:
-            zNorm_old = self.zNorm
-            self.zNorm = self.prox_rhog(self.x + self.uNorm, self.cNorm)
-            self.uNorm += self.x - self.zNorm
-
-        # check the stopping criteria
-        self.stop = True
-        rMax, sMax = 0, 0
-        for ii in range(len(self.L)):
-            # primal residual
-            r = np.transpose(self.L[ii] @ np.transpose(self.x) - self.z[ii])
-            # dual residual
-            dz = self.z[ii] - z_old[ii]
-            s = 1 / self.rho[ii] * np.transpose(self.L[ii]) * dz
-            if np.linalg.norm(r) > self.eps_pri or\
-                    np.linalg.norm(s) > self.eps_dual:
-                self.stop = False
-            if np.linalg.norm(r) > rMax:
-                rMax = np.linalg.norm(r)
-            if np.linalg.norm(s) > sMax:
-                sMax = np.linalg.norm(s)
-        if self.cNorm is not None:
-            r = self.x - self.zNorm
-            s = 1 / self.rhoNorm * (self.zNorm - zNorm_old)
-            if np.linalg.norm(r) > self.eps_pri or\
-                    np.linalg.norm(s) > self.eps_dual:
-                self.stop = False
-            if np.linalg.norm(r) > rMax:
-                rMax = np.linalg.norm(r)
-            if np.linalg.norm(s) > sMax:
-                sMax = np.linalg.norm(s)
-        if self.cMax is not None:
-            r = self.x - self.zMax
-            s = 1 / self.rhoMax * (self.zMax - zMax_old)
-            if np.linalg.norm(r) > self.eps_pri or\
-                    np.linalg.norm(s) > self.eps_dual:
-                self.stop = False
-            if np.linalg.norm(r) > rMax:
-                rMax = np.linalg.norm(r)
-            if np.linalg.norm(s) > sMax:
-                sMax = np.linalg.norm(s)
+            # check the stopping criteria
+            self.stop = True
+            rMax, sMax = 0, 0
+            for ii in range(len(self.L)):
+                # primal residual
+                r = xp.transpose(self.L[ii] @ xp.transpose(self.x) - self.z[ii])
+                # dual residual
+                dz = self.z[ii] - z_old[ii]
+                s = 1 / self.rho[ii] * xp.transpose(self.L[ii]) * dz
+                if xp.linalg.norm(r) > self.eps_pri or\
+                        xp.linalg.norm(s) > self.eps_dual:
+                    self.stop = False
+                if xp.linalg.norm(r) > rMax:
+                    rMax = xp.linalg.norm(r)
+                if xp.linalg.norm(s) > sMax:
+                    sMax = xp.linalg.norm(s)
+            if self.cNorm is not None:
+                r = self.x - self.zNorm
+                s = 1 / self.rhoNorm * (self.zNorm - zNorm_old)
+                if xp.linalg.norm(r) > self.eps_pri or\
+                        xp.linalg.norm(s) > self.eps_dual:
+                    self.stop = False
+                if xp.linalg.norm(r) > rMax:
+                    rMax = xp.linalg.norm(r)
+                if xp.linalg.norm(s) > sMax:
+                    sMax = xp.linalg.norm(s)
+            if self.cMax is not None:
+                r = self.x - self.zMax
+                s = 1 / self.rhoMax * (self.zMax - zMax_old)
+                if xp.linalg.norm(r) > self.eps_pri or\
+                        xp.linalg.norm(s) > self.eps_dual:
+                    self.stop = False
+                if xp.linalg.norm(r) > rMax:
+                    rMax = xp.linalg.norm(r)
+                if xp.linalg.norm(s) > sMax:
+                    sMax = xp.linalg.norm(s)
 
     def _done(self):
         return self.iter >= self.max_iter or self.stop
