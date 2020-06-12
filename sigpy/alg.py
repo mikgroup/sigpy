@@ -517,11 +517,12 @@ class ADMM(Alg):
 
 
 class SDMM(Alg):
-    r"""Simultaneous Direction Method of Multipliers.
+    r"""Simultaneous Direction Method of Multipliers. Can be used for
+    unconstrained or constrained optimization.
 
     """
-    def __init__(self, A, d, lam, L, c, mu, rho, rhoMax, rhoNorm,
-                 eps_pri=10**-5, eps_dual=10**-2, cMax=None, cNorm=None,
+    def __init__(self, A, d, lam, L, c, mu, rho, rho_max, rho_norm,
+                 eps_pri=10**-5, eps_dual=10**-2, c_max=None, c_norm=None,
                  max_cg_iter=30, max_iter=1000):
         self.A = A
         self.d = d
@@ -530,12 +531,12 @@ class SDMM(Alg):
         self.c = c
         self.mu = mu
         self.rho = rho
-        self.rhoMax = rhoMax
-        self.rhoNorm = rhoNorm
+        self.rho_max = rho_max
+        self.rho_norm = rho_norm
         self.eps_pri = eps_pri
         self.eps_dual = eps_dual
-        self.cMax = cMax
-        self.cNorm = cNorm
+        self.c_max = c_max
+        self.c_norm = c_norm
         self. max_cg_iter = max_cg_iter
         self.stop = False  # stop criterion collector variable
         self.device = backend.get_device(d)
@@ -546,18 +547,18 @@ class SDMM(Alg):
         with self.device:
             xp = self.device.xp
             self.x = xp.zeros(self.A.ishape, dtype=np.complex).flatten()
-            self.x = xp.expand_dims(self.x, axis=0)
+            self.x = xp.expand_dims(self.x, axis=1)
             self.z, self.u = [], []
 
             for ii in range(M):
-                self.z.append(xp.transpose(L[ii] @ xp.transpose(self.x)))
+                self.z.append(L[ii] @ self.x)
                 self.u.append(xp.expand_dims(xp.zeros(xp.shape(L[ii])[0],
                                                       dtype=xp.complex),
-                                             axis=0))
-            if cMax is not None:
+                                             axis=1))
+            if c_max is not None:
                 self.zMax = self.x
                 self.uMax = xp.zeros(xp.shape(self.x), dtype=xp.complex)
-            if cNorm is not None:
+            if c_norm is not None:
                 self.zNorm = self.x
                 self.uNorm = xp.zeros(xp.shape(self.x), dtype=xp.complex)
 
@@ -581,7 +582,7 @@ class SDMM(Alg):
     def prox_muf(self, v, mu, A, x, d, lam, nCGiters):
         with self.device:
             xp = self.device.xp
-            d = xp.hstack((d, xp.sqrt(1 / mu) * v, xp.sqrt(lam) * x))
+            d = xp.vstack((d, xp.sqrt(1 / mu) * v, xp.sqrt(lam) * x))
             Am = self.Amult(x, A, mu, lam)
             int_method = ConjugateGradient(Am.H * Am, Am.H * d, x,
                                            max_iter=nCGiters)
@@ -592,13 +593,10 @@ class SDMM(Alg):
             return int_method.x
 
     def Amult(self, x, A, mu, lam):
-        M = sp.linop.Multiply(x.shape, np.ones(x.shape) * np.sqrt(1/mu))
+        M = sp.linop.Multiply(x.shape, np.ones(x.shape) * np.sqrt(1 / mu))
         L = sp.linop.Multiply(x.shape, np.ones(x.shape) * np.sqrt(lam))
-        Rao = sp.linop.Reshape((1, A.oshape[0] * A.oshape[1]), ishape=A.oshape)
-        Rai = sp.linop.Reshape((A.ishape), ishape=x.shape)
-        A = Rao * A * Rai
         Y = sp.linop.Vstack((A, M, L))
-        Ry = sp.linop.Reshape((1, Y.oshape[0]), Y.oshape)
+        Ry = sp.linop.Reshape((Y.oshape[0], 1), Y.oshape)
         Y = Ry * Y
         return Y
 
@@ -608,29 +606,32 @@ class SDMM(Alg):
             # evaluate objective
             v = self.x
             for ii in range(len(self.L)):
-                v -= xp.transpose(self.mu / self.rho[ii] * xp.transpose(self.L[ii]) @ \
-                    xp.transpose((xp.transpose(self.L[ii] @ xp.transpose(self.x)) - self.z[ii] + self.u[ii])))
-            if self.cMax is not None:
-                v = v - self.mu / self.rhoMax * (self.x - self.zMax + self.uMax)
-            if self.cNorm is not None:
-                v = v - self.mu / self.rhoNorm * (self.x - self.zNorm + self.uNorm)
+                v -= self.mu / self.rho[ii] * xp.transpose(self.L[ii]) @ \
+                                (self.L[ii] @ self.x - self.z[ii] + self.u[ii])
+            if self.c_max is not None:
+                x_min_z_pl_u = (self.x - self.zMax + self.uMax)
+                v -= self.mu / self.rho_max * x_min_z_pl_u
+            if self.c_norm is not None:
+                x_min_z_pl_u = (self.x - self.zNorm + self.uNorm)
+                v -= self.mu / self.rho_norm * x_min_z_pl_u
 
-            self.x = self.prox_muf(v, self.mu, self.A, self.x, self.d, self.lam,
-                                   self.max_cg_iter)
+            self.x = self.prox_muf(v, self.mu, self.A, self.x, self.d,
+                                   self.lam, self.max_cg_iter)
 
             # run through constraints
             z_old = self.z
             for ii in range(len(self.L)):
-                self.z[ii] = self.prox_rhog(xp.transpose(xp.transpose(self.L[ii] @ xp.transpose(self.x)) + self.u[ii]), self.c[ii])
-                self.u[ii] += xp.transpose(self.L[ii] @ xp.transpose(self.x) - self.z[ii])
+                self.z[ii] = self.prox_rhog(self.L[ii] @ (self.x + self.u[ii]),
+                                            self.c[ii])
+                self.u[ii] += self.L[ii] @ self.x - self.z[ii]
 
-            if self.cMax is not None:
+            if self.c_max is not None:
                 zMax_old = self.zMax
-                self.zMax = self.prox_rhog_max(self.x + self.uMax, self.cMax)
+                self.zMax = self.prox_rhog_max(self.x + self.uMax, self.c_max)
                 self.uMax = self.uMax + self.x - self.zMax
-            if self.cNorm is not None:
+            if self.c_norm is not None:
                 zNorm_old = self.zNorm
-                self.zNorm = self.prox_rhog(self.x + self.uNorm, self.cNorm)
+                self.zNorm = self.prox_rhog(self.x + self.uNorm, self.c_norm)
                 self.uNorm += self.x - self.zNorm
 
             # check the stopping criteria
@@ -638,7 +639,7 @@ class SDMM(Alg):
             rMax, sMax = 0, 0
             for ii in range(len(self.L)):
                 # primal residual
-                r = xp.transpose(self.L[ii] @ xp.transpose(self.x) - self.z[ii])
+                r = self.L[ii] @ self.x - self.z[ii]
                 # dual residual
                 dz = self.z[ii] - z_old[ii]
                 s = 1 / self.rho[ii] * xp.transpose(self.L[ii]) * dz
@@ -649,9 +650,9 @@ class SDMM(Alg):
                     rMax = xp.linalg.norm(r)
                 if xp.linalg.norm(s) > sMax:
                     sMax = xp.linalg.norm(s)
-            if self.cNorm is not None:
+            if self.c_norm is not None:
                 r = self.x - self.zNorm
-                s = 1 / self.rhoNorm * (self.zNorm - zNorm_old)
+                s = 1 / self.rho_norm * (self.zNorm - zNorm_old)
                 if xp.linalg.norm(r) > self.eps_pri or\
                         xp.linalg.norm(s) > self.eps_dual:
                     self.stop = False
@@ -659,9 +660,9 @@ class SDMM(Alg):
                     rMax = xp.linalg.norm(r)
                 if xp.linalg.norm(s) > sMax:
                     sMax = xp.linalg.norm(s)
-            if self.cMax is not None:
+            if self.c_max is not None:
                 r = self.x - self.zMax
-                s = 1 / self.rhoMax * (self.zMax - zMax_old)
+                s = 1 / self.rho_max * (self.zMax - zMax_old)
                 if xp.linalg.norm(r) > self.eps_pri or\
                         xp.linalg.norm(s) > self.eps_dual:
                     self.stop = False
