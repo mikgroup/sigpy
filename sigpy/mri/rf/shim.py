@@ -7,20 +7,21 @@ import numpy as np
 
 from sigpy import backend
 from sigpy.mri import rf as rf
-from scipy.ndimage import center_of_mass
 
 
 __all__ = ['calc_shims', 'minibatch', 'multivariate_gaussian', 'gaussian_1d',
-           'init_optimal_spectral', 'init_circ_polar']
+           'gaussian_pdf', 'init_optimal_spectral', 'init_circ_polar']
 
 
-def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
-    """RF shim designer.
+def calc_shims(shim_roi, sens, x0, dt, lamb=0, max_iter=50, mini=False):
+    """RF shim designer. Uses the Gerchberg Saxton algorithm to calculate
+    shim weights.
 
      Args:
         shim_roi (array): region within volume to be shimmed. Mask of 1's and
             0's. [dim_x dim_y dim_z]
         sens (array): sensitivity maps. [Nc dim_x dim_y dim_z]
+        x0 (array) initial guess for shim values. [Nc 1]
         dt (float): hardware sampling dwell time.
         lamb (float): regularization term.
         max_iter (int): max number of iterations.
@@ -34,27 +35,25 @@ def calc_shims(shim_roi, sens, dt, lamb=0, max_iter=50, mini=False):
     A = sp.mri.rf.PtxSpatialExplicit(sens, coord=k1, dt=dt,
                                      img_shape=shim_roi.shape, ret_array=False)
 
-    alg_method = sp.alg.GerchbergSaxton(A, shim_roi, max_iter=max_iter,
-                                        tol=10E-9, lamb=lamb, minibatch=mini)
+    alg_method = sp.alg.GerchbergSaxton(A, shim_roi, x0, max_iter=max_iter,
+                                        tol=10E-9, lamb=lamb)
     while not alg_method.done():
         alg_method.update()
 
     return alg_method.x
 
 
-def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
-              sigfact=2):
+def minibatch(A, ncol, mask, p, linop_o=True, check_small=False):
     """Function to minibatch col of a non-composed linear operator. Returns a
     subset of the columns, along with the corresponding indices relative to A.
     If mask is included, only select columns corresponding to nonzero y
-    indices.
+    indices. Also returns the entries of the mask corresponding to the indices.
 
         Args:
             A (linop): sigpy Linear operator.
             ncol (int): number of columns to include in minibatch.
             mask (array): area in y within which indices are selected.
-            pdf_dist (bool): use a spatially varying centroid centered
-                multivariate gaussian pdf for sample selection.
+            p (array): a 2D pdf distribution, with the same dimensions as mask.
             linop_o (bool): return a sigpy Linop. Else return a numpy ndarray.
             redfact (float): takes 1/redfact * col in minibatch.
     """
@@ -67,73 +66,46 @@ def minibatch(A, ncol, mask, pdf_dist=True, linop_o=True,
         else:
             Anum = A
 
-        a_col_num = Anum.shape[0]
+        a_col_num = A.oshape[0] * A.oshape[1]
         if mask is not None:
-
             n = mask.shape[0]
 
-            # code for superimposing 2D Gaussian distribution
-            if pdf_dist:
-                # get PDF sigma and centroid
-                nonzero = xp.nonzero(mask)
-                nonzero_x, nonzero_y = nonzero[0], nonzero[1]
-                max_x, max_y = xp.amax(nonzero_x), xp.amax(nonzero_y)
-                min_x, min_y = xp.amin(nonzero_x), xp.amin(nonzero_y)
-
-                rx = max_x - min_x
-                ry = max_y - min_y
-
-                #TODO center of mass function doesn't work on gpu
-                cx = (max_x + min_x) / 2
-                cy = (max_y + min_y) / 2
-
-                mu = xp.array([cy, cx])
-                sigma = xp.zeros((2, 2))
-                sigma[0, 0] = ry * sigfact
-                sigma[1, 1] = rx * sigfact
-
-                # create the 2D pdf from with columns will be pulledgit 
-                centered_pdf = multivariate_gaussian(n, mu, sigma, device)
-                centered_pdf = centered_pdf.flatten()
-
-                mask = mask.flatten()
-                mask = mask.astype(xp.int)
-                mask_inds = xp.nonzero(mask)[0]
-
-                centered_pdf = centered_pdf[mask_inds]
-                p = centered_pdf / xp.sum(centered_pdf)
-                ncol = ncol
-
-            # else: just use uniform random distribution
-            else:
-                mask = mask.flatten()
-                mask = mask.astype(xp.int)
-                mask_inds = xp.nonzero(mask)[0]
-                p = xp.squeeze(xp.ones((mask_inds.size,1))/mask_inds.size)
+            # process mask to make sure it's correct shape/type for sampling
+            mask = mask.flatten().astype(xp.int)
+            mask_inds = xp.nonzero(mask)[0]
 
             # do not minibatch in the case of very small numbers of nonzero
             # columns.
-            if ncol < n * n * 0.005:
+            if ncol < n * n * 0.005 and check_small:
                 inds = mask_inds
             elif ncol < xp.size(mask_inds):
-                # replace = False is preferable, but not implemented in cupy
+                # developer's note: replace=False not implemented in cupy
                 inds = xp.random.choice(mask_inds, ncol, replace=True, p=p)
             else:
                 # asking for more indices than exist in mask
                 inds = mask_inds
         else:
+            # no mask provided, any columns
             inds = xp.random.choice(a_col_num, ncol, replace=True)
+
+        # create a sampling matrix S
+        S = xp.zeros((inds.size, Anum.shape[0]))
+        xind = xp.linspace(0, inds.size - 1, inds.size).astype(int)
+        S[xind, inds] = 1
         inds = sp.to_device(inds, device)
         inds = xp.sort(inds)
-        samps = xp.zeros((n * n, 1))
-        samps[inds] = 1
-        Anum = Anum[inds, :]
+
+        # sample using our sampling matrix
+        Anum = S @ Anum
+
+        # sample the mask at the corresponding locations
+        mask = np.expand_dims(mask.flatten()[inds], 1)
 
         # finally, "rebundle" A as a linop again if desired
         if linop_o:
             Anum = sp.linop.MatMul(A.ishape, Anum)
 
-        return Anum, inds
+        return Anum, mask, inds
 
 
 def multivariate_gaussian(n, mu, sigma, device=-1):
@@ -142,6 +114,8 @@ def multivariate_gaussian(n, mu, sigma, device=-1):
     pos is an array constructed by packing the meshed arrays of variables
     x_1, x_2, x_3, ..., x_k into its _last_ dimension.
 
+    Based on code by Christian Hill, International Atomic Energy Agency.
+    https://scipython.com/blog/visualizing-the-bivariate-gaussian-distribution/
     """
     xp = device.xp
     with device:
@@ -170,13 +144,54 @@ def gaussian_1d(x, m, sigma):
     return f_x
 
 
+def gaussian_pdf(mask, sigfact):
+    device = backend.get_device(mask)
+    xp = device.xp
+    with device:
+        # get PDF sigma and centroid
+        n = mask.shape[0]
+        nonzero = xp.nonzero(mask)
+        nonzero_x, nonzero_y = nonzero[0], nonzero[1]
+        max_x, max_y = xp.amax(nonzero_x), xp.amax(nonzero_y)
+        min_x, min_y = xp.amin(nonzero_x), xp.amin(nonzero_y)
+
+        rx = max_x - min_x
+        ry = max_y - min_y
+        cx = (max_x + min_x) / 2
+        cy = (max_y + min_y) / 2
+
+        mu = xp.array([cy, cx])
+        sigma = xp.zeros((2, 2))
+        sigma[0, 0] = ry * sigfact
+        sigma[1, 1] = rx * sigfact
+
+        # create the 2D pdf from with columns will be pulledgit
+        centered_pdf = multivariate_gaussian(n, mu, sigma, device)
+        centered_pdf = centered_pdf.flatten()
+
+        mask = mask.flatten()
+        mask = mask.astype(xp.int)
+        mask_inds = xp.nonzero(mask)[0]
+
+        centered_pdf = centered_pdf[mask_inds]
+        p = centered_pdf / xp.sum(centered_pdf)
+        return p
+
+
 def init_optimal_spectral(A, sens, preproc=False):
-    """Function to return shim weights based on an optimal spectral method, an
-    eigenvetor-based method. From PhasePack: A Phase Retrieval Library.
+    """Function to return initial shim weights based on an optimal spectral
+     method, an eigenvector-based method.
 
         Args:
             A (linop): sigpy Linear operator.
             sens (array): sensitivity maps. [Nc dim_x dim_y]
+            preproc (bool): option to apply preprocessing function before
+                finding eigenvectors
+
+        References:
+            Chandra, R., Zhong, Z., Hontz, J., McCulloch, V., Studer, C.,
+            Goldstein, T. (2017) 'PhasePack: A Phase Retrieval Library.'
+            arXiv:1711.10175.
     """
     # convert to numpy linop
     device = backend.get_device(sens)
@@ -207,11 +222,9 @@ def init_optimal_spectral(A, sens, preproc=False):
             T = T * ymean
             T = xp.transpose(xp.expand_dims(T, axis=1))
 
-            #Y = np.zeros((n, 1))
             for mm in range(m):
                 col = Anum[mm, :]
                 aat = col * xp.transpose(col)
-                Tbi = T[mm]
                 Y = Y + (1 / m) * T[mm] * aat
 
         Y = (1 / m) * Anumt @ Anum
@@ -222,8 +235,9 @@ def init_optimal_spectral(A, sens, preproc=False):
 
 
 def init_circ_polar(sens):
-    """Function to return circularly polarized shim weights. Provides shim
-    weights that set the phase to be even in the middle of the sens profiles.
+    """Function to return circularly polarized initial shim weights. Provides
+     shim weights that set the phase to be even in the middle of the sens
+     profiles.
 
         Args:
             sens (array): sensitivity maps. [Nc dim_x dim_y]
