@@ -7,10 +7,10 @@ import sigpy as sp
 from sigpy.mri import rf as rf
 from sigpy import backend
 
-__all__ = ['stspa', 'wstspa']
+__all__ = ['stspa', 'wstspa', 'additive_angle']
 
 
-def stspa(target, sens, coord, dt, roi=None, alpha=0, B0=None, tseg=None,
+def stspa(target, sens, coord, dt, roi=None, alpha=0, b0=None, tseg=None,
           st=None, phase_update_interval=float('inf'), explicit=False,
           max_iter=1000, tol=1E-6):
     """Small tip spatial domain method for multicoil parallel excitation.
@@ -23,7 +23,7 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, B0=None, tseg=None,
         dt (float): hardware sampling dwell time.
         roi (array): array for error weighting, specify spatial ROI. [dim dim]
         alpha (float): regularization term, if unconstrained.
-        B0 (array): B0 inhomogeneity map [dim dim]. For explicit matrix
+        b0 (array): B0 inhomogeneity map [dim dim]. For explicit matrix
             building.
         tseg (None or Dictionary): parameters for time-segmented off-resonance
             correction. Parameters are 'b0' (array), 'dt' (float),
@@ -55,13 +55,12 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, B0=None, tseg=None,
     device = backend.get_device(target)
     xp = device.xp
     with device:
-
         pulses = xp.zeros((Nc, Nt), xp.complex)
 
         # set up the system matrix
         if explicit:
             A = rf.linop.PtxSpatialExplicit(sens, coord, dt,
-                                            target.shape, B0)
+                                            target.shape, b0)
         else:
             A = sp.mri.linop.Sense(sens, coord, weights=None, tseg=tseg,
                                    ishape=target.shape).H
@@ -78,7 +77,6 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, B0=None, tseg=None,
         if st is None:
             I = sp.linop.Identity((Nc, coord.shape[0]))
             b = A.H * W * target
-            #b = A.H * target
 
             alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
                                                   b, pulses, P=None,
@@ -203,3 +201,73 @@ def wstspa(target, sens, coord, alpha=0, max_iter=1000,
             alg_method.update()
 
         return pulses
+
+
+def additive_angle(target, sens, coord, g, dt, fa, fov, roi=None, alpha=0,
+                   explicit=False, max_st_iter=5, max_cg_iter=1000, tol=1E-6):
+    """Large-tip parallel transmit pulse design via iterative small tip designs
+    by the additive angle method.
+
+    Args:
+        target (array): desired magnetization profile. Scale assumed 0 to 1,
+         [dim dim]
+        sens (array): sensitivity maps. [Nc dim dim]
+        coord (array): coordinates for noncartesian trajectories. [Nt 2]
+        dt (float): hardware sampling dwell time. (s)
+        fa (float): desired flip angle in radians.
+        roi (array): array for error weighting, specify spatial ROI. [dim dim]
+        alpha (float): regularization term, if unconstrained.
+        explicit (bool): Use explicit matrix.
+        max_st_iter (int): max numer of small tip design iterations to perform.
+        max_cg_iter (int): max number of CG iterations in each small tip design
+        tol (float): allowable error in the large tip design.
+
+    Returns:
+        array: pulses out.
+
+    References:
+        Grissom, W., Yip, C., Wright, S., Fessler, J. A. & Noll, D. C. (2008).
+        Additive Angle Method for Fast Large-Tip-Angle RF Pulse Design in
+        Parallel Excitation. Magnetic Resonance in Medicine, 59, 779-787.
+    """
+    Nc = sens.shape[0]
+    Nt = coord.shape[0]
+    dim = sens.shape[1]
+    gam = 42580  # Hz/mT
+
+    device = backend.get_device(target)
+    xp = device.xp
+    with device:
+
+        st_iter = 0
+        b = xp.zeros((Nc, Nt))
+
+        # assume target pattern is not FA scaled; apply the FA:
+        target_fa = target * fa
+
+        # make spatial variables, in units of m
+        x, y = xp.meshgrid(xp.linspace(fov / 2, -fov / 2, dim),
+                           xp.linspace(fov / 2, -fov / 2, dim))
+        spatial = xp.fliplr(xp.concatenate(
+            (xp.reshape(x, (dim * dim, 1)), xp.reshape(y, (dim * dim, 1))),
+            axis=1))
+
+        while st_iter < max_st_iter:
+
+            # perform a small-tip design of remaining pattern to excite
+            # TODO: needs to include entire pulse in regularization ??
+            b += stspa(target, sens, coord, dt, roi, alpha, explicit=explicit,
+                      max_iter=max_cg_iter)
+
+            # simulate the resulting magnetization
+            a, b, m, mz = rf.abrm_ptx(b / 100, spatial,
+                                      g * gam * dt * 2 * xp.pi, dt,
+                                      fmap=None, sens=sens)
+
+            # calculate the actual flip angle:
+            theta_des = xp.arccos(mz / 1)  # TODO: 1 is a placeholder for M0
+            theta_des = xp.reshape(theta_des, [dim, dim])  # reshape to 2D
+
+            st_iter += 1
+
+    return
