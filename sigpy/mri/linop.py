@@ -61,18 +61,18 @@ def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
         if coord is None:
             F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
         else:
-            if transp_nufft == False:
+            if transp_nufft is False:
                 F = sp.linop.NUFFT(S.oshape, coord)
-            else: 
+            else:
                 F = sp.linop.NUFFT(S.oshape, -coord).H
-        
+
         A = F * S
 
     # If B0 provided, perform time-segmented off-resonance compensation
     else:
-        if transp_nufft == False:
+        if transp_nufft is False:
             F = sp.linop.NUFFT(S.oshape, coord)
-        else: 
+        else:
             F = sp.linop.NUFFT(S.oshape, -coord).H
         time = len(coord) * tseg['dt']
         b, ct = sp.mri.util.tseg_off_res_b_ct(tseg['b0'], tseg['n_bins'],
