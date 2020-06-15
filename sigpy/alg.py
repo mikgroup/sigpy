@@ -518,7 +518,50 @@ class ADMM(Alg):
 
 class SDMM(Alg):
     r"""Simultaneous Direction Method of Multipliers. Can be used for
-    unconstrained or constrained optimization.
+    unconstrained or constrained optimization with several constraints.
+
+    Solves the problem of form:
+
+    .. math::
+
+        \min_{x} \frac{1}{2}\left\|Ax-d\right\|_2^2
+        + \frac{\lambda}{2}\left\|x\right\|_2^2
+
+        s.t. \left\|L_{i}x\right\|_2^2 < c_{i}
+
+    In SDMM, constraints are typically specified as a list of L linear
+    operators and c constraints. This algorithm gives the user the option to
+    provide either a list of L's and c's or a single maximum (c_max) and/or
+    norm constraint (c_norm) with implicit L.
+
+    Solution variable x can be found in alg_method.x.
+
+    Args:
+        A (Linop): a system matrix Linop.
+        d (array): observation.
+        lam (float): scaling parameter.
+        L (list of arrays): list of constraint linear operator arrays. If not
+            used, provide empty list {}.
+        c (list of floats): list of constraints, constraining the L2 norm of
+            :math:`L_{i}x`
+        mu (float): proximal scaling factor.
+        rho (list of floats): list of L scaling parameters, which each one
+            corresponding to one L constraint linear array.
+        rho_max (float): max constraint scaling parameter (if c_max provided).
+        rho_norm (float): norm constraint scaling parameter (if c_norm
+            provided).
+        eps_pri (float): primal variable error tolerance.
+        eps_dual (float): dual variable error tolerance.
+        c_max (float): maximum value constraint.
+        c_norm (float): norm constraint.
+        max_cg_iter (int): maximum number of unconstrained CG iterations per
+            SDMM iteration.
+        max_iter (int): maximum number of SDMM iterations.
+
+    References:
+        Moolekamp, F. and Melchior, P. (2017). 'Block-Simultaneous Direction
+        Method of Multipliers: A proximal primal-dual splitting algorithm for
+        nonconvex problems with multiple constraints.' arXiv.
 
     """
     def __init__(self, A, d, lam, L, c, mu, rho, rho_max, rho_norm,
@@ -543,7 +586,6 @@ class SDMM(Alg):
         super().__init__(max_iter)
 
         M = len(self.L)
-        # flatten out into single vector if multiple channel problem
         with self.device:
             xp = self.device.xp
             self.x = xp.zeros(self.A.ishape, dtype=np.complex).flatten()
@@ -742,7 +784,7 @@ class GerchbergSaxton(Alg):
     measurements |Ax|.
 
     Args:
-        A (linop): a matmul linop containing the system matrix.
+        A (Linop): system matrix Linop.
         y (array): observations.
         max_iter (int): maximum number of iterations.
         tol (float): optimization stopping tolerance.
