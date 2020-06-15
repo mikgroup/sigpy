@@ -167,7 +167,6 @@ class TestAlg(unittest.TestCase):
                 while(not alg_method.done()):
                     alg_method.update()
 
-
                 npt.assert_allclose(x, x_numpy)
 
     def test_GerchbergSaxton(self):
