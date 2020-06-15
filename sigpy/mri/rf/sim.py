@@ -3,7 +3,6 @@
 
 """
 from sigpy import backend
-import sigpy.plot as pl
 
 __all__ = ['abrm', 'abrm_nd', 'abrm_hp', 'abrm_ptx']
 

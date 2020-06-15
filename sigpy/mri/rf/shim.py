@@ -4,7 +4,6 @@
 
 import sigpy as sp
 import numpy as np
-
 from sigpy import backend
 from sigpy.mri import rf as rf
 
@@ -12,9 +11,8 @@ from sigpy.mri import rf as rf
 __all__ = ['calc_shims', 'init_optimal_spectral', 'init_circ_polar']
 
 
-def calc_shims(shim_roi, sens, x0, dt, lamb=0, max_iter=50, mini=False):
-    """RF shim designer. Uses the Gerchberg Saxton algorithm to calculate
-    shim weights.
+def calc_shims(shim_roi, sens, x0, dt, lamb=0, max_iter=50):
+    """RF shim designer. Uses the Gerchberg Saxton algorithm.
 
      Args:
         shim_roi (array): region within volume to be shimmed. Mask of 1's and
@@ -24,15 +22,14 @@ def calc_shims(shim_roi, sens, x0, dt, lamb=0, max_iter=50, mini=False):
         dt (float): hardware sampling dwell time.
         lamb (float): regularization term.
         max_iter (int): max number of iterations.
-        mini (bool): option to use system matrix minibatching.
 
-    Returns:
-        array: complex shims.
+     Returns:
+         Vector of complex shim weights.
     """
 
     k1 = np.expand_dims(np.array((0, 0, 0)), 0)
-    A = sp.mri.rf.PtxSpatialExplicit(sens, coord=k1, dt=dt,
-                                     img_shape=shim_roi.shape, ret_array=False)
+    A = rf.PtxSpatialExplicit(sens, coord=k1, dt=dt,
+                              img_shape=shim_roi.shape, ret_array=False)
 
     alg_method = sp.alg.GerchbergSaxton(A, shim_roi, x0, max_iter=max_iter,
                                         tol=10E-9, lamb=lamb)
@@ -44,20 +41,22 @@ def calc_shims(shim_roi, sens, x0, dt, lamb=0, max_iter=50, mini=False):
 
 def init_optimal_spectral(A, sens, preproc=False):
     """Function to return initial shim weights based on an optimal spectral
-     method, an eigenvector-based method.
+    method, an eigenvector-based method.
 
         Args:
             A (linop): sigpy Linear operator.
             sens (array): sensitivity maps. [Nc dim_x dim_y]
-            preproc (bool): option to apply preprocessing function before
+            preproc (bool): option to apply preprocessing function before \
                 finding eigenvectors
+
+        Returns:
+            Vector of complex shim weights.
 
         References:
             Chandra, R., Zhong, Z., Hontz, J., McCulloch, V., Studer, C.,
             Goldstein, T. (2017) 'PhasePack: A Phase Retrieval Library.'
             arXiv:1711.10175.
     """
-    # convert to numpy linop
     device = backend.get_device(sens)
     xp = device.xp
     with device:
@@ -79,19 +78,19 @@ def init_optimal_spectral(A, sens, preproc=False):
 
         # apply pre-processing function
         yplus = xp.amax(y)
+        Y = (1 / m) * Anumt @ Anum
+
         if preproc:
             T = (yplus - 1) / (yplus + xp.sqrt(delta) - 1)
 
             # unnormalize
-            T = T * ymean
+            T *= ymean
             T = xp.transpose(xp.expand_dims(T, axis=1))
 
             for mm in range(m):
                 col = Anum[mm, :]
                 aat = col * xp.transpose(col)
                 Y = Y + (1 / m) * T[mm] * aat
-
-        Y = (1 / m) * Anumt @ Anum
 
         w, v = xp.linalg.eigh(Y)
 
@@ -105,6 +104,9 @@ def init_circ_polar(sens):
 
         Args:
             sens (array): sensitivity maps. [Nc dim_x dim_y]
+
+        Returns:
+            Vector of complex shim weights.
     """
     dim = sens.shape[1]
     device = backend.get_device(sens)

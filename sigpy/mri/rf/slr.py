@@ -27,10 +27,14 @@ def dzrf(n=64, tb=4, ptype='st', ftype='ls', d1=0.01, d2=0.01,
     Args:
         n (int): number of time points.
         tb (int): pulse time bandwidth product.
-        ptype (string): type of pulse to be designed.
-        ftype (string): type of filter to use in pulse design
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        ptype (string): pulse type, 'st' (small-tip excitation), 'ex' (pi/2
+            excitation pulse), 'se' (spin-echo pulse), 'inv' (inversion), or
+            'sat' (pi/2 saturation pulse).
+        ftype (string): type of filter to use: 'ms' (sinc), 'pm'
+            (Parks-McClellan equal-ripple), 'min' (minphase using factored pm),
+            'max' (maxphase using factored pm), 'ls' (least squares).
+        d1 (float): passband ripple level in :math:'M_0^{-1}'.
+        d2 (float): stopband ripple level in :math:'M_0^{-1}'.
         cancel_alpha_phs (bool): For 'ex' pulses, absorb the alpha phase
             profile from beta's profile, so they cancel for a flatter
             total phase
@@ -181,8 +185,8 @@ def dz_gslider_b(n=128, g=5, gind=1, tb=4, d1=0.01, d2=0.01,
         g (int): number of sub-slices.
         gind (int): subslice index.
         tb (int): time bandwidth product.
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        d1 (float): passband ripple level in :math:'M_0^{-1}'.
+        d2 (float): stopband ripple level in :math:'M_0^{-1}'.
         phi (float): subslice phase.
         shift (int): n time points shift of pulse.
 
@@ -313,8 +317,8 @@ def dz_hadamard_b(n=128, g=5, gind=1, tb=4, d1=0.01, d2=0.01, shift=32):
         g (int): order of the Hadamard matrix.
         gind (int): index of vector to use from Hadamard matrix for encoding.
         tb (int): time bandwidth product.
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        d1 (float): passband ripple level in :math:'M_0^{-1}'.
+        d2 (float): stopband ripple level in :math:'M_0^{-1}'.
         shift (int): n time points shift of pulse.
 
     Returns:
@@ -414,8 +418,8 @@ def dz_gslider_rf(n=256, g=5, flip=np.pi / 2, phi=np.pi, tb=12,
         flip (float): flip angle.
         phi (float): subslice phase.
         tb (int): time bandwidth product.
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        d1 (float): passband ripple level in :math:'M_0^{-1}'.
+        d2 (float): stopband ripple level in :math:'M_0^{-1}'.
         cancel_alpha_phs (bool): absorb the alpha phase
             profile from beta's profile, so they cancel for a flatter
             total phase
@@ -601,8 +605,8 @@ def dz_recursive_rf(n_seg, tb, n, se_seq=False, tb_ref=8, z_pad_fact=4,
         t1 (float): t1
         tr_seg (int): length of tr
         use_mz (bool): design the pulses accounting for the actual Mz profile
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        d1 (float): passband ripple level in :math:'M_0^{-1}'.
+        d2 (float): stopband ripple level in :math:'M_0^{-1}'.
         d1se (float): passband ripple level for se
         d2se (float): stopband ripple level for se
 

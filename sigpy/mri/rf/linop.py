@@ -19,6 +19,10 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, b0=None, ret_array=False):
         ret_array (bool): if true, return explicit numpy array.
             Else return linop.
 
+    Returns:
+        SigPy linop with A.repr_string 'pTx spatial explicit', or numpy array
+        if selected with 'ret_array'
+
 
     References:
         Grissom, W., Yip, C., Zhang, Z., Stenger, V. A., Fessler, J. A.
@@ -82,7 +86,7 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, b0=None, ret_array=False):
             if three_d:
                 tmp = xp.squeeze(sens[ii, :, :, :]).flatten()
             else:
-                tmp = sens[ii,:, :].flatten()
+                tmp = sens[ii, :, :].flatten()
             D = xp.transpose(xp.tile(tmp, [coord.shape[0], 1]))
             AFullExplicit = xp.concatenate((AFullExplicit, D * AExplicit),
                                            axis=1)

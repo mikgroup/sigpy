@@ -136,12 +136,14 @@ def dz_pins(tb, sl_sep, sl_thick, g_max, g_slew, dt, b1_max=0.18,
         sl_thick (float): slice thickness in cm.
         g_max (float): max gradient amplitude in gauss/cm
         g_slew (float): max gradient sliew in gauss/cm/s
-        dt (float): RF + gradient dwell time in seconds
+        dt (float): RF + gradient dwell time in s.
         b1_max (float): Maximum RF amplitude
-        ptype (string): type of pulse to be designed.
+        ptype (string): pulse type, 'st' (small-tip excitation), 'ex' (pi/2
+            excitation pulse), 'se' (spin-echo pulse), 'inv' (inversion), or
+            'sat' (pi/2 saturation pulse).
         ftype (string): type of filter to use in pulse design
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        d1 (float): passband ripple level in :math:'M_0^{-1}'.
+        d2 (float): stopband ripple level in :math:'M_0^{-1}'.
         gambar (float): Appropriate gyromagnetic ratio in Hz/gauss.
 
     Returns:

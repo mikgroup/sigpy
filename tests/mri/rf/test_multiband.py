@@ -32,9 +32,9 @@ class TestMultiband(unittest.TestCase):
         [a, b] = rf.sim.abrm(mb_pulse,
                              np.arange(-20 * tb, 20 * tb, 40 * tb / 2000),
                              True)
-        Mxy = 2 * np.multiply(np.conj(a), b)
+        mxy = 2 * np.multiply(np.conj(a), b)
 
-        pts = np.array([Mxy[750], Mxy[850], Mxy[1000], Mxy[1150], Mxy[1250]])
+        pts = np.array([mxy[750], mxy[850], mxy[1000], mxy[1150], mxy[1250]])
         npt.assert_almost_equal(abs(pts), np.array([1, 0, 1, 0, 1]), decimal=2)
 
     def test_pins(self):
@@ -59,9 +59,9 @@ class TestMultiband(unittest.TestCase):
         # simulate it
         x = np.reshape(np.arange(-1000, 1000), (2000, 1)) / 1000 * 12  # cm
         [a, b] = rf.sim.abrm_nd(2 * np.pi * dt * 4258 * rf_pins, x,
-                                np.reshape(g_pins, (
-                                np.size(g_pins), 1)) * 4258 * dt * 2 * np.pi)
-        Mxy = 2 * np.conj(a) * b
+                                np.reshape(g_pins, (np.size(g_pins), 1)) *
+                                4258 * dt * 2 * np.pi)
+        mxy = 2 * np.conj(a) * b
 
-        pts = np.array([Mxy[100], Mxy[1000], Mxy[1900]])
+        pts = np.array([mxy[100], mxy[1000], mxy[1900]])
         npt.assert_almost_equal(abs(pts), np.array([0, 1, 0]), decimal=2)

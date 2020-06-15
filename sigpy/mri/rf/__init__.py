@@ -1,10 +1,13 @@
 """This MRI submodule contains functions and classes for MRI pulse design.
 
-It currently provides tools for SLR pulse design and RF pulse simulation.
-Tools for designing pTx, adiabatic, and other types of rf pulses,
-as well as gradient and trajectory designers will be added soon.
+It contains functions to design a variety of RF pulses for MRI, such as SLR,
+adiabatic, parallel transmit, multibanded, and others. The submodule also
+includes other functions to assist with pulse design, such as I/O functions,
+trajectory/gradient designers, and Bloch simulators.
 
-Explore RF design tutorials at `sigpy-rf-tutorials`_.
+Explore RF design tutorials at `sigpy-rf-tutorials`_. These are primarily
+Jupyter Notebooks, and provide more detailed instruction on pulse design
+workflow and function use.
 
 See in-progress features at `sigpy-rf`_.
 
@@ -14,7 +17,7 @@ See in-progress features at `sigpy-rf`_.
 """
 from sigpy.mri import linop
 
-from sigpy.mri.rf import adiabatic, b1sel, io, linop, multiband, optcont, ptx,\
+from sigpy.mri.rf import adiabatic, b1sel, io, multiband, optcont, ptx,\
     shim, sim, slr, trajgrad, util
 from sigpy.mri.rf.adiabatic import *  # noqa
 from sigpy.mri.rf.b1sel import *  # noqa

@@ -8,7 +8,7 @@ __all__ = ['bir4', 'hypsec', 'wurst', 'goia_wurst', 'bloch_siegert_fm']
 
 
 def bir4(n, beta, kappa, theta, dw0):
-    r"""Generate a BIR-4 adiabatic pulse.
+    r"""Design a BIR-4 adiabatic pulse.
 
     BIR-4 is equivalent to two BIR-1 pulses back-to-back.
 
@@ -54,7 +54,7 @@ def bir4(n, beta, kappa, theta, dw0):
 
 
 def hypsec(n=512, beta=800, mu=4.9, dur=0.012):
-    r"""Generate a hyperbolic secant adiabatic pulse.
+    r"""Design a hyperbolic secant adiabatic pulse.
 
     mu * beta becomes the amplitude of the frequency sweep
 
@@ -85,7 +85,7 @@ def hypsec(n=512, beta=800, mu=4.9, dur=0.012):
 
 
 def wurst(n=512, n_fac=40, bw=40e3, dur=2e-3):
-    r"""Generate a WURST (wideband, uniform rate, smooth truncation) adiabatic
+    r"""Design a WURST (wideband, uniform rate, smooth truncation) adiabatic
      inversion pulse
 
     Args:
@@ -93,7 +93,7 @@ def wurst(n=512, n_fac=40, bw=40e3, dur=2e-3):
         n_fac (int): power to exponentiate to within AM term. ~20 or greater is
          typical.
         bw (float): pulse bandwidth.
-        T (float): pulse time (s).
+        dur (float): pulse time (s).
 
 
     Returns:
@@ -118,7 +118,7 @@ def wurst(n=512, n_fac=40, bw=40e3, dur=2e-3):
 
 def goia_wurst(n=512, dur=3.5e-3, f=0.9, n_b1=16, m_grad=4,
                b1_max=817, bw=20000):
-    r"""Generate a GOIA (gradient offset independent adiabaticity) WURST
+    r"""Design a GOIA (gradient offset independent adiabaticity) WURST
      inversion pulse
 
     Args:
@@ -159,8 +159,8 @@ def goia_wurst(n=512, dur=3.5e-3, f=0.9, n_b1=16, m_grad=4,
 def bloch_siegert_fm(n=512, dur=2e-3, b1p=20., k=42.,
                      gamma=2*np.pi*42.58):
     r"""
-    U-shaped FM waveform for adiabatic Bloch-Siegert B1+ mapping and
-    spatial encoding.
+    U-shaped FM waveform for adiabatic Bloch-Siegert :math:`B_1^{+}` mapping
+    and spatial encoding.
 
     Args:
         n (int): number of time points

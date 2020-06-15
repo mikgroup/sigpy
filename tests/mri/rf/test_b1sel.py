@@ -28,8 +28,8 @@ class TestB1sel(unittest.TestCase):
             rf_am) * 4)  # b1 grid we simulate the pulse over
         b1 = np.reshape(b1, (np.size(b1), 1))
         [a, b] = rf.sim.abrm_nd(2 * np.pi * dt * rf_fm, b1,
-                                2 * np.pi * 4258 * dt * np.reshape(rf_am, (
-                                np.size(rf_am), 1)))
+                                2 * np.pi * 4258 * dt *
+                                np.reshape(rf_am, (np.size(rf_am), 1)))
         mxy = -2 * np.real(a * b) + 1j * np.imag(np.conj(a) ** 2 - b ** 2)
 
         pts = np.array([mxy[10], mxy[int(len(b1) / 2)],

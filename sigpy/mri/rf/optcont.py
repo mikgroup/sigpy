@@ -57,6 +57,8 @@ def blochsim(rf, x, g):
 def deriv(rf, x, g, auxa, auxb, af, bf):
     r"""1D RF pulse simulation, with simultaneous RF + gradient rotations.
 
+    'rf', 'g', and 'x' should have consistent units.
+
      Args:
          rf (array): rf waveform input.
          x (array): spatial locations.

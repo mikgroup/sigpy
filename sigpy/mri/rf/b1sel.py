@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""B1-selective RF Pulse Design functions.
+""":math:`B_1^{+}`-selective RF Pulse Design functions.
 
 """
 import numpy as np
@@ -10,17 +10,20 @@ __all__ = ['dz_b1_rf', 'dz_b1_gslider_rf', 'dz_b1_hadamard_rf']
 
 def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
              pbc=2, d1=0.01, d2=0.01, os=8, split_and_reflect=True):
-    """Design a B1-selective excitation pulse following Grissom JMR 2014
+    """Design a :math:`B_1^{+}`-selective excitation pulse following Grissom \
+    JMR 2014
 
     Args:
         dt (float): hardware sampling dwell time in s.
         tb (int): time-bandwidth product.
-        ptype (string): pulse type, 'st', 'ex', 'se', 'inv', or 'sat'.
+        ptype (string): pulse type, 'st' (small-tip excitation), 'ex' (pi/2
+            excitation pulse), 'se' (spin-echo pulse), 'inv' (inversion), or
+            'sat' (pi/2 saturation pulse).
         flip (float): flip angle, in radians.
         pbw (float): width of passband in Gauss.
         pbc (float): center of passband in Gauss.
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        d1 (float): passband ripple level in :math:`M_0^{-1}`.
+        d2 (float): stopband ripple level in :math:`M_0^{-1}`.
         os (int): matrix scaling factor.
         split_and_reflect (bool): option to split and reflect designed pulse.
 
@@ -35,12 +38,12 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
 
     References:
         Grissom, W., Cao, Z., & Does, M. (2014).
-        |B1+|-selective excitation pulse design using the Shinnar-Le Roux
-        algorithm. Journal of Magnetic Resonance, 242, 189-196.
+        :math:`B_1^{+}`-selective excitation pulse design using the Shinnar-Le
+        Roux algorithm. Journal of Magnetic Resonance, 242, 189-196.
     """
 
     # calculate beta filter ripple
-    [bsf, d1, d2] = slr.calc_ripples(ptype, d1, d2)
+    [_, d1, d2] = slr.calc_ripples(ptype, d1, d2)
 
     # calculate pulse duration
     b = 4257 * pbw
@@ -110,19 +113,21 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
 
 def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
                      pbw=0.5, pbc=2, d1=0.01, d2=0.01, split_and_reflect=True):
-    """Design a B1-selective excitation gSlider pulse following Grissom JMR
-    2014.
+    """Design a :math:`B_1^{+}`-selective excitation gSlider pulse following
+     Grissom JMR 2014.
 
     Args:
         dt (float): hardware sampling dwell time in s.
         g (int): number of slabs to be acquired.
         tb (int): time-bandwidth product.
-        ptype (string): pulse type, 'st', 'ex', 'se', 'inv', or 'sat'.
+        ptype (string): pulse type, 'st' (small-tip excitation), 'ex' (pi/2
+            excitation pulse), 'se' (spin-echo pulse), 'inv' (inversion), or
+            'sat' (pi/2 saturation pulse).
         flip (float): flip angle, in radians.
         pbw (float): width of passband in Gauss.
         pbc (float): center of passband in Gauss.
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        d1 (float): passband ripple level in :math:`M_0^{-1}`.
+        d2 (float): stopband ripple level in :math:`M_0^{-1}`.
         split_and_reflect (bool): option to split and reflect designed pulse.
 
     Split-and-reflect preserves pulse selectivity when scaled to excite large
@@ -136,12 +141,12 @@ def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
 
     References:
         Grissom, W., Cao, Z., & Does, M. (2014).
-        |B1+|-selective excitation pulse design using the Shinnar-Le Roux
-        algorithm. Journal of Magnetic Resonance, 242, 189-196.
+        :math:`B_1^{+}`-selective excitation pulse design using the Shinnar-Le
+        Roux algorithm. Journal of Magnetic Resonance, 242, 189-196.
     """
 
     # calculate beta filter ripple
-    [bsf, d1, d2] = slr.calc_ripples(ptype, d1, d2)
+    [_, d1, d2] = slr.calc_ripples(ptype, d1, d2)
     # if ptype == 'st':
     bsf = flip
 
@@ -183,18 +188,20 @@ def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
 
 def dz_b1_hadamard_rf(dt=2e-6, g=8, tb=16, ptype='st', flip=np.pi / 6,
                       pbw=2, pbc=2, d1=0.01, d2=0.01, split_and_reflect=True):
-    """Design a B1-selective Hadamard-encoded pulse following Grissom JMR
-    2014.
+    """Design a :math:`B_1^{+}`-selective Hadamard-encoded pulse following \
+     Grissom JMR 2014.
     Args:
         dt (float): hardware sampling dwell time in s.
         g (int): number of slabs to be acquired.
         tb (int): time-bandwidth product.
-        ptype (string): pulse type, 'st', 'ex', 'se', 'inv', or 'sat'.
+        ptype (string): pulse type, 'st' (small-tip excitation), 'ex' (pi/2 \
+            excitation pulse), 'se' (spin-echo pulse), 'inv' (inversion), or \
+            'sat' (pi/2 saturation pulse).
         flip (float): flip angle, in radians.
         pbw (float): width of passband in Gauss.
         pbc (float): center of passband in Gauss.
-        d1 (float): passband ripple level in M0**-1.
-        d2 (float): stopband ripple level in M0**-1.
+        d1 (float): passband ripple level in :math:`M_0^{-1}`.
+        d2 (float): stopband ripple level in :math:`M_0^{-1}`.
         split_and_reflect (bool): option to split and reflect designed pulse.
 
     Split-and-reflect preserves pulse selectivity when scaled to excite large
@@ -208,12 +215,12 @@ def dz_b1_hadamard_rf(dt=2e-6, g=8, tb=16, ptype='st', flip=np.pi / 6,
 
     References:
         Grissom, W., Cao, Z., & Does, M. (2014).
-        |B1+|-selective excitation pulse design using the Shinnar-Le Roux
-        algorithm. Journal of Magnetic Resonance, 242, 189-196.
+        :math:`B_1^{+}`-selective excitation pulse design using the Shinnar-Le
+        Roux algorithm. Journal of Magnetic Resonance, 242, 189-196.
     """
 
     # calculate beta filter ripple
-    [bsf, d1, d2] = slr.calc_ripples(ptype, d1, d2)
+    [_, d1, d2] = slr.calc_ripples(ptype, d1, d2)
     bsf = flip
 
     # calculate pulse duration
