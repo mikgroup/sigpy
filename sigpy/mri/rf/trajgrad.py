@@ -1,49 +1,11 @@
+# -*- coding: utf-8 -*-
 """MRI gradient and excitation trajectory design
 """
 
 import numpy as np
 
-__all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch', 'epi',
-           'rosette', 'stack_of', 'traj_array_to_complex',
-           'traj_complex_to_array']
-
-
-def min_trap_grad(area, gmax, dgdt, dt):
-    r"""Minimal duration trapezoidal gradient designer.
-
-    Args:
-        area (float): pulse area in (g*sec)/cm
-        gmax (float): maximum gradient in g/cm
-        dgdt (float): max slew rate in g/cm/sec
-        dt (float): sample time in sec
-
-    """
-
-    if np.abs(area) > 0:
-        # we get the solution for plateau amp by setting derivative of
-        # duration as a function of amplitude to zero and solving
-        a = np.sqrt(dgdt * area / 2)
-
-        # finish design with discretization
-        # make a flat portion of magnitude a and enough area for the swath
-        flat = np.ones(1, np.floor(area / a / dt))
-        flat = flat / np.sum(flat) * area / dt
-        if max(flat) > gmax:
-            flat = np.ones(1, np.ceil(area / gmax / dt))
-            flat = flat / sum(flat) * area / dt
-
-        # make attack and decay ramps
-        ramppts = int(np.ceil(max(flat) / dgdt / dt))
-        ramp_up = np.linspace(0, ramppts, num=ramppts) / ramppts * np.max(flat)
-        ramp_dn = np.linspace(ramppts, 0, num=ramppts) / ramppts * np.max(flat)
-
-        trap = np.concatenate((ramp_up, flat, ramp_dn))
-
-    else:
-        # negative-area trap requested?
-        trap, ramppts = 0, 0
-
-    return np.expand_dims(trap, axis=0), ramppts
+__all__ = ['trap_grad', 'spiral_varden', 'spiral_arch', 'epi', 'rosette',
+           'stack_of', 'traj_array_to_complex', 'traj_complex_to_array']
 
 
 def trap_grad(area, gmax, dgdt, dt, *args):
@@ -178,6 +140,8 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
                     den1 = 1
 
                 if realn > densamp + dentrans:
+                    if 'scthat' not in locals():
+                        scthat = 0
                     scoffset = scthat
                     denoffset = taun_1
                     scthat = scoffset + om * (tauhat - denoffset)
@@ -280,9 +244,9 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
     # rewinder
     if rewinder:
         rewx, ramppts = np.squeeze(trap_grad(abs(np.real(sum(g))) * gts,
-                                  gamp, gslew * 50, gts))
+                                   gamp, gslew * 50, gts))
         rewy, ramppts = np.squeeze(trap_grad(abs(np.imag(sum(g))) * gts,
-                                  gamp, gslew * 50, gts))
+                                   gamp, gslew * 50, gts))
 
         # append rewinder gradient
         if len(rewx) > len(rewy):
@@ -351,7 +315,6 @@ def spiral_arch(fov, res, gts, gslew, gamp):
     if theta_max > theta_s:
         print(' Spiral trajectory is slewrate limited or amplitude limited')
 
-        n_t = n_s + n_g
         tacq = ts + t_g
 
         t_s = np.linspace(0, ts, n_s)
@@ -435,8 +398,6 @@ def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
         area = (np.sum(gxro) - dirx * g) * dt
     else:
         area = np.sum(gxro) * dt
-    gxprew2 = dirx * trap_grad(area / 2 + dirx * g * dt,
-                               gamp, gslew * 1000, dt)[0]
     gxprew = dirx * trap_grad(area / 2, gamp, gslew * 1000, dt)[0]
 
     gxprew = np.concatenate((np.zeros((1, (gxprew.size + ramp.size) % 2)),
@@ -605,7 +566,7 @@ def stack_of(k, num, zres):
         z_coord = np.expand_dims(np.ones(len(kr)) * z[ii], axis=1)
         krz = np.concatenate((traj_complex_to_array(kr), z_coord), axis=1)
 
-        kout[ii*len(krz):(ii + 1) * len(krz), :] = krz
+        kout[ii * len(krz):(ii + 1) * len(krz), :] = krz
 
     return kout
 
