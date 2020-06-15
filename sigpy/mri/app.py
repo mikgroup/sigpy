@@ -36,6 +36,10 @@ class SenseRecon(sp.app.LinearLeastSquares):
         mps (array): sensitivity maps.
         lamda (float): regularization parameter.
         weights (float or array): weights for data consistency.
+        tseg (None or Dictionary): parameters for time-segmented off-resonance
+            correction. Parameters are 'b0' (array), 'dt' (float),
+            'lseg' (int), and 'n_bins' (int). Lseg is the number of
+            time segments used, and n_bins is the number of histogram bins.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
         coil_batch_size (int): batch size to process coils.
