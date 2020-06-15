@@ -55,7 +55,7 @@ class SenseRecon(sp.app.LinearLeastSquares):
 
     """
 
-    def __init__(self, y, mps, lamda=0, weights=None,
+    def __init__(self, y, mps, lamda=0, weights=None, tseg=None,
                  coord=None, device=sp.cpu_device, coil_batch_size=None,
                  comm=None, show_pbar=True, transp_nufft=False, **kwargs):
         weights = _estimate_weights(y, weights, coord)
@@ -64,7 +64,7 @@ class SenseRecon(sp.app.LinearLeastSquares):
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights,
+        A = linop.Sense(mps, coord=coord, weights=weights, tseg=tseg,
                         coil_batch_size=coil_batch_size, comm=comm,
                         transp_nufft=transp_nufft)
 
