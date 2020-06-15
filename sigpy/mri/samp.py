@@ -136,16 +136,18 @@ def _poisson(nx, ny, K, R, calib, seed):
     f = ny / nx
 
     if seed is not None:
-        np.random.seed(int(seed))
+        rand_state = np.random.RandomState(int(seed))
+    else:
+        rand_state = np.random
 
     pxs = np.empty(nx * ny, np.int32)
     pys = np.empty(nx * ny, np.int32)
-    pxs[0] = np.random.randint(0, nx)
-    pys[0] = np.random.randint(0, ny)
+    pxs[0] = rand_state.randint(0, nx)
+    pys[0] = rand_state.randint(0, ny)
     m = 1
     while (m > 0):
 
-        i = np.random.randint(0, m)
+        i = rand_state.randint(0, m)
         px = pxs[i]
         py = pys[i]
         rad = R[py, px]
@@ -156,8 +158,8 @@ def _poisson(nx, ny, K, R, calib, seed):
         while not done and k < K:
 
             # Generate point randomly from R and 2R
-            rd = rad * (np.random.random() * 3 + 1)**0.5
-            t = 2 * np.pi * np.random.random()
+            rd = rad * (rand_state.random() * 3 + 1)**0.5
+            t = 2 * np.pi * rand_state.random()
             qx = px + rd * np.cos(t)
             qy = py + rd * f * np.sin(t)
 
