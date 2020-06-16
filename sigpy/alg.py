@@ -4,6 +4,7 @@ and implements commonly used methods, such as gradient methods,
 Newton's method, and the augmented Lagrangian method.
 """
 import numpy as np
+import sigpy as sp
 from sigpy import backend, util
 
 
@@ -515,6 +516,207 @@ class ADMM(Alg):
         self.u += self.A(self.x) + self.B(self.z) - self.c
 
 
+class SDMM(Alg):
+    r"""Simultaneous Direction Method of Multipliers. Can be used for
+    unconstrained or constrained optimization with several constraints.
+
+    Solves the problem of form:
+
+    .. math::
+
+        \min_{x} \frac{1}{2}\left\|Ax-d\right\|_2^2
+        + \frac{\lambda}{2}\left\|x\right\|_2^2
+
+        s.t. \left\|L_{i}x\right\|_2^2 < c_{i}
+
+    In SDMM, constraints are typically specified as a list of L linear
+    operators and c constraints. This algorithm gives the user the option to
+    provide either a list of L's and c's or a single maximum (c_max) and/or
+    norm constraint (c_norm) with implicit L.
+
+    Solution variable x can be found in alg_method.x.
+
+    Args:
+        A (Linop): a system matrix Linop.
+        d (array): observation.
+        lam (float): scaling parameter.
+        L (list of arrays): list of constraint linear operator arrays. If not
+            used, provide empty list {}.
+        c (list of floats): list of constraints, constraining the L2 norm of
+            :math:`L_{i}x`
+        mu (float): proximal scaling factor.
+        rho (list of floats): list of L scaling parameters, which each one
+            corresponding to one L constraint linear array.
+        rho_max (float): max constraint scaling parameter (if c_max provided).
+        rho_norm (float): norm constraint scaling parameter (if c_norm
+            provided).
+        eps_pri (float): primal variable error tolerance.
+        eps_dual (float): dual variable error tolerance.
+        c_max (float): maximum value constraint.
+        c_norm (float): norm constraint.
+        max_cg_iter (int): maximum number of unconstrained CG iterations per
+            SDMM iteration.
+        max_iter (int): maximum number of SDMM iterations.
+
+    References:
+        Moolekamp, F. and Melchior, P. (2017). 'Block-Simultaneous Direction
+        Method of Multipliers: A proximal primal-dual splitting algorithm for
+        nonconvex problems with multiple constraints.' arXiv.
+
+    """
+    def __init__(self, A, d, lam, L, c, mu, rho, rho_max, rho_norm,
+                 eps_pri=10**-5, eps_dual=10**-2, c_max=None, c_norm=None,
+                 max_cg_iter=30, max_iter=1000):
+        self.A = A
+        self.d = d
+        self.lam = lam
+        self.L = L
+        self.c = c
+        self.mu = mu
+        self.rho = rho
+        self.rho_max = rho_max
+        self.rho_norm = rho_norm
+        self.eps_pri = eps_pri
+        self.eps_dual = eps_dual
+        self.c_max = c_max
+        self.c_norm = c_norm
+        self. max_cg_iter = max_cg_iter
+        self.stop = False  # stop criterion collector variable
+        self.device = backend.get_device(d)
+        super().__init__(max_iter)
+
+        M = len(self.L)
+        with self.device:
+            xp = self.device.xp
+            self.x = xp.zeros(self.A.ishape, dtype=np.complex).flatten()
+            self.x = xp.expand_dims(self.x, axis=1)
+            self.z, self.u = [], []
+
+            for ii in range(M):
+                self.z.append(L[ii] @ self.x)
+                self.u.append(xp.expand_dims(xp.zeros(xp.shape(L[ii])[0],
+                                                      dtype=xp.complex),
+                                             axis=1))
+            if c_max is not None:
+                self.zMax = self.x
+                self.uMax = xp.zeros(xp.shape(self.x), dtype=xp.complex)
+            if c_norm is not None:
+                self.zNorm = self.x
+                self.uNorm = xp.zeros(xp.shape(self.x), dtype=xp.complex)
+
+    def prox_rhog(self, v, c):
+        with self.device:
+            xp = self.device.xp
+            if xp.real(xp.linalg.norm(v) ** 2) > c:
+                z = v * xp.sqrt(c) / xp.sqrt(xp.real(xp.linalg.norm(v)))
+            else:
+                z = v
+            return z
+
+    def prox_rhog_max(self, v, c):
+        with self.device:
+            xp = self.device.xp
+            z = v
+            indices = xp.where((abs(z) ** 2 > c))
+            z[indices] = xp.sqrt(c) * z[indices] / xp.absolute(z[indices])
+            return z
+
+    def prox_muf(self, v, mu, A, x, d, lam, nCGiters):
+        with self.device:
+            xp = self.device.xp
+            d = xp.vstack((d, xp.sqrt(1 / mu) * v, xp.sqrt(lam) * x))
+            Am = self.Amult(x, A, mu, lam)
+            int_method = ConjugateGradient(Am.H * Am, Am.H * d, x,
+                                           max_iter=nCGiters)
+
+            while not int_method.done():
+                int_method.update()
+
+            return int_method.x
+
+    def Amult(self, x, A, mu, lam):
+        M = sp.linop.Multiply(x.shape, np.ones(x.shape) * np.sqrt(1 / mu))
+        L = sp.linop.Multiply(x.shape, np.ones(x.shape) * np.sqrt(lam))
+        Y = sp.linop.Vstack((A, M, L))
+        Ry = sp.linop.Reshape((Y.oshape[0], 1), Y.oshape)
+        Y = Ry * Y
+        return Y
+
+    def _update(self):
+        with self.device:
+            xp = self.device.xp
+            # evaluate objective
+            v = self.x
+            for ii in range(len(self.L)):
+                v -= self.mu / self.rho[ii] * xp.transpose(self.L[ii]) @ \
+                                (self.L[ii] @ self.x - self.z[ii] + self.u[ii])
+            if self.c_max is not None:
+                x_min_z_pl_u = (self.x - self.zMax + self.uMax)
+                v -= self.mu / self.rho_max * x_min_z_pl_u
+            if self.c_norm is not None:
+                x_min_z_pl_u = (self.x - self.zNorm + self.uNorm)
+                v -= self.mu / self.rho_norm * x_min_z_pl_u
+
+            self.x = self.prox_muf(v, self.mu, self.A, self.x, self.d,
+                                   self.lam, self.max_cg_iter)
+
+            # run through constraints
+            z_old = self.z
+            for ii in range(len(self.L)):
+                self.z[ii] = self.prox_rhog(self.L[ii] @ (self.x + self.u[ii]),
+                                            self.c[ii])
+                self.u[ii] += self.L[ii] @ self.x - self.z[ii]
+
+            if self.c_max is not None:
+                zMax_old = self.zMax
+                self.zMax = self.prox_rhog_max(self.x + self.uMax, self.c_max)
+                self.uMax = self.uMax + self.x - self.zMax
+            if self.c_norm is not None:
+                zNorm_old = self.zNorm
+                self.zNorm = self.prox_rhog(self.x + self.uNorm, self.c_norm)
+                self.uNorm += self.x - self.zNorm
+
+            # check the stopping criteria
+            self.stop = True
+            rMax, sMax = 0, 0
+            for ii in range(len(self.L)):
+                # primal residual
+                r = self.L[ii] @ self.x - self.z[ii]
+                # dual residual
+                dz = self.z[ii] - z_old[ii]
+                s = 1 / self.rho[ii] * xp.transpose(self.L[ii]) * dz
+                if xp.linalg.norm(r) > self.eps_pri or\
+                        xp.linalg.norm(s) > self.eps_dual:
+                    self.stop = False
+                if xp.linalg.norm(r) > rMax:
+                    rMax = xp.linalg.norm(r)
+                if xp.linalg.norm(s) > sMax:
+                    sMax = xp.linalg.norm(s)
+            if self.c_norm is not None:
+                r = self.x - self.zNorm
+                s = 1 / self.rho_norm * (self.zNorm - zNorm_old)
+                if xp.linalg.norm(r) > self.eps_pri or\
+                        xp.linalg.norm(s) > self.eps_dual:
+                    self.stop = False
+                if xp.linalg.norm(r) > rMax:
+                    rMax = xp.linalg.norm(r)
+                if xp.linalg.norm(s) > sMax:
+                    sMax = xp.linalg.norm(s)
+            if self.c_max is not None:
+                r = self.x - self.zMax
+                s = 1 / self.rho_max * (self.zMax - zMax_old)
+                if xp.linalg.norm(r) > self.eps_pri or\
+                        xp.linalg.norm(s) > self.eps_dual:
+                    self.stop = False
+                if xp.linalg.norm(r) > rMax:
+                    rMax = xp.linalg.norm(r)
+                if xp.linalg.norm(s) > sMax:
+                    sMax = xp.linalg.norm(s)
+
+    def _done(self):
+        return self.iter >= self.max_iter or self.stop
+
+
 class NewtonsMethod(Alg):
     """Newton's Method.
 
@@ -574,3 +776,55 @@ class NewtonsMethod(Alg):
 
     def _done(self):
         return self.iter >= self.max_iter or self.residual <= self.tol
+
+
+class GerchbergSaxton(Alg):
+    """Gerchberg-Saxton method, also called the variable exchange method.
+    Iterative method for recovery of a signal from the amplitude of linear
+    measurements |Ax|.
+
+    Args:
+        A (Linop): system matrix Linop.
+        y (array): observations.
+        max_iter (int): maximum number of iterations.
+        tol (float): optimization stopping tolerance.
+        lamb (float): Tikhonov regularization value.
+
+    """
+    def __init__(self, A, y, x0, max_iter=500, tol=0, max_tol=0, lamb=0):
+
+        self.A = A
+        self.Aholder = A
+        self.y = y
+        self.x = x0
+        self.max_iter = max_iter
+        self.iter = 0
+        self.tol = tol
+        self.max_tol = max_tol
+        self.lamb = lamb
+        self.residual = np.infty
+
+    def _update(self):
+        device = backend.get_device(self.y)
+        xp = device.xp
+        with device:
+
+            y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
+            I = sp.linop.Identity(self.A.ishape)
+            system = self.A.H * self.A + self.lamb * I
+            b = self.A.H * y_hat
+
+            alg_internal = ConjugateGradient(system, b, self.x, max_iter=5)
+
+            while not alg_internal.done():
+                alg_internal.update()
+                self.x = alg_internal.x
+
+        self.residual = xp.sum(xp.absolute(xp.absolute(self.A * self.x)
+                                           - self.y))
+        self.iter += 1
+
+    def _done(self):
+        over_iter = self.iter >= self.max_iter
+        under_tol = self.residual <= self.tol
+        return over_iter or under_tol

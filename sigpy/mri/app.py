@@ -36,6 +36,10 @@ class SenseRecon(sp.app.LinearLeastSquares):
         mps (array): sensitivity maps.
         lamda (float): regularization parameter.
         weights (float or array): weights for data consistency.
+        tseg (None or Dictionary): parameters for time-segmented off-resonance
+            correction. Parameters are 'b0' (array), 'dt' (float),
+            'lseg' (int), and 'n_bins' (int). Lseg is the number of
+            time segments used, and n_bins is the number of histogram bins.
         coord (None or array): coordinates.
         device (Device): device to perform reconstruction.
         coil_batch_size (int): batch size to process coils.
@@ -55,17 +59,18 @@ class SenseRecon(sp.app.LinearLeastSquares):
 
     """
 
-    def __init__(self, y, mps, lamda=0, weights=None,
+    def __init__(self, y, mps, lamda=0, weights=None, tseg=None,
                  coord=None, device=sp.cpu_device, coil_batch_size=None,
-                 comm=None, show_pbar=True, **kwargs):
+                 comm=None, show_pbar=True, transp_nufft=False, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights,
-                        coil_batch_size=coil_batch_size, comm=comm)
+        A = linop.Sense(mps, coord=coord, weights=weights, tseg=tseg,
+                        coil_batch_size=coil_batch_size, comm=comm,
+                        transp_nufft=transp_nufft)
 
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
@@ -108,7 +113,8 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None,
                  wave_name='db4', device=sp.cpu_device,
-                 coil_batch_size=None, comm=None, show_pbar=True, **kwargs):
+                 coil_batch_size=None, comm=None, show_pbar=True,
+                 transp_nufft=False, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
@@ -116,7 +122,8 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             y = sp.to_device(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights,
-                        comm=comm, coil_batch_size=coil_batch_size)
+                        comm=comm, coil_batch_size=coil_batch_size,
+                        transp_nufft=transp_nufft)
         img_shape = mps.shape[1:]
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
@@ -166,7 +173,8 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
 
     def __init__(self, y, mps, lamda,
                  weights=None, coord=None, device=sp.cpu_device,
-                 coil_batch_size=None, comm=None, show_pbar=True, **kwargs):
+                 coil_batch_size=None, comm=None, show_pbar=True,
+                 transp_nufft=False, **kwargs):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
@@ -174,7 +182,8 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
             y = sp.to_device(y, device=device)
 
         A = linop.Sense(mps, coord=coord, weights=weights,
-                        comm=comm, coil_batch_size=coil_batch_size)
+                        comm=comm, coil_batch_size=coil_batch_size,
+                        transp_nufft=transp_nufft)
 
         G = sp.linop.FiniteDifference(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, lamda)

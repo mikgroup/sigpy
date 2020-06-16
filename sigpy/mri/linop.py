@@ -9,15 +9,19 @@ discrete Fourier transform.
 import sigpy as sp
 
 
-def Sense(mps, coord=None, weights=None, ishape=None,
-          coil_batch_size=None, comm=None):
+def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
+          coil_batch_size=None, comm=None, transp_nufft=False):
     """Sense linear operator.
 
     Args:
         mps (array): sensitivity maps of length = number of channels.
         coord (None or array): coordinates.
         weights (None or array): k-space weights.
-        Useful for soft-gating or density compensation.
+            Useful for soft-gating or density compensation.
+        tseg (None or Dictionary): parameters for time-segmented off-resonance
+            correction. Parameters are 'b0' (array), 'dt' (float),
+            'lseg' (int), and 'n_bins' (int). Lseg is the number of
+            time segments used, and n_bins is the number of histogram bins.
         ishape (None or tuple): image shape.
         coil_batch_size (None or int): batch size for processing multi-channel.
             When None, process all coils at the same time.
@@ -53,12 +57,35 @@ def Sense(mps, coord=None, weights=None, ishape=None,
 
     # Create Sense linear operator
     S = sp.linop.Multiply(ishape, mps)
-    if coord is None:
-        F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
-    else:
-        F = sp.linop.NUFFT(S.oshape, coord)
+    if tseg is None:
+        if coord is None:
+            F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
+        else:
+            if transp_nufft is False:
+                F = sp.linop.NUFFT(S.oshape, coord)
+            else:
+                F = sp.linop.NUFFT(S.oshape, -coord).H
 
-    A = F * S
+        A = F * S
+
+    # If B0 provided, perform time-segmented off-resonance compensation
+    else:
+        if transp_nufft is False:
+            F = sp.linop.NUFFT(S.oshape, coord)
+        else:
+            F = sp.linop.NUFFT(S.oshape, -coord).H
+        time = len(coord) * tseg['dt']
+        b, ct = sp.mri.util.tseg_off_res_b_ct(tseg['b0'], tseg['n_bins'],
+                                              tseg['lseg'], tseg['dt'], time)
+        for ii in range(tseg['lseg']):
+            Bi = sp.linop.Multiply(F.oshape, b[:, ii])
+            Cti = sp.linop.Multiply(S.ishape, ct[:, ii].reshape(S.ishape))
+
+            # operation below is effectively A = A + Bi * F(Cti * S)
+            if ii == 0:
+                A = Bi * F * S * Cti
+            else:
+                A = A + Bi * F * S * Cti
 
     if weights is not None:
         with sp.get_device(weights):
