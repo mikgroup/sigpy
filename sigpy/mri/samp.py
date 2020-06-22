@@ -137,7 +137,7 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
 
 
 @nb.jit(nopython=True, cache=True)  # pragma: no cover
-def _poisson(nx, ny, K, R, calib, seed):
+def _poisson(nx, ny, K, R, calib, seed=None):
 
     mask = np.zeros((ny, nx))
     f = ny / nx
