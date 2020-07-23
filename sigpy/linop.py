@@ -1658,3 +1658,50 @@ class ConvolveFilterAdjoint(Linop):
         return ConvolveFilter(self.oshape, self.data,
                               mode=self.mode, strides=self.strides,
                               multi_channel=self.multi_channel)
+
+
+class Slice(Linop):
+    """Slice input with given index.
+
+    Given input `input` and index `idx`, returns `input[idx]`.
+
+    Args:
+        ishape (tuple of ints): Input shape.
+        idx (slice or tuple of slices): Index.
+
+    """
+    def __init__(self, ishape, idx):
+        self.idx = idx
+        oshape = np.empty(ishape)[idx].shape
+        super().__init__(oshape, ishape)
+
+    def _apply(self, input):
+        return input[self.idx]
+
+    def _adjoint_linop(self):
+        return Embed(self.ishape, self.idx)
+
+
+class Embed(Linop):
+    """Embed input into a zero array with the given shape and index.
+
+    Given input `input` and index `idx`,
+    returns output with `output[idx] = input`.
+
+    Args:
+        oshape (tuple of ints): output shape.
+        idx (slice or tuple of slices): Index.
+
+    """
+    def __init__(self, oshape, idx):
+        self.idx = idx
+        ishape = np.empty(oshape)[idx].shape
+        super().__init__(oshape, ishape)
+
+    def _apply(self, input):
+        output = np.zeros(self.oshape, dtype=input.dtype)
+        output[self.idx] = input
+        return output
+
+    def _adjoint_linop(self):
+        return Slice(self.oshape, self.idx)

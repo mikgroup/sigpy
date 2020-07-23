@@ -34,8 +34,10 @@ Basic Linops
    :toctree: generated
    :nosignatures:
 
+   sigpy.linop.Embed
    sigpy.linop.Identity
    sigpy.linop.Reshape
+   sigpy.linop.Slice
    sigpy.linop.Transpose
 
 Computing Related Linops

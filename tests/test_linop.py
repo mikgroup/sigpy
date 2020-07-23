@@ -507,3 +507,20 @@ class TestLinop(unittest.TestCase):
                         self.check_linop_linear(A, dtype=dtype, device=device)
                         self.check_linop_adjoint(A, dtype=dtype, device=device)
                         self.check_linop_pickleable(A)
+
+    def test_Slice(self):
+        ishape = (5, )
+        idx = slice(1, 3)
+        A = linop.Slice(ishape, idx)
+        x = np.arange(5)
+        npt.assert_allclose(A(x), [1, 2])
+
+        ishape = (5, 5)
+        idx = (slice(1, 3), slice(1, 3))
+        A = linop.Slice(ishape, idx)
+        x = np.outer(np.arange(5), np.arange(5))
+        npt.assert_allclose(A(x), [[1, 2], [2, 4]])
+
+        self.check_linop_linear(A)
+        self.check_linop_adjoint(A)
+        self.check_linop_pickleable(A)
