@@ -1,5 +1,6 @@
 import sys
 from setuptools import setup, find_packages
+from sigpy.version import __version__  # noqa
 
 if sys.version_info < (3, 5):
     sys.exit('Sorry, Python < 3.5 is not supported')
@@ -10,7 +11,7 @@ with open("README.rst", "r") as f:
     long_description = f.read()
 
 setup(name='sigpy',
-      version='0.1.18',
+      version=__version__,
       description='Python package for signal reconstruction.',
       long_description=long_description,
       long_description_content_type="text/x-rst",

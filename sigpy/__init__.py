@@ -8,10 +8,12 @@ These functions are wrapped into higher level classes (Linop and Prox)
 that can be used in conjuction with Alg to form an App.
 
 """
+from .version import __version__ # noqa
 from sigpy import alg, app, config, linop, prox
 
 from sigpy import (backend, block, conv, interp,
-                   fourier, pytorch, sim, thresh, util, wavelet)
+                   fourier, pytorch, sim, thresh,
+                   util, wavelet)
 from sigpy.backend import *  # noqa
 from sigpy.block import *  # noqa
 from sigpy.conv import *  # noqa
