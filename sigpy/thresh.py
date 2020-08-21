@@ -109,6 +109,28 @@ def l2_proj(eps, input, axes=None):
     return output
 
 
+def linf_proj(eps, input, bias=None):
+    """Projection onto L-infinity ball.
+
+    Args:
+        eps (float, or array): l-infinity ball scaling.
+        input (array)
+
+    Returns:
+        array: Result.
+
+    """
+    if bias is not None:
+        input = input - bias
+
+    output = input - soft_thresh(eps, input)
+
+    if bias is not None:
+        output += bias
+
+    return output
+
+
 @nb.vectorize  # pragma: no cover
 def _soft_thresh(lamda, input):
     abs_input = abs(input)
