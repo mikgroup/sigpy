@@ -421,7 +421,7 @@ if config.cupy_enabled:  # pragma: no cover
         S t = x / 3.75;
         S t2 = t * t;
         S t4 = t2 * t2;
-        S t6 = t4 * t4;
+        S t6 = t4 * t2;
         S t8 = t6 * t2;
         if (x < 3.75) {
             S t10 = t8 * t2;
@@ -467,11 +467,11 @@ if config.cupy_enabled:  # pragma: no cover
             const int coord_idx[] = {i, 0};
             const S kx = coord[coord_idx];
             const int x0 = ceil(kx - width[ndim - 1] / 2.0);
-            const int x1 = floor(kx + width[0] / 2.0);
+            const int x1 = floor(kx + width[ndim - 1] / 2.0);
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[0]);
+                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[ndim - 1]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, mod(x, nx)};
                     const T v = (T) w * input[input_idx];
@@ -506,10 +506,12 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width[ndim - 2] / 2.0), param[0]);
+                    ((S) y - ky) / (width[ndim - 2] / 2.0),
+                    param[ndim - 2]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width[ndim - 1] / 2.0), param[1]);
+                        ((S) x - kx) / (width[ndim - 1] / 2.0),
+                        param[ndim - 1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, mod(y, ny), mod(x, nx)};
                         const T v = (T) w * input[input_idx];
@@ -548,13 +550,16 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width[ndim - 3] / 2.0), param[0]);
+                    ((S) z - kz) / (width[ndim - 3] / 2.0),
+                    param[ndim - 3]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                        ((S) y - ky) / (width[ndim - 2] / 2.0), param[1]);
+                        ((S) y - ky) / (width[ndim - 2] / 2.0),
+                        param[ndim - 2]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width[ndim - 1] / 2.0), param[2]);
+                            ((S) x - kx) / (width[ndim - 1] / 2.0),
+                            param[ndim - 1]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, mod(z, nz), mod(y, ny),
                                 mod(x, nx)};
@@ -591,7 +596,7 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[0]);
+                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[ndim - 1]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
@@ -624,10 +629,12 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width[ndim - 2] / 2.0), param[0]);
+                    ((S) y - ky) / (width[ndim - 2] / 2.0),
+                    param[ndim - 2]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width[ndim - 1] / 2.0), param[1]);
+                        ((S) x - kx) / (width[ndim - 1] / 2.0),
+                        param[ndim - 1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
@@ -664,13 +671,16 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width[ndim - 3] / 2.0), param[0]);
+                    ((S) z - kz) / (width[ndim - 3] / 2.0),
+                    param[ndim - 3]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                        ((S) y - ky) / (width[ndim - 2] / 2.0), param[1]);
+                        ((S) y - ky) / (width[ndim - 2] / 2.0),
+                        param[ndim - 2]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width[ndim - 1] / 2.0), param[2]);
+                            ((S) x - kx) / (width[ndim - 1] / 2.0),
+                            param[ndim - 1]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, i};
                             const T v = (T) w * input[input_idx];
@@ -707,7 +717,7 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int x = x0; x < x1 + 1; x++) {
                 const S w = kernel(
-                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[0]);
+                    ((S) x - kx) / (width[ndim - 1] / 2.0), param[ndim - 1]);
                 for (int b = 0; b < batch_size; b++) {
                     const int input_idx[] = {b, i};
                     const T v = (T) w * input[input_idx];
@@ -746,10 +756,12 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int y = y0; y < y1 + 1; y++) {
                 const S wy = kernel(
-                    ((S) y - ky) / (width[ndim - 2] / 2.0), param[0]);
+                    ((S) y - ky) / (width[ndim - 2] / 2.0),
+                    param[ndim - 2]);
                 for (int x = x0; x < x1 + 1; x++) {
                     const S w = wy * kernel(
-                        ((S) x - kx) / (width[ndim - 1] / 2.0), param[1]);
+                        ((S) x - kx) / (width[ndim - 1] / 2.0),
+                        param[ndim - 1]);
                     for (int b = 0; b < batch_size; b++) {
                         const int input_idx[] = {b, i};
                         const T v = (T) w * input[input_idx];
@@ -793,13 +805,16 @@ if config.cupy_enabled:  # pragma: no cover
 
             for (int z = z0; z < z1 + 1; z++) {
                 const S wz = kernel(
-                    ((S) z - kz) / (width[ndim - 3] / 2.0), param[0]);
+                    ((S) z - kz) / (width[ndim - 3] / 2.0),
+                    param[ndim - 3]);
                 for (int y = y0; y < y1 + 1; y++) {
                     const S wy = wz * kernel(
-                         ((S) y - ky) / (width[ndim - 2] / 2.0), param[1]);
+                         ((S) y - ky) / (width[ndim - 2] / 2.0),
+                         param[ndim - 2]);
                     for (int x = x0; x < x1 + 1; x++) {
                         const S w = wy * kernel(
-                            ((S) x - kx) / (width[ndim - 1] / 2.0), param[2]);
+                            ((S) x - kx) / (width[ndim - 1] / 2.0),
+                            param[ndim - 1]);
                         for (int b = 0; b < batch_size; b++) {
                             const int input_idx[] = {b, i};
                             const T v = (T) w * input[input_idx];
