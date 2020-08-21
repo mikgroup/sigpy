@@ -239,6 +239,21 @@ class LInfProj(Prox):
             return thresh.linf_proj(self.epsilon, input, bias=self.bias)
 
 
+class PsdProj(Prox):
+    r"""Proximal operator for positive semi-definite matrices.
+
+    .. math::
+        \min_x \frac{1}{2} \| X - Y \|_2^2 + 1\{\| X \succeq 0\}
+
+    Args:
+        shape (tuple of ints): Input shape.
+
+    """
+    def _prox(self, alpha, input):
+        with backend.get_device(input):
+            return thresh.psd_proj(input)
+
+
 class L1Reg(Prox):
     r"""Proximal operator for l1 regularization.
 
