@@ -1424,8 +1424,9 @@ class NUFFT(Linop):
     def _apply(self, input):
         device = backend.get_device(input)
         with device:
+            coord = backend.to_device(self.coord, device)
             return fourier.nufft(
-                input, self.coord,
+                input, coord,
                 oversamp=self.oversamp, width=self.width)
 
     def _adjoint_linop(self):
@@ -1457,8 +1458,9 @@ class NUFFTAdjoint(Linop):
     def _apply(self, input):
         device = backend.get_device(input)
         with device:
+            coord = backend.to_device(self.coord, device)
             return fourier.nufft_adjoint(
-                input, self.coord, self.oshape,
+                input, coord, self.oshape,
                 oversamp=self.oversamp, width=self.width)
 
     def _adjoint_linop(self):
