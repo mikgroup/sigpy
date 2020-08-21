@@ -7,7 +7,8 @@ import numba as nb
 from sigpy import backend, config, util
 
 
-__all__ = ['soft_thresh', 'hard_thresh', 'l1_proj', 'l2_proj']
+__all__ = ['soft_thresh', 'hard_thresh', 'l1_proj',
+           'l2_proj', 'linf_proj', 'psd_proj']
 
 
 def soft_thresh(lamda, input):
