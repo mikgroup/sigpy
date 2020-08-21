@@ -109,6 +109,8 @@ Thresholding Functions
    sigpy.hard_thresh
    sigpy.l1_proj
    sigpy.l2_proj
+   sigpy.linf_proj
+   sigpy.psd_proj
 
 Utility Functions
 -----------------
@@ -143,4 +145,3 @@ Wavelet Functions
 
    sigpy.fwt
    sigpy.iwt
-

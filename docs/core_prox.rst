@@ -34,3 +34,5 @@ Basic Proxs
    sigpy.prox.L1Reg
    sigpy.prox.L2Proj
    sigpy.prox.L2Reg
+   sigpy.prox.LInfProj
+   sigpy.prox.PsdProj
