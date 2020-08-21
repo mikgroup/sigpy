@@ -38,6 +38,15 @@ class TestThresh(unittest.TestCase):
         y = [-1, -1, 0, 1, 1]
         npt.assert_allclose(thresh.linf_proj(1, x), y)
 
+    def test_psd_proj(self):
+        x = np.array([[1, 0, 0],
+                      [0, -1, 0],
+                      [0, 0, -2]])
+        y = np.array([[1, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 0]])
+        npt.assert_allclose(thresh.psd_proj(x), y)
+
     def test_soft_thresh(self):
         x = np.array([-2, -1.5, -1, 0.5, 0, 0.5, 1, 1.5, 2])
         y = np.array([-1, -0.5, 0, 0, 0, 0, 0, 0.5, 1])

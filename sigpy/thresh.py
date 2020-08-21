@@ -131,6 +131,22 @@ def linf_proj(eps, input, bias=None):
     return output
 
 
+def psd_proj(input):
+    """Projection onto postiive semi-definite matrices.
+
+    Args:
+        input (array): a two-dimensional matrix.
+
+    Returns:
+        array: Result.
+
+    """
+    xp = backend.get_array_module(input)
+    w, v = xp.linalg.eig((input + xp.conj(input).T) / 2)
+    w[w < 0] = 0
+    return (v * w) @ v.conjugate().T
+
+
 @nb.vectorize  # pragma: no cover
 def _soft_thresh(lamda, input):
     abs_input = abs(input)
