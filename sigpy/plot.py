@@ -74,8 +74,8 @@ class ImagePlot(object):
             hide_axes=False,
             mode=None,
             colormap=None,
-            vmin_mag=None,
-            vmax_mag=None,
+            vmin=None,
+            vmax=None,
             title='',
             interpolation='nearest',
             save_basename='Figure',
@@ -105,10 +105,8 @@ class ImagePlot(object):
         self.mode = mode
         self.colormap = colormap
         self.entering_slice = False
-        self.vmin = vmin_mag
-        self.vmax = vmax_mag
-        self.vmin_mag = vmin_mag
-        self.vmax_mag = vmax_mag
+        self.vmin = vmin
+        self.vmax = vmax
         self.save_basename = save_basename
         self.fps = fps
         self.help_text = None
@@ -257,12 +255,8 @@ class ImagePlot(object):
             self.fig.canvas.draw()
 
         elif event.key in ['m', 'p', 'r', 'i', 'l']:
-            if event.key in ['m', 'r', 'i']:
-                self.vmin = self.vmin_mag
-                self.vmax = self.vmax_mag
-            else:
-                self.vmin = None
-                self.vmax = None
+            self.vmin = None
+            self.vmax = None
             self.mode = event.key
 
             self.update_axes()
