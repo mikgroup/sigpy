@@ -416,11 +416,13 @@ class EspiritCalib(sp.app.App):
 
         xp = self.device.xp
         with self.device:
-            # Get calibration matrix
-            kernel_shape = [num_coils] + [kernel_width] * img_ndim
-            kernel_strides = [1] * (img_ndim + 1)
-            mat = sp.array_to_blocks(calib, kernel_shape, kernel_strides)
-            mat = mat.reshape([-1, sp.prod(kernel_shape)])
+            # Get calibration matrix.
+            # Shape [num_coils] + num_blks + [kernel_width] * img_ndim
+            mat = sp.array_to_blocks(
+                calib, [kernel_width] * img_ndim, [1] * img_ndim)
+            mat = mat.reshape([num_coils, -1, kernel_width**img_ndim])
+            mat = mat.transpose([1, 0, 2])
+            mat = mat.reshape([-1, num_coils * kernel_width**img_ndim])
 
             # Perform SVD on calibration matrix
             _, S, VH = xp.linalg.svd(mat, full_matrices=False)
@@ -428,7 +430,8 @@ class EspiritCalib(sp.app.App):
 
             # Get kernels
             num_kernels = len(VH)
-            kernels = VH.reshape([num_kernels] + kernel_shape)
+            kernels = VH.reshape(
+                [num_kernels, num_coils] + [kernel_width] * img_ndim)
             img_shape = ksp.shape[1:]
 
             # Get covariance matrix in image domain

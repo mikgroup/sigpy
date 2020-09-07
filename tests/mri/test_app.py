@@ -96,19 +96,40 @@ class TestApp(unittest.TestCase):
         npt.assert_allclose(mps, mps_rec, atol=1e-2, rtol=1e-2)
 
     def test_espirit_maps(self):
-        mps_shape = [8, 32, 32]
+        # 2D
+        mps_shape = [8, 16, 16]
         mps = sim.birdcage_maps(mps_shape)
         ksp = sp.fft(mps, axes=[-1, -2])
         mps_rec = app.EspiritCalib(ksp, show_pbar=False).run()
 
-        np.testing.assert_allclose(np.abs(mps)[:, 8:24, 8:24],
-                                   np.abs(mps_rec[:, 8:24, 8:24]),
+        np.testing.assert_allclose(np.abs(mps)[:, 4:-4, 4:-4],
+                                   np.abs(mps_rec[:, 4:-4, 4:-4]),
+                                   rtol=1e-2, atol=1e-2)
+
+        # 3D
+        mps_shape = [8, 16, 16, 16]
+        mps = sim.birdcage_maps(mps_shape)
+        ksp = sp.fft(mps, axes=[-1, -2, -3])
+        mps_rec = app.EspiritCalib(ksp, show_pbar=False).run()
+
+        np.testing.assert_allclose(np.abs(mps)[:, 4:-4, 4:-4, 4:-4],
+                                   np.abs(mps_rec[:, 4:-4, 4:-4, 4:-4]),
                                    rtol=1e-2, atol=1e-2)
 
     def test_espirit_maps_eig(self):
-        mps_shape = [8, 32, 32]
+        # 2D
+        mps_shape = [8, 16, 16]
         mps = sim.birdcage_maps(mps_shape)
         ksp = sp.fft(mps, axes=[-1, -2])
+        mps_rec, eig_val = app.EspiritCalib(
+            ksp, output_eigenvalue=True, show_pbar=False).run()
+
+        np.testing.assert_allclose(eig_val, 1, rtol=0.01, atol=0.01)
+
+        # 3D
+        mps_shape = [8, 16, 16, 16]
+        mps = sim.birdcage_maps(mps_shape)
+        ksp = sp.fft(mps, axes=[-1, -2, -3])
         mps_rec, eig_val = app.EspiritCalib(
             ksp, output_eigenvalue=True, show_pbar=False).run()
 
