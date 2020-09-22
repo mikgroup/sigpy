@@ -41,6 +41,9 @@ def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
         SIGGRAPH sketches. 2007.
 
     """
+    if accel <= 1:
+        raise ValueError(f'accel must be greater than 1, got {accel}')
+
     if seed is not None:
         rand_state = np.random.get_state()
 
