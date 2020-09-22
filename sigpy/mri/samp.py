@@ -14,7 +14,7 @@ def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
     """Generate variable-density Poisson-disc sampling pattern.
 
     The function generates a variable density Poisson-disc sampling
-    mask with density proportional to :math:`1 / (1 + s * |r|)`,
+    mask with density proportional to :math:`1 / (1 + s |r|)`,
     where :math:`r` represents the k-space radius, and :math:`s`
     represents the slope. A binary search is performed on the slope :math:`s`
     such that the resulting acceleration factor is close to the
