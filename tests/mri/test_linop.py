@@ -32,9 +32,6 @@ class TestLinop(unittest.TestCase):
         img = sp.randn(img_shape, dtype=np.complex)
         mps = sp.randn(mps_shape, dtype=np.complex)
 
-        mask = np.zeros(img_shape)
-        mask[::2, ::2] = 1.0
-
         A = linop.Sense(mps)
 
         check_linop_adjoint(A, dtype=np.complex)
@@ -48,9 +45,6 @@ class TestLinop(unittest.TestCase):
 
         img = sp.randn(img_shape, dtype=np.complex)
         mps = sp.randn(mps_shape, dtype=np.complex)
-
-        mask = np.zeros(img_shape, dtype=np.complex)
-        mask[::2, ::2] = 1.0
 
         A = linop.Sense(mps, coil_batch_size=1)
         check_linop_adjoint(A, dtype=np.complex)
@@ -79,9 +73,6 @@ class TestLinop(unittest.TestCase):
 
         img = sp.randn(img_shape, dtype=np.complex)
         mps = sp.randn(mps_shape, dtype=np.complex)
-
-        mask = np.zeros(img_shape)
-        mask[::2, ::2] = 1.0
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
