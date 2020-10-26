@@ -2,8 +2,9 @@
 """Utility functions.
 """
 import numpy as np
+import numba as nb
 
-from sigpy import backend
+from sigpy import backend, config
 
 
 __all__ = ['prod', 'vec', 'split', 'rss', 'resize',
@@ -432,7 +433,15 @@ def axpy(y, a, x):
         x (array): Input array.
 
     """
-    y += a * x
+    device = backend.get_device(x)
+    x = backend.to_device(x, device)
+    a = backend.to_device(a, device)
+
+    with device:
+        if device == backend.cpu_device:
+            _axpy(y, a, x, out=y)
+        else:
+            _axpy_cuda(a, x, y)
 
 
 def xpay(y, a, x):
@@ -443,5 +452,42 @@ def xpay(y, a, x):
         a (scalar or array): Input scalar.
         x (array): Input array.
     """
-    y *= a
-    y += x
+    device = backend.get_device(y)
+    x = backend.to_device(x, device)
+    a = backend.to_device(a, device)
+
+    with device:
+        if device == backend.cpu_device:
+            _xpay(y, a, x, out=y)
+        else:
+            _xpay_cuda(a, x, y)
+
+
+@nb.vectorize(nopython=True, cache=True)  # pragma: no cover
+def _axpy(y, a, x):
+    return a * x + y
+
+
+@nb.vectorize(nopython=True, cache=True)  # pragma: no cover
+def _xpay(y, a, x):
+    return x + a * y
+
+
+if config.cupy_enabled:  # pragma: no cover
+    import cupy as cp
+
+    _axpy_cuda = cp.ElementwiseKernel(
+        'S a, T x',
+        'T y',
+        """
+        y += (T) a * x;
+        """,
+        name='axpy')
+
+    _xpay_cuda = cp.ElementwiseKernel(
+        'S a, T x',
+        'T y',
+        """
+        y = x + (T) a * y;
+        """,
+        name='xpay')
