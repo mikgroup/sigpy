@@ -448,11 +448,11 @@ class EspiritCalib(sp.app.App):
             self.mps = xp.ones(ksp.shape[::-1] + (1, ), dtype=ksp.dtype)
 
             def forward(x):
-                with self.device:
+                with sp.get_device(x):
                     return AHA @ x
 
             def normalize(x):
-                with self.device:
+                with sp.get_device(x):
                     return xp.sum(xp.abs(x)**2,
                                   axis=-2, keepdims=True)**0.5
 
