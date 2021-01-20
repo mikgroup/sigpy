@@ -220,6 +220,7 @@ class JsenseRecon(sp.app.App):
         device (Device): device to perform reconstruction.
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
+        img_shape (None or list): Image shape.
         max_iter (int): Maximum number of iterations.
         max_inner_iter (int): Maximum number of inner iterations.
 
@@ -239,7 +240,7 @@ class JsenseRecon(sp.app.App):
     def __init__(self, y,
                  mps_ker_width=16, ksp_calib_width=24,
                  lamda=0, device=sp.cpu_device, comm=None,
-                 weights=None, coord=None, max_iter=10,
+                 weights=None, coord=None, img_shape=None, max_iter=10,
                  max_inner_iter=10, normalize=True, show_pbar=True):
         self.y = y
         self.mps_ker_width = mps_ker_width
@@ -247,6 +248,7 @@ class JsenseRecon(sp.app.App):
         self.lamda = lamda
         self.weights = weights
         self.coord = coord
+        self.img_shape = img_shape
         self.max_iter = max_iter
         self.max_inner_iter = max_inner_iter
         self.normalize = normalize
@@ -276,7 +278,11 @@ class JsenseRecon(sp.app.App):
                     self.weights, ndim * [self.ksp_calib_width])
 
         else:
-            self.img_shape = sp.estimate_shape(self.coord)
+            if self.img_shape is None:
+                self.img_shape = sp.estimate_shape(self.coord)
+            else:
+                self.img_shape = list(self.img_shape)
+
             calib_idx = np.amax(np.abs(self.coord), axis=-
                                 1) < self.ksp_calib_width / 2
 
