@@ -101,13 +101,15 @@ def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
     return A
 
 
-def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
+def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, grd_shape=None,
+              comm=None):
     """Convolution linear operator with sensitivity maps kernel in k-space.
 
     Args:
         img_ker_shape (tuple of ints): image kernel shape.
         mps_ker (array): sensitivity maps kernel.
         coord (array): coordinates.
+        grd_shape (None or list): Shape of grid.
 
     """
     ndim = len(img_ker_shape)
@@ -119,7 +121,12 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
     A = C * R
 
     if coord is not None:
-        grd_shape = [num_coils] + sp.estimate_shape(coord)
+        if grd_shape is None:
+            grd_shape = sp.estimate_shape(coord)
+        else:
+            grd_shape = list(grd_shape)
+
+        grd_shape = [num_coils] + grd_shape
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
         A = N * iF * A
@@ -137,13 +144,15 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, comm=None):
     return A
 
 
-def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None):
+def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None,
+              grd_shape=None):
     """Convolution linear operator with image kernel in k-space.
 
     Args:
         mps_ker_shape (tuple of ints): sensitivity maps kernel shape.
         img_ker (array): image kernel.
         coord (array): coordinates.
+        grd_shape (None or list): Shape of grid.
 
     """
     ndim = img_ker.ndim
@@ -157,7 +166,12 @@ def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None):
 
     if coord is not None:
         num_coils = mps_ker_shape[0]
-        grd_shape = [num_coils] + sp.estimate_shape(coord)
+        if grd_shape is None:
+            grd_shape = sp.estimate_shape(coord)
+        else:
+            grd_shape = list(grd_shape)
+
+        grd_shape = [num_coils] + grd_shape
         iF = sp.linop.IFFT(grd_shape, axes=range(-ndim, 0))
         N = sp.linop.NUFFT(grd_shape, coord)
         A = N * iF * A
