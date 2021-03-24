@@ -71,21 +71,21 @@ def trap_grad(area, gmax, dgdt, dt, *args):
     if np.abs(area) > 0:
         if rampsamp:
 
-            ramppts = np.ceil(gmax/dgdt/dt)
+            ramppts = int(np.ceil(gmax/dgdt/dt))
             triareamax = ramppts * dt * gmax
 
             if triareamax > np.abs(area):
                 # triangle pulse
                 newgmax = np.sqrt(np.abs(area) * dgdt)
                 ramppts = int(np.ceil(newgmax/dgdt/dt))
-                ramp_up = np.linspace(0, ramppts, num=ramppts)/ramppts
-                ramp_dn = np.linspace(ramppts, 0, num=ramppts)/ramppts
+                ramp_up = np.linspace(0, ramppts, num=ramppts+1)/ramppts
+                ramp_dn = np.linspace(ramppts, 0, num=ramppts+1)/ramppts
                 pulse = np.concatenate((ramp_up, ramp_dn))
             else:
                 # trapezoid pulse
                 nflat = int(np.ceil((area - triareamax)/gmax / dt / 2) * 2)
-                ramp_up = np.linspace(0, ramppts, num=ramppts) / ramppts
-                ramp_dn = np.linspace(ramppts, 0, num=ramppts) / ramppts
+                ramp_up = np.linspace(0, ramppts, num=ramppts+1) / ramppts
+                ramp_dn = np.linspace(ramppts, 0, num=ramppts+1) / ramppts
                 pulse = np.concatenate((ramp_up, np.ones(nflat), ramp_dn))
 
             trap = pulse * (area / (sum(pulse) * dt))
@@ -99,8 +99,8 @@ def trap_grad(area, gmax, dgdt, dt, *args):
 
             # make attack and decay ramps
             ramppts = int(np.ceil(np.max(flat) / dgdt / dt))
-            ramp_up = np.linspace(0, ramppts, num=ramppts) / ramppts * flat_top
-            ramp_dn = np.linspace(ramppts, 0, num=ramppts) / ramppts * flat_top
+            ramp_up = np.linspace(0, ramppts, num=ramppts+1) / ramppts * flat_top
+            ramp_dn = np.linspace(ramppts, 0, num=ramppts+1) / ramppts * flat_top
             trap = np.concatenate((ramp_up, flat, ramp_dn))
 
     else:
