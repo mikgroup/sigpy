@@ -271,7 +271,8 @@ class LinearLeastSquares(App):
                 util.axpy(AHy, self.lamda, self.z)
 
         self.alg = ConjugateGradient(
-            AHA, AHy, self.x, P=self.P, max_iter=self.max_iter)
+            AHA, AHy, self.x, P=self.P, max_iter=self.max_iter,
+            tol=self.tol)
 
     def _get_GradientMethod(self):
         def gradf(x):
@@ -379,7 +380,8 @@ class LinearLeastSquares(App):
             self.sigma,
             gamma_primal=gamma_primal,
             gamma_dual=gamma_dual,
-            max_iter=self.max_iter)
+            max_iter=self.max_iter,
+            tol=self.tol)
 
     def _get_ADMM(self):
         r"""Considers the formulation:
