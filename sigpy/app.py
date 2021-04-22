@@ -179,7 +179,7 @@ class LinearLeastSquares(App):
                  solver=None, max_iter=100,
                  P=None, alpha=None, max_power_iter=30, accelerate=True,
                  tau=None, sigma=None,
-                 rho=1, max_cg_iter=10,
+                 rho=1, max_cg_iter=10, tol=0,
                  save_objective_values=False,
                  show_pbar=True, leave_pbar=True):
         self.A = A
@@ -200,6 +200,7 @@ class LinearLeastSquares(App):
         self.sigma = sigma
         self.rho = rho
         self.max_cg_iter = max_cg_iter
+        self.tol = tol
         self.save_objective_values = save_objective_values
         self.show_pbar = show_pbar
         self.leave_pbar = leave_pbar
@@ -225,7 +226,8 @@ class LinearLeastSquares(App):
                 self.pbar.set_postfix(
                     obj='{0:.2E}'.format(self.objective_values[-1]))
             else:
-                self.pbar.set_postfix(resid='{0:.2E}'.format(self.alg.resid))
+                self.pbar.set_postfix(resid='{0:.2E}'.format(
+                    backend.to_device(self.alg.resid, backend.cpu_device)))
 
     def _output(self):
         return self.x
@@ -269,7 +271,8 @@ class LinearLeastSquares(App):
                 util.axpy(AHy, self.lamda, self.z)
 
         self.alg = ConjugateGradient(
-            AHA, AHy, self.x, P=self.P, max_iter=self.max_iter)
+            AHA, AHy, self.x, P=self.P, max_iter=self.max_iter,
+            tol=self.tol)
 
     def _get_GradientMethod(self):
         def gradf(x):
@@ -307,7 +310,7 @@ class LinearLeastSquares(App):
             self.alpha,
             proxg=self.proxg,
             max_iter=self.max_iter,
-            accelerate=self.accelerate)
+            accelerate=self.accelerate, tol=self.tol)
 
     def _get_PrimalDualHybridGradient(self):
         with self.y_device:
@@ -377,7 +380,8 @@ class LinearLeastSquares(App):
             self.sigma,
             gamma_primal=gamma_primal,
             gamma_dual=gamma_dual,
-            max_iter=self.max_iter)
+            max_iter=self.max_iter,
+            tol=self.tol)
 
     def _get_ADMM(self):
         r"""Considers the formulation:

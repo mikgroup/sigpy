@@ -220,6 +220,8 @@ class JsenseRecon(sp.app.App):
         device (Device): device to perform reconstruction.
         weights (float or array): weights for data consistency.
         coord (None or array): coordinates.
+        img_shape (None or list): Image shape.
+        grd_shape (None or list): Shape of grid.
         max_iter (int): Maximum number of iterations.
         max_inner_iter (int): Maximum number of inner iterations.
 
@@ -239,14 +241,17 @@ class JsenseRecon(sp.app.App):
     def __init__(self, y,
                  mps_ker_width=16, ksp_calib_width=24,
                  lamda=0, device=sp.cpu_device, comm=None,
-                 weights=None, coord=None, max_iter=10,
-                 max_inner_iter=10, normalize=True, show_pbar=True):
+                 weights=None, coord=None, img_shape=None, grd_shape=None,
+                 max_iter=10, max_inner_iter=10, normalize=True,
+                 show_pbar=True):
         self.y = y
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
         self.lamda = lamda
         self.weights = weights
         self.coord = coord
+        self.img_shape = img_shape
+        self.grd_shape = grd_shape
         self.max_iter = max_iter
         self.max_inner_iter = max_inner_iter
         self.normalize = normalize
@@ -276,7 +281,11 @@ class JsenseRecon(sp.app.App):
                     self.weights, ndim * [self.ksp_calib_width])
 
         else:
-            self.img_shape = sp.estimate_shape(self.coord)
+            if self.img_shape is None:
+                self.img_shape = sp.estimate_shape(self.coord)
+            else:
+                self.img_shape = list(self.img_shape)
+
             calib_idx = np.amax(np.abs(self.coord), axis=-
                                 1) < self.ksp_calib_width / 2
 
@@ -311,8 +320,11 @@ class JsenseRecon(sp.app.App):
             img_ker_shape = [i + self.mps_ker_width -
                              1 for i in self.y.shape[1:]]
         else:
-            grd_shape = sp.estimate_shape(self.coord)
-            img_ker_shape = [i + self.mps_ker_width - 1 for i in grd_shape]
+            if self.grd_shape is None:
+                self.grd_shape = sp.estimate_shape(self.coord)
+
+            img_ker_shape = [i + self.mps_ker_width - 1
+                             for i in self.grd_shape]
 
         self.img_ker = sp.dirac(
             img_ker_shape, dtype=self.dtype, device=self.device)
@@ -448,11 +460,11 @@ class EspiritCalib(sp.app.App):
             self.mps = xp.ones(ksp.shape[::-1] + (1, ), dtype=ksp.dtype)
 
             def forward(x):
-                with self.device:
+                with sp.get_device(x):
                     return AHA @ x
 
             def normalize(x):
-                with self.device:
+                with sp.get_device(x):
                     return xp.sum(xp.abs(x)**2,
                                   axis=-2, keepdims=True)**0.5
 

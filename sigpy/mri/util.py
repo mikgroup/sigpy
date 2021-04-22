@@ -66,7 +66,7 @@ def tseg_off_res_b_ct(b0, bins, lseg, dt, T):
     """
 
     # create time vector
-    t = np.linspace(0, T, T/dt)
+    t = np.linspace(0, T, np.int(T/dt))
     hist_wt, bin_edges = np.histogram(np.imag(2j * np.pi * np.concatenate(b0)),
                                       bins)
 

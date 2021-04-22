@@ -32,9 +32,6 @@ class TestLinop(unittest.TestCase):
         img = sp.randn(img_shape, dtype=np.complex)
         mps = sp.randn(mps_shape, dtype=np.complex)
 
-        mask = np.zeros(img_shape)
-        mask[::2, ::2] = 1.0
-
         A = linop.Sense(mps)
 
         check_linop_adjoint(A, dtype=np.complex)
@@ -48,9 +45,6 @@ class TestLinop(unittest.TestCase):
 
         img = sp.randn(img_shape, dtype=np.complex)
         mps = sp.randn(mps_shape, dtype=np.complex)
-
-        mask = np.zeros(img_shape, dtype=np.complex)
-        mask[::2, ::2] = 1.0
 
         A = linop.Sense(mps, coil_batch_size=1)
         check_linop_adjoint(A, dtype=np.complex)
@@ -72,6 +66,34 @@ class TestLinop(unittest.TestCase):
         check_linop_adjoint(A, dtype=np.complex)
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]).ravel(),
                             (A * img).ravel(), atol=0.1, rtol=0.1)
+
+    def test_sense_tseg_off_res_model(self):
+        img_shape = [16, 16]
+        mps_shape = [8, 16, 16]
+
+        img = sp.randn(img_shape, dtype=np.complex)
+        mps = sp.randn(mps_shape, dtype=np.complex)
+
+        y, x = np.mgrid[:16, :16]
+        coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
+        coord = coord.astype(np.float)
+
+        d = np.sqrt(x * x + y * y)
+        sigma, mu, a = 2, 0.25, 400
+        b0 = a * np.exp(-((d - mu) ** 2 / (2.0 * sigma ** 2)))
+        tseg = {"b0": b0, "dt": 4e-6, "lseg": 1, "n_bins": 10}
+
+        F = sp.linop.NUFFT(mps_shape, coord)
+        b, ct = sp.mri.util.tseg_off_res_b_ct(b0=b0, bins=10, lseg=1, dt=4e-6,
+                                              T=coord.shape[0] * 4e-6)
+        B1 = sp.linop.Multiply(F.oshape, b.T)
+        Ct1 = sp.linop.Multiply(img_shape, ct.reshape(img_shape))
+        S = sp.linop.Multiply(img_shape, mps)
+
+        A = linop.Sense(mps, coord=coord, tseg=tseg)
+
+        check_linop_adjoint(A, dtype=np.complex)
+        npt.assert_allclose(B1 * F * S * Ct1 * img, A * img)
 
     def test_noncart_sense_model_batch(self):
         img_shape = [16, 16]
