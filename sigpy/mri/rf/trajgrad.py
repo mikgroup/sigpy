@@ -7,7 +7,6 @@ from scipy import interpolate
 from scipy import integrate
 import numba as nb
 import math
-import matplotlib.pyplot as plt
 
 
 __all__ = ['trap_grad', 'spiral_varden', 'spiral_arch', 'epi', 'rosette',
@@ -645,7 +644,7 @@ def runge_kutta(ds: float, st: float, kvals: np.ndarray, smax=None,
 #    modified 2006 and 2007
 #    Rewritten in Python in 2020 by Kevin Johnson
 def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
-                      dt=4e-3, show=False, gamma=4.257):
+                      dt=4e-3, gamma=4.257):
     r"""
     Given a k-space trajectory c(n), gradient and slew constraints. This
     function will return a new parametrization that will meet these
@@ -662,7 +661,6 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
         gmax (float): Maximum gradient [G/cm] (3.9 default)
         smax (float): Maximum slew [G/Cm/ms]  (14.5 default)
         dt (float): Sampling time interval [ms] (4e-3 default)
-        show (bool): Show plots while optimizing
         gamma (float): Gyromagnetic ratio
 
     Returns:
@@ -733,9 +731,6 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
     s_of_p = integrate.cumtrapz(ds_p, p_highres, initial=0)
     curve_length = s_of_p[-1]
 
-    if show:
-        print(f'Length of curve {curve_length}')
-
     # decide ds and compute st for the first point
     stt0 = (gamma * smax)  # always assumes first point is max slew
     st0 = stt0 * dt / 8  # start at 1/8 the gradient for accuracy close to g=0
@@ -753,9 +748,6 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
     cp_highres = cp(p_highres)
     cs = interpolate.CubicSpline(s_of_p, cp_highres, axis=0)
 
-    if show:
-        print('Compute geometry dependent constraints')
-
     # compute constraints (forbidden line curve)
     phi, k = sdotmax(cs, s, gmax, smax)
 
@@ -765,9 +757,6 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
     # Get the start
     sta = np.zeros_like(s)
     sta[0] = min(g0 * gamma + st0, gamma * gmax)
-
-    if show:
-        print('Solve ODE forward')
 
     # solve ODE forward
     for n in range(1, s.shape[0]):
@@ -780,12 +769,6 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
             tmpst = sta[n - 1] + dstds
             sta[n] = min(tmpst, phi[n])
 
-    if show:
-        plt.figure()
-        plt.plot(np.linspace(s[0], s[-1], len(phi)), phi)
-        plt.plot(s, sta)
-        plt.show()
-
     stb = 0 * s
     if gfin is None:
         stb[-1] = sta[-1]
@@ -793,9 +776,6 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
         stb[-1] = min(max(gfin * gamma, st0), gamma * gmax)
 
     # solve ODE backwards
-    if show:
-        print('Solve ODE backwards')
-
     for n in range(s.shape[0] - 2, 0, -1):
 
         kpos_end = n  # to 0
@@ -819,15 +799,6 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
         tmpst = stb[n + 1] + dstds
         stb[n] = min(tmpst, phi[n - 1])
 
-    if show:
-        plt.figure()
-        plt.plot(np.linspace(s[0], s[-1], len(phi)), phi)
-        plt.plot(s, sta)
-        plt.plot(s, stb)
-        plt.show()
-
-    if show:
-        print('Final Interpolations')
     # take the minimum of the curves
     ds = s[1] - s[0]
     st_of_s = np.minimum(sta, stb)
@@ -835,8 +806,6 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
     # compute time
     t_of_s = integrate.cumtrapz(1. / st_of_s, initial=0) * ds
 
-    if show:
-        print(f't_of_s max {t_of_s[-1]}')
     t = np.arange(0, t_of_s[-1] + np.finfo(float).eps, dt)
 
     t_of_s = interpolate.CubicSpline(t_of_s, s)
