@@ -14,6 +14,14 @@ else:
     cudnn_enabled = False
     nccl_enabled = False
 
-mpi4py_enabled = util.find_spec("mpi4py") is not None
+mpi4py_enabled = util.find_spec("mpi4py")
 
-pytorch_enabled = util.find_spec("torch") is not None
+if util.find_spec("torch"):
+    try:
+        import torch  # noqa
+        pytorch_enabled = True
+    except ImportError:
+        print('Warning : Pytorch installed but can import')
+        pytorch_enabled = False
+else:
+    pytorch_enabled = False
