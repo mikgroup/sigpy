@@ -3,10 +3,8 @@ import numpy as np
 import numpy.testing as npt
 from sigpy import backend, config, linop, pytorch
 
-
 if config.pytorch_enabled:
     import torch
-
     if __name__ == '__main__':
         unittest.main()
 
@@ -23,8 +21,11 @@ if config.pytorch_enabled:
                         xp = device.xp
                         array = xp.array([1, 2, 3], dtype=dtype)
                         tensor = pytorch.to_pytorch(array)
-                        tensor[0] = 0
-                        xp.testing.assert_allclose(array, [0, 2, 3])
+                        array[0] = 0
+                        torch.testing.assert_allclose(
+                            tensor, torch.tensor([0, 2, 3],
+                                                 dtype=tensor.dtype,
+                                                 device=tensor.device))
 
         def test_to_pytorch_complex(self):
             for dtype in [np.complex64, np.complex128]:
@@ -33,8 +34,11 @@ if config.pytorch_enabled:
                         xp = device.xp
                         array = xp.array([1 + 1j, 2 + 2j, 3 + 3j], dtype=dtype)
                         tensor = pytorch.to_pytorch(array)
-                        tensor[0, 0] = 0
-                        xp.testing.assert_allclose(array, [1j, 2 + 2j, 3 + 3j])
+                        array[0] = 0
+                        torch.testing.assert_allclose(
+                            tensor, torch.tensor([[0, 0], [2, 2], [3, 3]],
+                                                 dtype=tensor.dtype,
+                                                 device=tensor.device))
 
         def test_from_pytorch(self):
             for dtype in [torch.float32, torch.float64]:

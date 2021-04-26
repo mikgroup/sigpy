@@ -16,4 +16,14 @@ else:
 
 mpi4py_enabled = util.find_spec("mpi4py") is not None
 
-pytorch_enabled = util.find_spec("torch") is not None
+# This is to catch an import error when the cudnn in cupy (system) and pytorch
+# (built in) are in conflict.
+if util.find_spec("torch") is not None:
+    try:
+        import torch  # noqa
+        pytorch_enabled = True
+    except ImportError:
+        print('Warning : Pytorch installed but can import')
+        pytorch_enabled = False
+else:
+    pytorch_enabled = False

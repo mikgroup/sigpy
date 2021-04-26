@@ -108,6 +108,7 @@ Trajectory and Gradient Design Functions
     sigpy.mri.rf.trajgrad.stack_of
     sigpy.mri.rf.traj_complex_to_array
     sigpy.mri.rf.traj_array_to_complex
+    sigpy.mri.rf.min_time_gradient
 
 RF Utility
 --------------------------
