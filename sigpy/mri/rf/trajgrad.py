@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 
 
 __all__ = ['trap_grad', 'spiral_varden', 'spiral_arch', 'epi', 'rosette',
-           'stack_of', 'traj_array_to_complex', 'traj_complex_to_array']
+           'stack_of', 'traj_array_to_complex', 'traj_complex_to_array',
+           'min_time_gradient']
 
 
 def trap_grad(area, gmax, dgdt, dt, *args):
@@ -601,7 +602,7 @@ def traj_array_to_complex(k):
 @nb.jit(nopython=True, cache=True)  # pragma: no cover
 def runge_kutta(ds: float, st: float, kvals: np.ndarray, smax=None,
                 gamma=4.257):
-    """Runge-Kutta 4 for curve constrained
+    r"""Runge-Kutta 4 for curve constrained
 
     Args:
         ds (float): spacing in arc length space
@@ -609,6 +610,7 @@ def runge_kutta(ds: float, st: float, kvals: np.ndarray, smax=None,
         kvals (array): 3 points of curve.
         smax (float): maximum slew
         gamma (float): gyromagnetic ratio
+
     Returns:
         float or None: step size dsdt or None
     """
@@ -638,42 +640,43 @@ def runge_kutta(ds: float, st: float, kvals: np.ndarray, smax=None,
     return k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6
 
 
+#  Arc length code translated from matlab
+#    (c) Michael Lustig 2005
+#    modified 2006 and 2007
+#    Rewritten in Python in 2020 by Kevin Johnson
 def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
                       dt=4e-3, show=False, gamma=4.257):
-    r"""Given a k-space trajectory c(n), gradient and slew constraints. This
+    r"""
+    Given a k-space trajectory c(n), gradient and slew constraints. This
     function will return a new parametrization that will meet these
     constraint while getting from one point to the other in minimum time.
-        (c) Michael Lustig 2005
-        modified 2006 and 2007
-        Rewritten in Python in 2020 by Kevin Johnson
 
     Args:
-        c (array): The Curve in k-space given in any parametrization [1/cm]
-                    a Nx3 real array.
+        c (array): Curve in k-space given in any parametrization [1/cm]
+                        Nx3 real array
         g0 (float): Initial gradient amplitude (leave empty for g0 = 0)
         gfin (float): Gradient value at the end of the trajectory. If not
                         possible, the result would be the largest possible
                         ampltude. (Leave empty if you don't care to get
-                         maximum gradient.)
+                        maximum gradient.)
         gmax (float): Maximum gradient [G/cm] (3.9 default)
         smax (float): Maximum slew [G/Cm/ms]  (14.5 default)
         dt (float): Sampling time interval [ms] (4e-3 default)
-        show (bool): Show plots while optimizing (Warning: This will make the
-                    process considerably slower!)
-        gamma (float): Gyromagnetic ration
+        show (bool): Show plots while optimizing
+        gamma (float): Gyromagnetic ratio
 
     Returns:
-        Tuple containing:
+        tuple: (g, k, s, t) tuple containing
 
-        - **c** (*array*): reparametrized curve, sampled at T[ms],
-        - **time** (*array*): sampled time,
-        - **g** (*array*): gradient waveform [G/cm],
-        - **s** (*array*): slew rate [G/cm/ms],
-        - **k** (*array*): exact k-space corresponding to gradient g (This
-                            function reparametrizes C, then takes a derivative.
-                             Numerical errors in the derivative can lead to
-                            deviation.
+        - **g** - (array): gradient waveform [G/cm]
+        - **k** - (array): exact k-space corresponding to gradient g.
+        - **s** - (array): slew rate [G/cm/ms]
+        - **time** - (array):  sampled time
 
+    References:
+        Lustig M, Kim SJ, Pauly JM. A fast method for designing time-optimal
+        gradient waveforms for arbitrary k-space trajectories. IEEE Trans Med
+        Imaging. 2008;27(6):866-873. doi:10.1109/TMI.2008.922699
     """
 
     def sdotmax(cs: interpolate.CubicSpline, s: np.ndarray,
@@ -730,7 +733,8 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
     s_of_p = integrate.cumtrapz(ds_p, p_highres, initial=0)
     curve_length = s_of_p[-1]
 
-    print(f'Length of curve {curve_length}')
+    if show:
+        print(f'Length of curve {curve_length}')
 
     # decide ds and compute st for the first point
     stt0 = (gamma * smax)  # always assumes first point is max slew
@@ -749,7 +753,8 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
     cp_highres = cp(p_highres)
     cs = interpolate.CubicSpline(s_of_p, cp_highres, axis=0)
 
-    print('Compute geometry dependent constraints')
+    if show:
+        print('Compute geometry dependent constraints')
 
     # compute constraints (forbidden line curve)
     phi, k = sdotmax(cs, s, gmax, smax)
@@ -761,7 +766,9 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
     sta = np.zeros_like(s)
     sta[0] = min(g0 * gamma + st0, gamma * gmax)
 
-    print('Solve ODE forward')
+    if show:
+        print('Solve ODE forward')
+
     # solve ODE forward
     for n in range(1, s.shape[0]):
         kpos = n
@@ -786,7 +793,9 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
         stb[-1] = min(max(gfin * gamma, st0), gamma * gmax)
 
     # solve ODE backwards
-    print('Solve ODE backwards')
+    if show:
+        print('Solve ODE backwards')
+
     for n in range(s.shape[0] - 2, 0, -1):
 
         kpos_end = n  # to 0
@@ -817,7 +826,8 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
         plt.plot(s, stb)
         plt.show()
 
-    print('Final Interpolations')
+    if show:
+        print('Final Interpolations')
     # take the minimum of the curves
     ds = s[1] - s[0]
     st_of_s = np.minimum(sta, stb)
@@ -825,7 +835,8 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
     # compute time
     t_of_s = integrate.cumtrapz(1. / st_of_s, initial=0) * ds
 
-    print(f't_of_s max {t_of_s[-1]}')
+    if show:
+        print(f't_of_s max {t_of_s[-1]}')
     t = np.arange(0, t_of_s[-1] + np.finfo(float).eps, dt)
 
     t_of_s = interpolate.CubicSpline(t_of_s, s)
