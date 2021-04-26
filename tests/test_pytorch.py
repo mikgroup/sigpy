@@ -21,8 +21,9 @@ if config.pytorch_enabled:
                         xp = device.xp
                         array = xp.array([1, 2, 3], dtype=dtype)
                         tensor = pytorch.to_pytorch(array)
+                        array[0] = 0
                         torch.testing.assert_allclose(
-                            tensor, torch.tensor([1, 2, 3],
+                            tensor, torch.tensor([0, 2, 3],
                                                  dtype=tensor.dtype,
                                                  device=tensor.device))
 
@@ -33,8 +34,9 @@ if config.pytorch_enabled:
                         xp = device.xp
                         array = xp.array([1 + 1j, 2 + 2j, 3 + 3j], dtype=dtype)
                         tensor = pytorch.to_pytorch(array)
+                        array[0] = 0
                         torch.testing.assert_allclose(
-                            tensor, torch.tensor([[1, 1], [2, 2], [3, 3]],
+                            tensor, torch.tensor([[0, 0], [2, 2], [3, 3]],
                                                  dtype=tensor.dtype,
                                                  device=tensor.device))
 
