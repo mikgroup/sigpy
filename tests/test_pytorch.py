@@ -1,7 +1,6 @@
 import unittest
 import numpy as np
 import numpy.testing as npt
-
 from sigpy import backend, config, linop, pytorch
 
 if config.pytorch_enabled:

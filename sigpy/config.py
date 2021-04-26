@@ -14,8 +14,10 @@ else:
     cudnn_enabled = False
     nccl_enabled = False
 
-mpi4py_enabled = util.find_spec("mpi4py")
+mpi4py_enabled = util.find_spec("mpi4py") is not None
 
+# This is to catch an import error when the cudnn in cupy (system) and pytorch
+# (built in) are in conflict.
 if util.find_spec("torch"):
     try:
         import torch  # noqa
