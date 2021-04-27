@@ -1320,7 +1320,7 @@ class ArrayToBlocks(Linop):
         D = len(blk_shape)
         num_blks = [(i - b + s) // s for i, b,
                     s in zip(ishape[-D:], blk_shape, blk_strides)]
-        oshape = num_blks + list(blk_shape)
+        oshape = list(ishape[:-D]) + num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
 
@@ -1352,7 +1352,7 @@ class BlocksToArray(Linop):
         D = len(blk_shape)
         num_blks = [(i - b + s) // s for i, b,
                     s in zip(oshape[-D:], blk_shape, blk_strides)]
-        ishape = num_blks + list(blk_shape)
+        ishape = list(oshape[:-D]) + num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
 
