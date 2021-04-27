@@ -41,7 +41,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
     batch_shape = list(input.shape[:-ndim])
     batch_size = util.prod(batch_shape)
     xp = backend.get_array_module(input)
-    output = xp.zeros([batch_size] + num_blks + blk_shape,
+    output = xp.zeros([batch_size] + num_blks + list(blk_shape),
                       dtype=input.dtype)
     input = input.reshape([batch_size] + list(input.shape[-ndim:]))
 
@@ -102,7 +102,7 @@ def array_to_blocks(input, blk_shape, blk_strides):
     else:
         raise ValueError('Only support ndim=1, 2, or 3, got {}'.format(ndim))
 
-    return output.reshape(batch_shape + num_blks + blk_shape)
+    return output.reshape(batch_shape + num_blks + list(blk_shape))
 
 
 def blocks_to_array(input, oshape, blk_shape, blk_strides):
