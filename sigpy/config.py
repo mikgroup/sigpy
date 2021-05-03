@@ -4,9 +4,20 @@
 This module contains flags to turn on and off optional modules.
 
 """
+import warnings
 from importlib import util
 
 cupy_enabled = util.find_spec("cupy") is not None
+if cupy_enabled:
+    try:
+        import cupy  # noqa
+    except ImportError as e:
+        warnings.warn(
+            f"Importing cupy failed. "
+            f"For more details, see the error stack below:\n{e}"
+        )
+        cupy_enabled = False
+
 if cupy_enabled:  # pragma: no cover
     cudnn_enabled = util.find_spec("cupy.cuda.cudnn") is not None
     nccl_enabled = util.find_spec("cupy.cuda.nccl") is not None
