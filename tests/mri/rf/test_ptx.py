@@ -140,3 +140,34 @@ class TestPtx(unittest.TestCase):
                                  phase_update_interval=200, explicit=False)
 
         npt.assert_array_almost_equal(A*pulses, target, 1E-3)
+
+    def test_spokes(self):
+
+        # spokes problem definition:
+        dim = 20  # size of the b1 matrix loaded
+        n_spokes = 5
+        fov = 20  # cm
+        dx_max = 2  # cm
+        gts = 4E-6
+        sl_thick = 5  # slice thickness, mm
+        tbw = 4
+        dgdtmax = 18000  # g/cm/s
+        gmax = 2  # g/cm
+
+        _, sens = self.problem_2d(dim)
+        roi = np.zeros((dim, dim))
+        radius=dim//2
+        cx, cy = dim//2, dim //2
+        y,x = np.ogrid[-radius:radius, -radius:radius]
+        index = x**2 + y**2 <= radius**2
+        roi[cy-radius:cy+radius, cx-radius:cx+radius][index] = 1
+        sens = sens * roi
+
+        [pulses, g] = rf.stspk(roi, sens, n_spokes, fov, dx_max, gts,
+                               sl_thick, tbw,
+                               dgdtmax, gmax, alpha=1)
+
+        # should give the number of pulses corresponding to number of TX ch
+        npt.assert_equal(np.shape(pulses)[0], np.shape(sens)[0])
+        # should hit the max gradient constraint
+        npt.assert_almost_equal(gmax, np.max(g), decimal=3)
