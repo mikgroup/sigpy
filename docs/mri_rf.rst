@@ -59,6 +59,7 @@ Parallel Transmit Pulse Designers
     :nosignatures:
 
     sigpy.mri.rf.ptx.stspa
+    sigpy.mri.rf.ptx.stspk
 
 RF Shimming Functions
 --------------------------
