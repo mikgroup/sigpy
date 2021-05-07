@@ -177,7 +177,7 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
         for ii in range(n_spokes):
 
             # build Afull (and take only 0 locations into matrix)
-            Anum = rf.PtxSpatialExplicit(sens, k, gts, mask.shape, fov=fov,
+            Anum = rf.PtxSpatialExplicit(sens, k, gts, mask.shape,
                                          ret_array=True)
             Anum = Anum[~(Anum == 0).all(1)]
 
@@ -188,7 +188,8 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
             w_full = xp.linalg.solve(sys_a, sys_b)
 
             err = Anum @ w_full - xp.exp(1j * phs)
-            cost = xp.real(err.conj().T @ err + alpha * w_full.conj().T @ w_full)
+            cost = err.conj().T @ err + alpha * w_full.conj().T @ w_full
+            cost = xp.real(cost)
             cost_old = 10 * cost  # to get the loop going
             while xp.absolute(cost - cost_old) > iter_dif * cost_old:
                 cost_old = cost
@@ -208,8 +209,7 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
                 for jj in range(kxs.size):
                     ks_test = xp.expand_dims(xp.array([kxs[jj], kys[jj]]), 0)
                     Anum = rf.PtxSpatialExplicit(sens, ks_test, gts,
-                                                 mask.shape, fov=fov,
-                                                 ret_array=True)
+                                                 mask.shape, ret_array=True)
                     Anum = Anum[~(Anum == 0).all(1)]
 
                     rfm = xp.linalg.solve((Anum.conj().T @ Anum),
