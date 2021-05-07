@@ -145,6 +145,7 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
            Small-tip-angle spokes pulse design using interleaved greedy and
            local optimization methods. Magnetic Resonance in Medicine, 68(5),
            1553-62.
+
        """
 
     device = backend.get_device(sens)
