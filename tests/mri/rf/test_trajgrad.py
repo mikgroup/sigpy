@@ -44,4 +44,3 @@ class TestTrajGrad(unittest.TestCase):
 
         npt.assert_almost_equal(area, np.sum(trap)*dt, decimal=3)
         npt.assert_almost_equal(gmax, np.max(trap), decimal=1)
-

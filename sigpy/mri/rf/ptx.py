@@ -255,4 +255,3 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
         pulses = xp.concatenate((pulses, rf_ref), 1)
 
         return pulses, g
-
