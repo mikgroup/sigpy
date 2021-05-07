@@ -24,6 +24,12 @@ def min_trap_grad(area, gmax, dgdt, dt):
         dgdt (float): max slew rate in g/cm/sec
         dt (float): sample time in sec
 
+    Returns:
+        2-element tuple containing
+
+        - **trap** (*array*): gradient waveform in g/cm.
+        - **ramppts** (*int*): number of points in ramps.
+
     """
 
     if np.abs(area) > 0:
@@ -64,6 +70,12 @@ def trap_grad(area, gmax, dgdt, dt, *args):
         dgdt (float): max slew rate in g/cm/sec
         dt (float): sample time in sec
 
+    Returns:
+        2-element tuple containing
+
+        - **trap** (*array*): gradient waveform in g/cm.
+        - **ramppts** (*int*): number of points in ramps.
+
     """
 
     if len(args) < 5:
@@ -101,8 +113,8 @@ def trap_grad(area, gmax, dgdt, dt, *args):
 
             # make attack and decay ramps
             ramppts = int(np.ceil(np.max(flat) / dgdt / dt))
-            ramp_up = np.linspace(0, ramppts, num=ramppts+1) / ramppts * flat_top
-            ramp_dn = np.linspace(ramppts, 0, num=ramppts+1) / ramppts * flat_top
+            ramp_up = np.linspace(0, ramppts, num=ramppts+1) / ramppts*flat_top
+            ramp_dn = np.linspace(ramppts, 0, num=ramppts+1) / ramppts*flat_top
             trap = np.concatenate((ramp_up, flat, ramp_dn))
 
     else:
@@ -127,6 +139,15 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
             (should be >= densamp/2).
         nl (float): degree of undersampling outer region.
         rewinder (Boolean): if True, include rewinder. If false, exclude.
+
+    Returns:
+        tuple: (g, k, t, s, dens) tuple containing
+
+        - **g** - (array): gradient waveform [g/cm]
+        - **k** - (array): exact k-space corresponding to gradient g.
+        - **time** - (array):  sampled time
+        - **s** - (array): slew rate [g/cm/s]
+        - **dens** - (array): undersampling factor at each time point.
 
     References:
         Code and algorithm based on spiralgradlx6 from
@@ -333,6 +354,14 @@ def spiral_arch(fov, res, gts, gslew, gamp):
         gslew (float): max slew rate in mT/m/ms.
         gamp (float): max gradient amplitude in mT/m.
 
+    Returns:
+        tuple: (g, k, t, s) tuple containing
+
+        - **g** - (array): gradient waveform [mT/m]
+        - **k** - (array): exact k-space corresponding to gradient g.
+        - **time** - (array):  sampled time
+        - **s** - (array): slew rate [mT/m/ms]
+
     References:
         Glover, G. H.(1999).
         Simple Analytic Spiral K-Space Algorithm.
@@ -416,6 +445,14 @@ def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
         offset (int): used for multi-shot EPI goes from 0 to #shots-1
         dirx (int): x direction of EPI -1 left to right, 1 right to left
         diry (int): y direction of EPI -1 bottom-top, 1 top-bottom
+
+    Returns:
+        tuple: (g, k, t, s) tuple containing
+
+        - **g** - (array): gradient waveform [mT/m]
+        - **k** - (array): exact k-space corresponding to gradient g.
+        - **time** - (array):  sampled time
+        - **s** - (array): slew rate [mT/m/ms]
 
 
     References:
@@ -557,6 +594,14 @@ def rosette(kmax, w1, w2, dt, dur, gamp=None, gslew=None):
         gamp (float): max gradient amplitude (mT/m).
         gslew (float): max slew rate (mT/m/ms).
 
+    Returns:
+        tuple: (g, k, t, s) tuple containing
+
+        - **g** - (array): gradient waveform [mT/m]
+        - **k** - (array): exact k-space corresponding to gradient g.
+        - **time** - (array):  sampled time
+        - **s** - (array): slew rate [mT/m/ms]
+
     References:
         D. C. Noll, 'Multi-shot rosette trajectories for spectrally selective
         MR imaging.' IEEE Trans. Med Imaging 16, 372-377 (1997).
@@ -605,7 +650,7 @@ def spokes_grad(k, tbw, sl_thick, gmax, dgdtmax, gts):
         gts (float): hardware sampling dwell time (s).
 
     Returns:
-        g (array): gz, gy, and gz waveforms [3, Nt]
+        g (array): gz, gy, and gz waveforms  in g/cm [3, Nt]
 
     References:
            Grissom, W., Khalighi, M., Sacolick, L., Rutt, B. & Vogel, M (2012).

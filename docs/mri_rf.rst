@@ -101,12 +101,14 @@ Trajectory and Gradient Design Functions
     :toctree: generated
     :nosignatures:
 
+    sigpy.mri.rf.trajgrad.min_trap_grad
     sigpy.mri.rf.trajgrad.trap_grad
     sigpy.mri.rf.trajgrad.spiral_varden
     sigpy.mri.rf.trajgrad.spiral_arch
     sigpy.mri.rf.trajgrad.epi
     sigpy.mri.rf.trajgrad.rosette
     sigpy.mri.rf.trajgrad.stack_of
+    sigpy.mri.rf.trajgrad.spokes_grad
     sigpy.mri.rf.traj_complex_to_array
     sigpy.mri.rf.traj_array_to_complex
     sigpy.mri.rf.min_time_gradient
