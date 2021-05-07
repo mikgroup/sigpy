@@ -32,6 +32,7 @@ class TestTrajGrad(unittest.TestCase):
         trap, _ = rf.trap_grad(area, gmax, dgdt, dt)
 
         npt.assert_almost_equal(area, np.sum(trap)*dt, decimal=3)
+        npt.assert_almost_equal(gmax, np.max(trap), decimal=1)
 
     def test_min_trap_grad(self):
         dt = 4e-6  # s
@@ -42,3 +43,5 @@ class TestTrajGrad(unittest.TestCase):
         trap, _ = rf.min_trap_grad(area, gmax, dgdt, dt)
 
         npt.assert_almost_equal(area, np.sum(trap)*dt, decimal=3)
+        npt.assert_almost_equal(gmax, np.max(trap), decimal=1)
+
