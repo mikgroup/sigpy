@@ -15,7 +15,8 @@ __all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch', 'epi',
 
 
 def min_trap_grad(area, gmax, dgdt, dt):
-    r"""Minimal duration trapezoidal gradient designer.
+    r"""Minimal duration trapezoidal gradient designer. Design for target area
+    under the flat portion (for non-ramp-sampled pulses)
 
     Args:
         area (float): pulse area in (g*sec)/cm
@@ -54,7 +55,8 @@ def min_trap_grad(area, gmax, dgdt, dt):
 
 
 def trap_grad(area, gmax, dgdt, dt, *args):
-    r"""General trapezoidal gradient designer. Min total time.
+    r"""General trapezoidal gradient designer for total target area
+    (for rewinders)
 
     Args:
         area (float): pulse area in (g*sec)/cm
