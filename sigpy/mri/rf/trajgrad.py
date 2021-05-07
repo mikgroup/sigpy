@@ -41,8 +41,8 @@ def min_trap_grad(area, gmax, dgdt, dt):
 
         # make attack and decay ramps
         ramppts = int(np.ceil(np.max(flat) / dgdt / dt))
-        ramp_up = np.linspace(0, ramppts-1, num=ramppts) / ramppts*np.max(flat)
-        ramp_dn = np.linspace(ramppts-1, 0, num=ramppts) / ramppts*np.max(flat)
+        ramp_up = np.linspace(0, ramppts, num=ramppts+1) / ramppts*np.max(flat)
+        ramp_dn = np.linspace(ramppts, 0, num=ramppts+1) / ramppts*np.max(flat)
 
         trap = np.concatenate((ramp_up, np.squeeze(flat), ramp_dn))
 
