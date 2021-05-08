@@ -116,37 +116,36 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, b0=None, tseg=None,
 
 def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
           alpha=1, iter_dif=0.01):
-    """Small tip spokes and k-t points parallel transmit pulse designer.
+    """Small tip spokes parallel transmit pulse designer.
 
-       Args:
-           mask (ndarray): region in which to optimize flip angle uniformity
-               in slice. [dim dim]
-           sens (ndarray): sensitivity maps. [nc dim dim]
-           n_spokes (int): number of spokes to be created in the design.
-           fov (float): excitation FOV (cm).
-           dx_max (float): max. resolution of the trajectory (cm).
-           gts (float): hardware sampling dwell time (s).
-           sl_thick (float): slice thickness (mm).
-           tbw (int): time-bandwidth product.
-           dgdtmax (float): max gradient slew (g/cm/s).
-           gmax (float): max gradient amplitude (g/cm).
-           alpha (float): regularization parameter.
-           iter_dif (float): for each spoke, the difference in cost btwn.
-              successive iterations at which to terminate MLS iterations.
+    Args:
+       mask (ndarray): region in which to optimize flip angle uniformity
+           in slice. [dim dim]
+       sens (ndarray): sensitivity maps. [nc dim dim]
+       n_spokes (int): number of spokes to be created in the design.
+       fov (float): excitation FOV (cm).
+       dx_max (float): max. resolution of the trajectory (cm).
+       gts (float): hardware sampling dwell time (s).
+       sl_thick (float): slice thickness (mm).
+       tbw (int): time-bandwidth product.
+       dgdtmax (float): max gradient slew (g/cm/s).
+       gmax (float): max gradient amplitude (g/cm).
+       alpha (float): regularization parameter.
+       iter_dif (float): for each spoke, the difference in cost btwn.
+          successive iterations at which to terminate MLS iterations.
 
     Returns:
-        2-element tuple containing
+       2-element tuple containing
 
         - **pulses** (*array*): RF waveform out.
         - **g** (*array*): corresponding gradient, in g/cm.
 
-       References:
-           Grissom, W., Khalighi, M., Sacolick, L., Rutt, B. & Vogel, M (2012).
-           Small-tip-angle spokes pulse design using interleaved greedy and
-           local optimization methods. Magnetic Resonance in Medicine, 68(5),
-           1553-62.
-
-       """
+    References:
+       Grissom, W., Khalighi, M., Sacolick, L., Rutt, B. & Vogel, M (2012).
+       Small-tip-angle spokes pulse design using interleaved greedy and
+       local optimization methods. Magnetic Resonance in Medicine, 68(5),
+       1553-62.
+    """
 
     device = backend.get_device(sens)
     xp = device.xp
