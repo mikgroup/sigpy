@@ -12,14 +12,14 @@ requirements:
   host:
     - python
     - setuptools
-    - numpy >= 1.12
+    - numpy >=1.12
     - pywavelets
     - numba
     - scipy
     - tqdm
   run:
     - python
-    - numpy >= 1.12
+    - numpy >=1.12
     - pywavelets
     - numba
     - scipy
