@@ -677,14 +677,14 @@ def spokes_grad(k, tbw, sl_thick, gmax, dgdtmax, gts):
         gx.extend([0] * np.size(subgz))  # zeros for gz duration
         if np.absolute(gxarea[ii]) > 0:
             [gblip, _] = trap_grad(abs(gxarea[ii]), gmax, dgdtmax, gts)
-            gxblip = np.int(np.sign(gxarea[ii])) * gblip
+            gxblip = int(np.sign(gxarea[ii])) * gblip
             gx = gx[:len(gx) - len(gxblip.T)]
             gx.extend(np.squeeze(gxblip).tolist())
 
         gy.extend([0] * np.size(subgz))
         if np.absolute(gyarea[ii]) > 0:
             [gblip, _] = trap_grad(abs(gyarea[ii]), gmax, dgdtmax, gts)
-            gyblip = np.int(np.sign(gyarea[ii])) * gblip
+            gyblip = int(np.sign(gyarea[ii])) * gblip
             gy = gy[:len(gy) - len(gyblip.T)]
             gy.extend(np.squeeze(gyblip).tolist())
 

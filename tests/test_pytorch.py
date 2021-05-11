@@ -36,7 +36,7 @@ if config.pytorch_enabled:
                         tensor = pytorch.to_pytorch(array)
                         array[0] = 0
                         torch.testing.assert_allclose(
-                            tensor, torch.tensor([[0, 0], [2, 2], [3, 3]],
+                            tensor, torch.tensor([0, 2 + 2j, 3 + 3j],
                                                  dtype=tensor.dtype,
                                                  device=tensor.device))
 
@@ -57,7 +57,7 @@ if config.pytorch_enabled:
                                                    [0, 2, 3])
 
         def test_from_pytorch_complex(self):
-            for dtype in [torch.float32, torch.float64]:
+            for dtype in [torch.complex64, torch.complex128]:
                 for device in devices:
                     with self.subTest(device=device, dtype=dtype):
                         if device == backend.cpu_device:
@@ -65,19 +65,17 @@ if config.pytorch_enabled:
                         else:
                             torch_device = torch.device('cuda:0')
 
-                        tensor = torch.tensor([[1, 1], [2, 2], [3, 3]],
+                        tensor = torch.tensor([1+1j, 2+2j, 3+3j],
                                               dtype=dtype, device=torch_device)
-                        array = pytorch.from_pytorch(tensor, iscomplex=True)
+                        tensor[0] = 0
+                        array = pytorch.from_pytorch(tensor)
                         xp = device.xp
                         xp.testing.assert_array_equal(array,
-                                                      [1 + 1j, 2 + 2j, 3 + 3j])
-                        array[0] -= 1
-                        np.testing.assert_allclose(tensor.cpu().numpy(),
-                                                   [[0, 1], [2, 2], [3, 3]])
+                                                      [0, 2 + 2j, 3 + 3j])
 
         def test_to_pytorch_function(self):
             A = linop.Resize([5], [3])
-            x = np.array([1, 2, 3], np.float)
+            x = np.array([1, 2, 3], np.float32)
             y = np.ones([5])
 
             with self.subTest('forward'):
@@ -94,22 +92,36 @@ if config.pytorch_enabled:
                                     A.H(A(x) - y))
 
         def test_to_pytorch_function_complex(self):
-            A = linop.FFT([3])
-            x = np.array([1 + 1j, 2 + 2j, 3 + 3j], np.complex)
-            y = np.ones([3], np.complex)
+            for device in devices:
 
-            with self.subTest('forward'):
-                f = pytorch.to_pytorch_function(
-                    A,
-                    input_iscomplex=True,
-                    output_iscomplex=True).apply
-                x_torch = pytorch.to_pytorch(x)
-                npt.assert_allclose(f(x_torch).detach().numpy().ravel(),
-                                    A(x).view(np.float))
+                if device == backend.cpu_device:
+                    torch_device = torch.device('cpu')
+                else:
+                    torch_device = torch.device('cuda:0')
 
-            with self.subTest('adjoint'):
-                y_torch = pytorch.to_pytorch(y)
-                loss = (f(x_torch) - y_torch).pow(2).sum() / 2
-                loss.backward()
-                npt.assert_allclose(x_torch.grad.detach().numpy().ravel(),
-                                    A.H(A(x) - y).view(np.float))
+                A = linop.FFT([3])
+                A_torch = pytorch.to_pytorch_function(A)
+
+                x = device.xp.array([1 + 1j, 2 + 2j, 3 + 3j], np.complex64)
+                x_torch = torch.tensor([1 + 1j, 2 + 2j, 3 + 3j],
+                                       dtype=torch.complex64,
+                                       device=torch_device,
+                                       requires_grad=True)
+
+                y = device.xp.ones([3], np.complex64)
+                y_torch = torch.ones([3],
+                                     dtype=torch.complex64,
+                                     device=torch_device)
+
+                with self.subTest('forward'):
+                    npt.assert_allclose(
+                        A_torch.apply(x_torch).detach().cpu().numpy(),
+                        backend.to_device(A(x), backend.cpu_device))
+
+                with self.subTest('adjoint'):
+                    loss = torch.abs(A_torch.apply(x_torch) - y_torch)\
+                               .pow(2).sum() / 2
+                    loss.backward()
+                    npt.assert_allclose(
+                        x_torch.grad.detach().cpu().numpy(),
+                        backend.to_device(A.H(A(x) - y), backend.cpu_device))

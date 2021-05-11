@@ -29,7 +29,7 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
     """
     xp = backend.get_array_module(input)
     if not np.issubdtype(input.dtype, np.complexfloating):
-        input = input.astype(np.complex)
+        input = input.astype(complex)
 
     if center:
         output = _fftc(input, oshape=oshape, axes=axes, norm=norm)
@@ -62,7 +62,7 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
     """
     xp = backend.get_array_module(input)
     if not np.issubdtype(input.dtype, np.complexfloating):
-        input = input.astype(np.complex)
+        input = input.astype(complex)
 
     if center:
         output = _ifftc(input, oshape=oshape, axes=axes, norm=norm)

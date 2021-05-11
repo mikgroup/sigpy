@@ -10,7 +10,7 @@ if __name__ == '__main__':
 class TestAlg(unittest.TestCase):
     def Ax_setup(self, n):
         A = np.eye(n) + 0.1 * np.ones([n, n])
-        x = np.arange(n, dtype=np.float)
+        x = np.arange(n, dtype=float)
         return A, x
 
     def Ax_y_setup(self, n, lamda):
@@ -177,7 +177,7 @@ class TestAlg(unittest.TestCase):
         x_numpy = np.expand_dims(x_numpy, 1)
         A = np.csingle(A)
         A = linop.MatMul(y.shape, A)
-        x0 = np.zeros(A.ishape, dtype=np.complex)
+        x0 = np.zeros(A.ishape, dtype=complex)
 
         alg_method = alg.GerchbergSaxton(A, y, x0, max_iter=100, tol=10E-9,
                                          lamb=lamda)

@@ -9,7 +9,7 @@ if __name__ == '__main__':
     unittest.main()
 
 
-def check_linop_adjoint(A, dtype=np.float, device=sp.cpu_device):
+def check_linop_adjoint(A, dtype=float, device=sp.cpu_device):
 
     device = sp.Device(device)
     x = sp.randn(A.ishape, dtype=dtype, device=device)
@@ -29,12 +29,12 @@ class TestLinop(unittest.TestCase):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 
-        img = sp.randn(img_shape, dtype=np.complex)
-        mps = sp.randn(mps_shape, dtype=np.complex)
+        img = sp.randn(img_shape, dtype=complex)
+        mps = sp.randn(mps_shape, dtype=complex)
 
         A = linop.Sense(mps)
 
-        check_linop_adjoint(A, dtype=np.complex)
+        check_linop_adjoint(A, dtype=complex)
 
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]),
                             A * img)
@@ -43,11 +43,11 @@ class TestLinop(unittest.TestCase):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 
-        img = sp.randn(img_shape, dtype=np.complex)
-        mps = sp.randn(mps_shape, dtype=np.complex)
+        img = sp.randn(img_shape, dtype=complex)
+        mps = sp.randn(mps_shape, dtype=complex)
 
         A = linop.Sense(mps, coil_batch_size=1)
-        check_linop_adjoint(A, dtype=np.complex)
+        check_linop_adjoint(A, dtype=complex)
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]),
                             A * img)
 
@@ -55,15 +55,15 @@ class TestLinop(unittest.TestCase):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 
-        img = sp.randn(img_shape, dtype=np.complex)
-        mps = sp.randn(mps_shape, dtype=np.complex)
+        img = sp.randn(img_shape, dtype=complex)
+        mps = sp.randn(mps_shape, dtype=complex)
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
-        coord = coord.astype(np.float)
+        coord = coord.astype(float)
 
         A = linop.Sense(mps, coord=coord)
-        check_linop_adjoint(A, dtype=np.complex)
+        check_linop_adjoint(A, dtype=complex)
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]).ravel(),
                             (A * img).ravel(), atol=0.1, rtol=0.1)
 
@@ -71,12 +71,12 @@ class TestLinop(unittest.TestCase):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 
-        img = sp.randn(img_shape, dtype=np.complex)
-        mps = sp.randn(mps_shape, dtype=np.complex)
+        img = sp.randn(img_shape, dtype=complex)
+        mps = sp.randn(mps_shape, dtype=complex)
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
-        coord = coord.astype(np.float)
+        coord = coord.astype(float)
 
         d = np.sqrt(x * x + y * y)
         sigma, mu, a = 2, 0.25, 400
@@ -92,22 +92,22 @@ class TestLinop(unittest.TestCase):
 
         A = linop.Sense(mps, coord=coord, tseg=tseg)
 
-        check_linop_adjoint(A, dtype=np.complex)
+        check_linop_adjoint(A, dtype=complex)
         npt.assert_allclose(B1 * F * S * Ct1 * img, A * img)
 
     def test_noncart_sense_model_batch(self):
         img_shape = [16, 16]
         mps_shape = [8, 16, 16]
 
-        img = sp.randn(img_shape, dtype=np.complex)
-        mps = sp.randn(mps_shape, dtype=np.complex)
+        img = sp.randn(img_shape, dtype=complex)
+        mps = sp.randn(mps_shape, dtype=complex)
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
-        coord = coord.astype(np.float)
+        coord = coord.astype(float)
 
         A = linop.Sense(mps, coord=coord, coil_batch_size=1)
-        check_linop_adjoint(A, dtype=np.complex)
+        check_linop_adjoint(A, dtype=complex)
         npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]).ravel(),
                             (A * img).ravel(), atol=0.1, rtol=0.1)
 
@@ -117,8 +117,8 @@ class TestLinop(unittest.TestCase):
             mps_shape = [8, 16, 16]
             comm = sp.Communicator()
 
-            img = sp.randn(img_shape, dtype=np.complex)
-            mps = sp.randn(mps_shape, dtype=np.complex)
+            img = sp.randn(img_shape, dtype=complex)
+            mps = sp.randn(mps_shape, dtype=complex)
             comm.allreduce(img)
             comm.allreduce(mps)
             ksp = sp.fft(img * mps, axes=[-1, -2])

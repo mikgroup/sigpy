@@ -36,8 +36,8 @@ class TestLinop(unittest.TestCase):
                           ninterleaves=1, alpha=1, gm=0.03, sm=200)
         k = rf.stack_of(k, 3, 0.1)
 
-        mps = sp.randn(mps_shape, dtype=np.complex)
+        mps = sp.randn(mps_shape, dtype=complex)
 
         A = linop.PtxSpatialExplicit(mps, k, dt, img_shape)
 
-        check_linop_adjoint(A, dtype=np.complex)
+        check_linop_adjoint(A, dtype=complex)
