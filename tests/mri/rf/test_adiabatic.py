@@ -10,6 +10,37 @@ if __name__ == '__main__':
 
 class TestAdiabatic(unittest.TestCase):
 
+    def test_hypsec_n(self):
+        # test an HSn adiabatic inversion pulse
+        n = 500
+        beta = 8  # rad/ms
+        a_max = 12000  # Hz
+        pwr = 8
+        dur = 0.012  # s
+
+        [am_sechn, fm_sechn] = rf.adiabatic.hypsec_n(n, beta, a_max, pwr)
+
+        # check relatively homogeneous over range of B1 values
+        b1 = np.arange(0.2, 0.8, 0.1)
+        b1 = np.reshape(b1, (np.size(b1), 1))
+
+        a = np.zeros(np.shape(b1), dtype='complex')
+        b = np.zeros(np.shape(b1), dtype='complex')
+        for ii in range(0, np.size(b1)):
+            [a[ii], b[ii]] = rf.sim.abrm_nd(
+                2 * np.pi * (dur / n) * 4258 * b1[ii] * am_sechn, np.ones(1),
+                dur / n * np.reshape(fm_sechn, (np.size(fm_sechn), 1)))
+        mz = 1 - 2 * np.abs(b) ** 2
+
+        test = np.ones(mz.shape) * -1  # magnetization value we expect
+        
+        # test we get our inversion profile
+        npt.assert_array_almost_equal(mz, test, 2)
+        # test that the AM is scaled to 1
+        npt.assert_almost_equal(np.max(am_sechn), 1, 3)
+        # test that the FM is scaled to A
+        npt.assert_almost_equal(np.max(fm_sechn), a_max, 3)
+
     def test_bir4(self):
         # test an excitation bir4 pulse
         n = 1176

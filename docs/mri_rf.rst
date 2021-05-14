@@ -11,6 +11,7 @@ Adiabatic Pulse Design Functions
     :nosignatures:
 
     sigpy.mri.rf.adiabatic.bir4
+    sigpy.mri.rf.adiabatic.hypsec_n
     sigpy.mri.rf.adiabatic.hypsec
     sigpy.mri.rf.adiabatic.wurst
     sigpy.mri.rf.adiabatic.goia_wurst
