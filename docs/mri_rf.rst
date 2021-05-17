@@ -127,6 +127,7 @@ I/O
     :toctree: generated
     :nosignatures:
 
+    sigpy.mri.rf.io.siemens_rf
     sigpy.mri.rf.io.signa
     sigpy.mri.rf.io.ge_rf_params
     sigpy.mri.rf.io.philips_rf_params
