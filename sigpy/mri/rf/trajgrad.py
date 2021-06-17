@@ -793,7 +793,7 @@ def runge_kutta(ds: float, st: float, kvals: np.ndarray, smax=None,
 #    (c) Michael Lustig 2005
 #    modified 2006 and 2007
 #    Rewritten in Python in 2020 by Kevin Johnson
-def min_time_gradient(c: np.ndarray, g0=0, gfin=0, gmax=4, smax=15,
+def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
                       dt=4e-3, gamma=4.257):
     r"""
     Given a k-space trajectory c(n), gradient and slew constraints. This
