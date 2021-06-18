@@ -1,5 +1,5 @@
 {% set name = "sigpy" %}
-{% set version = "0.1.22" %}
+{% set version = "0.1.23" %}
 
 package:
   name: '{{ name|lower }}'
@@ -10,16 +10,16 @@ source:
 
 requirements:
   host:
-    - python
+    - python {{ python }}
     - setuptools
-    - numpy >= 1.12
+    - numpy
     - pywavelets
     - numba
     - scipy
     - tqdm
   run:
-    - python
-    - numpy >= 1.12
+    - python {{ python }}
+    - numpy
     - pywavelets
     - numba
     - scipy

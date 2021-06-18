@@ -5,7 +5,71 @@
 import numpy as np
 import struct
 
-__all__ = ['signa', 'ge_rf_params', 'philips_rf_params']
+__all__ = ['signa', 'ge_rf_params', 'philips_rf_params', 'siemens_rf']
+
+
+def siemens_rf(pulse, rfbw, rfdurms, pulsename, minslice=0.5, maxslice=320.0,
+               comment=None):
+    """Write a .pta text file for Siemens PulseTool.
+
+    Args:
+        pulse (array): complex-valued RF pulse array with maximum of 4096
+            points.
+        rfbw (float): bandwidth of RF pulse in Hz
+        rfdurms (float): duration of RF pulse in ms
+        pulsename (string): '<FamilyName>.<PulseName>', e.g. 'Sigpy.SincPulse'
+        minslice (float): minimum slice thickness [mm]
+        maxslice (float): maximum slice thickness [mm]
+        comment (string): a comment that can be seen in Siemens PulseTool
+
+    Note this has only been tested on MAGNETOM Verio running (VB17)
+
+    Open pulsetool from the IDEA command line. Open the extrf.dat file and add
+    this .pta file using the import function
+
+    Recommended to make a copy and renaming extrf.dat prior to making changes.
+
+    After saving a new pulse to <myUniqueFileName>_extrf.dat and copying it to
+    the scanner, you will need to re-boot the host for it to load changes.
+
+    """
+
+    # get the number of points in RF waveform
+    npts = pulse.size
+    assert npts <= 4096, ('RF pulse must have less than 4096 points for'
+                          ' Siemens VB17')
+
+    if comment is None:
+        comment = ''
+
+    # Calculate reference gradient value.
+    # This is necessary for proper calculation of slice-select gradient
+    # amplitude using the .getGSAmplitude() method for the external RF class.
+    # See the IDEA documentation for more details on this.
+    refgrad = 1000.0 * rfbw * (rfdurms/5.12) / (42.577E06 * (10.0/1000.0))
+
+    rffile = open(pulsename+'.pta', 'w')
+    rffile.write('PULSENAME: {}\n'.format(pulsename))
+    rffile.write('COMMENT: {}\n'.format(comment))
+    rffile.write('REFGRAD: {:6.5f}\n'.format(refgrad))
+    rffile.write('MINSLICE: {:6.5f}\n'.format(minslice))
+    rffile.write('MAXSLICE: {:6.5f}\n'.format(maxslice))
+
+    # the following are related to SAR calcs and will be calculated by
+    # PulseTool upon loading the pulse
+    rffile.write('AMPINT: \n')
+    rffile.write('POWERINT: \n')
+    rffile.write('ABSINT: \n\n')
+
+    # magnitude must be between 0 and 1
+    mxmag = np.max(np.abs(pulse))
+    for n in range(npts):
+        mag = np.abs(pulse[n]) / mxmag  # magnitude at current point
+        mag = np.squeeze(mag)
+        pha = np.angle(pulse[n])     # phase at current point
+        pha = np.squeeze(pha)
+        rffile.write('{:10.9f}\t{:10.9f}\t; ({:d})\n'.format(mag, pha, n))
+    rffile.close()
 
 
 def signa(wav, filename, scale=-1):
