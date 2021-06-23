@@ -46,6 +46,7 @@ class Linop():
         oshape: output shape.
         ishape: input shape.
         H: adjoint linear operator.
+        N: normal linear operator.
 
     """
     def __init__(self, oshape, ishape, repr_str=None):
@@ -59,6 +60,9 @@ class Linop():
             self.repr_str = self.__class__.__name__
         else:
             self.repr_str = repr_str
+
+        self.adj = None
+        self.normal = None
 
     def _check_ishape(self, input):
         for i1, i2 in zip(input.shape, self.ishape):
@@ -102,6 +106,9 @@ class Linop():
     def _adjoint_linop(self):
         raise NotImplementedError
 
+    def _normal_linop(self):
+        return self.H * self
+
     @property
     def H(self):
         r"""Return adjoint linear operator.
@@ -116,7 +123,24 @@ class Linop():
             Linop: adjoint linear operator.
 
         """
-        return self._adjoint_linop()
+        if self.adj is None:
+            self.adj = self._adjoint_linop()
+        return self.adj
+
+    @property
+    def N(self):
+        r"""Return normal linear operator.
+
+        A normal linear operator :math:`A^HA` for
+        a linear operator :math:`A`.
+
+        Returns:
+            Linop: adjoint linear operator.
+
+        """
+        if self.normal is None:
+            self.normal = self._normal_linop()
+        return self.normal
 
     def __call__(self, input):
         return self.__mul__(input)
@@ -173,6 +197,9 @@ class Identity(Linop):
         return input
 
     def _adjoint_linop(self):
+        return self
+
+    def _normal_linop(self):
         return self
 
 
@@ -652,6 +679,9 @@ class Reshape(Linop):
     def _adjoint_linop(self):
         return Reshape(self.ishape, self.oshape)
 
+    def _normal_linop(self):
+        return Identity(self.ishape)
+
 
 class Transpose(Linop):
     """Tranpose input with the given axes.
@@ -687,6 +717,9 @@ class Transpose(Linop):
 
         return Transpose(oshape, axes=iaxes)
 
+    def _normal_linop(self):
+        return Identity(self.ishape)
+
 
 class FFT(Linop):
     """FFT linear operator.
@@ -711,6 +744,9 @@ class FFT(Linop):
 
     def _adjoint_linop(self):
         return IFFT(self.ishape, axes=self.axes, center=self.center)
+
+    def _normal_linop(self):
+        return Identity(self.ishape)
 
 
 class IFFT(Linop):
@@ -737,6 +773,9 @@ class IFFT(Linop):
 
     def _adjoint_linop(self):
         return FFT(self.ishape, axes=self.axes, center=self.center)
+
+    def _normal_linop(self):
+        return Identity(self.ishape)
 
 
 def _get_matmul_oshape(ishape, mshape, adjoint):
@@ -1059,6 +1098,9 @@ class Resize(Linop):
         return Resize(self.ishape, self.oshape,
                       ishift=self.oshift, oshift=self.ishift)
 
+    def _normal_linop(self):
+        return Identity(self.ishape)
+
 
 class Flip(Linop):
     """Flip linear operator.
@@ -1169,6 +1211,9 @@ class Circshift(Linop):
     def _adjoint_linop(self):
         return Circshift(self.ishape, [-s for s in self.shift], axes=self.axes)
 
+    def _normal_linop(self):
+        return Identity(self.ishape)
+
 
 class Wavelet(Linop):
     """Wavelet transform linear operator.
@@ -1262,7 +1307,6 @@ class Sum(Linop):
             return xp.sum(input, axis=self.axes)
 
     def _adjoint_linop(self):
-
         return Tile(self.ishape, self.axes)
 
 
@@ -1333,6 +1377,9 @@ class ArrayToBlocks(Linop):
     def _adjoint_linop(self):
         return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides)
 
+    def _normal_linop(self):
+        return Identity(self.ishape)
+
 
 class BlocksToArray(Linop):
     """Accumulate blocks into an array in a sliding window manner.
@@ -1364,6 +1411,9 @@ class BlocksToArray(Linop):
 
     def _adjoint_linop(self):
         return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides)
+
+    def _normal_linop(self):
+        return Identity(self.ishape)
 
 
 def Gradient(ishape, axes=None):
