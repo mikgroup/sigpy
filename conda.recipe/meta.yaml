@@ -28,7 +28,6 @@ requirements:
 test:
   imports:
     - sigpy
-    - sigpy.learn
     - sigpy.mri
 
 about:
