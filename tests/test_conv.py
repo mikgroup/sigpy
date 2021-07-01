@@ -19,45 +19,60 @@ class TestConv(unittest.TestCase):
         if config.cupy_enabled:
             devices.append(backend.Device(0))
 
-        for device in devices:
-            xp = device.xp
-            with device:
-                for dtype in dtypes:
-                    with self.subTest(dtype=dtype, device=device):
-                        data = util.dirac([1, 3], device=device, dtype=dtype)
-                        filt = xp.ones([1, 3], dtype=dtype)
-                        output = backend.to_device(conv.convolve(
-                            data, filt, mode=mode))
-                        npt.assert_allclose(output, [[1]], atol=1e-5)
+        for D in [1, 2, 3]:
+            for device in devices:
+                xp = device.xp
+                with device:
+                    for dtype in dtypes:
+                        with self.subTest(D=D, dtype=dtype, device=device):
+                            data = util.dirac([3] + [1] * (D - 1),
+                                              device=device, dtype=dtype)
+                            filt = xp.ones([3] + [1] * (D - 1), dtype=dtype)
+                            output = backend.to_device(conv.convolve(
+                                data, filt, mode=mode))
+                            npt.assert_allclose(
+                                output,
+                                np.ones([1] * D), atol=1e-5)
 
-                        data = util.dirac([1, 3], device=device, dtype=dtype)
-                        filt = xp.ones([1, 2], dtype=dtype)
-                        output = backend.to_device(conv.convolve(
-                            data, filt, mode=mode))
-                        npt.assert_allclose(output, [[1, 1]], atol=1e-5)
+                            data = util.dirac([3] + [1] * (D - 1),
+                                              device=device, dtype=dtype)
+                            filt = xp.ones([2] + [1] * (D - 1), dtype=dtype)
+                            output = backend.to_device(conv.convolve(
+                                data, filt, mode=mode))
+                            npt.assert_allclose(
+                                output,
+                                np.ones([2] + [1] * (D - 1)), atol=1e-5)
 
-                        data = util.dirac([1, 1, 3], device=device,
-                                          dtype=dtype)
-                        filt = xp.ones([2, 1, 1, 3], dtype=dtype)
-                        output = backend.to_device(
-                            conv.convolve(data, filt,
-                                          mode=mode,
-                                          multi_channel=True),
-                            backend.cpu_device)
-                        npt.assert_allclose(output, [[[1]],
-                                                     [[1]]], atol=1e-5)
+                            data = util.dirac([1, 3] + [1] * (D - 1),
+                                              device=device,
+                                              dtype=dtype)
+                            filt = xp.ones([2, 1, 3] + [1] * (D - 1),
+                                           dtype=dtype)
+                            output = backend.to_device(
+                                conv.convolve(data, filt,
+                                              mode=mode,
+                                              multi_channel=True),
+                                backend.cpu_device)
+                            npt.assert_allclose(
+                                output,
+                                np.ones([2, 1] + [1] * (D - 1)),
+                                atol=1e-5)
 
-                        data = util.dirac([1, 1, 3], device=device,
-                                          dtype=dtype)
-                        filt = xp.ones([2, 1, 1, 3], dtype=dtype)
-                        strides = [1, 2]
-                        output = backend.to_device(
-                            conv.convolve(data, filt,
-                                          mode=mode, strides=strides,
-                                          multi_channel=True),
-                            backend.cpu_device)
-                        npt.assert_allclose(output, [[[1]],
-                                                     [[1]]], atol=1e-5)
+                            data = util.dirac([1, 3] + [1] * (D - 1),
+                                              device=device,
+                                              dtype=dtype)
+                            filt = xp.ones([2, 1, 3] + [1] * (D - 1),
+                                           dtype=dtype)
+                            strides = [2] + [1] * (D - 1)
+                            output = backend.to_device(
+                                conv.convolve(data, filt,
+                                              mode=mode, strides=strides,
+                                              multi_channel=True),
+                                backend.cpu_device)
+                            npt.assert_allclose(
+                                output,
+                                np.ones([2, 1] + [1] * (D - 1)),
+                                atol=1e-5)
 
     def test_convolve_full(self):
         mode = 'full'
@@ -65,47 +80,72 @@ class TestConv(unittest.TestCase):
         if config.cupy_enabled:
             devices.append(backend.Device(0))
 
-        for device in devices:
-            xp = device.xp
-            with device:
-                for dtype in dtypes:
-                    with self.subTest(dtype=dtype, device=device):
-                        data = util.dirac([1, 3], device=device, dtype=dtype)
-                        filt = xp.ones([1, 3], dtype=dtype)
-                        output = backend.to_device(conv.convolve(
-                            data, filt, mode=mode))
-                        npt.assert_allclose(output, [[0, 1, 1, 1, 0]],
-                                            atol=1e-5)
+        for D in [1, 2, 3]:
+            for device in devices:
+                xp = device.xp
+                with device:
+                    for dtype in dtypes:
+                        with self.subTest(D=D, dtype=dtype, device=device):
+                            data = util.dirac(
+                                [3] + [1] * (D - 1),
+                                device=device, dtype=dtype)
+                            filt = xp.ones(
+                                [3] + [1] * (D - 1), dtype=dtype)
+                            output = backend.to_device(conv.convolve(
+                                data, filt, mode=mode))
+                            npt.assert_allclose(
+                                output,
+                                np.array([0, 1, 1, 1, 0]).reshape(
+                                    [5] + [1] * (D - 1)),
+                                atol=1e-5)
 
-                        data = util.dirac([1, 3], device=device, dtype=dtype)
-                        filt = xp.ones([1, 2], dtype=dtype)
-                        output = backend.to_device(conv.convolve(
-                            data, filt, mode=mode))
-                        npt.assert_allclose(output, [[0, 1, 1, 0]], atol=1e-5)
+                            data = util.dirac(
+                                [3] + [1] * (D - 1),
+                                device=device, dtype=dtype)
+                            filt = xp.ones(
+                                [2] + [1] * (D - 1), dtype=dtype)
+                            output = backend.to_device(conv.convolve(
+                                data, filt, mode=mode))
+                            npt.assert_allclose(
+                                output,
+                                np.array([0, 1, 1, 0]).reshape(
+                                    [4] + [1] * (D - 1)),
+                                atol=1e-5)
 
-                        data = util.dirac([1, 1, 3], device=device,
-                                          dtype=dtype)
-                        filt = xp.ones([2, 1, 1, 3], dtype=dtype)
-                        output = backend.to_device(
-                            conv.convolve(data, filt,
-                                          mode=mode,
-                                          multi_channel=True),
-                            backend.cpu_device)
-                        npt.assert_allclose(output, [[[0, 1, 1, 1, 0]],
-                                                     [[0, 1, 1, 1, 0]]],
-                                            atol=1e-5)
+                            data = util.dirac(
+                                [1, 3] + [1] * (D - 1),
+                                device=device, dtype=dtype)
+                            filt = xp.ones(
+                                [2, 1, 3] + [1] * (D - 1), dtype=dtype)
+                            output = backend.to_device(
+                                conv.convolve(data, filt,
+                                              mode=mode,
+                                              multi_channel=True),
+                                backend.cpu_device)
+                            npt.assert_allclose(
+                                output,
+                                np.array([[0, 1, 1, 1, 0],
+                                          [0, 1, 1, 1, 0]]).reshape(
+                                              [2, 5] + [1] * (D - 1)),
+                                atol=1e-5)
 
-                        data = util.dirac([1, 1, 3], device=device,
-                                          dtype=dtype)
-                        filt = xp.ones([2, 1, 1, 3], dtype=dtype)
-                        strides = [1, 2]
-                        output = backend.to_device(
-                            conv.convolve(data, filt,
-                                          mode=mode,
-                                          strides=strides,
-                                          multi_channel=True))
-                        npt.assert_allclose(output, [[[0, 1, 0]],
-                                                     [[0, 1, 0]]], atol=1e-5)
+                            data = util.dirac([1, 3] + [1] * (D - 1),
+                                              device=device,
+                                              dtype=dtype)
+                            filt = xp.ones([2, 1, 3] + [1] * (D - 1),
+                                           dtype=dtype)
+                            strides = [2] + [1] * (D - 1)
+                            output = backend.to_device(
+                                conv.convolve(data, filt,
+                                              mode=mode,
+                                              strides=strides,
+                                              multi_channel=True))
+                            npt.assert_allclose(
+                                output,
+                                np.array([[0, 1, 0],
+                                          [0, 1, 0]]).reshape(
+                                              [2, 3] + [1] * (D - 1)),
+                                atol=1e-5)
 
     def test_convolve_data_adjoint_valid(self):
         mode = 'valid'

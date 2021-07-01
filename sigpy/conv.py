@@ -14,6 +14,7 @@ def convolve(data, filt, mode='full', strides=None, multi_channel=False):
     r"""Convolution that supports multi-dimensional and multi-channel inputs.
 
     This function follows the signal processing definition of convolution.
+    Note that the cuDNN version only supports inputs with D=1, 2 or 3.
 
     Args:
         data (array): data array of shape:
@@ -56,6 +57,8 @@ def convolve(data, filt, mode='full', strides=None, multi_channel=False):
 def convolve_data_adjoint(output, filt, data_shape,
                           mode='full', strides=None, multi_channel=False):
     """Adjoint convolution operation with respect to data.
+
+    Note that the cuDNN version only supports inputs with D=1, 2 or 3.
 
     Args:
         output (array): output array of shape
@@ -106,6 +109,7 @@ def convolve_filter_adjoint(output, data, filt_shape,
                             mode='full', strides=None, multi_channel=False):
     """Adjoint convolution operation with respect to filter.
 
+    Note that the cuDNN version only supports inputs with D=1, 2 or 3.
     Args:
         output (array): output array of shape:
             :math:`[..., p_1, ..., p_D]` if multi_channel is False,
@@ -325,6 +329,18 @@ if config.cudnn_enabled:  # pragma: no cover
         D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
             data.shape, filt.shape,
             mode, strides, multi_channel)
+
+        if D == 1:
+            return _convolve_cuda(
+                xp.expand_dims(data, -1),
+                xp.expand_dims(filt, -1),
+                mode=mode,
+                strides=list(strides) + [1] if strides is not None else None,
+                multi_channel=multi_channel).squeeze(-1)
+        elif D > 3:
+            raise ValueError(
+                f'cuDNN convolution only supports 1, 2, or 3D, got {D}.')
+
         dilations = (1, ) * D
         groups = 1
         auto_tune = True
@@ -359,6 +375,19 @@ if config.cudnn_enabled:  # pragma: no cover
         D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
             data_shape, filt.shape,
             mode, strides, multi_channel)
+
+        if D == 1:
+            return _convolve_data_adjoint_cuda(
+                xp.expand_dims(output, -1),
+                xp.expand_dims(filt, -1),
+                list(data_shape) + [1],
+                mode=mode,
+                strides=list(strides) + [1] if strides is not None else None,
+                multi_channel=multi_channel).squeeze(-1)
+        elif D > 3:
+            raise ValueError(
+                f'cuDNN convolution only supports 1, 2 or 3D, got {D}.')
+
         dilations = (1, ) * D
         groups = 1
         auto_tune = True
@@ -392,6 +421,18 @@ if config.cudnn_enabled:  # pragma: no cover
         D, b, B, m, n, s, c_i, c_o, p = _get_convolve_params(
             data.shape, filt_shape,
             mode, strides, multi_channel)
+        if D == 1:
+            return _convolve_filter_adjoint_cuda(
+                xp.expand_dims(output, -1),
+                xp.expand_dims(data, -1),
+                list(filt_shape) + [1],
+                mode=mode,
+                strides=list(strides) + [1] if strides is not None else None,
+                multi_channel=multi_channel).squeeze(-1)
+        elif D > 3:
+            raise ValueError(
+                f'cuDNN convolution only supports 1, 2 or 3D, got {D}.')
+
         dilations = (1, ) * D
         groups = 1
         auto_tune = True
