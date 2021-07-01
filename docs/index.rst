@@ -29,13 +29,6 @@
 
 .. toctree::
    :hidden:
-   :caption: Learning API Reference
-
-   learn
-   learn_app
-
-.. toctree::
-   :hidden:
    :caption: Plot API Reference
 
    plot
