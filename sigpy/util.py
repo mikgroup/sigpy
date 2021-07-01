@@ -55,7 +55,7 @@ def prod(shape):
         Product.
 
     """
-    return np.prod(shape, dtype=np.long)
+    return np.prod(shape, dtype=np.int64)
 
 
 def vec(inputs):
