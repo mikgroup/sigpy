@@ -110,6 +110,7 @@ def convolve_filter_adjoint(output, data, filt_shape,
     """Adjoint convolution operation with respect to filter.
 
     Note that the cuDNN version only supports inputs with D=1, 2 or 3.
+
     Args:
         output (array): output array of shape:
             :math:`[..., p_1, ..., p_D]` if multi_channel is False,
