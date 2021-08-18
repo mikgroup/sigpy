@@ -58,7 +58,7 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, b0=None, tseg=None,
     device = backend.get_device(target)
     xp = device.xp
     with device:
-        pulses = xp.zeros((Nc, Nt), xp.complex)
+        pulses = xp.zeros((Nc, Nt), xp.complex64)
 
         # set up the system matrix
         if explicit:
@@ -155,9 +155,9 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
         kmax = 1 / dx_max  # /cm, max spatial freq of trajectory
         # greedy kx, ky grid
         kxs, kys = xp.meshgrid(xp.linspace(-kmax / 2, kmax / 2 - 1 / fov,
-                                           xp.int(fov * kmax)),
+                                           int(fov * kmax)),
                                xp.linspace(-kmax / 2, kmax / 2 - 1 / fov,
-                                           xp.int(fov * kmax)))
+                                           int(fov * kmax)))
         # vectorize the grid
         kxs = kxs.flatten()
         kys = kys.flatten()
@@ -172,7 +172,7 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
         k = xp.expand_dims(xp.array([0, 0]), 0)
 
         # initial target phase
-        phs = xp.zeros((xp.count_nonzero(mask), 1), dtype=xp.complex)
+        phs = xp.zeros((xp.count_nonzero(mask), 1), dtype=xp.complex64)
 
         for ii in range(n_spokes):
 
@@ -205,7 +205,7 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
             if ii < n_spokes - 1:
 
                 r = xp.exp(1j * phs) - Anum @ w_full
-                rfnorm = xp.zeros(kxs.shape, dtype=xp.complex)
+                rfnorm = xp.zeros(kxs.shape, dtype=xp.complex64)
                 for jj in range(kxs.size):
                     ks_test = xp.expand_dims(xp.array([kxs[jj], kys[jj]]), 0)
                     Anum = rf.PtxSpatialExplicit(sens, ks_test, gts,

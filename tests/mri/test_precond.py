@@ -45,7 +45,8 @@ class TestPrecond(unittest.TestCase):
                     p_expected[c, i] = 1 / p_expected_inv_ic
 
         p = precond.kspace_precond(mps, weights=weights)
-        npt.assert_allclose(p[:, weights == 1], p_expected[:, weights == 1])
+        npt.assert_allclose(p[:, weights == 1], p_expected[:, weights == 1],
+                            atol=1E-6, rtol=1e-6)
 
     def test_kspace_precond_noncart(self):
         n = 10
@@ -86,26 +87,30 @@ class TestPrecond(unittest.TestCase):
         mps_shape = [1, 1]
         mps = np.ones(mps_shape, dtype=np.complex)
         p = precond.kspace_precond(mps)
-        npt.assert_allclose(p, np.ones(mps_shape))
+        npt.assert_allclose(p, np.ones(mps_shape),
+                            atol=1e-6, rtol=1e-6)
 
         # Check scaling
         mps_shape = [1, 3]
         mps = np.ones(mps_shape, dtype=np.complex)
         p = precond.kspace_precond(mps)
-        npt.assert_allclose(p, np.ones(mps_shape))
+        npt.assert_allclose(p, np.ones(mps_shape),
+                            atol=1e-6, rtol=1e-6)
 
         # Check 2d
         mps_shape = [1, 3, 3]
         mps = np.ones(mps_shape, dtype=np.complex)
         p = precond.kspace_precond(mps)
-        npt.assert_allclose(p, np.ones(mps_shape))
+        npt.assert_allclose(p, np.ones(mps_shape),
+                            atol=1e-6, rtol=1e-6)
 
         # Check weights
         mps_shape = [1, 3]
         mps = np.ones(mps_shape, dtype=np.complex)
         weights = np.array([1, 0, 1], dtype=np.complex)
         p = precond.kspace_precond(mps, weights=weights)
-        npt.assert_allclose(p, [[1, 1, 1]])
+        npt.assert_allclose(p, [[1, 1, 1]],
+                            atol=1e-6, rtol=1e-6)
 
     def test_kspace_precond_simple_noncart(self):
         # Check identity
@@ -114,14 +119,16 @@ class TestPrecond(unittest.TestCase):
         mps = np.ones(mps_shape, dtype=np.complex)
         coord = np.array([[0.0]])
         p = precond.kspace_precond(mps, coord=coord)
-        npt.assert_allclose(p, [[1.0]], atol=1, rtol=1e-1)
+        npt.assert_allclose(p, [[1.0]],
+                            atol=1, rtol=1e-1)
 
         mps_shape = [1, 3]
 
         mps = np.ones(mps_shape, dtype=np.complex)
         coord = np.array([[0.0], [-1], [1]])
         p = precond.kspace_precond(mps, coord=coord)
-        npt.assert_allclose(p, [[1.0, 1.0, 1.0]], atol=1, rtol=1e-1)
+        npt.assert_allclose(p, [[1.0, 1.0, 1.0]],
+                            atol=1, rtol=1e-1)
 
     def test_circulant_precond_cart(self):
         nc = 4
@@ -142,7 +149,8 @@ class TestPrecond(unittest.TestCase):
                 p_expected[i] = 1 / F(A.H(A(F.H(x))))[i]
 
         p = precond.circulant_precond(mps, weights=weights)
-        npt.assert_allclose(p[weights == 1], p_expected[weights == 1])
+        npt.assert_allclose(p[weights == 1], p_expected[weights == 1],
+                            atol=1e-6, rtol=1e-6)
 
     def test_circulant_precond_noncart(self):
         nc = 4
@@ -162,4 +170,5 @@ class TestPrecond(unittest.TestCase):
             p_expected[i] = 1 / F(A.H(A(F.H(x))))[i]
 
         p = precond.circulant_precond(mps, coord=coord)
-        npt.assert_allclose(p, p_expected, atol=1e-1, rtol=1e-1)
+        npt.assert_allclose(p, p_expected,
+                            atol=1e-1, rtol=1e-1)

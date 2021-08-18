@@ -262,7 +262,7 @@ class LinearLeastSquares(App):
 
     def _get_ConjugateGradient(self):
         I = linop.Identity(self.x.shape)
-        AHA = self.A.H * self.A
+        AHA = self.A.N
         AHy = self.A.H(self.y)
 
         if self.lamda != 0:
@@ -275,13 +275,12 @@ class LinearLeastSquares(App):
             tol=self.tol)
 
     def _get_GradientMethod(self):
-        def gradf(x):
-            with self.y_device:
-                r = self.A(x)
-                r -= self.y
+        with self.y_device:
+            AHy = self.A.H(self.y)
 
+        def gradf(x):
             with self.x_device:
-                gradf_x = self.A.H(r)
+                gradf_x = self.A.N(x) - AHy
                 if self.lamda != 0:
                     if self.z is None:
                         util.axpy(gradf_x, self.lamda, x)
@@ -292,7 +291,7 @@ class LinearLeastSquares(App):
 
         if self.alpha is None:
             I = linop.Identity(self.x.shape)
-            AHA = self.A.H * self.A
+            AHA = self.A.N
             if self.lamda != 0:
                 AHA += self.lamda * I
 
@@ -410,7 +409,7 @@ class LinearLeastSquares(App):
             if self.z is not None:
                 AHy += self.lamda * self.z
 
-            AHA = self.A.H * self.A
+            AHA = self.A.N
             I = linop.Identity(self.x.shape)
             if self.G is None:
                 AHA += (self.lamda + self.rho) * I
@@ -500,7 +499,7 @@ class L2ConstrainedMinimization(App):
         self.x_device = backend.get_device(self.x)
         if G is None:
             self.max_eig_app = MaxEig(
-                A.H * A, dtype=self.x.dtype, device=self.x_device,
+                A.N, dtype=self.x.dtype, device=self.x_device,
                 show_pbar=show_pbar)
 
             proxfc = prox.Conj(prox.L2Proj(A.oshape, eps, y=y))

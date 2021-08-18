@@ -50,7 +50,7 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
     pulse_len = tb / b
 
     # calculate number of samples in pulse
-    n = np.int(np.ceil(pulse_len / dt / 2) * 2)
+    n = int(np.ceil(pulse_len / dt / 2) * 2)
 
     if pbc == 0:
         # we want passband as close to zero as possible.
@@ -72,7 +72,7 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
         ds = np.double(np.abs(ii) > f[2])
 
         # shift the target pattern to minimum center position
-        pbc = np.int(np.ceil((f[2] - f[1]) * n * os / 2 + f[1] * n * os / 2))
+        pbc = int(np.ceil((f[2] - f[1]) * n * os / 2 + f[1] * n * os / 2))
         dl = np.roll(d, pbc)
         dr = np.roll(d, -pbc)
         dsl = np.roll(ds, pbc)
@@ -155,7 +155,7 @@ def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
     pulse_len = tb / b
 
     # calculate number of samples in pulse
-    n = np.int(np.ceil(pulse_len / dt / 2) * 2)
+    n = int(np.ceil(pulse_len / dt / 2) * 2)
 
     om = 2 * np.pi * 4257 * pbc  # modulation freq to center profile at pbc
     t = np.arange(0, n) * pulse_len / n - pulse_len / 2
@@ -228,7 +228,7 @@ def dz_b1_hadamard_rf(dt=2e-6, g=8, tb=16, ptype='st', flip=np.pi / 6,
     pulse_len = tb / b
 
     # calculate number of samples in pulse
-    n = np.int(np.ceil(pulse_len / dt / 2) * 2)
+    n = int(np.ceil(pulse_len / dt / 2) * 2)
 
     # modulation frequency to center profile at pbc gauss
     om = 2 * np.pi * 4257 * pbc

@@ -10,7 +10,7 @@ if __name__ == '__main__':
 class TestAlg(unittest.TestCase):
     def Ax_setup(self, n):
         A = np.eye(n) + 0.1 * np.ones([n, n])
-        x = np.arange(n, dtype=np.float)
+        x = np.arange(n, dtype=np.float32)
         return A, x
 
     def Ax_y_setup(self, n, lamda):

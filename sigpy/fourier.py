@@ -8,7 +8,8 @@ from math import ceil
 from sigpy import backend, interp, util
 
 
-__all__ = ['fft', 'ifft', 'nufft', 'nufft_adjoint', 'estimate_shape']
+__all__ = ['fft', 'ifft', 'nufft', 'nufft_adjoint', 'estimate_shape',
+           'toeplitz_psf']
 
 
 def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
@@ -29,7 +30,7 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
     """
     xp = backend.get_array_module(input)
     if not np.issubdtype(input.dtype, np.complexfloating):
-        input = input.astype(np.complex)
+        input = input.astype(np.complex64)
 
     if center:
         output = _fftc(input, oshape=oshape, axes=axes, norm=norm)
@@ -62,7 +63,7 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
     """
     xp = backend.get_array_module(input)
     if not np.issubdtype(input.dtype, np.complexfloating):
-        input = input.astype(np.complex)
+        input = input.astype(np.complex64)
 
     if center:
         output = _ifftc(input, oshape=oshape, axes=axes, norm=norm)
@@ -92,7 +93,6 @@ def nufft(input, coord, oversamp=1.25, width=4):
         oversamp (float): oversampling factor.
         width (float): interpolation kernel full-width in terms of
             oversampled grid.
-        n (int): number of sampling points of the interpolation kernel.
 
     Returns:
         array: Fourier domain data of shape
@@ -167,7 +167,6 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4):
         oversamp (float): oversampling factor.
         width (float): interpolation kernel full-width in terms of
             oversampled grid.
-        n (int): number of sampling points of the interpolation kernel.
 
     Returns:
         array: signal domain array with shape specified by oshape.
@@ -202,6 +201,53 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4):
     _apodize(output, ndim, oversamp, width, beta)
 
     return output
+
+
+def toeplitz_psf(coord, shape, oversamp=1.25, width=4):
+    """Toeplitz PSF for fast Normal non-uniform Fast Fourier Transform.
+
+    While fast, this is more computationally expensive.
+
+    Args:
+        coord (array): Fourier domain coordinate array of shape (..., ndim).
+            ndim determines the number of dimension to apply nufft adjoint.
+            coord[..., i] should be scaled to have its range between
+            -n_i // 2, and n_i // 2.
+        shape (tuple of ints): shape of the form
+            (..., n_{ndim - 1}, ..., n_1, n_0).
+            This is the shape of the input array of the forward nufft.
+        oversamp (float): oversampling factor.
+        width (float): interpolation kernel full-width in terms of
+            oversampled grid.
+
+    Returns:
+        array: PSF to be used by the normal operator defined in
+            `sigpy.linop.NUFFT`
+
+    See Also:
+        :func:`sigpy.linop.NUFFT`
+
+    """
+    xp = backend.get_array_module(coord)
+    with backend.get_device(coord):
+        ndim = coord.shape[-1]
+
+        new_shape = _get_oversamp_shape(shape, ndim, 2)
+        new_coord = _scale_coord(coord, new_shape, 2)
+
+        idx = [slice(None)]*len(new_shape)
+        for k in range(-1, -(ndim + 1), -1):
+            idx[k] = new_shape[k]//2
+
+        d = xp.zeros(new_shape, dtype=xp.complex64)
+        d[tuple(idx)] = 1
+
+        psf = nufft(d, new_coord, oversamp, width)
+        psf = nufft_adjoint(psf, new_coord, d.shape, oversamp, width)
+        fft_axes = tuple(range(-1, -(ndim + 1), -1))
+        psf = fft(psf, axes=fft_axes, norm=None) * (2**ndim)
+
+        return psf
 
 
 def _fftc(input, oshape=None, axes=None, norm='ortho'):

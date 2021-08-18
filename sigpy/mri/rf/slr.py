@@ -149,7 +149,7 @@ def fmp(h):
     hpfs = hpf - np.min(np.real(hpf)) * 1.000001
     hpfmp = mag2mp(np.sqrt(np.abs(hpfs)))
     hpmp = sp.ifft(np.fft.ifftshift(np.conj(hpfmp)), center=False, norm=None)
-    hmp = hpmp[:np.int((l + 1) / 2)]
+    hmp = hpmp[:int((l + 1) / 2)]
 
     return hmp
 
