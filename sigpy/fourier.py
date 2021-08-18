@@ -92,7 +92,6 @@ def nufft(input, coord, oversamp=1.25, width=4):
         oversamp (float): oversampling factor.
         width (float): interpolation kernel full-width in terms of
             oversampled grid.
-        n (int): number of sampling points of the interpolation kernel.
 
     Returns:
         array: Fourier domain data of shape
@@ -167,7 +166,6 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4):
         oversamp (float): oversampling factor.
         width (float): interpolation kernel full-width in terms of
             oversampled grid.
-        n (int): number of sampling points of the interpolation kernel.
 
     Returns:
         array: signal domain array with shape specified by oshape.

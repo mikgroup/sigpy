@@ -1457,7 +1457,6 @@ class NUFFT(Linop):
         coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
         oversamp (float): Oversampling factor.
         width (float): Kernel width.
-        n (int): Kernel sampling number.
 
     """
     def __init__(self, ishape, coord, oversamp=1.25, width=4):
