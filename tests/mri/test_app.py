@@ -32,11 +32,13 @@ class TestApp(unittest.TestCase):
                        'GradientMethod',
                        'PrimalDualHybridGradient',
                        'ADMM']:
-            with self.subTest(solver=solver):
-                img_rec = app.SenseRecon(
-                    ksp, mps, lamda, solver=solver,
-                    show_pbar=False).run()
-                npt.assert_allclose(img, img_rec, atol=1e-2, rtol=1e-2)
+            for coil_batch_size in [None, 1, 2, 3]:
+                with self.subTest(solver=solver):
+                    img_rec = app.SenseRecon(
+                        ksp, mps, lamda, solver=solver,
+                        coil_batch_size=coil_batch_size,
+                        show_pbar=False).run()
+                    npt.assert_allclose(img, img_rec, atol=1e-2, rtol=1e-2)
 
     if sp.config.mpi4py_enabled:
         def test_shepp_logan_SenseRecon_with_comm(self):
