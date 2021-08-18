@@ -40,7 +40,7 @@ def bir4(n, beta, kappa, theta, dw0):
     a3 = np.tanh(beta * (3 - 4 * t[n // 2:3 * n // 4]))
     a4 = np.tanh(beta * (4 * t[3 * n // 4:] - 3))
 
-    a = np.concatenate((a1, a2, a3, a4)).astype(complex)
+    a = np.concatenate((a1, a2, a3, a4)).astype(np.complex64)
     a[n // 4:3 * n // 4] = a[n // 4:3 * n // 4] * np.exp(1j * dphi)
 
     om1 = dw0 * np.tan(kappa * 4 * t[:n // 4]) / np.tan(kappa)

@@ -8,7 +8,8 @@ from math import ceil
 from sigpy import backend, interp, util
 
 
-__all__ = ['fft', 'ifft', 'nufft', 'nufft_adjoint', 'estimate_shape', 'toeplitz_psf']
+__all__ = ['fft', 'ifft', 'nufft', 'nufft_adjoint', 'estimate_shape',
+           'toeplitz_psf']
 
 
 def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
@@ -29,7 +30,7 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
     """
     xp = backend.get_array_module(input)
     if not np.issubdtype(input.dtype, np.complexfloating):
-        input = input.astype(np.complex)
+        input = input.astype(np.complex64)
 
     if center:
         output = _fftc(input, oshape=oshape, axes=axes, norm=norm)
@@ -62,7 +63,7 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
     """
     xp = backend.get_array_module(input)
     if not np.issubdtype(input.dtype, np.complexfloating):
-        input = input.astype(np.complex)
+        input = input.astype(np.complex64)
 
     if center:
         output = _ifftc(input, oshape=oshape, axes=axes, norm=norm)
@@ -244,7 +245,7 @@ def toeplitz_psf(coord, shape, oversamp=1.25, width=4):
         psf = nufft(d, new_coord, oversamp, width)
         psf = nufft_adjoint(psf, new_coord, d.shape, oversamp, width)
         fft_axes = tuple(range(-1, -(ndim + 1), -1))
-        psf = fft(psf, axes=fft_axes)
+        psf = fft(psf, axes=fft_axes, norm=None) * (2**ndim)
 
         return psf
 

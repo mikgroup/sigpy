@@ -1098,9 +1098,6 @@ class Resize(Linop):
         return Resize(self.ishape, self.oshape,
                       ishift=self.oshift, oshift=self.ishift)
 
-    def _normal_linop(self):
-        return Identity(self.ishape)
-
 
 class Flip(Linop):
     """Flip linear operator.
@@ -1457,12 +1454,14 @@ class NUFFT(Linop):
         coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
         oversamp (float): Oversampling factor.
         width (float): Kernel width.
+        toeplitz (bool): Use toeplitz PSF to evaluate normal operator.
 
     """
-    def __init__(self, ishape, coord, oversamp=1.25, width=4):
+    def __init__(self, ishape, coord, oversamp=1.25, width=4, toeplitz=False):
         self.coord = coord
         self.oversamp = oversamp
         self.width = width
+        self.toeplitz = toeplitz
 
         ndim = coord.shape[-1]
 
@@ -1481,6 +1480,23 @@ class NUFFT(Linop):
     def _adjoint_linop(self):
         return NUFFTAdjoint(self.ishape, self.coord,
                             oversamp=self.oversamp, width=self.width)
+
+    def _normal_linop(self):
+        if self.toeplitz is False:
+            return self.H * self
+
+        ndim = self.coord.shape[-1]
+        psf = fourier.toeplitz_psf(self.coord, self.ishape, self.oversamp,
+                                   self.width)
+
+        fft_axes = tuple(range(-1, -(ndim + 1), -1))
+
+        R = Resize(psf.shape, self.ishape)
+        F = FFT(psf.shape, axes=fft_axes)
+        P = Multiply(psf.shape, psf)
+        T = R.H * F.H * P * F * R
+
+        return T
 
 
 class NUFFTAdjoint(Linop):

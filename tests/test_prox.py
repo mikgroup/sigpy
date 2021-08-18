@@ -40,7 +40,7 @@ class TestProx(unittest.TestCase):
         P = prox.UnitaryTransform(prox.L2Reg(shape, lamda), A)
         x = util.randn(shape)
         y = P(0.1, x)
-        npt.assert_allclose(y, x / (1 + lamda * 0.1))
+        npt.assert_allclose(y, x / (1 + lamda * 0.1), atol=1e-6, rtol=1e-6)
 
     def test_L2Reg(self):
         shape = [6]
