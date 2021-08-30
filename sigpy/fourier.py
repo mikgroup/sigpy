@@ -206,7 +206,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4):
 def toeplitz_psf(coord, shape, oversamp=1.25, width=4):
     """Toeplitz PSF for fast Normal non-uniform Fast Fourier Transform.
 
-    While fast, this is more computationally expensive.
+    While fast, this is more memory intensive.
 
     Args:
         coord (array): Fourier domain coordinate array of shape (..., ndim).
