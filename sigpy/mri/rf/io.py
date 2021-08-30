@@ -119,14 +119,14 @@ def signa(wav, filename, scale=-1):
         fid = open(filename + '.r', 'wb')
 
         for x in np.nditer(wav):
-            fid.write(struct.pack('>h', np.real(x)))
+            fid.write(struct.pack('>h', int(np.real(x))))
 
         fid.close()
 
         fid = open(filename + '.i', 'wb')
 
         for x in np.nditer(wav):
-            fid.write(struct.pack('>h', np.imag(x)))
+            fid.write(struct.pack('>h', int(np.imag(x))))
 
         fid.close()
 
