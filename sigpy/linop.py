@@ -375,7 +375,12 @@ class Add(Linop):
         device = backend.get_device(input)
         xp = device.xp
         with device:
-            output = xp.sum(_mult_map(self.linops, input, self.num_processes))
+            if self.num_processes > 1 and device is backend.cpu_device:
+                output = xp.sum(_mult_map(self.linops, input, self.num_processes))
+            else:
+                output = self.linops[0](input)
+                for L in self.linops[1:]:
+                    output += L(input)
 
         return output
 
@@ -489,6 +494,7 @@ class Hstack(Linop):
             Otherwise, inputs are stacked along axis.
 
     """
+    # TODO: Make parallel
 
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
@@ -573,6 +579,7 @@ class Vstack(Linop):
         axis (int or None): If None, outputs are vectorized and concatenated.
 
     """
+    # TODO: Make parallel
 
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
@@ -635,6 +642,7 @@ class Diag(Linop):
             and concatenated.
 
     """
+    # TODO: Make parallel
 
     def __init__(self, linops, oaxis=None, iaxis=None):
         self.nops = len(linops)
@@ -1391,6 +1399,7 @@ class ArrayToBlocks(Linop):
         :func:`sigpy.block.array_to_blocks`
 
     """
+    # TODO: See if it is possible to make parallel
 
     def __init__(self, ishape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
@@ -1427,6 +1436,7 @@ class BlocksToArray(Linop):
         array: array of shape oshape.
 
     """
+    # TODO: See if it is possible to make parallel
     def __init__(self, oshape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
