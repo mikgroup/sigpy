@@ -7,7 +7,35 @@ such as reshape, transpose, and resize.
 import numpy as np
 import multiprocessing as mp
 
+from functools import reduce
 from sigpy import backend, block, fourier, util, interp, conv, wavelet
+
+
+def _map_helper(fx):
+    return fx[0] * fx[1]
+
+
+def _map(fi, xi, num_processes=1):
+    """Parallel element-wise map.
+
+    Use multiprocessing to calculate the following:
+
+       >>> [(fi * xi) for (f, x) in (fi, xi)]
+
+    Args:
+        fi (list of arrays or linops): List of elements to multiply with x.
+        xi (list of arrays): Input arrays.
+
+    Returns:
+        list of arrays: List of multiplication results.
+    """
+    zipped = zip(fi, xi)
+    if num_processes > 1:
+        with mp.Pool(processes = num_processes) as pool:
+            result = pool.map(_map_helper, zipped)
+    else:
+        result = map(_map_helper, zipped)
+    return result
 
 
 def _check_shape_positive(shape):
@@ -310,29 +338,14 @@ class Conj(Linop):
         return Conj(self.A.H)
 
 
-def _map_helper(fx):
-    return fx[0] * fx[1]
+def _unpack_add(linops):
+    if linops == []:
+        return []
 
+    L = linops[0]
+    L = _unpack_add(L.linops) if isinstance(L, Add) or isinstance(L, ParallelAdd) else [L]
 
-def _map(fi, xi):
-    """Parallel element-wise map.
-
-    Use multiprocessing to calculate the following:
-
-       >>> [(fi * xi) for (f, x) in (fi, xi)]
-
-    Args:
-        fi (list of arrays or linops): List of elements to multiply with x.
-        xi (list of arrays): Input arrays.
-
-    Returns:
-        list of arrays: List of multiplication results.
-    """
-    zipped = zip(fi, xi)
-    #with mp.Pool(processes = mp.cpu_count()) as pool:
-    with mp.Pool(processes = 8) as pool:
-        result = pool.map(_map_helper, zipped)
-    return result
+    return L + _unpack_add(linops[1:])
 
 
 class Add(Linop):
@@ -348,20 +361,11 @@ class Add(Linop):
 
     """
 
-    def _filter_linops(self, linops):
-        if linops == []:
-            return []
-
-        L = linops[0]
-        L = self._filter_linops(L.linops) if isinstance(L, Add) else [L]
-
-        return L + self._filter_linops(linops[1:])
-
     def __init__(self, linops):
         _check_linops_same_ishape(linops)
         _check_linops_same_oshape(linops)
 
-        self.linops = self._filter_linops(linops)
+        self.linops = _unpack_add(linops)
 
         oshape = self.linops[0].oshape
         ishape = self.linops[0].ishape
@@ -374,15 +378,56 @@ class Add(Linop):
         device = backend.get_device(input)
         xp = device.xp
         with device:
-            if device is backend.cpu_device:
-                output = xp.sum(_map(self.linops, [input]*len(self.linops)))
-            else:
-                output = xp.sum(map(self.linops, [input]*len(self.linops)))
-
+            summation = lambda x, y: xp.add(x, y)
+            output = reduce(summation, _map(self.linops, [input]*len(self.linops)))
         return output
 
     def _adjoint_linop(self):
         return Add([linop.H for linop in self.linops])
+
+
+class ParallelAdd(Linop):
+    """Addition of linear operators using multiple processes.
+
+    Input and output shapes and devices must match.
+
+    Args:
+        linops (list of Linops): Input linear operators.
+        num_processes (int): Number of processes to use. By default, uses all available.
+
+    Returns:
+        Linop: linops[0] + linops[1] + ... + linops[n - 1]
+
+    """
+
+    def __init__(self, linops, num_processes=mp.cpu_count()):
+        _check_linops_same_ishape(linops)
+        _check_linops_same_oshape(linops)
+
+        self.linops = _unpack_add(linops)
+
+        oshape = self.linops[0].oshape
+        ishape = self.linops[0].ishape
+
+        self.num_process = num_processes
+
+        self.num_processes = num_processes
+
+        super().__init__(
+            oshape, ishape,
+            repr_str=' + '.join([linop.repr_str for linop in linops]))
+
+    def _apply(self, input):
+        device = backend.get_device(input)
+        xp = device.xp
+        with device:
+            summation = lambda x, y: xp.add(x, y)
+            output = reduce(summation, _map(self.linops, [input]*len(self.linops),
+                self.num_processes))
+        return output
+
+    def _adjoint_linop(self):
+        return ParallelAdd([linop.H for linop in self.linops], self.num_processes)
 
 
 def _check_compose_linops(linops):
@@ -506,11 +551,8 @@ class Hstack(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        device = backend.get_device(input)
-        xp = device.xp
-
-        with device:
-            lst_input = []
+        with backend.get_device(input):
+            output = 0
             for n, linop in enumerate(self.linops):
                 if n == 0:
                     start = 0
@@ -523,7 +565,7 @@ class Hstack(Linop):
                     end = self.indices[n]
 
                 if self.axis is None:
-                    lst_input.append(input[start:end].reshape(linop.ishape))
+                    output += linop(input[start:end].reshape(linop.ishape))
                 else:
                     ndim = len(linop.ishape)
                     axis = self.axis % ndim
@@ -531,12 +573,7 @@ class Hstack(Linop):
                     slc = tuple([slice(None)] * axis + [slice(start, end)] +
                                 [slice(None)] * (ndim - axis - 1))
 
-                    lst_input.append(input[slc])
-
-            if device is backend.cpu_device:
-                output = xp.sum(_map(self.linops, lst_input))
-            else:
-                output = xp.sum(map(self.linops, lst_input))
+                    output += linop(input[slc])
 
             return output
 
@@ -600,16 +637,9 @@ class Vstack(Linop):
     def _apply(self, input):
         device = backend.get_device(input)
         xp = device.xp
-
         with device:
-            if device is backend.cpu_device:
-                map_result = _map(self.linops, [input]*len(self.linops))
-            else:
-                map_result = map(self.linops, [input]*len(self.linops))
-
             output = xp.empty(self.oshape, dtype=input.dtype)
             for n, linop in enumerate(self.linops):
-
                 if n == 0:
                     start = 0
                 else:
@@ -621,13 +651,13 @@ class Vstack(Linop):
                     end = self.indices[n]
 
                 if self.axis is None:
-                    output[start:end] = map_result[n].ravel()
+                    output[start:end] = linop(input).ravel()
                 else:
                     ndim = len(linop.oshape)
                     axis = self.axis % ndim
                     slc = tuple([slice(None)] * axis + [slice(start, end)] +
                                 [slice(None)] * (ndim - axis - 1))
-                    output[slc] = map_result[n]
+                    output[slc] = linop(input)
 
         return output
 
@@ -669,10 +699,7 @@ class Diag(Linop):
     def _apply(self, input):
         device = backend.get_device(input)
         xp = device.xp
-
         with device:
-            lst_input = []
-
             output = xp.empty(self.oshape, dtype=input.dtype)
             for n, linop in enumerate(self.linops):
                 if n == 0:
@@ -690,33 +717,25 @@ class Diag(Linop):
                     oend = self.oindices[n]
 
                 if self.iaxis is None:
-                    lst_input.append(input[istart:iend].reshape(linop.ishape))
+                    output_n = linop(
+                        input[istart:iend].reshape(linop.ishape)).ravel()
                 else:
                     ndim = len(linop.ishape)
                     axis = self.iaxis % ndim
                     islc = tuple([slice(None)] * axis + [slice(istart, iend)] +
                                  [slice(None)] * (ndim - axis - 1))
 
-                    lst_input.append(input[islc])
+                    output_n = linop(input[islc])
 
-            if device is backend.cpu_device:
-                output_n = _map(self.linops, lst_input)
-            else:
-                output_n = map(self.linops, lst_input)
-
-            if self.iaxis is None:
-                output_n = [x.ravel() for x in output_n]
-
-            for n, linop in enumerate(self.linops):
                 if self.oaxis is None:
-                    output[ostart:oend] = output_n[n]
+                    output[ostart:oend] = output_n
                 else:
                     ndim = len(linop.oshape)
                     axis = self.oaxis % ndim
                     oslc = tuple([slice(None)] * axis + [slice(ostart, oend)] +
                                  [slice(None)] * (ndim - axis - 1))
 
-                    output[oslc] = output_n[n]
+                    output[oslc] = output_n
 
             return output
 
@@ -1419,7 +1438,6 @@ class ArrayToBlocks(Linop):
         :func:`sigpy.block.array_to_blocks`
 
     """
-    # TODO: See if it is possible to make parallel
 
     def __init__(self, ishape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
@@ -1456,7 +1474,6 @@ class BlocksToArray(Linop):
         array: array of shape oshape.
 
     """
-    # TODO: See if it is possible to make parallel
     def __init__(self, oshape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
