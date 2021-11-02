@@ -310,27 +310,28 @@ class Conj(Linop):
         return Conj(self.A.H)
 
 
-def _forward_mult(fx):
+def _map_helper(fx):
     return fx[0] * fx[1]
 
 
-def _mult_map(fi, x, num_processes=1):
-    """Parallel multiplication map.
+def _map(fi, xi):
+    """Parallel element-wise map.
 
     Use multiprocessing to calculate the following:
 
-       >>> [f * x for f in fi]
+       >>> [(fi * xi) for (f, x) in (fi, xi)]
 
     Args:
         fi (list of arrays or linops): List of elements to multiply with x.
-        x (array): Input array.
+        xi (list of arrays): Input arrays.
 
     Returns:
         list of arrays: List of multiplication results.
     """
-    zipped = [(f, x) for f in fi]
-    with mp.Pool(processes = num_processes) as pool:
-        result = pool.map(_forward_mult, zipped)
+    zipped = zip(fi, xi)
+    #with mp.Pool(processes = mp.cpu_count()) as pool:
+    with mp.Pool(processes = 8) as pool:
+        result = pool.map(_map_helper, zipped)
     return result
 
 
@@ -365,8 +366,6 @@ class Add(Linop):
         oshape = self.linops[0].oshape
         ishape = self.linops[0].ishape
 
-        self.num_processes = 1
-
         super().__init__(
             oshape, ishape,
             repr_str=' + '.join([linop.repr_str for linop in linops]))
@@ -375,12 +374,10 @@ class Add(Linop):
         device = backend.get_device(input)
         xp = device.xp
         with device:
-            if self.num_processes > 1 and device is backend.cpu_device:
-                output = xp.sum(_mult_map(self.linops, input, self.num_processes))
+            if device is backend.cpu_device:
+                output = xp.sum(_map(self.linops, [input]*len(self.linops)))
             else:
-                output = self.linops[0](input)
-                for L in self.linops[1:]:
-                    output += L(input)
+                output = xp.sum(map(self.linops, [input]*len(self.linops)))
 
         return output
 
@@ -494,7 +491,6 @@ class Hstack(Linop):
             Otherwise, inputs are stacked along axis.
 
     """
-    # TODO: Make parallel
 
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
@@ -510,8 +506,11 @@ class Hstack(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        with backend.get_device(input):
-            output = 0
+        device = backend.get_device(input)
+        xp = device.xp
+
+        with device:
+            lst_input = []
             for n, linop in enumerate(self.linops):
                 if n == 0:
                     start = 0
@@ -524,7 +523,7 @@ class Hstack(Linop):
                     end = self.indices[n]
 
                 if self.axis is None:
-                    output += linop(input[start:end].reshape(linop.ishape))
+                    lst_input.append(input[start:end].reshape(linop.ishape))
                 else:
                     ndim = len(linop.ishape)
                     axis = self.axis % ndim
@@ -532,7 +531,12 @@ class Hstack(Linop):
                     slc = tuple([slice(None)] * axis + [slice(start, end)] +
                                 [slice(None)] * (ndim - axis - 1))
 
-                    output += linop(input[slc])
+                    lst_input.append(input[slc])
+
+            if device is backend.cpu_device:
+                output = xp.sum(_map(self.linops, lst_input))
+            else:
+                output = xp.sum(map(self.linops, lst_input))
 
             return output
 
@@ -579,7 +583,6 @@ class Vstack(Linop):
         axis (int or None): If None, outputs are vectorized and concatenated.
 
     """
-    # TODO: Make parallel
 
     def __init__(self, linops, axis=None):
         self.nops = len(linops)
@@ -597,9 +600,16 @@ class Vstack(Linop):
     def _apply(self, input):
         device = backend.get_device(input)
         xp = device.xp
+
         with device:
+            if device is backend.cpu_device:
+                map_result = _map(self.linops, [input]*len(self.linops))
+            else:
+                map_result = map(self.linops, [input]*len(self.linops))
+
             output = xp.empty(self.oshape, dtype=input.dtype)
             for n, linop in enumerate(self.linops):
+
                 if n == 0:
                     start = 0
                 else:
@@ -611,13 +621,13 @@ class Vstack(Linop):
                     end = self.indices[n]
 
                 if self.axis is None:
-                    output[start:end] = linop(input).ravel()
+                    output[start:end] = map_result[n].ravel()
                 else:
                     ndim = len(linop.oshape)
                     axis = self.axis % ndim
                     slc = tuple([slice(None)] * axis + [slice(start, end)] +
                                 [slice(None)] * (ndim - axis - 1))
-                    output[slc] = linop(input)
+                    output[slc] = map_result[n]
 
         return output
 
@@ -642,7 +652,6 @@ class Diag(Linop):
             and concatenated.
 
     """
-    # TODO: Make parallel
 
     def __init__(self, linops, oaxis=None, iaxis=None):
         self.nops = len(linops)
@@ -660,7 +669,10 @@ class Diag(Linop):
     def _apply(self, input):
         device = backend.get_device(input)
         xp = device.xp
+
         with device:
+            lst_input = []
+
             output = xp.empty(self.oshape, dtype=input.dtype)
             for n, linop in enumerate(self.linops):
                 if n == 0:
@@ -678,25 +690,33 @@ class Diag(Linop):
                     oend = self.oindices[n]
 
                 if self.iaxis is None:
-                    output_n = linop(
-                        input[istart:iend].reshape(linop.ishape)).ravel()
+                    lst_input.append(input[istart:iend].reshape(linop.ishape))
                 else:
                     ndim = len(linop.ishape)
                     axis = self.iaxis % ndim
                     islc = tuple([slice(None)] * axis + [slice(istart, iend)] +
                                  [slice(None)] * (ndim - axis - 1))
 
-                    output_n = linop(input[islc])
+                    lst_input.append(input[islc])
 
+            if device is backend.cpu_device:
+                output_n = _map(self.linops, lst_input)
+            else:
+                output_n = map(self.linops, lst_input)
+
+            if self.iaxis is None:
+                output_n = [x.ravel() for x in output_n]
+
+            for n, linop in enumerate(self.linops):
                 if self.oaxis is None:
-                    output[ostart:oend] = output_n
+                    output[ostart:oend] = output_n[n]
                 else:
                     ndim = len(linop.oshape)
                     axis = self.oaxis % ndim
                     oslc = tuple([slice(None)] * axis + [slice(ostart, oend)] +
                                  [slice(None)] * (ndim - axis - 1))
 
-                    output[oslc] = output_n
+                    output[oslc] = output_n[n]
 
             return output
 
