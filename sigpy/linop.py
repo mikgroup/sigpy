@@ -5,6 +5,7 @@ such as FFT, NUFFT, and wavelet, and array manipulation operators,
 such as reshape, transpose, and resize.
 """
 import numpy as np
+import multiprocessing as mp
 
 from sigpy import backend, block, fourier, util, interp, conv, wavelet
 
@@ -309,6 +310,30 @@ class Conj(Linop):
         return Conj(self.A.H)
 
 
+def _forward_mult(fx):
+    return fx[0] * fx[1]
+
+
+def _mult_map(fi, x, num_processes=1):
+    """Parallel multiplication map.
+
+    Use multiprocessing to calculate the following:
+
+       >>> [f * x for f in fi]
+
+    Args:
+        fi (list of arrays or linops): List of elements to multiply with x.
+        x (array): Input array.
+
+    Returns:
+        list of arrays: List of multiplication results.
+    """
+    zipped = [(f, x) for f in fi]
+    with mp.Pool(processes = num_processes) as pool:
+        result = pool.map(_forward_mult, zipped)
+    return result
+
+
 class Add(Linop):
     """Addition of linear operators.
 
@@ -322,23 +347,35 @@ class Add(Linop):
 
     """
 
+    def _filter_linops(self, linops):
+        if linops == []:
+            return []
+
+        L = linops.pop(0)
+        L = self._filter_linops(L.linops) if isinstance(L, Add) else [L]
+
+        return L + self._filter_linops(linops)
+
     def __init__(self, linops):
         _check_linops_same_ishape(linops)
         _check_linops_same_oshape(linops)
 
-        self.linops = linops
-        oshape = linops[0].oshape
-        ishape = linops[0].ishape
+        self.linops = self._filter_linops(linops)
+
+        oshape = self.linops[0].oshape
+        ishape = self.linops[0].ishape
+
+        self.num_processes = 1
 
         super().__init__(
             oshape, ishape,
             repr_str=' + '.join([linop.repr_str for linop in linops]))
 
     def _apply(self, input):
-        output = 0
-        with backend.get_device(input):
-            for linop in self.linops:
-                output += linop(input)
+        device = backend.get_device(input)
+        xp = device.xp
+        with device:
+            output = xp.sum(_mult_map(self.linops, input, self.num_processes))
 
         return output
 
