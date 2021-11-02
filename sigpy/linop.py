@@ -351,10 +351,10 @@ class Add(Linop):
         if linops == []:
             return []
 
-        L = linops.pop(0)
+        L = linops[0]
         L = self._filter_linops(L.linops) if isinstance(L, Add) else [L]
 
-        return L + self._filter_linops(linops)
+        return L + self._filter_linops(linops[1:])
 
     def __init__(self, linops):
         _check_linops_same_ishape(linops)
