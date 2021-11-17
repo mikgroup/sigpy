@@ -19,8 +19,26 @@ if cupy_enabled:
         cupy_enabled = False
 
 if cupy_enabled:  # pragma: no cover
-    cudnn_enabled = util.find_spec("cupy.cuda.cudnn") is not None
-    nccl_enabled = util.find_spec("cupy.cuda.nccl") is not None
+    try:
+        cudnn_enabled = util.find_spec("cupy.cuda.cudnn") is not None
+        if cudnn_enabled:
+            from cupy import cudnn
+    except ImportError as e:
+        warnings.warn(
+            f"Importing cupy.cuda.cudnn failed. "
+            f"For more details, see the error stack below:\n{e}"
+        )
+        cudnn_enabled = False
+    try:
+        nccl_enabled = util.find_spec("cupy.cuda.nccl") is not None
+        if nccl_enabled:
+            from cupy.cuda import nccl  # noqa: F401
+    except ImportError as e:
+        warnings.warn(
+            f"Importing cupy.cuda.nccl failed. "
+            f"For more details, see the error stack below:\n{e}"
+        )
+        nccl_enabled = False
 else:
     cudnn_enabled = False
     nccl_enabled = False
