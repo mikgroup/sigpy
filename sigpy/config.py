@@ -22,7 +22,7 @@ if cupy_enabled:  # pragma: no cover
     try:
         cudnn_enabled = util.find_spec("cupy.cuda.cudnn") is not None
         if cudnn_enabled:
-            from cupy import cudnn
+            from cupy import cudnn  # noqa: F401
     except ImportError as e:
         warnings.warn(
             f"Importing cupy.cuda.cudnn failed. "
