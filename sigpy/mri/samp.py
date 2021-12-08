@@ -158,6 +158,10 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
 def _poisson(nx, ny, max_attempts, radius_x, radius_y, calib, seed=None):
     mask = np.zeros((ny, nx))
 
+    # Add calibration region
+    mask[int(ny / 2 - calib[-2] / 2):int(ny / 2 + calib[-2] / 2),
+         int(nx / 2 - calib[-1] / 2):int(nx / 2 + calib[-1] / 2)] = 1
+
     if seed is not None:
         np.random.seed(int(seed))
 
@@ -212,10 +216,6 @@ def _poisson(nx, ny, max_attempts, radius_x, radius_y, calib, seed=None):
             pxs[i] = pxs[num_actives - 1]
             pys[i] = pys[num_actives - 1]
             num_actives -= 1
-
-    # Add calibration region
-    mask[int(ny / 2 - calib[-2] / 2):int(ny / 2 + calib[-2] / 2),
-         int(nx / 2 - calib[-1] / 2):int(nx / 2 + calib[-1] / 2)] = 1
 
     return mask
 
