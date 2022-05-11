@@ -14,6 +14,9 @@ SigPy
 .. image:: https://codecov.io/gh/mikgroup/sigpy/branch/master/graph/badge.svg
 	:target: https://codecov.io/gh/mikgroup/sigpy
 
+.. image:: https://zenodo.org/badge/139635485.svg
+   :target: https://zenodo.org/badge/latestdoi/139635485
+
 
 `Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `MRI Recon Tutorial <https://github.com/mikgroup/sigpy-mri-tutorial>`_ | `MRI Pulse Design Tutorial <https://github.com/jonbmartin/open-source-pulse-design>`_
 

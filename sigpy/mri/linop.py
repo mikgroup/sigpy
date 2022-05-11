@@ -45,9 +45,10 @@ def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
 
     if coil_batch_size < len(mps):
         num_coil_batches = (num_coils + coil_batch_size - 1) // coil_batch_size
-        A = sp.linop.Vstack([Sense(mps[c::num_coil_batches], coord=coord,
-                                   weights=weights, ishape=ishape)
-                             for c in range(num_coil_batches)], axis=0)
+        A = sp.linop.Vstack(
+            [Sense(mps[c*coil_batch_size:((c+1)*coil_batch_size)],
+                   coord=coord, weights=weights, ishape=ishape)
+             for c in range(num_coil_batches)], axis=0)
 
         if comm is not None:
             C = sp.linop.AllReduceAdjoint(ishape, comm, in_place=True)
