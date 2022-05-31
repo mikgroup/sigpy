@@ -588,7 +588,7 @@ class SDMM(Alg):
         M = len(self.L)
         with self.device:
             xp = self.device.xp
-            self.x = xp.zeros(self.A.ishape, dtype=np.complex).flatten()
+            self.x = xp.zeros(self.A.ishape, dtype=xp.complex).flatten()
             self.x = xp.expand_dims(self.x, axis=1)
             self.z, self.u = [], []
 

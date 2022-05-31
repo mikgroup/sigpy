@@ -87,7 +87,7 @@ class TestApp(unittest.TestCase):
         img_shape = [6, 6]
         mps_shape = [4, 6, 6]
 
-        img = np.ones(img_shape, dtype=np.complex)
+        img = np.ones(img_shape, dtype=complex)
         mps = sim.birdcage_maps(mps_shape)
         ksp = sp.fft(mps * img, axes=[-2, -1])
 
