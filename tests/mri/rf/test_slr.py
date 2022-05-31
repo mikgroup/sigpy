@@ -17,7 +17,7 @@ class TestSlr(unittest.TestCase):
         N = 128
         tb = 16
         filts = ['ls', 'ms', 'pm', 'min', 'max']
-        for idx, filt in enumerate(filts):
+        for filt in filts:
             pulse = sp.mri.rf.dzrf(N, tb, ptype='st', ftype=filt,
                                    d1=0.01, d2=0.01)
 
@@ -36,8 +36,10 @@ class TestSlr(unittest.TestCase):
         ptype = 'ex'
         filts = ['min', 'max']  # filts produce inconsistent inversions
 
-        for idx, filt in enumerate(filts):
+        isodelays = []
+        for filt in filts:
             pulse = rf.slr.dzrf(N, tb, ptype, filt, d1, d2)
+            isodelays.append(rf.slr.get_isodelay(pulse, dt=4e-6))
 
             [_, b] = rf.sim.abrm(pulse, np.arange(-2 * tb, 2 * tb, 0.01))
             mz = 1 - 2 * np.abs(b) ** 2
@@ -47,6 +49,8 @@ class TestSlr(unittest.TestCase):
                             mz[int(len(mz) / 2 + len(mz)/3)]])
 
             npt.assert_almost_equal(pts, np.array([1, -0.2, 1]), decimal=1)
+        # test that isodelay is shorter for minphase inv than maxphase inv
+        npt.assert_array_less(isodelays[0], isodelays[1])
 
     def test_root_flipped(self):
         tb = 12
