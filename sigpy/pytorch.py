@@ -27,6 +27,11 @@ def to_pytorch(array, requires_grad=True):  # pragma: no cover
     from torch.utils.dlpack import from_dlpack
 
     device = backend.get_device(array)
+
+    if array.flags.f_contiguous:
+        with device:
+            array = device.xp.ascontiguousarray(array)
+
     if not np.issubdtype(array.dtype, np.floating):
         with device:
             shape = array.shape
