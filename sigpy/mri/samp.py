@@ -87,7 +87,7 @@ def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
     return mask
 
 
-def radial(coord_shape, img_shape, golden=True, dtype=np.float):
+def radial(coord_shape, img_shape, golden=True, half_spoke=True, dtype=np.float32):
     """Generate radial trajectory.
 
     Args:
@@ -96,6 +96,7 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
             and ndim is the number of dimensions.
         img_shape (tuple of ints): image shape.
         golden (bool): golden angle ordering.
+        half_spoke (bool): center-out trajectory.
         dtype (Dtype): data type.
 
     Returns:
@@ -119,12 +120,17 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
 
     ntr, nro, ndim = coord_shape
     if ndim == 2:
-        if golden:
+        if half_spoke:
+            n, r = np.mgrid[:ntr, :0.5:0.5 / nro]
+        else:
+            n, r = np.mgrid[:ntr, -0.5:0.5:1.0 / nro]
+
+        if golden and half_spoke:
             phi = np.pi * (3 - 5**0.5)
+        elif golden and not half_spoke:
+            phi = np.pi * (5**0.5 - 1)*0.5
         else:
             phi = 2 * np.pi / ntr
-
-        n, r = np.mgrid[:ntr, :0.5:0.5 / nro]
 
         theta = n * phi
         coord = np.zeros((ntr, nro, 2))
@@ -138,9 +144,13 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
         else:
             raise NotImplementedError
 
-        n, r = np.mgrid[:ntr, :0.5:0.5 / nro]
+        if half_spoke:
+            n, r = np.mgrid[:ntr, :0.5:0.5 / nro]
+            beta = np.arccos(2 * ((n * phi1) % 1) - 1)
+        else:
+            n, r = np.mgrid[:ntr, -0.5:0.5:1.0 / nro]
+            beta = np.arccos((n * phi1) % 1)
 
-        beta = np.arccos(2 * ((n * phi1) % 1) - 1)
         alpha = 2 * np.pi * ((n * phi2) % 1)
 
         coord = np.zeros((ntr, nro, 3))
