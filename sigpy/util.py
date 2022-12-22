@@ -103,7 +103,7 @@ def split(vec, oshapes):
     return outputs
 
 
-def rss(input, axes=(0,)):
+def rss(input, axes=(0, ), keepdims=False):
     """Root sum of squares.
 
     Args:
@@ -114,7 +114,8 @@ def rss(input, axes=(0,)):
         array: Result.
     """
     xp = backend.get_array_module(input)
-    return xp.sum(xp.abs(input) ** 2, axis=axes) ** 0.5
+
+    return xp.sum(xp.abs(input)**2, axis=axes, keepdims=keepdims)**0.5
 
 
 def resize(input, oshape, ishift=None, oshift=None):
