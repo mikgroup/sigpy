@@ -228,12 +228,13 @@ class ConjugateGradient(Alg):
 
     """
 
-    def __init__(self, A, b, x, P=None, max_iter=100, tol=0):
+    def __init__(self, A, b, x, P=None, max_iter=100, tol=0, verbose=False):
         self.A = A
         self.b = b
         self.P = P
         self.x = x
         self.tol = tol
+        self.verbose = verbose
         self.device = backend.get_device(x)
         with self.device:
             xp = self.device.xp
@@ -278,7 +279,10 @@ class ConjugateGradient(Alg):
                 util.xpay(self.p, beta, z)
                 self.rzold = rznew
 
-            self.resid = self.rzold.item() ** 0.5
+            self.resid = self.rzold.item()**0.5
+
+            if self.verbose:
+                print("  cg iter: " + "%2d"%(self.iter) + "; resid: " + "%4.6f"%(self.resid))
 
     def _done(self):
         return (
