@@ -322,12 +322,13 @@ def triang(shape, dtype=float, device=backend.cpu_device):
     return window
 
 
-def hanning(shape, dtype=float, device=backend.cpu_device):
+def hanning(shape, dtype=np.float, symm=False, device=backend.cpu_device):
     """Create multi-dimensional hanning window.
 
     Args:
         shape (tuple of ints): Output shape.
         dtype (Dtype): Output data-type.
+        symm (boolean): Symmetric hanning window.
         device (Device): Output device.
 
     Returns:
@@ -341,7 +342,13 @@ def hanning(shape, dtype=float, device=backend.cpu_device):
         window = xp.ones(shape, dtype=dtype)
         for n, i in enumerate(shape[::-1]):
             x = xp.arange(i, dtype=dtype)
-            w = 0.5 - 0.5 * xp.cos(2 * np.pi * x / max(1, (i - (i % 2))))
+
+            if symm is False:
+                den = max(1, (i - (i % 2)))
+            else:
+                den = max(1, i-1)
+
+            w = 0.5 - 0.5 * xp.cos(2 * np.pi * x / den)
             window *= w.reshape([i] + [1] * n)
 
     return window
