@@ -28,7 +28,7 @@ def to_pytorch(array, requires_grad=True):  # pragma: no cover
 
     device = backend.get_device(array)
 
-    if array.flags.f_contiguous:
+    if not array.flags.c_contiguous:
         with device:
             array = device.xp.ascontiguousarray(array)
 
