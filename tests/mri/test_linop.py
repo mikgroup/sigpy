@@ -47,7 +47,9 @@ class TestLinop(unittest.TestCase):
         for coil_batch_size in [None, 1, 2, 3]:
             A = linop.Sense(mps, coil_batch_size=coil_batch_size)
             check_linop_adjoint(A, dtype=complex)
-            npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]), A * img)
+
+            npt.assert_allclose(sp.fft(img * mps, axes=[-1, -2]),
+                                A * img)
 
     def test_noncart_sense_model(self):
         img_shape = [16, 16]
@@ -62,6 +64,7 @@ class TestLinop(unittest.TestCase):
 
         A = linop.Sense(mps, coord=coord)
         check_linop_adjoint(A, dtype=complex)
+
         npt.assert_allclose(
             sp.fft(img * mps, axes=[-1, -2]).ravel(),
             (A * img).ravel(),
@@ -112,6 +115,7 @@ class TestLinop(unittest.TestCase):
         for coil_batch_size in [None, 1, 2, 3]:
             A = linop.Sense(mps, coord=coord, coil_batch_size=coil_batch_size)
             check_linop_adjoint(A, dtype=complex)
+
             npt.assert_allclose(
                 sp.fft(img * mps, axes=[-1, -2]).ravel(),
                 (A * img).ravel(),

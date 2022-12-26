@@ -12,6 +12,7 @@ if __name__ == "__main__":
 class TestFourier(unittest.TestCase):
     def test_fft(self):
         input = np.array([0, 1, 0], dtype=complex)
+
         npt.assert_allclose(
             fourier.fft(input), np.ones(3) / 3**0.5, atol=1e-5
         )
@@ -29,6 +30,7 @@ class TestFourier(unittest.TestCase):
         )
 
         input = np.array([0, 1, 0], dtype=complex)
+
         npt.assert_allclose(
             fourier.fft(input, oshape=[5]), np.ones(5) / 5**0.5, atol=1e-5
         )
@@ -42,6 +44,7 @@ class TestFourier(unittest.TestCase):
 
     def test_ifft(self):
         input = np.array([0, 1, 0], dtype=complex)
+
         npt.assert_allclose(
             fourier.ifft(input), np.ones(3) / 3**0.5, atol=1e-5
         )
@@ -59,6 +62,7 @@ class TestFourier(unittest.TestCase):
         )
 
         input = np.array([0, 1, 0], dtype=complex)
+
         npt.assert_allclose(
             fourier.ifft(input, oshape=[5]), np.ones(5) / 5**0.5, atol=1e-5
         )

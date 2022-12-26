@@ -266,6 +266,7 @@ class TestLinop(unittest.TestCase):
 
         x = np.array([1.0, 2.0], complex)
         y = np.array([[1.0, 4.0], [3.0, 8.0]], complex)
+
         npt.assert_allclose(A * x, y)
 
     def test_Resize(self):

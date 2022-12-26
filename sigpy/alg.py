@@ -282,7 +282,8 @@ class ConjugateGradient(Alg):
             self.resid = self.rzold.item()**0.5
 
             if self.verbose:
-                print("  cg iter: " + "%2d"%(self.iter) + "; resid: " + "%4.6f"%(self.resid))
+                print("  cg iter: " + "%2d" % (self.iter) \
+                    + "; resid: " + "%4.6f" % (self.resid))
 
     def _done(self):
         return (
