@@ -85,3 +85,24 @@ class TestProx(unittest.TestCase):
         x = np.array([-2, -1, 0, 1, 2])
         y = P(None, x)
         npt.assert_allclose(y, [-1, 0, 0, 0, 1])
+
+    def test_Conj(self):
+        shape = [3, 3]
+        x = util.randn(shape, dtype=float)
+
+        F = linop.FiniteDifference(shape, axes=(-2, -1))
+        proxg = prox.L1Reg(F.oshape, 1.)
+        proxgc = prox.Conj(proxg)
+
+        O = F(x)
+        y1 = proxgc(1., O)
+
+        x1 = O[0, :, :]
+        x2 = O[1, :, :]
+        d1 = np.maximum(1., abs(x1))
+        x1n = np.divide(x1, d1)
+        d2 = np.maximum(1., abs(x2))
+        x2n = np.divide(x2, d2)
+        y2 = np.stack((x1n, x2n))
+
+        npt.assert_allclose(y1, y2)
