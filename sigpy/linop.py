@@ -1456,20 +1456,22 @@ class ArrayToBlocks(Linop):
         ishape (array): input array of shape [..., N_1, ..., N_D]
         blk_shape (tuple): block shape of length D, with D <= 4.
         blk_strides (tuple): block strides of length D.
+        mean (boolean): take the mean of repeated position.
 
     See Also:
         :func:`sigpy.block.array_to_blocks`
 
     """
 
-    def __init__(self, ishape, blk_shape, blk_strides):
+    def __init__(self, ishape, blk_shape, blk_strides, mean=True):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
         D = len(blk_shape)
-        num_blks = [
-            (i - b + s) // s
-            for i, b, s in zip(ishape[-D:], blk_shape, blk_strides)
-        ]
+        num_blks = [(i - b + s) // s for i, b,
+                    s in zip(ishape[-D:], blk_shape, blk_strides)]
+        self.num_blks = num_blks
+        self.mean = mean
+
         oshape = list(ishape[:-D]) + num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1482,7 +1484,7 @@ class ArrayToBlocks(Linop):
             )
 
     def _adjoint_linop(self):
-        return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides)
+        return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides, mean=self.mean)
 
     def _normal_linop(self):
         return Identity(self.ishape)
@@ -1495,13 +1497,14 @@ class BlocksToArray(Linop):
         oshape (tuple): output shape.
         blk_shape (tuple): block shape of length D.
         blk_strides (tuple): block strides of length D.
+        mean (boolean): take the mean of repeated position.
 
     Returns:
         array: array of shape oshape.
 
     """
 
-    def __init__(self, oshape, blk_shape, blk_strides):
+    def __init__(self, oshape, blk_shape, blk_strides, mean=True):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
         D = len(blk_shape)
@@ -1511,17 +1514,38 @@ class BlocksToArray(Linop):
         ]
         ishape = list(oshape[:-D]) + num_blks + list(blk_shape)
 
+        self.mean = mean
+
+        # Inspired by:
+        # https://pytorch.org/docs/stable/generated/torch.nn.Fold.html#torch.nn.Fold
+        # Switch on this option such that:
+        # BlockToArrays(ArrayToBlocks(input, ...), ...) = input
+        # i.e. average duplicated values
+        divisor = np.ones(oshape)
+        if self.mean:
+            divisor = block.array_to_blocks(divisor, blk_shape, blk_strides)
+            divisor = block.blocks_to_array(divisor, oshape, blk_shape, blk_strides)
+
+        self.divisor = divisor
+
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
         device = backend.get_device(input)
+        xp = device.xp
+
+        divisor = backend.to_device(self.divisor, device=device)
+
         with device:
-            return block.blocks_to_array(
-                input, self.oshape, self.blk_shape, self.blk_strides
-            )
+            output = block.blocks_to_array(
+                input, self.oshape, self.blk_shape, self.blk_strides)
+
+            output = xp.where(divisor > 0, xp.divide(output, divisor), 0)
+
+            return output
 
     def _adjoint_linop(self):
-        return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides)
+        return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides, mean=self.mean)
 
     def _normal_linop(self):
         return Identity(self.ishape)
