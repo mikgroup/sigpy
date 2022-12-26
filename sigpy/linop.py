@@ -1378,11 +1378,20 @@ class Sum(Linop):
     Args:
         ishape (tuple of ints): Input shape.
         axes (tuple of ints): Axes to sum over.
+        keepdims (boolean): Keep the summed dims (axes).
     """
 
-    def __init__(self, ishape, axes):
+    def __init__(self, ishape, axes, keepdims=False):
         self.axes = tuple(i % len(ishape) for i in axes)
-        oshape = [ishape[i] for i in range(len(ishape)) if i not in self.axes]
+
+        self.keepdims = keepdims
+
+        if self.keepdims is False:
+            oshape = [ishape[i] for i in range(len(ishape)) if i not in self.axes]
+        else:
+            oshape = [ishape[i] for i in range(len(ishape))]
+            for i in self.axes:
+                oshape[i] = 1
 
         super().__init__(oshape, ishape)
 
@@ -1390,10 +1399,10 @@ class Sum(Linop):
         device = backend.get_device(input)
         xp = device.xp
         with device:
-            return xp.sum(input, axis=self.axes)
+            return xp.sum(input, axis=self.axes, keepdims=self.keepdims)
 
     def _adjoint_linop(self):
-        return Tile(self.ishape, self.axes)
+        return Tile(self.ishape, self.axes, keepdims=self.keepdims)
 
 
 class Tile(Linop):
@@ -1402,12 +1411,22 @@ class Tile(Linop):
     Args:
         oshape (tuple of ints): Output shape.
         axes (tuple of ints): Axes to tile.
+        keepdims (boolean): Keep the summed dims (axes).
 
     """
 
-    def __init__(self, oshape, axes):
+    def __init__(self, oshape, axes, keepdims=False):
         self.axes = tuple(a % len(oshape) for a in axes)
-        ishape = [oshape[d] for d in range(len(oshape)) if d not in self.axes]
+
+        self.keepdims = keepdims
+
+        if self.keepdims is False:
+            ishape = [oshape[d] for d in range(len(oshape)) if d not in self.axes]
+        else:
+            ishape = [oshape[d] for d in range(len(oshape))]
+            for i in self.axes:
+                ishape[i] = 1
+
         self.expanded_ishape = []
         self.reps = []
         for d in range(len(oshape)):
