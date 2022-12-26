@@ -1966,3 +1966,52 @@ class Embed(Linop):
 
     def _adjoint_linop(self):
         return Slice(self.oshape, self.idx)
+
+
+class Sobolev(Linop):
+    """Sobolev weight
+
+    Given input in k-space,
+    returns output as:
+
+        output = ifft(W(input))
+
+        W = _get_Sobolev_weight(W_shape)
+          = ( 1 + a*|k|^2 )^(-b)
+
+        where k is the meshgrid of the ishape, normalized to [-0.5, 0.5].
+
+    Args:
+        ishape (tuple of ints): input shape
+        a (int): a in Sobolev weight [default: 440]
+        b (int): b in Sobolev weight [default: 16]
+    """
+    def __init__(self, ishape, a=440, b=16):
+        wshape = ishape[-2:]
+        self.W = self._get_Sobolev_weight(wshape, a, b)
+        self.S = Multiply(ishape, self.W)
+        self.F = IFFT(ishape, axes=range(-2, 0))
+        super().__init__(ishape, ishape)
+
+    def _get_Sobolev_weight(self, weight_shape, a=440, b=16):
+        _check_shape_positive(weight_shape)
+
+        W = np.zeros(shape=weight_shape, dtype=complex)
+
+        NY = weight_shape[1]
+        NX = weight_shape[0]
+
+        for y in range(0, NY):
+            for x in range(0, NX):
+                dist = pow(x/NX - 0.5, 2.) + pow(y/NY - 0.5, 2.)
+                W[x, y] = 1./pow(1 + a*dist, b) + 0j
+
+        return W
+
+    def _apply(self, input):
+        device = backend.get_device(input)
+        with device:
+            return self.F * self.S * input
+
+    def _adjoint_linop(self):
+        return (self.F * self.S).H
