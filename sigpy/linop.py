@@ -1682,6 +1682,174 @@ class NUFFTAdjoint(Linop):
         )
 
 
+class HDNUFFT(NUFFT):
+    """High-dimensional (HD) NUFFT.
+
+    Args:
+        ishape (tuple of int): Input shape.
+        coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
+        oversamp (float): Oversampling factor.
+        width (float): Kernel width.
+        toeplitz (bool): Use toeplitz PSF to evaluate normal operator.
+        nr_hd (int): number of higher dimensions (HD).
+                    HD starts from left most to right in ishape and coord.
+                    Default 1.
+        When nr_hd == 0, HDNUFFT is idential to NUFFT.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+    """
+    def __init__(self, ishape, coord,
+                 oversamp=1.25, width=4, toeplitz=False, nr_hd=1):
+        self.coord = coord
+        self.oversamp = oversamp
+        self.width = width
+        self.toeplitz = toeplitz
+
+        if len(ishape) <= 3 and len(coord.shape) <= 3:
+            nr_hd = 0
+
+        self.nr_hd = nr_hd
+
+        self._check_higher_dim(ishape, coord)
+
+        ndim = coord.shape[-1]
+        cshape = coord.shape
+        excl_hd = len(cshape) - nr_hd
+
+        oshape = list(ishape[:-ndim]) + list(cshape[-excl_hd:-1])
+
+        super(NUFFT, self).__init__(oshape, ishape)
+
+    def _check_higher_dim(self, ishape, coord):
+        cshape = coord.shape
+
+        for n in range(self.nr_hd):
+            if ishape[n] != cshape[n]:
+                raise ValueError(
+                    'shape mismatch for {s} between input {ishape} and coord {cshape}'.format(
+                        s=self, ishape=ishape, cshape=coord.shape))
+
+    def _apply(self, input):
+        # call the parent method
+        # when this is not high-dimensional
+        if self.nr_hd == 0:
+            return super(HDNUFFT, self)._apply(input)
+
+        sz_hd = np.prod(self.ishape[:self.nr_hd])
+        output = np.zeros([sz_hd] + list(self.oshape[self.nr_hd:]),
+                          dtype=complex)
+
+        device = backend.get_device(input)
+        with device:
+            xp = device.xp
+            coord = backend.to_device(self.coord, device)
+            output = backend.to_device(output, device=device)
+
+            coord = xp.reshape(coord, [sz_hd] + list(coord.shape[self.nr_hd:]))
+            input = xp.reshape(input, [sz_hd] + list(input.shape[self.nr_hd:]))
+
+            ld_ishape = self.ishape[self.nr_hd:]
+
+            for nhd in range(sz_hd):
+                ld_coord = coord[nhd, ...]
+                ld_input = input[nhd, ...]
+
+                F = NUFFT(ld_ishape, ld_coord,
+                          oversamp=self.oversamp, width=self.width,
+                          toeplitz=self.toeplitz)
+
+                output[nhd, ...] = F(ld_input)
+
+            output = xp.reshape(output, self.oshape)
+            return output
+
+    def _adjoint_linop(self):
+        return HDNUFFTAdjoint(self.ishape, self.coord,
+                              oversamp=self.oversamp, width=self.width,
+                              toeplitz=self.toeplitz, nr_hd=self.nr_hd)
+
+    def _normal_linop(self):
+        if self.toeplitz is False:
+            return self.H * self
+
+
+class HDNUFFTAdjoint(NUFFTAdjoint):
+    """high-dimensional NUFFT adjoint linear operator.
+
+    Args:
+        oshape (tuple of int): Output shape.
+        coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
+        oversamp (float): Oversampling factor.
+        width (float): Kernel width.
+        toeplitz (bool): Use toeplitz PSF to evaluate normal operator.
+        nr_hd (int): number of higher dimensions (HD).
+        HD starts from left most to right in ishape and coord. Default 1.
+        When nr_hd == 0, HDNUFFT is idential to NUFFT.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+    """
+    def __init__(self, oshape, coord,
+                 oversamp=1.25, width=4, toeplitz=False, nr_hd=1):
+        self.coord = coord
+        self.oversamp = oversamp
+        self.width = width
+        self.toeplitz = toeplitz
+
+        if len(oshape) <= 3 and len(coord.shape) <= 3:
+            nr_hd = 0
+
+        self.nr_hd = nr_hd
+
+        ndim = coord.shape[-1]
+        cshape = coord.shape
+        excl_hd = len(cshape) - nr_hd
+
+        ishape = list(oshape[:-ndim]) + list(cshape[-excl_hd:-1])
+
+        super(NUFFTAdjoint, self).__init__(oshape, ishape)
+
+    def _apply(self, input):
+        # call the parent method
+        # when this is not high-dimensional
+        if self.nr_hd == 0:
+            return super(HDNUFFTAdjoint, self)._apply(input)
+
+        sz_hd = np.prod(self.ishape[:self.nr_hd])
+        output = np.zeros([sz_hd] + list(self.oshape[self.nr_hd:]),
+                          dtype=complex)
+
+        device = backend.get_device(input)
+        with device:
+            xp = device.xp
+            coord = backend.to_device(self.coord, device)
+            output = backend.to_device(output, device)
+
+            coord = xp.reshape(coord, [sz_hd] + list(coord.shape[self.nr_hd:]))
+            input = xp.reshape(input, [sz_hd] + list(input.shape[self.nr_hd:]))
+
+            ld_oshape = self.oshape[self.nr_hd:]
+
+            for nhd in range(sz_hd):
+                ld_coord = coord[nhd, ...]
+                ld_input = input[nhd, ...]
+
+                F = NUFFTAdjoint(ld_oshape, ld_coord,
+                                 oversamp=self.oversamp,
+                                 width=self.width)
+
+                output[nhd, ...] = F(ld_input)
+
+            output = xp.reshape(output, self.oshape)
+            return output
+
+    def _adjoint_linop(self):
+        return HDNUFFT(self.oshape, self.coord,
+                       oversamp=self.oversamp, width=self.width,
+                       toeplitz=self.toeplitz, nr_hd=self.nr_hd)
+
+
 class ConvolveData(Linop):
     r"""Convolution operator for data arrays.
 
