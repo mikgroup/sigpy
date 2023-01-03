@@ -192,7 +192,8 @@ class LinearLeastSquares(App):
                  tau=None, sigma=None,
                  rho=1, max_cg_iter=10, tol=0,
                  save_objective_values=False,
-                 show_pbar=True, leave_pbar=True):
+                 show_pbar=True, leave_pbar=True,
+                 verbose=False):
         self.A = A
         self.y = y
         self.x = x
@@ -216,6 +217,9 @@ class LinearLeastSquares(App):
         self.save_objective_values = save_objective_values
         self.show_pbar = show_pbar
         self.leave_pbar = leave_pbar
+
+        self.iter_step = 0
+        self.verbose = verbose
 
         self.y_device = backend.get_device(y)
         if self.x is None:
@@ -434,6 +438,9 @@ class LinearLeastSquares(App):
             \frac{\lambda}{2} \| x - z \|_2^2 + g(v)
 
         """
+        ABSTOL = 1E-4
+        RELTOL = 1E-3
+
         xp = self.x_device.xp
         with self.x_device:
             if self.G is None:
@@ -463,14 +470,16 @@ class LinearLeastSquares(App):
 
                 AHA += self.rho * self.G.H * self.G
 
-            App(
-                ConjugateGradient(
-                    AHA, AHy, self.x, P=self.P, max_iter=self.max_cg_iter
-                ),
-                show_pbar=False,
-            ).run()
+            App(ConjugateGradient(AHA, AHy, self.x, P=self.P,
+                                  max_iter=self.max_cg_iter,
+                                  verbose=self.verbose),
+                show_pbar=False).run()
 
         def minL_v():
+
+            self.iter_step += 1
+            v_old = v.copy()
+
             if self.G is None:
                 backend.copyto(v, self.x + u)
             else:
@@ -478,6 +487,26 @@ class LinearLeastSquares(App):
 
             if self.proxg is not None:
                 backend.copyto(v, self.proxg(1 / self.rho, v))
+
+            if self.verbose:
+                with self.x_device:
+                    Gx = self.G(self.x)
+
+                    r_norm = xp.linalg.norm(Gx - v).item()
+                    s_norm = xp.linalg.norm(-self.rho * (v - v_old)).item()
+
+                    r_scaling = max(xp.linalg.norm(Gx).item(),
+                                 xp.linalg.norm(v).item())
+                    s_scaling = self.rho * xp.linalg.norm(u).item()
+
+                eps_pri  = ABSTOL * (np.prod(v.shape)**0.5) + RELTOL * r_scaling
+                eps_dual = ABSTOL * (np.prod(v.shape)**0.5) + RELTOL * s_scaling
+
+                print('admm iter: ' + "%2d"%(self.iter_step) +
+                      ', r norm: ' + "%10.4f"%(r_norm) +
+                      ', eps pri: ' + "%10.4f"%(eps_pri) +
+                      ', s norm: ' + "%10.4f"%(s_norm) +
+                      ', eps dual: ' + "%10.4f"%(eps_dual))
 
         I_v = linop.Identity(v.shape)
         if self.G is None:
