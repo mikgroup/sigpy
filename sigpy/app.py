@@ -223,6 +223,24 @@ class LinearLeastSquares(App):
                 self.x = self.y_device.xp.zeros(A.ishape, dtype=y.dtype)
 
         self.x_device = backend.get_device(self.x)
+
+
+        # make sure the arrays are on the same device.
+        # If one of them is on GPU, send the another one also to GPU.
+        if self.y_device != self.x_device:
+            if self.y_device == backend.cpu_device:
+                y = backend.to_device(y, device=self.x_device)
+                self.y_device = backend.get_device(y)
+            elif self.x_device == backend.cpu_device:
+                self.x = backend.to_device(self.x, device=backend.get_device(y))
+                self.x_device = backend.get_device(self.x)
+
+        assert self.y_device == self.x_device
+
+        if self.z is not None:
+            self.z = backend.to_device(self.z, device=self.y_device)
+
+
         self._get_alg()
         if self.save_objective_values:
             self.objective_values = [self.objective()]
