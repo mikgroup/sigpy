@@ -8,13 +8,10 @@ import time
 from tqdm.auto import tqdm
 
 from sigpy import backend, linop, prox, util
-from sigpy.alg import (
-    ADMM,
-    ConjugateGradient,
-    GradientMethod,
-    PowerMethod,
-    PrimalDualHybridGradient,
-)
+from sigpy.alg import (PowerMethod, GradientMethod, ADMM, IRGNM,
+                       ConjugateGradient, PrimalDualHybridGradient)
+
+import numpy as np
 
 
 class App(object):
@@ -553,6 +550,137 @@ class LinearLeastSquares(App):
 
             return obj
 
+
+class NonLinearLeastSquares(App):
+    r"""Non-linear least squares application.
+
+    Solves for the following problem, with optional regularizations:
+
+    .. math:
+        \min_x \frac{1}{2} \| A x - y \|_2^2 + \alpha G x
+
+        A is a non-linear operator.
+        \alpha is the regularization strength.
+        G is a regulariztion term on x, e.g. G x := \| T x \|_1, with T being total variation.
+        In this case, the non-linear problem can be solved via Alternating Direction Method of Multipliers (ADMM):
+
+        (1) x^{(k+1)} := argmin_x \| A x -y \|_2^2 + \rho/2 \| T x - z^{(k)} + u^{(k)} \|_2^2
+        (2) z^{(k+1)} := \Tau_{\alpha/\rho} (T x^{(k+1)} + u^{(k)})
+        (3) u^{(k+1)} := u^{(k)} + T x^{(k+1)} - z^{(k+1)}
+
+    Args:
+        A (Nlop): Forward non-linear operator.
+        y (array): Observation. e.g. k-space data.
+        x (array): Solution.
+        x0 (array): bias for L2 regularization.
+        max_iter (int): Maximum number of iterations.
+        lamda (float): regularization strength.
+        redu (float): reduction factor along iterations.
+        gn_iter (int): number of Gauss-Newton iterations.
+        inner_iter (int): number of inner iterations.
+        inner_tol (float): tolerance for the inner iterations.
+        G (None or Linop): Regularization linear operator.
+        proxg (None or prox): Proximal operator.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+    """
+    def __init__(self, A, y, x=None, x0=None,
+                 max_iter=6, lamda=1, redu=2,
+                 gn_iter=4, inner_iter=100, inner_tol=0.01,
+                 G=None, proxg=None,
+                 show_pbar=True, leave_pbar=True, verbose=False):
+        self.A = A
+        self.y = y
+
+        self.device = backend.get_device(y)
+
+        self.x = self._array_to_device(x, A.ishape, y.dtype)
+        self.x0 = self._array_to_device(x0, A.ishape, y.dtype)
+
+        self.max_iter = max_iter
+        self.lamda = lamda
+        self.redu = redu
+        self.gn_iter = gn_iter
+        self.inner_iter = inner_iter
+        self.inner_tol = inner_tol
+
+        self.G = G
+        self.proxg = proxg
+
+        self.show_pbar = show_pbar
+        self.leave_pbar = leave_pbar
+        self.verbose = verbose
+
+        self._get_alg()
+
+        super().__init__(self.alg, show_pbar=show_pbar,
+                         leave_pbar=leave_pbar)
+
+    def _output(self):
+        return self.x
+
+    def _array_to_device(self, arr, shape, dtype):
+        xp = self.device.xp
+
+        with self.device:
+            if arr is None:
+                arr_on_device = xp.zeros(shape, dtype=dtype)
+            else:
+                arr_on_device = backend.to_device(arr, device=self.device)
+
+        return arr_on_device
+
+    def _get_alg(self):
+        if self.proxg is None:
+            # L2 regularization
+            # TODO: incorporate G
+            self.alg = IRGNM(self.A, self.y, self.x,
+                             x0=self.x0, max_iter=self.gn_iter,
+                             alpha=self.lamda, redu=self.redu,
+                             inner_iter=self.inner_iter,
+                             inner_tol=self.inner_tol,
+                             verbose=self.verbose)
+
+        else:
+            xp = self.device.xp
+            with self.device:
+                if self.G is None:
+                    v = self.x.copy()
+                else:
+                    v = self.G(self.x)
+
+                u = xp.zeros_like(v)
+
+            def _minL_x():
+                if self.G is None:
+                    x0 = v - u
+                else:
+                    x0 = self.G.H(v - u)
+
+                App(IRGNM(self.A, self.y, self.x, x0=x0,
+                          max_iter=self.gn_iter,
+                          alpha=self.lamda, redu=self.redu,
+                          inner_iter=self.inner_iter,
+                          inner_tol=self.inner_tol,
+                          verbose=self.verbose), show_pbar=False).run()
+
+            def _minL_v():
+                if self.G is None:
+                    backend.copyto(v, self.x + u)
+                else:
+                    backend.copyto(v, self.G(self.x) + u)
+
+                backend.copyto(v, self.proxg(1 / self.lamda, v))
+
+            I_v = linop.Identity(v.shape)
+            if self.G is None:
+                G = linop.Identity(self.x.shape)
+            else:
+                G = self.G
+
+            self.alg = ADMM(_minL_x, _minL_v, self.x, v, u,
+                            G, -I_v, 0, max_iter=self.max_iter)
 
 class L2ConstrainedMinimization(App):
     r"""L2 contrained minimization application.
