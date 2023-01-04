@@ -13,9 +13,6 @@ Author: Zhengguo Tan <zhengguo.tan@gmail.com>
 """
 import sigpy as sp
 
-from sigpy import nlop
-from sigpy.mri import linop
-
 
 class Nlinv(sp.nlop.Nlop):
     """

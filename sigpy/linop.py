@@ -1486,7 +1486,8 @@ class ArrayToBlocks(Linop):
             )
 
     def _adjoint_linop(self):
-        return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides, mean=self.mean)
+        return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides,
+                             mean=self.mean)
 
     def _normal_linop(self):
         return Identity(self.ishape)
@@ -1526,7 +1527,8 @@ class BlocksToArray(Linop):
         divisor = np.ones(oshape)
         if self.mean:
             divisor = block.array_to_blocks(divisor, blk_shape, blk_strides)
-            divisor = block.blocks_to_array(divisor, oshape, blk_shape, blk_strides)
+            divisor = block.blocks_to_array(divisor, oshape,
+                                            blk_shape, blk_strides)
 
         self.divisor = divisor
 
@@ -1547,7 +1549,8 @@ class BlocksToArray(Linop):
             return output
 
     def _adjoint_linop(self):
-        return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides, mean=self.mean)
+        return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides,
+                             mean=self.mean)
 
     def _normal_linop(self):
         return Identity(self.ishape)

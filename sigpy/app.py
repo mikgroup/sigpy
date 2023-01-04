@@ -225,7 +225,6 @@ class LinearLeastSquares(App):
 
         self.x_device = backend.get_device(self.x)
 
-
         # make sure the arrays are on the same device.
         # If one of them is on GPU, send the another one also to GPU.
         if self.y_device != self.x_device:
@@ -233,14 +232,14 @@ class LinearLeastSquares(App):
                 y = backend.to_device(y, device=self.x_device)
                 self.y_device = backend.get_device(y)
             elif self.x_device == backend.cpu_device:
-                self.x = backend.to_device(self.x, device=backend.get_device(y))
+                self.x = backend.to_device(self.x,
+                                           device=backend.get_device(y))
                 self.x_device = backend.get_device(self.x)
 
         assert self.y_device == self.x_device
 
         if self.z is not None:
             self.z = backend.to_device(self.z, device=self.y_device)
-
 
         self._get_alg()
         if self.save_objective_values:
@@ -493,17 +492,19 @@ class LinearLeastSquares(App):
                     s_norm = xp.linalg.norm(-self.rho * (v - v_old)).item()
 
                     r_scaling = max(xp.linalg.norm(Gx).item(),
-                                 xp.linalg.norm(v).item())
+                                    xp.linalg.norm(v).item())
                     s_scaling = self.rho * xp.linalg.norm(u).item()
 
-                eps_pri  = ABSTOL * (np.prod(v.shape)**0.5) + RELTOL * r_scaling
-                eps_dual = ABSTOL * (np.prod(v.shape)**0.5) + RELTOL * s_scaling
+                eps_pri = ABSTOL * (np.prod(v.shape)**0.5) \
+                    + RELTOL * r_scaling
+                eps_dual = ABSTOL * (np.prod(v.shape)**0.5) \
+                    + RELTOL * s_scaling
 
-                print('admm iter: ' + "%2d"%(self.iter_step) +
-                      ', r norm: ' + "%10.4f"%(r_norm) +
-                      ', eps pri: ' + "%10.4f"%(eps_pri) +
-                      ', s norm: ' + "%10.4f"%(s_norm) +
-                      ', eps dual: ' + "%10.4f"%(eps_dual))
+                print('admm iter: ' + "%2d" % (self.iter_step) +
+                      ', r norm: ' + "%10.4f" % (r_norm) +
+                      ', eps pri: ' + "%10.4f" % (eps_pri) +
+                      ', s norm: ' + "%10.4f" % (s_norm) +
+                      ', eps dual: ' + "%10.4f" % (eps_dual))
 
         I_v = linop.Identity(v.shape)
         if self.G is None:
@@ -561,10 +562,15 @@ class NonLinearLeastSquares(App):
 
         A is a non-linear operator.
         \alpha is the regularization strength.
-        G is a regulariztion term on x, e.g. G x := \| T x \|_1, with T being total variation.
-        In this case, the non-linear problem can be solved via Alternating Direction Method of Multipliers (ADMM):
+        G is a regulariztion term on x,
+        e.g. G x := \| T x \|_1, with T being total variation.
 
-        (1) x^{(k+1)} := argmin_x \| A x -y \|_2^2 + \rho/2 \| T x - z^{(k)} + u^{(k)} \|_2^2
+        In this case, the non-linear problem can be solved via
+        Alternating Direction Method of Multipliers (ADMM):
+
+        (1) x^{(k+1)} := argmin_x \| A x -y \|_2^2
+                        + \rho/2 \| T x - z^{(k)}
+                        + u^{(k)} \|_2^2
         (2) z^{(k+1)} := \Tau_{\alpha/\rho} (T x^{(k+1)} + u^{(k)})
         (3) u^{(k+1)} := u^{(k)} + T x^{(k+1)} - z^{(k+1)}
 
@@ -681,6 +687,7 @@ class NonLinearLeastSquares(App):
 
             self.alg = ADMM(_minL_x, _minL_v, self.x, v, u,
                             G, -I_v, 0, max_iter=self.max_iter)
+
 
 class L2ConstrainedMinimization(App):
     r"""L2 contrained minimization application.

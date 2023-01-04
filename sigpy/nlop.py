@@ -135,6 +135,7 @@ class Nlop():
 
         return NotImplemented
 
+
 class Exponential(Nlop):
     """
     Construction of the non-linear exponential operator.
@@ -266,7 +267,8 @@ class Exponential(Nlop):
                 ind += 1
 
             # Jacobian for R
-            encode = xp.reshape(self.encode, list(self.encode.shape) + [1] * len(image_shape))
+            encode = xp.reshape(self.encode, list(self.encode.shape)
+                                + [1] * len(image_shape))
             Z = xp.reshape(a * z, [z.shape[0]] + [1] + list(image_shape))
             output[:, ind:, ...] = encode * Z
 

@@ -169,18 +169,13 @@ class TestApp(unittest.TestCase):
         N_diffenc = 60
         B0 = np.zeros([1, 6])
         B1 = util.randn([N_diffenc, 6])
-        B  = np.concatenate((B0, B1)) * 1E3
-
-        # print('>> B: ', B)
+        B = np.concatenate((B0, B1)) * 1E3
 
         img_shape = [15, 15]
         D = util.randn([7, 1] + img_shape, dtype=float) / 1E6
         D = D + 0. * 1j
 
         E = nlop.Exponential(D.shape, B, rvc=True)
-
-        print('E ishape: ', E.ishape)
-        print('E oshape: ', E.oshape)
 
         mps_shape = [8] + img_shape
         mps = sim.birdcage_maps(mps_shape)
@@ -197,8 +192,8 @@ class TestApp(unittest.TestCase):
             np.zeros([6, 1] + img_shape)), dtype=yn.dtype)
 
         x = sp.app.NonLinearLeastSquares(A, yn, x=x,
-                max_iter=6, lamda=1E-3, redu=3,
-                gn_iter=6, inner_iter=100,
-                show_pbar=False).run()
+                                         max_iter=6, lamda=1E-3, redu=3,
+                                         gn_iter=6, inner_iter=100,
+                                         show_pbar=False).run()
 
         npt.assert_allclose(x, D, rtol=1E-5, atol=1E-5)

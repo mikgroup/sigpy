@@ -84,7 +84,8 @@ class Conj(Prox):
 
 
 class NoOp(Prox):
-    r"""Proximal operator for empty function. Equivalant to an identity function.
+    r"""Proximal operator for empty function.
+    Equivalant to an identity function.
 
     Args:
        shape (tuple of ints): Input shape
@@ -108,7 +109,8 @@ class Stack(Prox):
 
     def __init__(self, proxs):
         self.nops = len(proxs)
-        assert self.nops > 0
+
+        assert (self.nops > 0)
 
         self.proxs = proxs
         self.shapes = [prox.shape for prox in proxs]

@@ -1,6 +1,6 @@
 import unittest
 import numpy.testing as npt
-from sigpy import backend, config, fourier, linop, util
+from sigpy import backend, config, linop, util
 
 from sigpy.mri import nlop
 

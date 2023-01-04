@@ -282,8 +282,8 @@ class ConjugateGradient(Alg):
             self.resid = self.rzold.item()**0.5
 
             if self.verbose:
-                print("  cg iter: " + "%2d" % (self.iter) \
-                    + "; resid: " + "%4.6f" % (self.resid))
+                print("  cg iter: " + "%2d" % (self.iter)
+                      + "; resid: " + "%4.6f" % (self.resid))
 
     def _done(self):
         return (
@@ -861,15 +861,19 @@ class IRGNM(Alg):
 
     References:
         Bauer F., Kannengiesser S. (2007).
-        An alternative approach to the image reconstruction for parallel data acquisition in MRI.
+        An alternative approach to the image reconstruction
+        for parallel data acquisition in MRI.
         Math. Meth. Appl. Sci. 30, 1437-1451.
 
         Uecker M., Hohage T., Block K. T., Frahm J. (2008)
-        Image reconstruction by regularized nonlinear inversion -- joint estimation of coil sensitivities and image content.
+        Image reconstruction by regularized nonlinear inversion
+        -- joint estimation of coil sensitivities and image content.
         Magn. Reson. Med. 60, 674-682.
 
-        Tan Z., Roeloffs V., Voit D., Joseph A. A., Untenberger M., Merboldt K. D., Frahm J. (2016).
-        Model-based reconstruction for real-time phase-contrast flow MRI: Improved spatiotemporal accuracy.
+        Tan Z., Roeloffs V., Voit D., Joseph A. A., Untenberger M.,
+        Merboldt K. D., Frahm J. (2016).
+        Model-based reconstruction for real-time phase-contrast flow MRI:
+        Improved spatiotemporal accuracy.
         Magn. Reson. Med. 77, 1082-1093.
 
     """
@@ -912,18 +916,23 @@ class IRGNM(Alg):
             resid = xp.linalg.norm(r).item()
 
             if self.verbose:
-                print("gn iter: " + "%2d"%(self.iter) + "; alpha: " + "%.6f"%(self.alpha) + "; resid: " + "%.6f"%(resid))
+                print("gn iter: " + "%2d" % (self.iter)
+                      + "; alpha: " + "%.6f" % (self.alpha)
+                      + "; resid: " + "%.6f" % (resid))
 
             p = self.A.adjoint(self.x, r)
             p += self.alpha * (self.x0 - self.x)
 
             # update dx
             def AHA(x):
-                return self.A.adjoint(self.x, self.A.derivative(self.x, x)) + self.alpha * x
+                return self.A.adjoint(self.x, self.A.derivative(self.x, x)) \
+                    + self.alpha * x
 
             inner_tol = self.inner_tol * xp.linalg.norm(p).item()
 
-            inner_alg = ConjugateGradient(AHA, p, dx, max_iter=self.inner_iter, tol=inner_tol)
+            inner_alg = ConjugateGradient(AHA, p, dx,
+                                          max_iter=self.inner_iter,
+                                          tol=inner_tol)
             while not inner_alg.done():
                 inner_alg.update()
 

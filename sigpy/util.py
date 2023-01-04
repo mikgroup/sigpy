@@ -198,7 +198,8 @@ def circshift(input, shifts, axes=None):
     if axes is None:
         axes = range(input.ndim)
 
-    assert len(axes) == len(shifts)
+    assert (len(axes) == len(shifts))
+
     xp = backend.get_array_module(input)
 
     for axis, shift in zip(axes, shifts):
