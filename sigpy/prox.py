@@ -343,9 +343,6 @@ class SLRMCReg(Prox):
         blk_strides (tuple of int): block strides [default: (1, 1)].
         thresh (string): thresholding type ['soft' or 'hard'].
 
-    Author:
-        Zhengguo Tan <zhengguo.tan@gmail.com>
-
     References:
         * Mani M, Jacob M, Kelley D, Magnotta V.
           Multi-shot sensitivity-encoded diffusion data recovery using
@@ -364,6 +361,9 @@ class SLRMCReg(Prox):
           joint usage of structured low-rank constraints
           and explicit phase mapping.
           Magn Reson Med 89:95-111 (2023).
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
     """
     def __init__(self, shape, lamda,
                  blk_shape=(7, 7), blk_strides=(1, 1),
