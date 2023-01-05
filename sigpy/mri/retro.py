@@ -8,6 +8,7 @@ Author:
 """
 import numpy as np
 
+
 def unsamp_ky(kdat, phaenc_axis=-3,
               uniform_unsamp=True, unsamp_factor=2):
     # find valid phase-encoding lines
@@ -18,7 +19,8 @@ def unsamp_ky(kdat, phaenc_axis=-3,
     sampled_phaenc_ind = np.array(np.nonzero(kdat3)).ravel()
     sampled_phaenc_len = len(sampled_phaenc_ind)
 
-    loop_shape = [np.prod(kdat.shape[:phaenc_axis])] + list(kdat.shape[phaenc_axis:])
+    loop_shape = [np.prod(kdat.shape[:phaenc_axis])] \
+        + list(kdat.shape[phaenc_axis:])
     kdat4 = np.reshape(kdat, loop_shape)
 
     output = np.zeros_like(kdat4)
@@ -32,7 +34,8 @@ def unsamp_ky(kdat, phaenc_axis=-3,
             shift_cnt = (shift_cnt + 1) % unsamp_factor
         else:
             rinds = np.random.randint(sampled_phaenc_len,
-                        size=(sampled_phaenc_len // unsamp_factor))
+                                      size=(sampled_phaenc_len
+                                            // unsamp_factor))
 
         rand_unsamp_lines = sampled_phaenc_ind[rinds]
 

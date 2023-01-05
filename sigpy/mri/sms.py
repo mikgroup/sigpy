@@ -12,6 +12,7 @@ __all__ = ['get_uncollap_slice_idx',
            'readout_extended_fov',
            'readout_unextend_fov']
 
+
 def map_acquire_to_ordered_slice_idx(acq_slice_idx,
                                      N_slices_uncollap, N_band,
                                      verbose=False):
@@ -38,10 +39,11 @@ def map_acquire_to_ordered_slice_idx(acq_slice_idx,
         ord_slice_idx.append(so)
 
     if verbose is True:
-        print('acquired slice: ' + str(acq_slice_idx).zfill(3) \
-            + ' --> ordered slices: ' + str(ord_slice_idx))
+        print('acquired slice: ' + str(acq_slice_idx).zfill(3)
+              + ' --> ordered slices: ' + str(ord_slice_idx))
 
     return ord_slice_idx
+
 
 def get_uncollap_slice_idx(N_slices_uncollap, MB, collap_slice_idx):
     """
@@ -60,7 +62,8 @@ def get_uncollap_slice_idx(N_slices_uncollap, MB, collap_slice_idx):
     N_slices_collap = N_slices_uncollap // MB
 
     if (collap_slice_idx < 0) or (collap_slice_idx >= N_slices_collap):
-        raise ValueError('collap_slice_idx must be in the range: [0, ' + str(N_slices_collap) + ').')
+        raise ValueError('collap_slice_idx must be in the range: [0, '
+                         + str(N_slices_collap) + ').')
 
     N_slices_collap_half = N_slices_collap // 2
 
@@ -86,7 +89,8 @@ def get_uncollap_slice_idx(N_slices_uncollap, MB, collap_slice_idx):
 
 def get_ordered_slice_idx(acq_slice_idx, N_slices):
     """
-    Get the ordered (geometrically correct) slice indices from the acquisition slice order.
+    Get the ordered (geometrically correct) slice indices
+    from the acquisition slice order.
 
     Args:
         acq_slice_idx (int or tuple of ints): indices for acquired slices.
@@ -95,7 +99,8 @@ def get_ordered_slice_idx(acq_slice_idx, N_slices):
     Output:
         ordered slice indices (list).
     """
-    ordered_slice_idx = list(range(1, N_slices, 2)) + list(range(0, N_slices, 2))
+    ordered_slice_idx = list(range(1, N_slices, 2)) \
+        + list(range(0, N_slices, 2))
 
     if isinstance(acq_slice_idx, int):
         return ordered_slice_idx[acq_slice_idx]
@@ -114,8 +119,8 @@ def reorder_slices_mb1(input, N_slices, slice_axis=-3):
     for s in range(N_slices):
         ord_slice_idx = get_ordered_slice_idx(s, N_slices)
 
-        print('acquired slice: ' + str(s).zfill(3) \
-            + ' --> geometric slice: ' + str(ord_slice_idx).zfill(3))
+        print('acquired slice: ' + str(s).zfill(3)
+              + ' --> geometric slice: ' + str(ord_slice_idx).zfill(3))
 
         output[ord_slice_idx, ...] = input[s, ...]
 
@@ -123,18 +128,18 @@ def reorder_slices_mb1(input, N_slices, slice_axis=-3):
 
     return output
 
+
 def reorder_slices_mbx(input, N_band, N_slices, band_axis=-3, slice_axis=0):
 
-    assert(N_band == input.shape[band_axis])
+    assert (N_band == input.shape[band_axis])
 
     N_slices_collap = N_slices // N_band
 
-    assert(N_slices_collap == input.shape[slice_axis])
+    assert (N_slices_collap == input.shape[slice_axis])
 
     # swap axes such that slice stored in axis 0, and band in axis 1
     input = np.swapaxes(input, 1, band_axis)
     input = np.swapaxes(input, 0, slice_axis)
-
 
     img_shape = input.shape[2:]  # image shape excluding slices and bands
 
@@ -142,7 +147,8 @@ def reorder_slices_mbx(input, N_band, N_slices, band_axis=-3, slice_axis=0):
 
     for s in range(N_slices_collap):
 
-        slice_mb_idx = map_acquire_to_ordered_slice_idx(s, N_slices, N_band, verbose=True)
+        slice_mb_idx = map_acquire_to_ordered_slice_idx(s, N_slices, N_band,
+                                                        verbose=True)
 
         output[slice_mb_idx, ...] = input[s, ...]
 
@@ -163,16 +169,15 @@ def reorder_slices(input, N_band, N_slices, band_axis=-3, slice_axis=0):
     Output:
 
     """
-    assert(N_band == input.shape[band_axis])
+    assert (N_band == input.shape[band_axis])
 
     N_slices_collap = N_slices // N_band
 
-    assert(N_slices_collap == input.shape[slice_axis])
+    assert (N_slices_collap == input.shape[slice_axis])
 
     # swap axes such that slice stored in axis 0, and band in axis 1
     input = np.swapaxes(input, 1, band_axis)
     input = np.swapaxes(input, 0, slice_axis)
-
 
     img_shape = input.shape[2:]  # image shape excluding slices and bands
 
@@ -182,11 +187,11 @@ def reorder_slices(input, N_band, N_slices, band_axis=-3, slice_axis=0):
         acq_slice_idx = get_uncollap_slice_idx(N_slices, N_band, s)
         ord_slice_idx = get_ordered_slice_idx(acq_slice_idx, N_slices)
 
-        print('collapsed slice: ' + str(s).zfill(3) \
-            + ' --> acquired slices: ' \
-            + str([str(sid).zfill(3) for sid in acq_slice_idx]) \
-            + ' --> reordered slices: ' \
-            + str([str(sid).zfill(3) for sid in ord_slice_idx]))
+        print('collapsed slice: ' + str(s).zfill(3)
+              + ' --> acquired slices: '
+              + str([str(sid).zfill(3) for sid in acq_slice_idx])
+              + ' --> reordered slices: '
+              + str([str(sid).zfill(3) for sid in ord_slice_idx]))
 
         output[ord_slice_idx, ...] = input[s, ...]
 
@@ -204,8 +209,10 @@ def get_sms_phase_shift(ishape, MB, yshift=None):
         yshift (tuple or list): use custom yshift.
 
     References:
-        * Breuer FA, Blaimer M, Heidemann RM, Mueller MF, Griswold MA, Jakob PM.
-          Controlled aliasing in parallel imagin results in higher acceleration (CAIPIRINHA) for multi-slice imaging.
+        * Breuer FA, Blaimer M, Heidemann RM, Mueller MF,
+          Griswold MA, Jakob PM.
+          Controlled aliasing in parallel imagin results in
+          higher acceleration (CAIPIRINHA) for multi-slice imaging.
           Magn. Reson. Med. 53:684-691 (2005).
     """
     Nz, Ny, Nx = ishape[-3:]
@@ -217,7 +224,7 @@ def get_sms_phase_shift(ishape, MB, yshift=None):
     if yshift is None:
         yshift = (np.arange(Nz)) / MB
     else:
-        assert(len(yshift) == Nz)
+        assert (len(yshift) == Nz)
 
     print(' > sms: yshift ', yshift)
 
@@ -237,19 +244,23 @@ def readout_extended_fov(ksp, mps, MB):
     """
     References:
         * Koopmans PJ, Poser BA, Breuer FA.
-          2D-SENSE-GRAPPA for fast, ghosting-robust reconstruction of in-plane and slice accelerated blipped-CAIPI-EPI.
+          2D-SENSE-GRAPPA for fast, ghosting-robust reconstruction of
+          in-plane and slice accelerated blipped-CAIPI-EPI.
           Proc. Intl. Soc. Magn. Reson. Med. 2015, page 2410.
     """
     Ncoil, Ny, Nx = ksp.shape[-3:]
     _Ncoil, Nz, _Ny, _Nx = mps.shape[-4:]
 
-    assert((Ncoil==_Ncoil) and (Nz==MB) and (Ny==_Ny) and (Nx==_Nx))
+    assert ((Ncoil == _Ncoil) and (Nz == MB) and (Ny == _Ny) and (Nx == _Nx))
 
     msk = (sp.rss(ksp, axes=(-3, ), keepdims=True) > 0.).astype(ksp.dtype)
 
-    ksp_ext = np.zeros(list(ksp.shape[:-3]) + [Ncoil] + [Ny] + [Nx * MB], dtype=ksp.dtype)
-    msk_ext = np.zeros(list(ksp.shape[:-3]) + [1] + [Ny] + [Nx * MB], dtype=ksp.dtype)
-    mps_ext = np.zeros(list(mps.shape[:-3]) + [Ny] + [Nx * MB], dtype=mps.dtype)
+    ksp_ext = np.zeros(list(ksp.shape[:-3]) + [Ncoil] + [Ny] + [Nx * MB],
+                       dtype=ksp.dtype)
+    msk_ext = np.zeros(list(ksp.shape[:-3]) + [1] + [Ny] + [Nx * MB],
+                       dtype=ksp.dtype)
+    mps_ext = np.zeros(list(mps.shape[:-3]) + [Ny] + [Nx * MB],
+                       dtype=mps.dtype)
 
     for b in range(MB):  # loop over multi bands
 

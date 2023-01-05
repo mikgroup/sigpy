@@ -18,6 +18,7 @@ def cartes_to_spheri(x, y, z):
 
     return r, theta, phi
 
+
 def spheri_to_cartes(r, theta, phi):
 
     x = r * np.sin(phi) * np.cos(theta)

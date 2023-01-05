@@ -10,6 +10,7 @@ from sigpy import fourier
 
 MIN_POSITIVE_SIGNAL = 0.0001
 
+
 def phase_corr(kdat, pcor, topup_dim=-11):
     """perform phase correction.
 
@@ -47,7 +48,8 @@ def phase_corr(kdat, pcor, topup_dim=-11):
     pcor_img = fourier.ifft(pcor, axes=[col_dim])
     kdat_img = fourier.ifft(kdat, axes=[col_dim])
 
-    slope = np.angle((np.conj(pcor_img[..., 1:]) * pcor_img[..., :-1]).sum(col_dim, keepdims=True).sum(-2, keepdims=True))
+    slope = np.angle((np.conj(pcor_img[..., 1:]) * pcor_img[..., :-1])
+                     .sum(col_dim, keepdims=True).sum(-2, keepdims=True))
     x = np.arange(ncol) - ncol//2
 
     pcor_fac = np.exp(1j * slope * x)
@@ -81,6 +83,7 @@ def get_B(b, g):
 
     return - b * np.array([gx**2, 2*gx*gy, gy**2,
                            2*gx*gz, 2*gy*gz, gz**2]).transpose()
+
 
 def get_B2(b, g):
     """For Diffusion Kurtosis:
@@ -142,7 +145,8 @@ def get_D(B, sig, fit_method='wls', fit_only_tensor=False,
 
     Output:
         D (array): [Dxx, Dxy, Dyy, Dxz, Dyz, Dzz] of every pixel.
-        Please refer to get_B() and get_B2() for the actual order of the D array.
+        Please refer to get_B() and get_B2() for the actual order
+        of the D array.
 
     References:
         Chung S. W., Lu Y., Henry R. G. (2006).
@@ -154,7 +158,7 @@ def get_D(B, sig, fit_method='wls', fit_only_tensor=False,
     """
     sig = np.abs(sig)
     sig = np.maximum(sig, min_signal)
-    S = np.log(sig, out=np.zeros_like(sig), where=(sig!=0))
+    S = np.log(sig, out=np.zeros_like(sig), where=(sig != 0))
 
     ndiff = S.shape[0]
     image_shape = S.shape[1:]
@@ -204,11 +208,11 @@ _lt_indices = np.array([[0, 1, 3],
                         [1, 2, 4],
                         [3, 4, 5]])
 
+
 def DT_vec2mat(Dvec):
     """Convert the 6 elements of diffusion tensor (DT)
     to a 3x3 symmetric matrix
     """
-    image_shape = Dvec.shape[1:]
     assert 6 == Dvec.shape[0]
 
     return Dvec[_lt_indices, ...]
@@ -281,6 +285,7 @@ def get_FA(eigvals):
 
     return FA
 
+
 def get_cFA(FA, eigvecs):
     """Compute color-coded Fractional Anisotropy (cFA) map
 
@@ -292,6 +297,7 @@ def get_cFA(FA, eigvecs):
         cFA (array): cFA map
     """
     return np.abs(eigvecs[:, 0, ...]) * FA
+
 
 def get_MD(eigvals):
     """Compute Mean Diffusivity (MD) map
