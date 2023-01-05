@@ -5,7 +5,7 @@ l1 ball projection, and box constraints.
 """
 import numpy as np
 
-from sigpy import backend, thresh, util
+from sigpy import backend, util, thresh, linop
 
 
 class Prox(object):
@@ -331,3 +331,110 @@ class BoxConstraint(Prox):
 
         with device:
             return xp.clip(input, self.lower, self.upper)
+
+
+class SLRMCReg(Prox):
+    r"""Structure Low Rank Matrix Completion as Regularization
+
+    Args:
+        shape (tuple of int): input shapes.
+        lamda (float): regularization parameter.
+        blk_shape (tuple of int): block shape [default: (7, 7)].
+        blk_strides (tuple of int): block strides [default: (1, 1)].
+        thresh (string): thresholding type ['soft' or 'hard'].
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+
+    References:
+        * Mani M, Jacob M, Kelley D, Magnotta V.
+          Multi-shot sensitivity-encoded diffusion data recovery using
+          structured low-rank matrix completion (MUSSELS).
+          Magn Reson Med 78:494-507 (2017).
+
+        * Bilgic B, Chatnuntawech I, Manhard MK, Tian Q,
+          Liao C, Iyer SS, Cauley SF, Huang SY,
+          Polimeni JR, Wald LL, Setsompop K.
+          Highly accelerated multishot echo planar imaging through
+          synergistic machine learning and joint reconstruction.
+          Magn Reson Med 82:1343-1358 (2019).
+
+        * Dai E, Mani M, McNab JA.
+          Multi-band multi-shot diffusion MRI reconstruction with
+          joint usage of structured low-rank constraints
+          and explicit phase mapping.
+          Magn Reson Med 89:95-111 (2023).
+    """
+    def __init__(self, shape, lamda,
+                 blk_shape=(7, 7), blk_strides=(1, 1),
+                 thresh='hard', verbose=False):
+        self.lamda = lamda
+
+        assert len(blk_shape) == len(blk_strides)
+        self.blk_shape = blk_shape
+        self.blk_strides = blk_strides
+        self.thresh = thresh
+        self.verbose = verbose
+
+        # construct forward linops
+        self.A = linop.ArrayToBlocks(shape, blk_shape, blk_strides)
+        self.Reshape = self._linop_reshape()
+
+        self.Fwd = self.Reshape * self.A
+
+        super().__init__(shape)
+
+    def _prox(self, alpha, input):
+        device = backend.get_device(input)
+        xp = device.xp
+
+        with device:
+
+            output = self.Fwd(input)
+
+            # SVD
+            u, s, vh = xp.linalg.svd(output, full_matrices=False)
+
+            if self.thresh == 'soft':  # soft thresholding
+
+                s_thresh = thresh.soft_thresh(self.lamda * alpha, s)
+
+                output = (u * s_thresh[..., None, :]) @ vh
+
+            else:  # hard thresholding
+
+                keep = int(self.lamda * alpha * len(s))
+
+                if keep >= len(s):
+                    keep = len(s)
+
+                if self.verbose:
+                    print('>>> shape of the array for SVD: ', output.shape)
+                    print('>>> # of singular values kept ' + str(keep)
+                          + ' of ' + str(len(s)))
+
+                u_t, s_t, vh_t = u[..., :keep], s[:keep], vh[..., :keep, :]
+
+                output = (u_t * s_t[..., None, :]) @ vh_t
+
+            output = self.Fwd.H(output)
+
+            return output
+
+    def _linop_reshape(self):
+        D = len(self.blk_shape)
+
+        oshape1 = [util.prod(self.A.ishape[:-D]),
+                   util.prod(self.A.num_blks),
+                   util.prod(self.blk_shape)]
+
+        R1 = linop.Reshape(oshape1, self.A.oshape)
+        R2 = linop.Transpose(R1.oshape, axes=(0, 2, 1))
+
+        oshape2 = [util.prod(R2.oshape[:-1]),
+                   R2.oshape[-1]]
+
+        R3 = linop.Reshape(oshape2, R2.oshape)
+        R4 = linop.Transpose(R3.oshape, axes=(1, 0))
+
+        return R4 * R3 * R2 * R1

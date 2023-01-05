@@ -106,3 +106,10 @@ class TestProx(unittest.TestCase):
         y2 = np.stack((x1n, x2n))
 
         npt.assert_allclose(y1, y2)
+
+    def test_SLRMCReg(self):
+        shape = [15, 48, 32]
+        x = util.randn(shape, dtype=complex)
+        L = prox.SLRMCReg(shape, 1, blk_shape=(8, 8))
+        y = L(1., x)
+        npt.assert_allclose(y, x)
