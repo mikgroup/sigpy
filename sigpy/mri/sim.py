@@ -201,7 +201,7 @@ def get_subspace(sig, num_coeffs=5, error_bound=1e-5, prior_err=True):
         if (err > error_bound) and (prior_err):
             num_coeffs += 1
         else:
-            print('Eventual number of subspace coefficients: '
+            print('\nEventual number of subspace coefficients: '
                   + str(num_coeffs))
             print('Eventual error: ' + str(err))
             return U_sub
