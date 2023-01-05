@@ -107,6 +107,13 @@ class TestProx(unittest.TestCase):
 
         npt.assert_allclose(y1, y2)
 
+    def test_LLRL1Reg(self):
+        shape = [15, 48, 32]
+        x = util.randn(shape, dtype=complex)
+        L = prox.LLRL1Reg(shape, 1)
+        y = L(0., x)
+        npt.assert_allclose(y, x)
+
     def test_SLRMCReg(self):
         shape = [15, 48, 32]
         x = util.randn(shape, dtype=complex)
