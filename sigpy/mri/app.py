@@ -5,20 +5,17 @@ import numpy as np
 
 import sigpy as sp
 from sigpy.mri import linop
+from sigpy.mri.dims import *
 
-__all__ = [
-    "SenseRecon",
-    "L1WaveletRecon",
-    "TotalVariationRecon",
-    "JsenseRecon",
-    "EspiritCalib",
-]
+__all__ = ['SenseRecon', 'L1WaveletRecon', 'TotalVariationRecon',
+           'JsenseRecon', 'EspiritCalib', 'CompressedSenseRecon']
 
 
-def _estimate_weights(y, weights, coord):
+def _estimate_weights(y, weights, coord, coil_dim=0):
     if weights is None and coord is None:
         with sp.get_device(y):
-            weights = (sp.rss(y, axes=(0,)) > 0).astype(y.dtype)
+            weights = (sp.rss(y, axes=(coil_dim, ),
+                              keepdims=True) > 0).astype(y.dtype)
 
     return weights
 
@@ -586,3 +583,310 @@ class EspiritCalib(sp.app.App):
             return mps, max_eig
         else:
             return mps
+
+
+def _get_regularization(ishape, regu='TIK', lamda=0,
+                        regu_kspace=False,
+                        regu_axes=[-2, -1],
+                        blk_shape=(8, 8),
+                        blk_strides=(8, 8),
+                        thresh='soft',
+                        ro_extend_fold=1):
+    """
+    This function constructs regularization terms.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+    """
+
+    idx = []
+    for n in range(-len(ishape), -1, 1):
+        idx.append(slice(0, ishape[n], 1))
+
+    Nx_ext = ishape[-1]
+    Nx = Nx_ext // ro_extend_fold
+
+    Slices = []
+    for n in range(ro_extend_fold):
+        idn = idx.copy()
+        idn.append(slice(n * Nx, (n+1) * Nx, 1))
+
+        Slices.append(sp.linop.Slice(ishape, tuple(idn)))
+
+    trafos = sp.linop.Vstack(Slices, axis=0)
+
+
+    if regu_kspace is True:
+        trafos = sp.linop.FFT(trafos.oshape, axes=[-2, -1]) * trafos
+    else:
+        trafos = sp.linop.Identity(trafos.oshape) * trafos
+
+
+    if regu == 'TIK':
+
+        proxg = None
+        strength = lamda
+
+    elif regu == 'LLR':
+
+        blk_shape = list(blk_shape)
+        blk_strides = list(blk_strides)
+
+        for ind in range(len(blk_shape)):
+            if ishape[ind-2] <= blk_shape[ind-2]:
+                blk_shape[ind-2] = ishape[ind-2] // 3
+                blk_strides[ind-2] = ishape[ind-2] // 3
+
+        proxg = sp.prox.LLRL1Reg(trafos.oshape, lamda,
+                                 blk_shape=blk_shape,
+                                 blk_strides=blk_strides)
+
+        # the lamda is passed into prox,
+        # so no need for strength here.
+        strength = 0
+
+    elif regu == 'SLR':
+
+        blk_shape = list(blk_shape)
+        blk_strides = list(blk_strides)
+
+        proxg = sp.prox.SLRMCReg(trafos.oshape, lamda,
+                                 blk_shape=blk_shape,
+                                 blk_strides=blk_strides,
+                                 thresh=thresh, verbose=True)
+
+        strength = 0
+
+    elif regu == 'TV':
+
+        T = sp.linop.FiniteDifference(trafos.oshape, axes=regu_axes)
+        trafos = T * trafos
+
+        proxg = sp.prox.L1Reg(trafos.oshape, lamda)
+        strength = 0
+
+
+    g = None
+
+    # TODO: It is difficult to define g here, because
+    # proxg functions like SLR and LLR contain linear trasfers
+    # inside their prox implementation.
+
+    # if proxg is None:
+    #     g = None
+    # else:
+    #     def g(input):
+    #         device = sp.get_device(input)
+    #         xp = device.xp
+    #         with device:
+    #             return lamda * xp.sum(xp.abs(input)).item()
+
+    return trafos, proxg, g, strength
+
+
+class CompressedSenseRecon(sp.app.LinearLeastSquares):
+    r"""Compressed SENSE Reconstruction.
+
+    Considers the problem
+
+    .. math::
+        \min_x \frac{1}{2} \| P F S M x - y \|_2^2 +
+        \frac{\lambda}{2} R(x)
+
+    where P is the sampling operator,
+    F is the Fourier transform operator,
+    S is the SENSE operator (multiplication with coil sensitivity maps),
+    M is the modeling operator, which can be
+        - subspace matrix,
+        - phase matrix,
+        - etc.
+    x is the subspace coefficient maps, and
+    y is the k-space measurements.
+
+    R(x) is the regularization term.
+        (1) TIK: Tikhonov L2.
+                    R(x) = \| x \|_2^2
+        (2) LLR: Locally Low Rank.
+                    R(x) = \| G(x) \|_1,
+            where G is the transformation function.
+        (3) SLR: Structured Low Rank.
+        (4) TV: total variation.
+
+    Args:
+        y (array): measured k-space data.
+        mps (array): coil sensitivity maps.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+
+    References:
+        * Lustig M, Donoho DL, Pauly JM.
+          Sparse MRI: The application of compressed sensing for rapid MRI.
+          Magn Reson Med 2007;58:1182-1195.
+
+        * Lustig M, Donoho DL, Santos JM, Pauly JM.
+          Compressed sensing MRI.
+          IEEE Signal Process Mag 2008;25:72-82.
+    """
+    def __init__(self, y, mps, lamda=0,
+                 weights=None, coord=None,
+                 basis=None,
+                 phase_echo=None, combine_echo=True,
+                 phase_sms=None,
+                 scale=0, regu='TIK', regu_kspace=False,
+                 regu_axes=[-2, -1], x=None,
+                 blk_shape=(8, 8), blk_strides=(8, 8),
+                 thresh='soft', max_iter=50,
+                 ro_extend_fold=1, solver=None,
+                 device=sp.cpu_device, show_pbar=True,
+                 **kwargs):
+
+        # k-space data in accordance with sigpy/mri/dims.py
+        Ntime, Necho, Ncoil, Nz, Ny, Nx = y.shape
+
+        assert(1 == Nz)  # deal with collapsed y even for SMS
+
+        if phase_sms is not None:
+            MB = phase_sms.shape[DIM_Z]
+        else:
+            MB = 1
+
+        # start to construct image shape
+        img_shape = [1] + [MB] + [Ny] + [Nx]
+
+        # %% construct MRI forward model
+
+        #### case 1. subspace modeling
+        if basis is not None:
+
+            Ncontrast, Ncoef = basis.shape
+            assert(Ncontrast == Ntime * Necho)
+
+            ishape = [Ncoef] + [1] + img_shape
+
+            sub_ishape = [Ncoef] + [np.prod(ishape[1:])]
+            sub_oshape = [Ntime] + [Necho] + img_shape
+
+            B1 = sp.linop.Reshape(sub_ishape, ishape)
+            B2 = sp.linop.MatMul(B1.oshape, basis)
+            B3 = sp.linop.Reshape(sub_oshape, B2.oshape)
+
+            B = B3 * B2 * B1
+
+        else:
+
+            if combine_echo is True:
+
+                assert(phase_echo is not None)
+                ishape = [Ntime] + [1] + img_shape
+
+            else:
+
+                ishape = [Ntime] + [Necho] + img_shape
+
+            B = sp.linop.Identity(ishape)
+
+
+        #### case 2. echo phase modeling
+        if phase_echo is not None:
+
+            self._check_two_shape([Ntime] + [Necho] + img_shape, phase_echo.shape)
+
+            P = sp.linop.Multiply(B.oshape, phase_echo)
+
+        else:
+
+            P = sp.linop.Identity(B.oshape)
+
+
+        #### parallel imaging modeling
+
+        # only one set of coil sensitivity maps for all images
+        self._check_two_shape(list(y.shape[DIM_Y:]), mps.shape[DIM_Y:])
+        assert(y.shape[DIM_COIL] == mps.shape[DIM_COIL])
+
+        S = sp.linop.Multiply(P.oshape, mps)
+
+
+        # FFT
+        if coord is None:
+            F = sp.linop.FFT(S.oshape, axes=range(-2, 0))
+        else:
+            F = sp.linop.HDNUFFT(S.oshape, coord)
+
+
+        # SMS
+        if phase_sms is not None:
+
+            self._check_two_shape(list(phase_sms.shape), mps.shape[DIM_Z:])
+
+            PHI = sp.linop.Multiply(F.oshape, phase_sms)
+            SUM = sp.linop.Sum(PHI.oshape, axes=(DIM_Z, ), keepdims=True)
+
+            M = SUM * PHI
+
+        else:
+
+            M = sp.linop.Identity(F.oshape)
+
+
+        # compute k-space sampling mask
+        if weights is None:
+            weights = _estimate_weights(y, weights, coord, coil_dim=DIM_COIL)
+
+        y = sp.to_device(y * weights**0.5, device=device)
+
+        W = sp.linop.Multiply(M.oshape, weights**0.5)
+
+
+        #### chain models
+        A = W * M * F * S * P * B
+
+
+        # %% scale y
+        if scale == 0:
+            device = sp.get_device(y)
+            xp = device.xp
+            with device:
+                x0 = A.H(y)
+                x1 = np.linalg.norm(x0, axis=0)
+                x2 = np.linalg.norm(x1, axis=0)
+                x1 = xp.sort(x2.flatten())
+                x_med = abs(x1[len(x1)//2])
+                x_p90 = abs(x1[int(len(x1) * 0.9)])
+                x_max = abs(x1[-1])
+                if (x_max - x_p90) < 2 * (x_p90 - x_med):
+                    scale = x_p90
+                else:
+                    scale = x_max
+
+        # print('scale: ' + str(scale))
+        y /= scale
+
+
+        # %% initialization
+        if x is not None:
+            x = sp.to_device(x, device=device)
+
+
+        # %% regularization
+        trafos, proxg, g, strength = _get_regularization(
+            A.ishape, regu=regu, lamda=lamda,
+            regu_kspace=regu_kspace, regu_axes=regu_axes,
+            blk_shape=blk_shape, blk_strides=blk_strides,
+            thresh=thresh, ro_extend_fold=ro_extend_fold)
+
+        if solver == 'ADMM':
+            show_pbar = False
+
+        super().__init__(A, y, x=x, lamda=strength,
+                         G=trafos, proxg=proxg, g=g, scale=scale,
+                         max_iter=max_iter, solver=solver,
+                         show_pbar=show_pbar, **kwargs)
+
+
+    def _check_two_shape(self, ref_shape, dst_shape):
+        for i1, i2 in zip(ref_shape, dst_shape):
+            if (i1 != i2):
+                raise ValueError('shape mismatch for ref {ref}, got {dst}'.format(
+                    ref=ref_shape, dst=dst_shape))
