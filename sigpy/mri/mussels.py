@@ -62,7 +62,7 @@ def MusselsRecon(y, coils, MB=1,
           Multi-band multi-shot diffusion MRI reconstruction
           with joint usage of structured low-rank constraints
           and explicit phase mapping.
-          Magn Reson Med 2023.
+          Magn Reson Med 2023;89:95-111.
     """
     Ndiff, Nshot, Ncoil, Nz_collap, Ny, Nx = y.shape
     assert (Nshot > 1)  # MUSSELS is a multi-shot technique
