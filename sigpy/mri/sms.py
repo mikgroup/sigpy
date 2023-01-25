@@ -13,6 +13,10 @@ __all__ = ['get_uncollap_slice_idx',
            'readout_unextend_fov']
 
 
+def is_even(input):
+    return (input % 2 ==0)
+
+
 def map_acquire_to_ordered_slice_idx(acq_slice_idx,
                                      N_slices_uncollap, N_band,
                                      verbose=False):
@@ -31,12 +35,23 @@ def map_acquire_to_ordered_slice_idx(acq_slice_idx,
         ordered uncollapsed slice indices (list of int)
     """
     N_slices_collap = N_slices_uncollap // N_band
+    N_slices_collap_half = N_slices_collap // 2
 
     ord_slice_idx = []
     for b in range(N_band):
-        so = acq_slice_idx * 2 + 1  # interleaved slice order
+
+        # interleaved slice order
+        if (acq_slice_idx >= N_slices_collap_half) and \
+            ((not is_even(N_band)) or \
+             (is_even(N_band) and is_even(N_slices_collap))):
+                so = acq_slice_idx * 2
+        else:
+            so = acq_slice_idx * 2 + 1
+
         so = (so + b * N_slices_collap) % N_slices_uncollap
         ord_slice_idx.append(so)
+
+    ord_slice_idx.sort()
 
     if verbose is True:
         print('acquired slice: ' + str(acq_slice_idx).zfill(3)
