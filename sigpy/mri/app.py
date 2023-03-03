@@ -724,6 +724,11 @@ class CompressedSenseRecon(sp.app.LinearLeastSquares):
           Sparse MRI: The application of compressed sensing for rapid MRI.
           Magn Reson Med 2007;58:1182-1195.
 
+        * Block KT, Uecker M, Frahm J.
+          Undersampled radial MRI with multiple coils.
+          Iterative image reconstruction using a total variation constraint.
+          Magn Reson Med 2007;57:1086-1098.
+
         * Lustig M, Donoho DL, Santos JM, Pauly JM.
           Compressed sensing MRI.
           IEEE Signal Process Mag 2008;25:72-82.
