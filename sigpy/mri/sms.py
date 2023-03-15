@@ -42,9 +42,8 @@ def map_acquire_to_ordered_slice_idx(acq_slice_idx,
 
         # interleaved slice order
         if (acq_slice_idx >= N_slices_collap_half) and \
-            ((not is_even(N_band)) or \
-             (is_even(N_band) and is_even(N_slices_collap))):
-                so = acq_slice_idx * 2
+            (is_even(N_slices_collap)):
+            so = acq_slice_idx * 2
         else:
             so = acq_slice_idx * 2 + 1
 

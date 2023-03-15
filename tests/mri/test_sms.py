@@ -11,8 +11,8 @@ if __name__ == '__main__':
 class TestSms(unittest.TestCase):
 
     def test_slice_order(self):
-        list_NS = [94, 114, 60]
-        list_MB = [2, 3, 2]
+        list_NS = [94, 114, 60, 159]
+        list_MB = [2, 3, 2, 3]
 
         for N_slices_uncollap, MB in zip(list_NS, list_MB):
 
@@ -21,9 +21,16 @@ class TestSms(unittest.TestCase):
 
             N_slices_collap = N_slices_uncollap // MB
 
+            slice_mb_idx = []
             for s in range(N_slices_collap):
 
-                slice_mb_idx = sms.map_acquire_to_ordered_slice_idx(s, N_slices_uncollap, MB, verbose=True)
+                slice_mb_idx += sms.map_acquire_to_ordered_slice_idx(s, N_slices_uncollap, MB, verbose=True)
+
+            npt.assert_allclose(slice_mb_idx.sort(), list(range(N_slices_uncollap)),
+                                err_msg = ['error in slice ordering for MB = '
+                                           + str(MB) + ' slices = '
+                                           + str(N_slices_uncollap).zfill(3)]
+                                )
 
     def test_reorder(self):
         N_slices = 114
