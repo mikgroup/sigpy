@@ -50,8 +50,6 @@ def map_acquire_to_ordered_slice_idx(acq_slice_idx,
         so = (so + b * N_slices_collap) % N_slices_uncollap
         ord_slice_idx.append(so)
 
-    ord_slice_idx.sort()
-
     if verbose is True:
         print('acquired slice: ' + str(acq_slice_idx).zfill(3)
               + ' --> ordered slices: ' + str(ord_slice_idx))
