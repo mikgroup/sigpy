@@ -11,8 +11,8 @@ if __name__ == '__main__':
 class TestSms(unittest.TestCase):
 
     def test_slice_order(self):
-        list_NS = [94, 114, 60, 159]
-        list_MB = [2, 3, 2, 3]
+        list_NS = [94, 114, 60, 159, 141]
+        list_MB = [2, 3, 2, 3, 3]
 
         for N_slices_uncollap, MB in zip(list_NS, list_MB):
 
