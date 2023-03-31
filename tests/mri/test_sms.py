@@ -26,7 +26,10 @@ class TestSms(unittest.TestCase):
 
                 slice_mb_idx += sms.map_acquire_to_ordered_slice_idx(s, N_slices_uncollap, MB, verbose=True)
 
-            npt.assert_allclose(slice_mb_idx.sort(), list(range(N_slices_uncollap)),
+            slice_mb_idx.sort()
+
+            npt.assert_allclose(slice_mb_idx,
+                                range(N_slices_uncollap),
                                 err_msg = ['error in slice ordering for MB = '
                                            + str(MB) + ' slices = '
                                            + str(N_slices_uncollap).zfill(3)]
