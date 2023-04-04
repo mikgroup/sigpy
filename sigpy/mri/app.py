@@ -669,7 +669,7 @@ def _get_regularization(ishape, regu='TIK', lamda=0,
     g = None
 
     # TODO: It is difficult to define g here, because
-    # proxg functions like SLR and LLR contain linear trasfers
+    # proxg functions like SLR and LLR contain linear transformations
     # inside their prox implementation.
 
     # if proxg is None:
