@@ -202,7 +202,7 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
 
 
 class JsenseRecon(sp.app.App):
-    r"""JSENSE reconstruction.
+    r"""JSENSE/NLINV reconstruction.
 
     Considers the problem
 
@@ -211,6 +211,12 @@ class JsenseRecon(sp.app.App):
         \frac{\lambda}{2} (\| l \|_2^2 + \| r \|_2^2)
 
     where :math:`\ast` is the convolution operator.
+
+    This formulation with regularization corresponds to the version
+    described in the NLINV paper. Without regularization (which is the
+    default) this corresponds to the version from the JSENSE paper but using a
+    truncated Fourier representation of the coils (as in NLINV) instead
+    of polynomials.
 
     Args:
         y (array): k-space measurements.
