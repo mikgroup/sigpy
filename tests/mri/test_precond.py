@@ -54,7 +54,7 @@ class TestPrecond(unittest.TestCase):
         shape = [nc, n]
         mps = sp.randn(shape, dtype=np.complex)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
-        coord = sp.randn([n, 1], dtype=np.float)
+        coord = sp.randn([n, 1], dtype=float)
 
         A = linop.Sense(mps, coord=coord)
 
@@ -158,7 +158,7 @@ class TestPrecond(unittest.TestCase):
         shape = [nc, n]
         mps = np.ones(shape, dtype=np.complex)
         mps /= np.linalg.norm(mps, axis=0, keepdims=True)
-        coord = sp.randn([n, 1], dtype=np.float)
+        coord = sp.randn([n, 1], dtype=float)
 
         A = linop.Sense(mps, coord=coord)
         F = sp.linop.FFT([n])

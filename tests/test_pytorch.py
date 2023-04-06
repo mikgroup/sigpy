@@ -77,7 +77,7 @@ if config.pytorch_enabled:
 
         def test_to_pytorch_function(self):
             A = linop.Resize([5], [3])
-            x = np.array([1, 2, 3], np.float)
+            x = np.array([1, 2, 3], float)
             y = np.ones([5])
 
             with self.subTest('forward'):
@@ -105,11 +105,11 @@ if config.pytorch_enabled:
                     output_iscomplex=True).apply
                 x_torch = pytorch.to_pytorch(x)
                 npt.assert_allclose(f(x_torch).detach().numpy().ravel(),
-                                    A(x).view(np.float))
+                                    A(x).view(float))
 
             with self.subTest('adjoint'):
                 y_torch = pytorch.to_pytorch(y)
                 loss = (f(x_torch) - y_torch).pow(2).sum() / 2
                 loss.backward()
                 npt.assert_allclose(x_torch.grad.detach().numpy().ravel(),
-                                    A.H(A(x) - y).view(np.float))
+                                    A.H(A(x) - y).view(float))

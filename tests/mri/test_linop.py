@@ -9,7 +9,7 @@ if __name__ == '__main__':
     unittest.main()
 
 
-def check_linop_adjoint(A, dtype=np.float, device=sp.cpu_device):
+def check_linop_adjoint(A, dtype=float, device=sp.cpu_device):
 
     device = sp.Device(device)
     x = sp.randn(A.ishape, dtype=dtype, device=device)
@@ -61,7 +61,7 @@ class TestLinop(unittest.TestCase):
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
-        coord = coord.astype(np.float)
+        coord = coord.astype(float)
 
         A = linop.Sense(mps, coord=coord)
         check_linop_adjoint(A, dtype=np.complex)
@@ -77,7 +77,7 @@ class TestLinop(unittest.TestCase):
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
-        coord = coord.astype(np.float)
+        coord = coord.astype(float)
 
         d = np.sqrt(x * x + y * y)
         sigma, mu, a = 2, 0.25, 400
@@ -105,7 +105,7 @@ class TestLinop(unittest.TestCase):
 
         y, x = np.mgrid[:16, :16]
         coord = np.stack([np.ravel(y - 8), np.ravel(x - 8)], axis=1)
-        coord = coord.astype(np.float)
+        coord = coord.astype(float)
 
         for coil_batch_size in [None, 1, 2, 3]:
             A = linop.Sense(mps, coord=coord, coil_batch_size=coil_batch_size)

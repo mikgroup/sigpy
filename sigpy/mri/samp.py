@@ -87,7 +87,7 @@ def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
     return mask
 
 
-def radial(coord_shape, img_shape, golden=True, dtype=np.float):
+def radial(coord_shape, img_shape, golden=True, dtype=float):
     """Generate radial trajectory.
 
     Args:
