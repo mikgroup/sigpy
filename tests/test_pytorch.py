@@ -95,8 +95,8 @@ if config.pytorch_enabled:
 
         def test_to_pytorch_function_complex(self):
             A = linop.FFT([3])
-            x = np.array([1 + 1j, 2 + 2j, 3 + 3j], np.complex)
-            y = np.ones([3], np.complex)
+            x = np.array([1 + 1j, 2 + 2j, 3 + 3j], complex)
+            y = np.ones([3], complex)
 
             with self.subTest('forward'):
                 f = pytorch.to_pytorch_function(

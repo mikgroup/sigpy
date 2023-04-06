@@ -241,8 +241,8 @@ class TestLinop(unittest.TestCase):
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
 
-        x = np.array([1.0, 2.0], np.complex)
-        y = np.array([1.1, 2.2], np.complex)
+        x = np.array([1.0, 2.0], complex)
+        y = np.array([1.1, 2.2], complex)
         npt.assert_allclose(A * x, y)
 
         # Test simple
@@ -255,8 +255,8 @@ class TestLinop(unittest.TestCase):
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
 
-        x = np.array([1.0, 2.0], np.complex)
-        y = np.array([1.0, 4.0], np.complex)
+        x = np.array([1.0, 2.0], complex)
+        y = np.array([1.0, 4.0], complex)
         npt.assert_allclose(A * x, y)
 
         # Test broadcasting
@@ -270,9 +270,9 @@ class TestLinop(unittest.TestCase):
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
 
-        x = np.array([1.0, 2.0], np.complex)
+        x = np.array([1.0, 2.0], complex)
         y = np.array([[1.0, 4.0],
-                      [3.0, 8.0]], np.complex)
+                      [3.0, 8.0]], complex)
         npt.assert_allclose(A * x, y)
 
     def test_Resize(self):
@@ -451,7 +451,7 @@ class TestLinop(unittest.TestCase):
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
 
-        x = np.array([1, 2, 3, 4], np.complex)
+        x = np.array([1, 2, 3, 4], complex)
 
         npt.assert_allclose(A(x), [[1, 2],
                                    [3, 4]])

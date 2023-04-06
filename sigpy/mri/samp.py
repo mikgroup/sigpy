@@ -8,7 +8,7 @@ import numba as nb
 __all__ = ['poisson', 'radial', 'spiral']
 
 
-def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
+def poisson(img_shape, accel, calib=(0, 0), dtype=complex,
             crop_corner=True, return_density=False, seed=0,
             max_attempts=30, tol=0.1):
     """Generate variable-density Poisson-disc sampling pattern.
