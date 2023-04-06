@@ -120,9 +120,9 @@ class TestUtil(unittest.TestCase):
                              [0, 1, 2]])
 
     def test_monte_carlo_sure(self):
-        x = np.ones([100000], dtype=np.float)
+        x = np.ones([100000], dtype=float)
         sigma = 0.1
-        noise = 0.1 * util.randn([100000], dtype=np.float)
+        noise = 0.1 * util.randn([100000], dtype=float)
         y = x + noise
 
         def f(y):

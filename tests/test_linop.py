@@ -16,7 +16,7 @@ if config.cupy_enabled:
 class TestLinop(unittest.TestCase):
 
     def check_linop_unitary(self, A,
-                            device=backend.cpu_device, dtype=np.float):
+                            device=backend.cpu_device, dtype=float):
         device = backend.Device(device)
         x = util.randn(A.ishape, dtype=dtype, device=device)
         xp = device.xp
@@ -25,7 +25,7 @@ class TestLinop(unittest.TestCase):
                                        atol=1e-5, rtol=1e-5)
 
     def check_linop_linear(self, A,
-                           device=backend.cpu_device, dtype=np.float):
+                           device=backend.cpu_device, dtype=float):
         device = backend.Device(device)
         a = util.randn([1], dtype=dtype, device=device)
         x = util.randn(A.ishape, dtype=dtype, device=device)
@@ -38,7 +38,7 @@ class TestLinop(unittest.TestCase):
                                        atol=1e-5, rtol=1e-5)
 
     def check_linop_adjoint(self, A,
-                            device=backend.cpu_device, dtype=np.float):
+                            device=backend.cpu_device, dtype=float):
         device = backend.Device(device)
         x = util.randn(A.ishape, dtype=dtype, device=device)
         y = util.randn(A.oshape, dtype=dtype, device=device)
@@ -53,7 +53,7 @@ class TestLinop(unittest.TestCase):
             rhs = xp.vdot(x, A.H * y)
             xp.testing.assert_allclose(lhs, rhs, rtol=1e-3)
 
-    def check_linop_normal(self, A, device=backend.cpu_device, dtype=np.float):
+    def check_linop_normal(self, A, device=backend.cpu_device, dtype=float):
         device = backend.Device(device)
         x = util.randn(A.ishape, dtype=dtype, device=device)
 
@@ -241,8 +241,8 @@ class TestLinop(unittest.TestCase):
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
 
-        x = np.array([1.0, 2.0], np.complex)
-        y = np.array([1.1, 2.2], np.complex)
+        x = np.array([1.0, 2.0], complex)
+        y = np.array([1.1, 2.2], complex)
         npt.assert_allclose(A * x, y)
 
         # Test simple
@@ -255,8 +255,8 @@ class TestLinop(unittest.TestCase):
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
 
-        x = np.array([1.0, 2.0], np.complex)
-        y = np.array([1.0, 4.0], np.complex)
+        x = np.array([1.0, 2.0], complex)
+        y = np.array([1.0, 4.0], complex)
         npt.assert_allclose(A * x, y)
 
         # Test broadcasting
@@ -270,9 +270,9 @@ class TestLinop(unittest.TestCase):
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
 
-        x = np.array([1.0, 2.0], np.complex)
+        x = np.array([1.0, 2.0], complex)
         y = np.array([[1.0, 4.0],
-                      [3.0, 8.0]], np.complex)
+                      [3.0, 8.0]], complex)
         npt.assert_allclose(A * x, y)
 
     def test_Resize(self):
@@ -451,7 +451,7 @@ class TestLinop(unittest.TestCase):
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
 
-        x = np.array([1, 2, 3, 4], np.complex)
+        x = np.array([1, 2, 3, 4], complex)
 
         npt.assert_allclose(A(x), [[1, 2],
                                    [3, 4]])
