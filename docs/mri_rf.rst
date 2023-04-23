@@ -89,6 +89,7 @@ SLR Pulse Design Functions
     :nosignatures:
 
     sigpy.mri.rf.slr.dzrf
+    sigpy.mri.rf.slr.get_isodelay
     sigpy.mri.rf.slr.root_flip
     sigpy.mri.rf.slr.dz_gslider_rf
     sigpy.mri.rf.slr.dz_gslider_b

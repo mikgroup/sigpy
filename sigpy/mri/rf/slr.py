@@ -12,7 +12,8 @@ from sigpy.mri.rf.util import dinf
 
 __all__ = ['dzrf', 'dzls', 'msinc', 'dzmp', 'fmp', 'dzlp',
            'b2rf', 'b2a', 'mag2mp', 'ab2rf', 'dz_gslider_b', 'dz_gslider_rf',
-           'root_flip', 'dz_recursive_rf', 'dz_hadamard_b', 'calc_ripples']
+           'root_flip', 'dz_recursive_rf', 'dz_hadamard_b', 'calc_ripples',
+           'get_isodelay']
 
 """ Functions for SLR pulse design
     SLR algorithm simplifies the solution of the Bloch equations
@@ -511,6 +512,27 @@ def ab2rf(a, b):
             b = bt[0:ii:1]
 
     return rf
+
+
+def get_isodelay(rf, dt):
+    r"""Function to compute isodelay of a selective RF pulse, for calulation of
+    refocusing gradient area. Approximates isodelay as the time interval
+    between peak RF energy and end of pulse, neglecting the (small) nonlinear
+    dependence on flip angle.
+
+    Args:
+        rf (array): input RF pulse.
+        dt (float): hardware dwell time (s).
+
+    Returns:
+        RF pulse isodelay. Always positive. (s).
+
+    References:
+        Bernstein, M.A. King, K.F. and Zhou, X.J. (2004). Handbook of MRI pulse
+        sequences. Amsterdam: Academic Press.
+    """
+
+    return (np.size(rf) - np.argmax(abs(rf)))*dt
 
 
 def root_flip(b, d1, flip, tb, verbose=False):
