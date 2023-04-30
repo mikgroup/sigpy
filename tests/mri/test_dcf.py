@@ -1,16 +1,16 @@
 import unittest
+
 import numpy as np
-import sigpy as sp
 import numpy.testing as npt
 
+import sigpy as sp
 from sigpy.mri import dcf, samp
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
 
 
 class TestApp(unittest.TestCase):
-
     def shepp_logan_setup(self):
         img_shape = [16, 16]
         coord_shape = [int(16 * np.pi), 16, 2]

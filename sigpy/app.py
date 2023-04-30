@@ -3,13 +3,19 @@
 and provides a few general Apps, including a linear least squares App,
 and a maximum eigenvalue estimation App.
 """
-import numpy as np
 import time
 
+import numpy as np
 from tqdm.auto import tqdm
+
 from sigpy import backend, linop, prox, util
-from sigpy.alg import (PowerMethod, GradientMethod, ADMM,
-                       ConjugateGradient, PrimalDualHybridGradient)
+from sigpy.alg import (
+    ADMM,
+    ConjugateGradient,
+    GradientMethod,
+    PowerMethod,
+    PrimalDualHybridGradient,
+)
 
 
 class App(object):
@@ -43,8 +49,7 @@ class App(object):
 
     """
 
-    def __init__(self, alg, show_pbar=True, leave_pbar=True,
-                 record_time=True):
+    def __init__(self, alg, show_pbar=True, leave_pbar=True, record_time=True):
         self.alg = alg
         self.show_pbar = show_pbar
         self.leave_pbar = leave_pbar
@@ -65,17 +70,16 @@ class App(object):
         return
 
     def run(self):
-        """Run the App.
-
-        """
+        """Run the App."""
         if self.show_pbar:
-            if self.__class__.__name__ == 'App':
+            if self.__class__.__name__ == "App":
                 name = self.alg.__class__.__name__
             else:
                 name = self.__class__.__name__
 
             self.pbar = tqdm(
-                total=self.alg.max_iter, desc=name, leave=self.leave_pbar)
+                total=self.alg.max_iter, desc=name, leave=self.leave_pbar
+            )
 
         while not self.alg.done():
             if self.record_time:
@@ -115,15 +119,22 @@ class MaxEig(App):
 
     """
 
-    def __init__(self, A, dtype=np.float, device=backend.cpu_device,
-                 max_iter=30, show_pbar=True, leave_pbar=True):
+    def __init__(
+        self,
+        A,
+        dtype=np.float,
+        device=backend.cpu_device,
+        max_iter=30,
+        show_pbar=True,
+        leave_pbar=True,
+    ):
         self.x = util.randn(A.ishape, dtype=dtype, device=device)
         alg = PowerMethod(A, self.x, max_iter=max_iter)
         super().__init__(alg, show_pbar=show_pbar, leave_pbar=leave_pbar)
 
     def _summarize(self):
         if self.show_pbar:
-            self.pbar.set_postfix(max_eig='{0:.2E}'.format(self.alg.max_eig))
+            self.pbar.set_postfix(max_eig="{0:.2E}".format(self.alg.max_eig))
 
     def _output(self):
         return self.alg.max_eig
@@ -174,14 +185,32 @@ class LinearLeastSquares(App):
         save_objective_values (bool): Toggle saving objective value.
 
     """
-    def __init__(self, A, y, x=None, proxg=None,
-                 lamda=0, G=None, g=None, z=None,
-                 solver=None, max_iter=100,
-                 P=None, alpha=None, max_power_iter=30, accelerate=True,
-                 tau=None, sigma=None,
-                 rho=1, max_cg_iter=10, tol=0,
-                 save_objective_values=False,
-                 show_pbar=True, leave_pbar=True):
+
+    def __init__(
+        self,
+        A,
+        y,
+        x=None,
+        proxg=None,
+        lamda=0,
+        G=None,
+        g=None,
+        z=None,
+        solver=None,
+        max_iter=100,
+        P=None,
+        alpha=None,
+        max_power_iter=30,
+        accelerate=True,
+        tau=None,
+        sigma=None,
+        rho=1,
+        max_cg_iter=10,
+        tol=0,
+        save_objective_values=False,
+        show_pbar=True,
+        leave_pbar=True,
+    ):
         self.A = A
         self.y = y
         self.x = x
@@ -224,10 +253,14 @@ class LinearLeastSquares(App):
         if self.show_pbar:
             if self.save_objective_values:
                 self.pbar.set_postfix(
-                    obj='{0:.2E}'.format(self.objective_values[-1]))
+                    obj="{0:.2E}".format(self.objective_values[-1])
+                )
             else:
-                self.pbar.set_postfix(resid='{0:.2E}'.format(
-                    backend.to_device(self.alg.resid, backend.cpu_device)))
+                self.pbar.set_postfix(
+                    resid="{0:.2E}".format(
+                        backend.to_device(self.alg.resid, backend.cpu_device)
+                    )
+                )
 
     def _output(self):
         return self.x
@@ -235,30 +268,32 @@ class LinearLeastSquares(App):
     def _get_alg(self):
         if self.solver is None:
             if self.proxg is None:
-                self.solver = 'ConjugateGradient'
+                self.solver = "ConjugateGradient"
             elif self.G is None:
-                self.solver = 'GradientMethod'
+                self.solver = "GradientMethod"
             else:
-                self.solver = 'PrimalDualHybridGradient'
+                self.solver = "PrimalDualHybridGradient"
 
-        if self.solver == 'ConjugateGradient':
+        if self.solver == "ConjugateGradient":
             if self.proxg is not None:
                 raise ValueError(
-                    'ConjugateGradient cannot have proxg specified.')
+                    "ConjugateGradient cannot have proxg specified."
+                )
 
             self._get_ConjugateGradient()
-        elif self.solver == 'GradientMethod':
+        elif self.solver == "GradientMethod":
             if self.G is not None:
-                raise ValueError('GradientMethod cannot have G specified.')
+                raise ValueError("GradientMethod cannot have G specified.")
 
             self._get_GradientMethod()
-        elif self.solver == 'PrimalDualHybridGradient':
+        elif self.solver == "PrimalDualHybridGradient":
             self._get_PrimalDualHybridGradient()
-        elif self.solver == 'ADMM':
+        elif self.solver == "ADMM":
             self._get_ADMM()
         else:
-            raise ValueError('Invalid solver: {solver}.'.format(
-                solver=self.solver))
+            raise ValueError(
+                "Invalid solver: {solver}.".format(solver=self.solver)
+            )
 
     def _get_ConjugateGradient(self):
         I = linop.Identity(self.x.shape)
@@ -271,8 +306,8 @@ class LinearLeastSquares(App):
                 util.axpy(AHy, self.lamda, self.z)
 
         self.alg = ConjugateGradient(
-            AHA, AHy, self.x, P=self.P, max_iter=self.max_iter,
-            tol=self.tol)
+            AHA, AHy, self.x, P=self.P, max_iter=self.max_iter, tol=self.tol
+        )
 
     def _get_GradientMethod(self):
         with self.y_device:
@@ -295,9 +330,13 @@ class LinearLeastSquares(App):
             if self.lamda != 0:
                 AHA += self.lamda * I
 
-            max_eig = MaxEig(AHA, dtype=self.x.dtype, device=self.x_device,
-                             max_iter=self.max_power_iter,
-                             show_pbar=self.show_pbar).run()
+            max_eig = MaxEig(
+                AHA,
+                dtype=self.x.dtype,
+                device=self.x_device,
+                max_iter=self.max_power_iter,
+                show_pbar=self.show_pbar,
+            ).run()
             if max_eig == 0:
                 self.alpha = 1
             else:
@@ -309,7 +348,9 @@ class LinearLeastSquares(App):
             self.alpha,
             proxg=self.proxg,
             max_iter=self.max_iter,
-            accelerate=self.accelerate, tol=self.tol)
+            accelerate=self.accelerate,
+            tol=self.tol,
+        )
 
     def _get_PrimalDualHybridGradient(self):
         with self.y_device:
@@ -317,8 +358,9 @@ class LinearLeastSquares(App):
 
         if self.lamda > 0:
             gamma_primal = self.lamda
-            proxg = prox.L2Reg(self.x.shape, self.lamda,
-                               y=self.z, proxh=self.proxg)
+            proxg = prox.L2Reg(
+                self.x.shape, self.lamda, y=self.z, proxh=self.proxg
+            )
         else:
             gamma_primal = 0
             if self.proxg is None:
@@ -349,7 +391,8 @@ class LinearLeastSquares(App):
                 dtype=self.x.dtype,
                 device=self.x_device,
                 max_iter=self.max_power_iter,
-                show_pbar=self.show_pbar).run()
+                show_pbar=self.show_pbar,
+            ).run()
 
             self.tau = 1 / max_eig
         elif self.sigma is None:
@@ -361,7 +404,8 @@ class LinearLeastSquares(App):
                 dtype=self.x.dtype,
                 device=self.x_device,
                 max_iter=self.max_power_iter,
-                show_pbar=self.show_pbar).run()
+                show_pbar=self.show_pbar,
+            ).run()
 
             self.sigma = 1 / max_eig
 
@@ -380,7 +424,8 @@ class LinearLeastSquares(App):
             gamma_primal=gamma_primal,
             gamma_dual=gamma_dual,
             max_iter=self.max_iter,
-            tol=self.tol)
+            tol=self.tol,
+        )
 
     def _get_ADMM(self):
         r"""Considers the formulation:
@@ -419,9 +464,12 @@ class LinearLeastSquares(App):
 
                 AHA += self.rho * self.G.H * self.G
 
-            App(ConjugateGradient(AHA, AHy, self.x, P=self.P,
-                                  max_iter=self.max_cg_iter),
-                show_pbar=False).run()
+            App(
+                ConjugateGradient(
+                    AHA, AHy, self.x, P=self.P, max_iter=self.max_cg_iter
+                ),
+                show_pbar=False,
+            ).run()
 
         def minL_v():
             if self.G is None:
@@ -439,27 +487,36 @@ class LinearLeastSquares(App):
         else:
             G = self.G
 
-        self.alg = ADMM(minL_x, minL_v, self.x, v, u,
-                        G, -I_v, 0, max_iter=self.max_iter)
+        self.alg = ADMM(
+            minL_x, minL_v, self.x, v, u, G, -I_v, 0, max_iter=self.max_iter
+        )
 
     def objective(self):
         with self.y_device:
             r = self.A(self.x) - self.y
 
-            obj = 1 / 2 * self.y_device.xp.linalg.norm(r).item()**2
+            obj = 1 / 2 * self.y_device.xp.linalg.norm(r).item() ** 2
             if self.lamda > 0:
                 if self.z is None:
-                    obj += self.lamda / 2 * self.x_device.xp.linalg.norm(
-                        self.x).item()**2
+                    obj += (
+                        self.lamda
+                        / 2
+                        * self.x_device.xp.linalg.norm(self.x).item() ** 2
+                    )
                 else:
-                    obj += self.lamda / 2 * self.x_device.xp.linalg.norm(
-                        self.x - self.z).item()**2
+                    obj += (
+                        self.lamda
+                        / 2
+                        * self.x_device.xp.linalg.norm(self.x - self.z).item()
+                        ** 2
+                    )
 
             if self.proxg is not None:
                 if self.g is None:
                     raise ValueError(
-                        'Cannot compute objective when proxg is specified,'
-                        'but g is not.')
+                        "Cannot compute objective when proxg is specified,"
+                        "but g is not."
+                    )
 
                 if self.G is None:
                     obj += self.g(self.x)
@@ -486,9 +543,19 @@ class L2ConstrainedMinimization(App):
 
     """
 
-    def __init__(self, A, y, proxg, eps, x=None, G=None,
-                 max_iter=100, tau=None, sigma=None,
-                 show_pbar=True):
+    def __init__(
+        self,
+        A,
+        y,
+        proxg,
+        eps,
+        x=None,
+        G=None,
+        max_iter=100,
+        tau=None,
+        sigma=None,
+        show_pbar=True,
+    ):
         self.y = y
         self.x = x
         self.y_device = backend.get_device(y)
@@ -499,8 +566,11 @@ class L2ConstrainedMinimization(App):
         self.x_device = backend.get_device(self.x)
         if G is None:
             self.max_eig_app = MaxEig(
-                A.N, dtype=self.x.dtype, device=self.x_device,
-                show_pbar=show_pbar)
+                A.N,
+                dtype=self.x.dtype,
+                device=self.x_device,
+                show_pbar=show_pbar,
+            )
 
             proxfc = prox.Conj(prox.L2Proj(A.oshape, eps, y=y))
         else:
@@ -511,23 +581,35 @@ class L2ConstrainedMinimization(App):
             A = linop.Vstack([A, G])
 
         if tau is None or sigma is None:
-            max_eig = MaxEig(A.H * A, dtype=self.x.dtype,
-                             device=self.x_device,
-                             show_pbar=show_pbar).run()
+            max_eig = MaxEig(
+                A.H * A,
+                dtype=self.x.dtype,
+                device=self.x_device,
+                show_pbar=show_pbar,
+            ).run()
             tau = 1
             sigma = 1 / max_eig
 
         with self.y_device:
             self.u = self.y_device.xp.zeros(A.oshape, dtype=self.y.dtype)
 
-        alg = PrimalDualHybridGradient(proxfc, proxg, A, A.H, self.x, self.u,
-                                       tau, sigma, max_iter=max_iter)
+        alg = PrimalDualHybridGradient(
+            proxfc,
+            proxg,
+            A,
+            A.H,
+            self.x,
+            self.u,
+            tau,
+            sigma,
+            max_iter=max_iter,
+        )
 
         super().__init__(alg, show_pbar=show_pbar)
 
     def _summarize(self):
         if self.show_pbar:
-            self.pbar.set_postfix(resid='{0:.2E}'.format(self.alg.resid))
+            self.pbar.set_postfix(resid="{0:.2E}".format(self.alg.resid))
 
     def _output(self):
         return self.x

@@ -4,6 +4,7 @@ and implements commonly used methods, such as gradient methods,
 Newton's method, and the augmented Lagrangian method.
 """
 import numpy as np
+
 import sigpy as sp
 from sigpy import backend, util
 
@@ -156,9 +157,16 @@ class GradientMethod(Alg):
 
     """
 
-    def __init__(self, gradf, x, alpha, proxg=None,
-                 accelerate=False, max_iter=100,
-                 tol=0):
+    def __init__(
+        self,
+        gradf,
+        x,
+        alpha,
+        proxg=None,
+        accelerate=False,
+        max_iter=100,
+        tol=0,
+    ):
         self.gradf = gradf
         self.alpha = alpha
         self.accelerate = accelerate
@@ -190,9 +198,10 @@ class GradientMethod(Alg):
 
             if self.accelerate:
                 t_old = self.t
-                self.t = (1 + (1 + 4 * t_old**2)**0.5) / 2
-                backend.copyto(self.z, self.x +
-                               ((t_old - 1) / self.t) * (self.x - x_old))
+                self.t = (1 + (1 + 4 * t_old**2) ** 0.5) / 2
+                backend.copyto(
+                    self.z, self.x + ((t_old - 1) / self.t) * (self.x - x_old)
+                )
 
             self.resid = xp.linalg.norm(self.x - x_old).item() / self.alpha
 
@@ -242,7 +251,7 @@ class ConjugateGradient(Alg):
 
             self.not_positive_definite = False
             self.rzold = xp.real(xp.vdot(self.r, z))
-            self.resid = self.rzold.item()**0.5
+            self.resid = self.rzold.item() ** 0.5
 
         super().__init__(max_iter)
 
@@ -269,11 +278,14 @@ class ConjugateGradient(Alg):
                 util.xpay(self.p, beta, z)
                 self.rzold = rznew
 
-            self.resid = self.rzold.item()**0.5
+            self.resid = self.rzold.item() ** 0.5
 
     def _done(self):
-        return (self.iter >= self.max_iter or
-                self.not_positive_definite or self.resid <= self.tol)
+        return (
+            self.iter >= self.max_iter
+            or self.not_positive_definite
+            or self.resid <= self.tol
+        )
 
 
 class PrimalDualHybridGradient(Alg):
@@ -311,10 +323,22 @@ class PrimalDualHybridGradient(Alg):
 
     """
 
-    def __init__(self, proxfc, proxg, A, AH, x, u,
-                 tau, sigma, theta=1,
-                 gamma_primal=0, gamma_dual=0,
-                 max_iter=100, tol=0):
+    def __init__(
+        self,
+        proxfc,
+        proxg,
+        A,
+        AH,
+        x,
+        u,
+        tau,
+        sigma,
+        theta=1,
+        gamma_primal=0,
+        gamma_dual=0,
+        max_iter=100,
+        tol=0,
+    ):
         self.proxfc = proxfc
         self.proxg = proxg
         self.tol = tol
@@ -366,7 +390,7 @@ class PrimalDualHybridGradient(Alg):
         if self.gamma_primal > 0 and self.gamma_dual == 0:
             with self.x_device:
                 xp = self.x_device.xp
-                theta = 1 / (1 + 2 * self.gamma_primal * self.tau_min)**0.5
+                theta = 1 / (1 + 2 * self.gamma_primal * self.tau_min) ** 0.5
                 self.tau *= theta
                 self.tau_min *= theta
 
@@ -375,7 +399,7 @@ class PrimalDualHybridGradient(Alg):
         elif self.gamma_primal == 0 and self.gamma_dual > 0:
             with self.u_device:
                 xp = self.u_device.xp
-                theta = 1 / (1 + 2 * self.gamma_dual * self.sigma_min)**0.5
+                theta = 1 / (1 + 2 * self.gamma_dual * self.sigma_min) ** 0.5
                 self.sigma *= theta
                 self.sigma_min *= theta
 
@@ -448,6 +472,7 @@ class AugmentedLagrangianMethod(Alg):
         max_iter (int): maximum number of iterations.
 
     """
+
     def __init__(self, minL, g, h, x, u, v, mu, max_iter=30):
         self.minL = minL
         self.g = g
@@ -499,6 +524,7 @@ class ADMM(Alg):
         max_iter (int): maximum number of iterations.
 
     """
+
     def __init__(self, minL_x, minL_z, x, z, u, A, B, c, max_iter=30):
         self.minL_x = minL_x
         self.minL_z = minL_z
@@ -564,9 +590,25 @@ class SDMM(Alg):
         nonconvex problems with multiple constraints.' arXiv.
 
     """
-    def __init__(self, A, d, lam, L, c, mu, rho, rho_max, rho_norm,
-                 eps_pri=10**-5, eps_dual=10**-2, c_max=None, c_norm=None,
-                 max_cg_iter=30, max_iter=1000):
+
+    def __init__(
+        self,
+        A,
+        d,
+        lam,
+        L,
+        c,
+        mu,
+        rho,
+        rho_max,
+        rho_norm,
+        eps_pri=10**-5,
+        eps_dual=10**-2,
+        c_max=None,
+        c_norm=None,
+        max_cg_iter=30,
+        max_iter=1000,
+    ):
         self.A = A
         self.d = d
         self.lam = lam
@@ -580,7 +622,7 @@ class SDMM(Alg):
         self.eps_dual = eps_dual
         self.c_max = c_max
         self.c_norm = c_norm
-        self. max_cg_iter = max_cg_iter
+        self.max_cg_iter = max_cg_iter
         self.stop = False  # stop criterion collector variable
         self.device = backend.get_device(d)
         super().__init__(max_iter)
@@ -594,9 +636,11 @@ class SDMM(Alg):
 
             for ii in range(M):
                 self.z.append(L[ii] @ self.x)
-                self.u.append(xp.expand_dims(xp.zeros(xp.shape(L[ii])[0],
-                                                      dtype=xp.complex),
-                                             axis=1))
+                self.u.append(
+                    xp.expand_dims(
+                        xp.zeros(xp.shape(L[ii])[0], dtype=xp.complex), axis=1
+                    )
+                )
             if c_max is not None:
                 self.zMax = self.x
                 self.uMax = xp.zeros(xp.shape(self.x), dtype=xp.complex)
@@ -626,8 +670,9 @@ class SDMM(Alg):
             xp = self.device.xp
             d = xp.vstack((d, xp.sqrt(1 / mu) * v, xp.sqrt(lam) * x))
             Am = self.Amult(x, A, mu, lam)
-            int_method = ConjugateGradient(Am.H * Am, Am.H * d, x,
-                                           max_iter=nCGiters)
+            int_method = ConjugateGradient(
+                Am.H * Am, Am.H * d, x, max_iter=nCGiters
+            )
 
             while not int_method.done():
                 int_method.update()
@@ -648,23 +693,29 @@ class SDMM(Alg):
             # evaluate objective
             v = self.x
             for ii in range(len(self.L)):
-                v -= self.mu / self.rho[ii] * xp.transpose(self.L[ii]) @ \
-                                (self.L[ii] @ self.x - self.z[ii] + self.u[ii])
+                v -= (
+                    self.mu
+                    / self.rho[ii]
+                    * xp.transpose(self.L[ii])
+                    @ (self.L[ii] @ self.x - self.z[ii] + self.u[ii])
+                )
             if self.c_max is not None:
-                x_min_z_pl_u = (self.x - self.zMax + self.uMax)
+                x_min_z_pl_u = self.x - self.zMax + self.uMax
                 v -= self.mu / self.rho_max * x_min_z_pl_u
             if self.c_norm is not None:
-                x_min_z_pl_u = (self.x - self.zNorm + self.uNorm)
+                x_min_z_pl_u = self.x - self.zNorm + self.uNorm
                 v -= self.mu / self.rho_norm * x_min_z_pl_u
 
-            self.x = self.prox_muf(v, self.mu, self.A, self.x, self.d,
-                                   self.lam, self.max_cg_iter)
+            self.x = self.prox_muf(
+                v, self.mu, self.A, self.x, self.d, self.lam, self.max_cg_iter
+            )
 
             # run through constraints
             z_old = self.z
             for ii in range(len(self.L)):
-                self.z[ii] = self.prox_rhog(self.L[ii] @ (self.x + self.u[ii]),
-                                            self.c[ii])
+                self.z[ii] = self.prox_rhog(
+                    self.L[ii] @ (self.x + self.u[ii]), self.c[ii]
+                )
                 self.u[ii] += self.L[ii] @ self.x - self.z[ii]
 
             if self.c_max is not None:
@@ -685,8 +736,10 @@ class SDMM(Alg):
                 # dual residual
                 dz = self.z[ii] - z_old[ii]
                 s = 1 / self.rho[ii] * xp.transpose(self.L[ii]) * dz
-                if xp.linalg.norm(r) > self.eps_pri or\
-                        xp.linalg.norm(s) > self.eps_dual:
+                if (
+                    xp.linalg.norm(r) > self.eps_pri
+                    or xp.linalg.norm(s) > self.eps_dual
+                ):
                     self.stop = False
                 if xp.linalg.norm(r) > rMax:
                     rMax = xp.linalg.norm(r)
@@ -695,8 +748,10 @@ class SDMM(Alg):
             if self.c_norm is not None:
                 r = self.x - self.zNorm
                 s = 1 / self.rho_norm * (self.zNorm - zNorm_old)
-                if xp.linalg.norm(r) > self.eps_pri or\
-                        xp.linalg.norm(s) > self.eps_dual:
+                if (
+                    xp.linalg.norm(r) > self.eps_pri
+                    or xp.linalg.norm(s) > self.eps_dual
+                ):
                     self.stop = False
                 if xp.linalg.norm(r) > rMax:
                     rMax = xp.linalg.norm(r)
@@ -705,8 +760,10 @@ class SDMM(Alg):
             if self.c_max is not None:
                 r = self.x - self.zMax
                 s = 1 / self.rho_max * (self.zMax - zMax_old)
-                if xp.linalg.norm(r) > self.eps_pri or\
-                        xp.linalg.norm(s) > self.eps_dual:
+                if (
+                    xp.linalg.norm(r) > self.eps_pri
+                    or xp.linalg.norm(s) > self.eps_dual
+                ):
                     self.stop = False
                 if xp.linalg.norm(r) > rMax:
                     rMax = xp.linalg.norm(r)
@@ -733,11 +790,14 @@ class NewtonsMethod(Alg):
         tol (float): Tolerance for stopping condition.
 
     """
-    def __init__(self, gradf, inv_hessf, x,
-                 beta=1, f=None, max_iter=10, tol=0):
+
+    def __init__(
+        self, gradf, inv_hessf, x, beta=1, f=None, max_iter=10, tol=0
+    ):
         if beta < 1 and f is None:
             raise TypeError(
-                "Cannot do backtracking linesearch without specifying f.")
+                "Cannot do backtracking linesearch without specifying f."
+            )
 
         self.gradf = gradf
         self.inv_hessf = inv_hessf
@@ -759,9 +819,11 @@ class NewtonsMethod(Alg):
             self.lamda2 = -xp.real(xp.vdot(p, gradf_x)).item()
             if self.lamda2 < 0:
                 raise ValueError(
-                    'Direction is not descending. Got lamda2={}. '
-                    'inv_hessf might not be defined correctly.'.
-                    format(self.lamda2))
+                    "Direction is not descending. Got lamda2={}. "
+                    "inv_hessf might not be defined correctly.".format(
+                        self.lamda2
+                    )
+                )
 
             x_new = self.x + p
             if self.beta < 1:
@@ -791,6 +853,7 @@ class GerchbergSaxton(Alg):
         lamb (float): Tikhonov regularization value.
 
     """
+
     def __init__(self, A, y, x0, max_iter=500, tol=0, max_tol=0, lamb=0):
 
         self.A = A
@@ -820,8 +883,9 @@ class GerchbergSaxton(Alg):
                 alg_internal.update()
                 self.x = alg_internal.x
 
-        self.residual = xp.sum(xp.absolute(xp.absolute(self.A * self.x)
-                                           - self.y))
+        self.residual = xp.sum(
+            xp.absolute(xp.absolute(self.A * self.x) - self.y)
+        )
         self.iter += 1
 
     def _done(self):

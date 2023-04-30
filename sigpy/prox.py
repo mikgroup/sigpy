@@ -4,7 +4,8 @@ and provides commonly used proximal operators, including soft-thresholding,
 l1 ball projection, and box constraints.
 """
 import numpy as np
-from sigpy import backend, util, thresh
+
+from sigpy import backend, thresh, util
 
 
 class Prox(object):
@@ -40,8 +41,10 @@ class Prox(object):
         for i1, i2 in zip(input.shape, self.shape):
             if i2 != -1 and i1 != i2:
                 raise ValueError(
-                    'shape mismatch for {s}, got {input_shape}.'.format(
-                        s=self, input_shape=input.shape))
+                    "shape mismatch for {s}, got {input_shape}.".format(
+                        s=self, input_shape=input.shape
+                    )
+                )
 
     def __call__(self, alpha, input):
         try:
@@ -49,13 +52,14 @@ class Prox(object):
             output = self._prox(alpha, input)
             self._check_shape(output)
         except Exception as e:
-            raise RuntimeError('Exceptions from {}.'.format(self)) from e
+            raise RuntimeError("Exceptions from {}.".format(self)) from e
 
         return output
 
     def __repr__(self):
-        return '<{shape} {repr_str} Prox>.'.format(
-            shape=self.shape, repr_str=self.repr_str)
+        return "<{shape} {repr_str} Prox>.".format(
+            shape=self.shape, repr_str=self.repr_str
+        )
 
 
 class Conj(Prox):
@@ -104,7 +108,7 @@ class Stack(Prox):
 
     def __init__(self, proxs):
         self.nops = len(proxs)
-        assert(self.nops > 0)
+        assert self.nops > 0
 
         self.proxs = proxs
         self.shapes = [prox.shape for prox in proxs]
@@ -120,9 +124,10 @@ class Stack(Prox):
                 alphas = util.split(alpha, self.shapes)
 
             inputs = util.split(input, self.shapes)
-            outputs = [prox(alpha, input)
-                       for prox, input, alpha in zip(
-                               self.proxs, inputs, alphas)]
+            outputs = [
+                prox(alpha, input)
+                for prox, input, alpha in zip(self.proxs, inputs, alphas)
+            ]
             output = util.vec(outputs)
 
             return output
@@ -182,8 +187,7 @@ class L2Reg(Prox):
             output /= 1 + self.lamda * alpha
 
             if self.proxh is not None:
-                return self.proxh(
-                    alpha / (1 + self.lamda * alpha), output)
+                return self.proxh(alpha / (1 + self.lamda * alpha), output)
 
         return output
 
@@ -210,8 +214,10 @@ class L2Proj(Prox):
 
     def _prox(self, alpha, input):
         with backend.get_device(input):
-            return thresh.l2_proj(
-                self.epsilon, input - self.y, self.axes) + self.y
+            return (
+                thresh.l2_proj(self.epsilon, input - self.y, self.axes)
+                + self.y
+            )
 
 
 class LInfProj(Prox):
@@ -249,6 +255,7 @@ class PsdProj(Prox):
         shape (tuple of ints): Input shape.
 
     """
+
     def _prox(self, alpha, input):
         with backend.get_device(input):
             return thresh.psd_proj(input)
