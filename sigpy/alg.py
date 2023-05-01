@@ -873,8 +873,9 @@ class GerchbergSaxton(Alg):
         with device:
 
             y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
-            I = sp.linop.Identity(self.A.ishape)
-            system = self.A.H * self.A + self.lamb * I
+            system = self.A.H * self.A + self.lamb * sp.linop.Identity(
+                self.A.ishape
+            )
             b = self.A.H * y_hat
 
             alg_internal = ConjugateGradient(system, b, self.x, max_iter=5)

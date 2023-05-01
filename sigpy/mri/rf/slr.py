@@ -168,15 +168,15 @@ def dzmp(n=64, tb=4, d1=0.01, d2=0.01):
 
 
 def fmp(h):
-    l = np.size(h)
-    lp = 128 * np.exp(np.ceil(np.log(l) / np.log(2)) * np.log(2))
-    padwidths = np.array([np.ceil((lp - l) / 2), np.floor((lp - l) / 2)])
+    size = np.size(h)
+    lp = 128 * np.exp(np.ceil(np.log(size) / np.log(2)) * np.log(2))
+    padwidths = np.array([np.ceil((lp - size) / 2), np.floor((lp - size) / 2)])
     hp = np.pad(h, padwidths.astype(int), "constant")
     hpf = sp.fft(hp, norm=None)
     hpfs = hpf - np.min(np.real(hpf)) * 1.000001
     hpfmp = mag2mp(np.sqrt(np.abs(hpfs)))
     hpmp = sp.ifft(np.fft.ifftshift(np.conj(hpfmp)), center=False, norm=None)
-    hmp = hpmp[: int((l + 1) / 2)]
+    hmp = hpmp[: int((size + 1) / 2)]
 
     return hmp
 

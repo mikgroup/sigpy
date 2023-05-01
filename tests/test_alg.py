@@ -156,8 +156,8 @@ class TestAlg(unittest.TestCase):
             return gradf_x
 
         def inv_hessf(x):
-            I = np.eye(n)
-            return lambda x: np.linalg.pinv(A.T @ A + lamda * I) @ x
+            Id = np.eye(n)
+            return lambda x: np.linalg.pinv(A.T @ A + lamda * Id) @ x
 
         for beta in [1, 0.5]:
             with self.subTest(beta=beta):

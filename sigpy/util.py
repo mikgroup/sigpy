@@ -425,20 +425,22 @@ def leja(x):
 
     foo = a[0, 0:n]
 
-    for l in range(1, n - 1):
-        foo = np.multiply(foo, a[l, :])
-        ind = np.argmax(foo[l:])
-        ind = ind + l
-        if l != ind:
-            tmp[:] = a[:, l]
-            a[:, l] = a[:, ind]
+    for ldx in range(1, n - 1):
+        foo = np.multiply(foo, a[ldx, :])
+        ind = np.argmax(foo[ldx:])
+        ind = ind + ldx
+        if ldx != ind:
+            tmp[:] = a[:, ldx]
+            a[:, ldx] = a[:, ind]
             a[:, ind] = tmp
             # also swap inds in foo
-            tmp[0] = foo[l]
-            foo[l] = foo[ind]
+            tmp[0] = foo[ldx]
+            foo[ldx] = foo[ind]
             foo[ind] = tmp[0]
-        x_out[l] = a[n - 1, l]
-        a[l + 1, (l + 1) : n] = np.abs(a[l + 1, (l + 1) :] - x_out[l])
+        x_out[ldx] = a[n - 1, ldx]
+        a[ldx + 1, (ldx + 1) : n] = np.abs(
+            a[ldx + 1, (ldx + 1) :] - x_out[ldx]
+        )
 
     x_out = a[n, :]
 

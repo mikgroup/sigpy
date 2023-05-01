@@ -90,11 +90,11 @@ def stspa(
 
         # Unconstrained, use conjugate gradient
         if st is None:
-            I = sp.linop.Identity((Nc, coord.shape[0]))
+            Id = sp.linop.Identity((Nc, coord.shape[0]))
             b = A.H * W * target
 
             alg_method = sp.alg.ConjugateGradient(
-                A.H * A + alpha * I,
+                A.N + alpha * Id,
                 b,
                 pulses,
                 P=None,

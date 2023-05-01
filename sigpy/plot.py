@@ -519,7 +519,6 @@ class ImagePlot(object):
             bbox_props = dict(
                 boxstyle="round", pad=1, fc="white", alpha=0.95, lw=0
             )
-            l, b, w, h = self.ax.get_position().bounds
             self.help_text = self.ax.text(
                 imv.shape[0] / 2,
                 imv.shape[1] / 2,

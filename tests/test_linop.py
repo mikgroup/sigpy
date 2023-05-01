@@ -81,8 +81,8 @@ class TestLinop(unittest.TestCase):
 
     def test_Conj(self):
         shape = [5]
-        I = linop.Identity(shape)
-        A = linop.Conj(I)
+        Id = linop.Identity(shape)
+        A = linop.Conj(Id)
         x = util.randn(shape)
 
         npt.assert_allclose(A(x), x)
@@ -93,8 +93,8 @@ class TestLinop(unittest.TestCase):
 
     def test_Add(self):
         shape = [5]
-        I = linop.Identity(shape)
-        A = linop.Add([I, I])
+        Id = linop.Identity(shape)
+        A = linop.Add([Id, Id])
         x = util.randn(shape)
 
         npt.assert_allclose(A(x), 2 * x)
@@ -105,8 +105,8 @@ class TestLinop(unittest.TestCase):
 
     def test_Compose(self):
         shape = [5]
-        I = linop.Identity(shape)
-        A = linop.Compose([I, I])
+        Id = linop.Identity(shape)
+        A = linop.Compose([Id, Id])
         x = util.randn(shape)
 
         npt.assert_allclose(A(x), x)
@@ -117,12 +117,12 @@ class TestLinop(unittest.TestCase):
 
     def test_Hstack(self):
         shape = [5]
-        I = linop.Identity(shape)
+        Id = linop.Identity(shape)
         x1 = util.randn(shape)
         x2 = util.randn(shape)
         x = util.vec([x1, x2])
 
-        A = linop.Hstack([I, I])
+        A = linop.Hstack([Id, Id])
         npt.assert_allclose(A(x), x1 + x2)
         self.check_linop_linear(A)
         self.check_linop_adjoint(A)
@@ -130,12 +130,12 @@ class TestLinop(unittest.TestCase):
         self.check_linop_pickleable(A)
 
         shape = [5, 3]
-        I = linop.Identity(shape)
+        Id = linop.Identity(shape)
         x1 = util.randn(shape)
         x2 = util.randn(shape)
         x = np.concatenate([x1, x2], axis=1)
 
-        A = linop.Hstack([I, I], axis=1)
+        A = linop.Hstack([Id, Id], axis=1)
         npt.assert_allclose(A(x), x1 + x2)
         self.check_linop_linear(A)
         self.check_linop_adjoint(A)
@@ -144,10 +144,10 @@ class TestLinop(unittest.TestCase):
 
     def test_Vstack(self):
         shape = [5]
-        I = linop.Identity(shape)
+        Id = linop.Identity(shape)
         x = util.randn(shape)
 
-        A = linop.Vstack([I, I])
+        A = linop.Vstack([Id, Id])
         npt.assert_allclose(A(x), util.vec([x, x]))
         self.check_linop_linear(A)
         self.check_linop_adjoint(A)
@@ -155,10 +155,10 @@ class TestLinop(unittest.TestCase):
         self.check_linop_pickleable(A)
 
         shape = [5, 3]
-        I = linop.Identity(shape)
+        Id = linop.Identity(shape)
         x = util.randn(shape)
 
-        A = linop.Vstack([I, I], axis=1)
+        A = linop.Vstack([Id, Id], axis=1)
         npt.assert_allclose(A(x), np.concatenate([x, x], axis=1))
         self.check_linop_linear(A)
         self.check_linop_adjoint(A)
@@ -167,10 +167,10 @@ class TestLinop(unittest.TestCase):
 
     def test_Diag(self):
         shape = [5]
-        I = linop.Identity(shape)
+        Id = linop.Identity(shape)
         x = util.randn([10])
 
-        A = linop.Diag([I, I])
+        A = linop.Diag([Id, Id])
         npt.assert_allclose(A(x), x)
         self.check_linop_linear(A)
         self.check_linop_adjoint(A)
@@ -178,10 +178,10 @@ class TestLinop(unittest.TestCase):
         self.check_linop_pickleable(A)
 
         shape = [5, 3]
-        I = linop.Identity(shape)
+        Id = linop.Identity(shape)
         x = util.randn([5, 6])
 
-        A = linop.Diag([I, I], iaxis=1, oaxis=1)
+        A = linop.Diag([Id, Id], iaxis=1, oaxis=1)
         npt.assert_allclose(A(x), x)
         self.check_linop_linear(A)
         self.check_linop_adjoint(A)

@@ -1535,12 +1535,12 @@ def FiniteDifference(ishape, axes=None):
             None.
 
     """
-    I = Identity(ishape)
+    Id = Identity(ishape)
     ndim = len(ishape)
     axes = util._normalize_axes(axes, ndim)
     linops = []
     for i in axes:
-        D = I - Circshift(ishape, [1], axes=[i])
+        D = Id - Circshift(ishape, [1], axes=[i])
         R = Reshape([1] + list(ishape), ishape)
         linops.append(R * D)
 

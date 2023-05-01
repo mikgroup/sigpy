@@ -296,12 +296,11 @@ class LinearLeastSquares(App):
             )
 
     def _get_ConjugateGradient(self):
-        I = linop.Identity(self.x.shape)
         AHA = self.A.N
         AHy = self.A.H(self.y)
 
         if self.lamda != 0:
-            AHA += self.lamda * I
+            AHA += self.lamda * linop.Identity(self.x.shape)
             if self.z is not None:
                 util.axpy(AHy, self.lamda, self.z)
 
@@ -325,10 +324,9 @@ class LinearLeastSquares(App):
                 return gradf_x
 
         if self.alpha is None:
-            I = linop.Identity(self.x.shape)
             AHA = self.A.N
             if self.lamda != 0:
-                AHA += self.lamda * I
+                AHA += self.lamda * linop.Identity(self.x.shape)
 
             max_eig = MaxEig(
                 AHA,
@@ -455,12 +453,12 @@ class LinearLeastSquares(App):
                 AHy += self.lamda * self.z
 
             AHA = self.A.N
-            I = linop.Identity(self.x.shape)
+            Id = linop.Identity(self.x.shape)
             if self.G is None:
-                AHA += (self.lamda + self.rho) * I
+                AHA += (self.lamda + self.rho) * Id
             else:
                 if self.lamda > 0:
-                    AHA += self.lamda * I
+                    AHA += self.lamda * Id
 
                 AHA += self.rho * self.G.H * self.G
 
