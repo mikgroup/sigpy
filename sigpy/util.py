@@ -323,7 +323,7 @@ def triang(shape, dtype=float, device=backend.cpu_device):
     return window
 
 
-def hanning(shape, dtype=np.float, symm=False, device=backend.cpu_device):
+def hanning(shape, dtype=float, symm=False, device=backend.cpu_device):
     """Create multi-dimensional hanning window.
 
     Args:
