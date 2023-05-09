@@ -8,23 +8,13 @@ These functions are wrapped into higher level classes (Linop and Prox)
 that can be used in conjuction with Alg to form an App.
 
 """
-from sigpy import (
-    alg,
-    app,
-    backend,
-    block,
-    config,
-    conv,
-    fourier,
-    interp,
-    linop,
-    prox,
-    pytorch,
-    sim,
-    thresh,
-    util,
-    wavelet,
-)
+
+from .version import __version__ # noqa
+from sigpy import alg, app, config, linop, prox, nlop
+
+from sigpy import (backend, block, conv, interp,
+                   fourier, pytorch, sim, thresh,
+                   util, wavelet)
 from sigpy.backend import *  # noqa
 from sigpy.block import *  # noqa
 from sigpy.conv import *  # noqa
@@ -36,9 +26,7 @@ from sigpy.thresh import *  # noqa
 from sigpy.util import *  # noqa
 from sigpy.wavelet import *  # noqa
 
-from .version import __version__  # noqa
-
-__all__ = ["alg", "app", "config", "linop", "prox"]
+__all__ = ['alg', 'app', 'config', 'linop', 'prox', 'nlop']
 __all__.extend(backend.__all__)
 __all__.extend(block.__all__)
 __all__.extend(conv.__all__)
