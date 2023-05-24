@@ -6,8 +6,10 @@ This module contains flags to turn on and off optional modules.
 """
 import warnings
 from importlib import util
+import torch
 
-cupy_enabled = util.find_spec("cupy") is not None
+cuda_avail = torch.cuda.is_available()
+cupy_enabled = (util.find_spec("cupy") is not None) and cuda_avail
 if cupy_enabled:
     try:
         import cupy  # noqa
