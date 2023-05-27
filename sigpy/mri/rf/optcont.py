@@ -3,7 +3,7 @@
 """
 from sigpy import backend
 
-__all__ = ['blochsim', 'deriv']
+__all__ = ["blochsim", "deriv"]
 
 
 def blochsim(rf, x, g):
@@ -19,7 +19,7 @@ def blochsim(rf, x, g):
      Returns:
          array: SLR alpha parameter
          array: SLR beta parameter
-     """
+    """
 
     device = backend.get_device(rf)
     xp = device.xp
@@ -71,7 +71,7 @@ def deriv(rf, x, g, auxa, auxb, af, bf):
      Returns:
          array: SLR alpha parameter
          array: SLR beta parameter
-     """
+    """
 
     device = backend.get_device(rf)
     xp = device.xp

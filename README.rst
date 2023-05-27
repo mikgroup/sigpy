@@ -59,7 +59,7 @@ If you want to contribute to the SigPy source code, we recommend you install it 
 	
 To run tests and contribute, we recommend installing the following packages::
 
-	pip install coverage flake8 sphinx sphinx_rtd_theme
+	pip install coverage ruff sphinx sphinx_rtd_theme black isort
 
 and run the script ``run_tests.sh``.
 
