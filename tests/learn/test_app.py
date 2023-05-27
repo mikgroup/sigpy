@@ -12,8 +12,8 @@ class TestApp(unittest.TestCase):
     def test_ConvSparseDecom(self):
         lamda = 1e-9
         L = np.array([[1, 1],
-                      [1, -1]], dtype=np.float) / 2**0.5
-        y = np.array([[1, 1]], dtype=np.float) / 2**0.5
+                      [1, -1]], dtype=float) / 2**0.5
+        y = np.array([[1, 1]], dtype=float) / 2**0.5
 
         R = app.ConvSparseDecom(y, L, lamda=lamda).run()
 
@@ -22,8 +22,8 @@ class TestApp(unittest.TestCase):
     def test_ConvSparseCoefficients(self):
         lamda = 1e-10
         L = np.array([[1, 1],
-                      [1, -1]], dtype=np.float) / 2**0.5
-        y = np.array([[1, 1]], dtype=np.float) / 2**0.5
+                      [1, -1]], dtype=float) / 2**0.5
+        y = np.array([[1, 1]], dtype=float) / 2**0.5
 
         R_j = app.ConvSparseCoefficients(y, L, lamda=lamda)
 
@@ -36,7 +36,7 @@ class TestApp(unittest.TestCase):
         num_atoms = 1
         filt_width = 2
         batch_size = 1
-        y = np.array([[1, 1]], dtype=np.float) / 2**0.5
+        y = np.array([[1, 1]], dtype=float) / 2**0.5
         lamda = 1e-10
         alpha = 1
 

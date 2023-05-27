@@ -7,7 +7,7 @@ import numpy as np
 __all__ = ['birdcage_maps']
 
 
-def birdcage_maps(shape, r=1.5, nzz=8, dtype=np.complex):
+def birdcage_maps(shape, r=1.5, nzz=8, dtype=complex):
     """Simulates birdcage coil sensitivies.
 
     Args:
