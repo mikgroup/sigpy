@@ -3,7 +3,6 @@
 and provides a few general Apps, including a linear least squares App,
 and a maximum eigenvalue estimation App.
 """
-import numpy as np
 import time
 
 from tqdm.auto import tqdm

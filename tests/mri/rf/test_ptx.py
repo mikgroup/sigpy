@@ -2,7 +2,8 @@ import unittest
 import numpy as np
 import sigpy as sp
 import numpy.testing as npt
-import scipy.ndimage.filters as filt
+
+from scipy.ndimage import gaussian_filter
 
 from sigpy.mri import rf, linop, sim
 
@@ -23,7 +24,7 @@ class TestPtx(unittest.TestCase):
         circle = x * x + y * y <= int(img_shape[0] / 6) ** 2
         target = np.zeros(img_shape)
         target[circle] = 1
-        target = filt.gaussian_filter(target, 1)
+        target = gaussian_filter(target, 1)
         target = target.astype(np.complex64)
 
         sens = sim.birdcage_maps(sens_shape)
@@ -43,7 +44,7 @@ class TestPtx(unittest.TestCase):
         circle = x * x + y * y + z * z <= int(img_shape[0] / 5) ** 2
         target = np.zeros(img_shape)
         target[circle] = 1
-        target = filt.gaussian_filter(target, 1)
+        target = gaussian_filter(target, 1)
         target = target.astype(np.complex64)
         sens = sp.mri.sim.birdcage_maps(sens_shape)
 
