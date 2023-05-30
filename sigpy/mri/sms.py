@@ -50,6 +50,11 @@ def map_acquire_to_ordered_slice_idx(acq_slice_idx,
         so = (so + b * N_slices_collap) % N_slices_uncollap
         ord_slice_idx.append(so)
 
+    # need this when MB=3 and N_slices_uncollap=141
+    if (acq_slice_idx != N_slices_collap_half) or (N_band % 2 == 0):
+        # and (N_band % 2) and (N_slices_uncollap % 2)
+        ord_slice_idx.sort()
+
     if verbose is True:
         print('acquired slice: ' + str(acq_slice_idx).zfill(3)
               + ' --> ordered slices: ' + str(ord_slice_idx))
@@ -136,7 +141,7 @@ def reorder_slices_mb1(input, N_slices, slice_axis=-3):
 
         output[ord_slice_idx, ...] = input[s, ...]
 
-    output = np.swapaxes(output, 0, -3)
+    output = np.swapaxes(output, 0, slice_axis)
 
     return output
 
