@@ -13,7 +13,7 @@ from sigpy.mri.dims import *
 
 
 # %%
-def _denoising(input, full_img_shape=None):
+def _denoising(input, full_img_shape=None, max_iter=5):
     """
     Args:
         input: acs images
@@ -38,8 +38,10 @@ def _denoising(input, full_img_shape=None):
                            oshape=list(input.shape[:-2])
                            + list(full_img_shape))
 
-        ksp = H_full * k_full
-        img = sp.ifft(ksp, axes=[-2, -1])
+        for m in range(max_iter):
+            k_full = H_full * k_full
+
+        img = sp.ifft(k_full, axes=[-2, -1])
 
         idx = abs(img) > 0
         phs = xp.zeros_like(img)
@@ -238,7 +240,7 @@ def MuseRecon(y, coils, MB=1, acs_shape=[64, 64],
                                          device=device).run()
 
                 img = sms.readout_unextend_fov(backend.to_device(img_ext), MB)
-                img = sp.ifft(np.conj(phi) * sp.fft(img, axes=[-2, -1]), axes=[-2, -1])
+                # img = sp.ifft(np.conj(phi) * sp.fft(img, axes=[-2, -1]), axes=[-2, -1])
                 R_muse.append(img)
 
             else:
