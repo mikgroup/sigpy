@@ -8,7 +8,7 @@ from sigpy.mri import linop
 from sigpy.mri.dims import *
 
 __all__ = ['SenseRecon', 'L1WaveletRecon', 'TotalVariationRecon',
-           'JsenseRecon', 'EspiritCalib', 'CompressedSenseRecon']
+           'JsenseRecon', 'EspiritCalib', 'HighDimensionalRecon']
 
 
 def _estimate_weights(y, weights, coord, coil_dim=0):
@@ -591,6 +591,7 @@ def _get_regularization(ishape, regu='TIK', lamda=0,
                         blk_shape=(8, 8),
                         blk_strides=(8, 8),
                         thresh='soft',
+                        deep_model=None,
                         ro_extend_fold=1):
     """
     This function constructs regularization terms.
@@ -665,6 +666,10 @@ def _get_regularization(ishape, regu='TIK', lamda=0,
         proxg = sp.prox.L1Reg(trafos.oshape, lamda)
         strength = 0
 
+    elif (regu == 'DAE') and (deep_model is not None):
+
+        proxg = sp.prox.DAEReg(trafos.oshape, lamda, deep_model)
+        strength = 0
 
     g = None
 
@@ -684,8 +689,8 @@ def _get_regularization(ishape, regu='TIK', lamda=0,
     return trafos, proxg, g, strength
 
 
-class CompressedSenseRecon(sp.app.LinearLeastSquares):
-    r"""Compressed SENSE Reconstruction.
+class HighDimensionalRecon(sp.app.LinearLeastSquares):
+    r"""High-Dimensional MRI Reconstruction.
 
     Considers the problem
 
@@ -741,6 +746,7 @@ class CompressedSenseRecon(sp.app.LinearLeastSquares):
                  scale=0, regu='TIK', regu_kspace=False,
                  regu_axes=[-2, -1], x=None,
                  blk_shape=(8, 8), blk_strides=(8, 8),
+                 deep_model=None,
                  thresh='soft', max_iter=50,
                  ro_extend_fold=1, solver=None,
                  device=sp.cpu_device, show_pbar=True,
@@ -879,7 +885,8 @@ class CompressedSenseRecon(sp.app.LinearLeastSquares):
             A.ishape, regu=regu, lamda=lamda,
             regu_kspace=regu_kspace, regu_axes=regu_axes,
             blk_shape=blk_shape, blk_strides=blk_strides,
-            thresh=thresh, ro_extend_fold=ro_extend_fold)
+            thresh=thresh, deep_model=deep_model,
+            ro_extend_fold=ro_extend_fold)
 
         if solver == 'ADMM':
             show_pbar = False
