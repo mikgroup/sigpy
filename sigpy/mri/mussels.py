@@ -113,7 +113,7 @@ def MusselsRecon(y, coils, MB=1,
                                                     yshift=yshift)
 
             # structured low rank matrix completion (SLRMC) as a regularizer
-            img_ext = app.CompressedSenseRecon(
+            img_ext = app.HighDimensionalRecon(
                 ksp_ext, mps_ext, lamda, max_iter=max_iter,
                 combine_echo=False, weights=msk_ext,
                 phase_sms=sms_phase,
