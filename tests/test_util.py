@@ -1,15 +1,16 @@
 import pickle
 import unittest
+
 import numpy as np
 import numpy.testing as npt
-from sigpy import util, backend
 
-if __name__ == '__main__':
+from sigpy import backend, util
+
+if __name__ == "__main__":
     unittest.main()
 
 
 class TestUtil(unittest.TestCase):
-
     def test_device(self):
         device = backend.Device(-1)
         pickle.dumps(device)
@@ -100,33 +101,31 @@ class TestUtil(unittest.TestCase):
         input = np.array([0, 1, 2, 3])
         axes = [0]
         shift = [1]
-        npt.assert_allclose(util.circshift(input, shift, axes),
-                            [3, 0, 1, 2])
+        npt.assert_allclose(util.circshift(input, shift, axes), [3, 0, 1, 2])
 
-        input = np.array([[0, 1, 2],
-                          [3, 4, 5]])
+        input = np.array([[0, 1, 2], [3, 4, 5]])
         axes = [-1]
         shift = [2]
-        npt.assert_allclose(util.circshift(input, shift, axes),
-                            [[1, 2, 0],
-                             [4, 5, 3]])
+        npt.assert_allclose(
+            util.circshift(input, shift, axes), [[1, 2, 0], [4, 5, 3]]
+        )
 
-        input = np.array([[0, 1, 2],
-                          [3, 4, 5]])
+        input = np.array([[0, 1, 2], [3, 4, 5]])
         axes = [-2]
         shift = [1]
-        npt.assert_allclose(util.circshift(input, shift, axes),
-                            [[3, 4, 5],
-                             [0, 1, 2]])
+        npt.assert_allclose(
+            util.circshift(input, shift, axes), [[3, 4, 5], [0, 1, 2]]
+        )
 
     def test_monte_carlo_sure(self):
-        x = np.ones([100000], dtype=np.float)
+        x = np.ones([100000], dtype=float)
         sigma = 0.1
-        noise = 0.1 * util.randn([100000], dtype=np.float)
+        noise = 0.1 * util.randn([100000], dtype=float)
         y = x + noise
 
         def f(y):
             return y
 
         npt.assert_allclose(
-            sigma**2, util.monte_carlo_sure(f, y, sigma), atol=1e-3)
+            sigma**2, util.monte_carlo_sure(f, y, sigma), atol=1e-3
+        )

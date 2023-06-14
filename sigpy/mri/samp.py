@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
 """MRI sampling functions.
 """
-import numpy as np
 import numba as nb
+import numpy as np
+
+__all__ = ["poisson", "radial", "spiral"]
 
 
-__all__ = ['poisson', 'radial', 'spiral']
-
-
-def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
-            crop_corner=True, return_density=False, seed=0,
-            max_attempts=30, tol=0.1):
+def poisson(
+    img_shape,
+    accel,
+    calib=(0, 0),
+    dtype=complex,
+    crop_corner=True,
+    return_density=False,
+    seed=0,
+    max_attempts=30,
+    tol=0.1,
+):
     """Generate variable-density Poisson-disc sampling pattern.
 
     The function generates a variable density Poisson-disc sampling
@@ -42,7 +49,7 @@ def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
 
     """
     if accel <= 1:
-        raise ValueError(f'accel must be greater than 1, got {accel}')
+        raise ValueError(f"accel must be greater than 1, got {accel}")
 
     if seed is not None:
         rand_state = np.random.get_state()
@@ -62,8 +69,14 @@ def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
         radius_x = np.clip((1 + r * slope) * nx / max(nx, ny), 1, None)
         radius_y = np.clip((1 + r * slope) * ny / max(nx, ny), 1, None)
         mask = _poisson(
-            img_shape[-1], img_shape[-2], max_attempts,
-            radius_x, radius_y, calib, seed)
+            img_shape[-1],
+            img_shape[-2],
+            max_attempts,
+            radius_x,
+            radius_y,
+            calib,
+            seed,
+        )
         if crop_corner:
             mask *= r < 1
 
@@ -77,7 +90,7 @@ def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
             slope_max = slope
 
     if abs(actual_accel - accel) >= tol:
-        raise ValueError(f'Cannot generate mask to satisfy accel={accel}.')
+        raise ValueError(f"Cannot generate mask to satisfy accel={accel}.")
 
     mask = mask.reshape(img_shape).astype(dtype)
 
@@ -87,7 +100,7 @@ def poisson(img_shape, accel, calib=(0, 0), dtype=np.complex,
     return mask
 
 
-def radial(coord_shape, img_shape, golden=True, dtype=np.float):
+def radial(coord_shape, img_shape, golden=True, dtype=float):
     """Generate radial trajectory.
 
     Args:
@@ -114,8 +127,9 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
     """
     if len(img_shape) != coord_shape[-1]:
         raise ValueError(
-            'coord_shape[-1] must match len(img_shape), '
-            'got {} and {}'.format(coord_shape[-1], len(img_shape)))
+            "coord_shape[-1] must match len(img_shape), "
+            "got {} and {}".format(coord_shape[-1], len(img_shape))
+        )
 
     ntr, nro, ndim = coord_shape
     if ndim == 2:
@@ -124,7 +138,7 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
         else:
             phi = 2 * np.pi / ntr
 
-        n, r = np.mgrid[:ntr, :0.5:0.5 / nro]
+        n, r = np.mgrid[:ntr, : 0.5 : 0.5 / nro]
 
         theta = n * phi
         coord = np.zeros((ntr, nro, 2))
@@ -138,7 +152,7 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
         else:
             raise NotImplementedError
 
-        n, r = np.mgrid[:ntr, :0.5:0.5 / nro]
+        n, r = np.mgrid[:ntr, : 0.5 : 0.5 / nro]
 
         beta = np.arccos(2 * ((n * phi1) % 1) - 1)
         alpha = 2 * np.pi * ((n * phi2) % 1)
@@ -148,8 +162,7 @@ def radial(coord_shape, img_shape, golden=True, dtype=np.float):
         coord[:, :, -2] = r * np.sin(beta) * np.sin(alpha)
         coord[:, :, -3] = r * np.cos(beta)
     else:
-        raise ValueError(
-            'coord_shape[-1] must be 2 or 3, got {}'.format(ndim))
+        raise ValueError("coord_shape[-1] must be 2 or 3, got {}".format(ndim))
 
     return (coord * img_shape[-ndim:]).astype(dtype)
 
@@ -159,8 +172,10 @@ def _poisson(nx, ny, max_attempts, radius_x, radius_y, calib, seed=None):
     mask = np.zeros((ny, nx))
 
     # Add calibration region
-    mask[int(ny / 2 - calib[-2] / 2):int(ny / 2 + calib[-2] / 2),
-         int(nx / 2 - calib[-1] / 2):int(nx / 2 + calib[-1] / 2)] = 1
+    mask[
+        int(ny / 2 - calib[-2] / 2) : int(ny / 2 + calib[-2] / 2),
+        int(nx / 2 - calib[-1] / 2) : int(nx / 2 + calib[-1] / 2),
+    ] = 1
 
     if seed is not None:
         np.random.seed(int(seed))
@@ -183,7 +198,7 @@ def _poisson(nx, ny, max_attempts, radius_x, radius_y, calib, seed=None):
         k = 0
         while not done and k < max_attempts:
             # Generate point randomly from r and 2 * r
-            v = (np.random.random() * 3 + 1)**0.5
+            v = (np.random.random() * 3 + 1) ** 0.5
             t = 2 * np.pi * np.random.random()
             qx = px + v * rx * np.cos(t)
             qy = py + v * ry * np.sin(t)
@@ -198,9 +213,11 @@ def _poisson(nx, ny, max_attempts, radius_x, radius_y, calib, seed=None):
                 done = True
                 for x in range(startx, endx):
                     for y in range(starty, endy):
-                        if (mask[y, x] == 1
-                            and (((qx - x) / radius_x[y, x])**2 +
-                                 ((qy - y) / (radius_y[y, x]))**2 < 1)):
+                        if mask[y, x] == 1 and (
+                            ((qx - x) / radius_x[y, x]) ** 2
+                            + ((qy - y) / (radius_y[y, x])) ** 2
+                            < 1
+                        ):
                             done = False
                             break
 
@@ -242,34 +259,50 @@ def spiral(fov, N, f_sampling, R, ninterleaves, alpha, gm, sm, gamma=2.678e8):
         'Simple Analytic Variable Density Spiral Design.' MRM 2003.
 
     """
-    res = fov/N
+    res = fov / N
 
-    lam = .5 / res  # in m**(-1)
+    lam = 0.5 / res  # in m**(-1)
     n = 1 / (1 - (1 - ninterleaves * R / fov / lam) ** (1 / alpha))
     w = 2 * np.pi * n
     Tea = lam * w / gamma / gm / (alpha + 1)  # in s
-    Tes = np.sqrt(lam * w ** 2 / sm / gamma) / (alpha / 2 + 1)  # in s
-    Ts2a = (Tes ** ((alpha + 1) / (alpha / 2 + 1)) *
-            (alpha / 2 + 1) / Tea / (alpha + 1)) ** (1 + 2 / alpha)  # in s
+    Tes = np.sqrt(lam * w**2 / sm / gamma) / (alpha / 2 + 1)  # in s
+    Ts2a = (
+        Tes ** ((alpha + 1) / (alpha / 2 + 1))
+        * (alpha / 2 + 1)
+        / Tea
+        / (alpha + 1)
+    ) ** (
+        1 + 2 / alpha
+    )  # in s
 
     if Ts2a < Tes:
         tautrans = (Ts2a / Tes) ** (1 / (alpha / 2 + 1))
 
         def tau(t):
-            return (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * \
-                (t <= Ts2a) + ((t - Ts2a) / Tea +
-                               tautrans ** (alpha + 1)) ** (1 / (alpha + 1))\
-                * (t > Ts2a) * (t <= Tea) * (Tes >= Ts2a)
+            return (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (
+                t <= Ts2a
+            ) + ((t - Ts2a) / Tea + tautrans ** (alpha + 1)) ** (
+                1 / (alpha + 1)
+            ) * (
+                t > Ts2a
+            ) * (
+                t <= Tea
+            ) * (
+                Tes >= Ts2a
+            )
+
         Tend = Tea
     else:
 
         def tau(t):
             return (t / Tes) ** (1 / (alpha / 2 + 1)) * (0 <= t) * (t <= Tes)
+
         Tend = Tes
 
     def k(t):
         return lam * tau(t) ** alpha * np.exp(w * tau(t) * 1j)
-    dt = Tea * 1E-4  # in s
+
+    dt = Tea * 1e-4  # in s
 
     Dt = dt * f_sampling / fov / abs(k(Tea) - k(Tea - dt))  # in s
 

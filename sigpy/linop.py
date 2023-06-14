@@ -6,17 +6,18 @@ such as reshape, transpose, and resize.
 """
 import numpy as np
 
-from sigpy import backend, block, fourier, util, interp, conv, wavelet
+from sigpy import backend, block, conv, fourier, interp, util, wavelet
 
 
 def _check_shape_positive(shape):
 
     if not all(s > 0 for s in shape):
         raise ValueError(
-            'Shapes must be positive, got {shape}'.format(shape=shape))
+            "Shapes must be positive, got {shape}".format(shape=shape)
+        )
 
 
-class Linop():
+class Linop:
     """Abstraction for linear operator.
 
     Linop can be called on a NumPy or CuPy array to
@@ -49,6 +50,7 @@ class Linop():
         N: normal linear operator.
 
     """
+
     def __init__(self, oshape, ishape, repr_str=None):
         self.oshape = list(oshape)
         self.ishape = list(ishape)
@@ -68,15 +70,19 @@ class Linop():
         for i1, i2 in zip(input.shape, self.ishape):
             if i2 != -1 and i1 != i2:
                 raise ValueError(
-                    'input shape mismatch for {s}, got {input_shape}'.format(
-                        s=self, input_shape=input.shape))
+                    "input shape mismatch for {s}, got {input_shape}".format(
+                        s=self, input_shape=input.shape
+                    )
+                )
 
     def _check_oshape(self, output):
         for o1, o2 in zip(output.shape, self.oshape):
             if o2 != -1 and o1 != o2:
                 raise ValueError(
-                    'output shape mismatch for {s}, got {output_shape}'.format(
-                        s=self, output_shape=output.shape))
+                    "output shape mismatch for {s}, got {output_shape}".format(
+                        s=self, output_shape=output.shape
+                    )
+                )
 
     def _apply(self, input):
         raise NotImplementedError
@@ -99,7 +105,7 @@ class Linop():
             output = self._apply(input)
             self._check_oshape(output)
         except Exception as e:
-            raise RuntimeError('Exceptions from {}.'.format(self)) from e
+            raise RuntimeError("Exceptions from {}.".format(self)) from e
 
         return output
 
@@ -176,8 +182,9 @@ class Linop():
         return self.__add__(-input)
 
     def __repr__(self):
-        return '<{oshape}x{ishape}> {repr_str} Linop>'.format(
-            oshape=self.oshape, ishape=self.ishape, repr_str=self.repr_str)
+        return "<{oshape}x{ishape}> {repr_str} Linop>".format(
+            oshape=self.oshape, ishape=self.ishape, repr_str=self.repr_str
+        )
 
 
 class Identity(Linop):
@@ -331,8 +338,10 @@ class Add(Linop):
         ishape = linops[0].ishape
 
         super().__init__(
-            oshape, ishape,
-            repr_str=' + '.join([linop.repr_str for linop in linops]))
+            oshape,
+            ishape,
+            repr_str=" + ".join([linop.repr_str for linop in linops]),
+        )
 
     def _apply(self, input):
         output = 0
@@ -348,9 +357,12 @@ class Add(Linop):
 
 def _check_compose_linops(linops):
     for linop1, linop2 in zip(linops[:-1], linops[1:]):
-        if (linop1.ishape != linop2.oshape):
-            raise ValueError('cannot compose {linop1} and {linop2}.'.format(
-                linop1=linop1, linop2=linop2))
+        if linop1.ishape != linop2.oshape:
+            raise ValueError(
+                "cannot compose {linop1} and {linop2}.".format(
+                    linop1=linop1, linop2=linop2
+                )
+            )
 
 
 def _combine_compose_linops(linops):
@@ -380,8 +392,10 @@ class Compose(Linop):
         self.linops = _combine_compose_linops(linops)
 
         super().__init__(
-            self.linops[0].oshape, self.linops[-1].ishape,
-            repr_str=' * '.join([linop.repr_str for linop in linops]))
+            self.linops[0].oshape,
+            self.linops[-1].ishape,
+            repr_str=" * ".join([linop.repr_str for linop in linops]),
+        )
 
     def _apply(self, input):
         output = input
@@ -396,18 +410,22 @@ class Compose(Linop):
 
 def _check_linops_same_ishape(linops):
     for linop in linops:
-        if (linop.ishape != linops[0].ishape):
+        if linop.ishape != linops[0].ishape:
             raise ValueError(
-                'Linops must have the same ishape, got {linops}.'.format(
-                    linops=linops))
+                "Linops must have the same ishape, got {linops}.".format(
+                    linops=linops
+                )
+            )
 
 
 def _check_linops_same_oshape(linops):
     for linop in linops:
-        if (linop.oshape != linops[0].oshape):
+        if linop.oshape != linops[0].oshape:
             raise ValueError(
-                'Linops must have the same oshape, got {linops}.'.format(
-                    linops=linops))
+                "Linops must have the same oshape, got {linops}.".format(
+                    linops=linops
+                )
+            )
 
 
 def _hstack_params(shapes, axis):
@@ -422,7 +440,8 @@ def _hstack_params(shapes, axis):
     for shape in shapes[1:]:
         if len(shape) != ndim:
             raise Exception(
-                'Shapes must have the same lengths to concatenate.')
+                "Shapes must have the same lengths to concatenate."
+            )
 
         for i in range(ndim):
             if i == axis:
@@ -431,7 +450,8 @@ def _hstack_params(shapes, axis):
                 idx += shape[i]
             elif shape[i] != ishape[i]:
                 raise RuntimeError(
-                    'Shapes not along axis must be the same to concatenate.')
+                    "Shapes not along axis must be the same to concatenate."
+                )
 
     return ishape, indices
 
@@ -461,7 +481,8 @@ class Hstack(Linop):
         self.axis = axis
 
         ishape, self.indices = _hstack_params(
-            [linop.ishape for linop in self.linops], axis)
+            [linop.ishape for linop in self.linops], axis
+        )
         oshape = self.linops[0].oshape
 
         super().__init__(oshape, ishape)
@@ -486,8 +507,11 @@ class Hstack(Linop):
                     ndim = len(linop.ishape)
                     axis = self.axis % ndim
 
-                    slc = tuple([slice(None)] * axis + [slice(start, end)] +
-                                [slice(None)] * (ndim - axis - 1))
+                    slc = tuple(
+                        [slice(None)] * axis
+                        + [slice(start, end)]
+                        + [slice(None)] * (ndim - axis - 1)
+                    )
 
                     output += linop(input[slc])
 
@@ -509,7 +533,8 @@ def _vstack_params(shapes, axis):
     for shape in shapes[1:]:
         if len(shape) != ndim:
             raise Exception(
-                'Shapes must have the same lengths to concatenate.')
+                "Shapes must have the same lengths to concatenate."
+            )
 
         for i in range(ndim):
             if i == axis:
@@ -518,7 +543,8 @@ def _vstack_params(shapes, axis):
                 idx += shape[i]
             elif shape[i] != oshape[i]:
                 raise Exception(
-                    'Shapes not along axis must be the same to concatenate.')
+                    "Shapes not along axis must be the same to concatenate."
+                )
 
     return oshape, indices
 
@@ -545,7 +571,8 @@ class Vstack(Linop):
         self.linops = linops
 
         oshape, self.indices = _vstack_params(
-            [linop.oshape for linop in self.linops], axis)
+            [linop.oshape for linop in self.linops], axis
+        )
         ishape = self.linops[0].ishape
 
         super().__init__(oshape, ishape)
@@ -571,8 +598,11 @@ class Vstack(Linop):
                 else:
                     ndim = len(linop.oshape)
                     axis = self.axis % ndim
-                    slc = tuple([slice(None)] * axis + [slice(start, end)] +
-                                [slice(None)] * (ndim - axis - 1))
+                    slc = tuple(
+                        [slice(None)] * axis
+                        + [slice(start, end)]
+                        + [slice(None)] * (ndim - axis - 1)
+                    )
                     output[slc] = linop(input)
 
         return output
@@ -606,9 +636,11 @@ class Diag(Linop):
         self.oaxis = oaxis
         self.iaxis = iaxis
         ishape, self.iindices = _hstack_params(
-            [linop.ishape for linop in self.linops], iaxis)
+            [linop.ishape for linop in self.linops], iaxis
+        )
         oshape, self.oindices = _vstack_params(
-            [linop.oshape for linop in self.linops], oaxis)
+            [linop.oshape for linop in self.linops], oaxis
+        )
 
         super().__init__(oshape, ishape)
 
@@ -634,12 +666,16 @@ class Diag(Linop):
 
                 if self.iaxis is None:
                     output_n = linop(
-                        input[istart:iend].reshape(linop.ishape)).ravel()
+                        input[istart:iend].reshape(linop.ishape)
+                    ).ravel()
                 else:
                     ndim = len(linop.ishape)
                     axis = self.iaxis % ndim
-                    islc = tuple([slice(None)] * axis + [slice(istart, iend)] +
-                                 [slice(None)] * (ndim - axis - 1))
+                    islc = tuple(
+                        [slice(None)] * axis
+                        + [slice(istart, iend)]
+                        + [slice(None)] * (ndim - axis - 1)
+                    )
 
                     output_n = linop(input[islc])
 
@@ -648,16 +684,20 @@ class Diag(Linop):
                 else:
                     ndim = len(linop.oshape)
                     axis = self.oaxis % ndim
-                    oslc = tuple([slice(None)] * axis + [slice(ostart, oend)] +
-                                 [slice(None)] * (ndim - axis - 1))
+                    oslc = tuple(
+                        [slice(None)] * axis
+                        + [slice(ostart, oend)]
+                        + [slice(None)] * (ndim - axis - 1)
+                    )
 
                     output[oslc] = output_n
 
             return output
 
     def _adjoint_linop(self):
-        return Diag([op.H for op in self.linops],
-                    oaxis=self.iaxis, iaxis=self.oaxis)
+        return Diag(
+            [op.H for op in self.linops], oaxis=self.iaxis, iaxis=self.oaxis
+        )
 
 
 class Reshape(Linop):
@@ -786,14 +826,20 @@ def _get_matmul_oshape(ishape, mshape, adjoint):
     oshape = []
     for i, m in zip(ishape_exp[:-2], mshape_exp[:-2]):
         if not (i == m or i == 1 or m == 1):
-            raise ValueError('Invalid shapes: {ishape}, {mshape}.'.format(
-                ishape=ishape, mshape=mshape))
+            raise ValueError(
+                "Invalid shapes: {ishape}, {mshape}.".format(
+                    ishape=ishape, mshape=mshape
+                )
+            )
 
         oshape.append(max(i, m))
 
     if mshape_exp[-1] != ishape_exp[-2]:
-        raise ValueError('Invalid shapes: {ishape}, {mshape}.'.format(
-            ishape=ishape, mshape=mshape))
+        raise ValueError(
+            "Invalid shapes: {ishape}, {mshape}.".format(
+                ishape=ishape, mshape=mshape
+            )
+        )
 
     oshape += [mshape_exp[-2], ishape_exp[-1]]
 
@@ -805,9 +851,9 @@ def _get_matmul_adjoint_sum_axes(oshape, ishape, mshape):
     max_ndim = max(len(ishape), len(mshape))
     sum_axes = []
     for i, m, o, d in zip(
-            ishape_exp[:-2], mshape_exp[:-2], oshape[:-2],
-            range(max_ndim - 2)):
-        if (i == 1 and (m != 1 or o != 1)):
+        ishape_exp[:-2], mshape_exp[:-2], oshape[:-2], range(max_ndim - 2)
+    ):
+        if i == 1 and (m != 1 or o != 1):
             sum_axes.append(d)
 
     return sum_axes
@@ -846,7 +892,8 @@ class MatMul(Linop):
 
     def _adjoint_linop(self):
         sum_axes = _get_matmul_adjoint_sum_axes(
-            self.oshape, self.ishape, self.mat.shape)
+            self.oshape, self.ishape, self.mat.shape
+        )
 
         M = MatMul(self.oshape, self.mat, adjoint=not self.adjoint)
         S = Sum(M.oshape, sum_axes)
@@ -863,14 +910,20 @@ def _get_right_matmul_oshape(ishape, mshape, adjoint):
     oshape = []
     for i, m, d in zip(ishape_exp[:-2], mshape_exp[:-2], range(max_ndim - 2)):
         if not (i == m or i == 1 or m == 1):
-            raise ValueError('Invalid shapes: {ishape}, {mshape}.'.format(
-                ishape=ishape, mshape=mshape))
+            raise ValueError(
+                "Invalid shapes: {ishape}, {mshape}.".format(
+                    ishape=ishape, mshape=mshape
+                )
+            )
 
         oshape.append(max(i, m))
 
     if ishape_exp[-1] != mshape_exp[-2]:
-        raise ValueError('Invalid shapes: {ishape}, {mshape}.'.format(
-            ishape=ishape, mshape=mshape))
+        raise ValueError(
+            "Invalid shapes: {ishape}, {mshape}.".format(
+                ishape=ishape, mshape=mshape
+            )
+        )
 
     oshape += [ishape_exp[-2], mshape_exp[-1]]
 
@@ -910,7 +963,8 @@ class RightMatMul(Linop):
 
     def _adjoint_linop(self):
         sum_axes = _get_matmul_adjoint_sum_axes(
-            self.oshape, self.ishape, self.mat.shape)
+            self.oshape, self.ishape, self.mat.shape
+        )
 
         M = RightMatMul(self.oshape, self.mat, adjoint=not self.adjoint)
         S = Sum(M.oshape, sum_axes)
@@ -924,8 +978,11 @@ def _get_multiply_oshape(ishape, mshape):
     oshape = []
     for i, m, d in zip(ishape_exp, mshape_exp, range(max_ndim)):
         if not (i == m or i == 1 or m == 1):
-            raise ValueError('Invalid shapes: {ishape}, {mshape}.'.format(
-                ishape=ishape, mshape=mshape))
+            raise ValueError(
+                "Invalid shapes: {ishape}, {mshape}.".format(
+                    ishape=ishape, mshape=mshape
+                )
+            )
 
         oshape.append(max(i, m))
 
@@ -937,7 +994,7 @@ def _get_multiply_adjoint_sum_axes(oshape, ishape, mshape):
     max_ndim = max(len(ishape), len(mshape))
     sum_axes = []
     for i, m, o, d in zip(ishape_exp, mshape_exp, oshape, range(max_ndim)):
-        if (i == 1 and (m != 1 or o != 1)):
+        if i == 1 and (m != 1 or o != 1):
             sum_axes.append(d)
 
     return sum_axes
@@ -984,7 +1041,8 @@ class Multiply(Linop):
 
     def _adjoint_linop(self):
         sum_axes = _get_multiply_adjoint_sum_axes(
-            self.oshape, self.ishape, self.mshape)
+            self.oshape, self.ishape, self.mshape
+        )
 
         M = Multiply(self.oshape, self.mult, conj=not self.conj)
         S = Sum(M.oshape, sum_axes)
@@ -1008,7 +1066,7 @@ class Interpolate(Linop):
 
     """
 
-    def __init__(self, ishape, coord, kernel='spline', width=2, param=1):
+    def __init__(self, ishape, coord, kernel="spline", width=2, param=1):
         ndim = coord.shape[-1]
         oshape = list(ishape[:-ndim]) + list(coord.shape[:-1])
 
@@ -1023,14 +1081,22 @@ class Interpolate(Linop):
         device = backend.get_device(input)
         with device:
             coord = backend.to_device(self.coord, device)
-            return interp.interpolate(input, coord,
-                                      kernel=self.kernel,
-                                      width=self.width, param=self.param)
+            return interp.interpolate(
+                input,
+                coord,
+                kernel=self.kernel,
+                width=self.width,
+                param=self.param,
+            )
 
     def _adjoint_linop(self):
         return Gridding(
-            self.ishape, self.coord,
-            kernel=self.kernel, width=self.width, param=self.param)
+            self.ishape,
+            self.coord,
+            kernel=self.kernel,
+            width=self.width,
+            param=self.param,
+        )
 
 
 class Gridding(Linop):
@@ -1050,7 +1116,7 @@ class Gridding(Linop):
 
     """
 
-    def __init__(self, oshape, coord, kernel='spline', width=2, param=1):
+    def __init__(self, oshape, coord, kernel="spline", width=2, param=1):
         ndim = coord.shape[-1]
         ishape = list(oshape[:-ndim]) + list(coord.shape[:-1])
 
@@ -1065,14 +1131,23 @@ class Gridding(Linop):
         device = backend.get_device(input)
         with device:
             coord = backend.to_device(self.coord, device)
-            return interp.gridding(input, coord, self.oshape,
-                                   kernel=self.kernel,
-                                   width=self.width, param=self.param)
+            return interp.gridding(
+                input,
+                coord,
+                self.oshape,
+                kernel=self.kernel,
+                width=self.width,
+                param=self.param,
+            )
 
     def _adjoint_linop(self):
-        return Interpolate(self.oshape, self.coord,
-                           kernel=self.kernel,
-                           width=self.width, param=self.param)
+        return Interpolate(
+            self.oshape,
+            self.coord,
+            kernel=self.kernel,
+            width=self.width,
+            param=self.param,
+        )
 
 
 class Resize(Linop):
@@ -1091,12 +1166,14 @@ class Resize(Linop):
 
     def _apply(self, input):
         with backend.get_device(input):
-            return util.resize(input, self.oshape,
-                               ishift=self.ishift, oshift=self.oshift)
+            return util.resize(
+                input, self.oshape, ishift=self.ishift, oshift=self.oshift
+            )
 
     def _adjoint_linop(self):
-        return Resize(self.ishape, self.oshape,
-                      ishift=self.oshift, oshift=self.ishift)
+        return Resize(
+            self.ishape, self.oshape, ishift=self.oshift, oshift=self.ishift
+        )
 
 
 class Flip(Linop):
@@ -1136,8 +1213,9 @@ class Downsample(Linop):
             shift = [0] * len(ishape)
 
         self.shift = shift
-        oshape = [((i - s + f - 1) // f)
-                  for i, f, s in zip(ishape, factors, shift)]
+        oshape = [
+            ((i - s + f - 1) // f) for i, f, s in zip(ishape, factors, shift)
+        ]
 
         super().__init__(oshape, ishape)
 
@@ -1167,16 +1245,18 @@ class Upsample(Linop):
             shift = [0] * len(oshape)
 
         self.shift = shift
-        ishape = [((i - s + f - 1) // f)
-                  for i, f, s in zip(oshape, factors, shift)]
+        ishape = [
+            ((i - s + f - 1) // f) for i, f, s in zip(oshape, factors, shift)
+        ]
 
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
         device = backend.get_device(input)
         with device:
-            return util.upsample(input, self.oshape,
-                                 self.factors, shift=self.shift)
+            return util.upsample(
+                input, self.oshape, self.factors, shift=self.shift
+            )
 
     def _adjoint_linop(self):
         return Downsample(self.oshape, self.factors, shift=self.shift)
@@ -1225,12 +1305,13 @@ class Wavelet(Linop):
         level (None or int): Number of wavelet levels.
     """
 
-    def __init__(self, ishape, axes=None, wave_name='db4', level=None):
+    def __init__(self, ishape, axes=None, wave_name="db4", level=None):
         self.wave_name = wave_name
         self.axes = axes
         self.level = level
-        oshape, _ = wavelet.get_wavelet_shape(ishape, wave_name=wave_name,
-                                              axes=axes, level=level)
+        oshape, _ = wavelet.get_wavelet_shape(
+            ishape, wave_name=wave_name, axes=axes, level=level
+        )
 
         super().__init__(oshape, ishape)
 
@@ -1238,15 +1319,19 @@ class Wavelet(Linop):
         device = backend.get_device(input)
         with device:
             return wavelet.fwt(
-                input, wave_name=self.wave_name,
-                axes=self.axes, level=self.level)
+                input,
+                wave_name=self.wave_name,
+                axes=self.axes,
+                level=self.level,
+            )
 
     def _adjoint_linop(self):
         return InverseWavelet(
             self.ishape,
             axes=self.axes,
             wave_name=self.wave_name,
-            level=self.level)
+            level=self.level,
+        )
 
 
 class InverseWavelet(Linop):
@@ -1262,25 +1347,34 @@ class InverseWavelet(Linop):
         level (None or int): Number of wavelet levels.
     """
 
-    def __init__(self, oshape, axes=None, wave_name='db4', level=None):
+    def __init__(self, oshape, axes=None, wave_name="db4", level=None):
         self.wave_name = wave_name
         self.axes = axes
         self.level = level
         ishape, self.coeff_slices = wavelet.get_wavelet_shape(
-            oshape, wave_name=wave_name,
-            axes=axes, level=level)
+            oshape, wave_name=wave_name, axes=axes, level=level
+        )
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
         device = backend.get_device(input)
         with device:
             return wavelet.iwt(
-                input, self.oshape, self.coeff_slices,
-                wave_name=self.wave_name, axes=self.axes, level=self.level)
+                input,
+                self.oshape,
+                self.coeff_slices,
+                wave_name=self.wave_name,
+                axes=self.axes,
+                level=self.level,
+            )
 
     def _adjoint_linop(self):
-        return Wavelet(self.oshape, axes=self.axes,
-                       wave_name=self.wave_name, level=self.level)
+        return Wavelet(
+            self.oshape,
+            axes=self.axes,
+            wave_name=self.wave_name,
+            level=self.level,
+        )
 
 
 class Sum(Linop):
@@ -1359,8 +1453,10 @@ class ArrayToBlocks(Linop):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
         D = len(blk_shape)
-        num_blks = [(i - b + s) // s for i, b,
-                    s in zip(ishape[-D:], blk_shape, blk_strides)]
+        num_blks = [
+            (i - b + s) // s
+            for i, b, s in zip(ishape[-D:], blk_shape, blk_strides)
+        ]
         oshape = list(ishape[:-D]) + num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1368,8 +1464,9 @@ class ArrayToBlocks(Linop):
     def _apply(self, input):
         device = backend.get_device(input)
         with device:
-            return block.array_to_blocks(input, self.blk_shape,
-                                         self.blk_strides)
+            return block.array_to_blocks(
+                input, self.blk_shape, self.blk_strides
+            )
 
     def _adjoint_linop(self):
         return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides)
@@ -1390,12 +1487,15 @@ class BlocksToArray(Linop):
         array: array of shape oshape.
 
     """
+
     def __init__(self, oshape, blk_shape, blk_strides):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
         D = len(blk_shape)
-        num_blks = [(i - b + s) // s for i, b,
-                    s in zip(oshape[-D:], blk_shape, blk_strides)]
+        num_blks = [
+            (i - b + s) // s
+            for i, b, s in zip(oshape[-D:], blk_shape, blk_strides)
+        ]
         ishape = list(oshape[:-D]) + num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1404,7 +1504,8 @@ class BlocksToArray(Linop):
         device = backend.get_device(input)
         with device:
             return block.blocks_to_array(
-                input, self.oshape, self.blk_shape, self.blk_strides)
+                input, self.oshape, self.blk_shape, self.blk_strides
+            )
 
     def _adjoint_linop(self):
         return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides)
@@ -1416,9 +1517,11 @@ class BlocksToArray(Linop):
 def Gradient(ishape, axes=None):
     import warnings
 
-    warnings.warn('Gradient Linop is renamed to FiniteDifference, '
-                  'Please switch to use FiniteDifference.',
-                  category=DeprecationWarning)
+    warnings.warn(
+        "Gradient Linop is renamed to FiniteDifference, "
+        "Please switch to use FiniteDifference.",
+        category=DeprecationWarning,
+    )
 
     return FiniteDifference(ishape, axes=axes)
 
@@ -1432,12 +1535,12 @@ def FiniteDifference(ishape, axes=None):
             None.
 
     """
-    I = Identity(ishape)
+    Id = Identity(ishape)
     ndim = len(ishape)
     axes = util._normalize_axes(axes, ndim)
     linops = []
     for i in axes:
-        D = I - Circshift(ishape, [1], axes=[i])
+        D = Id - Circshift(ishape, [1], axes=[i])
         R = Reshape([1] + list(ishape), ishape)
         linops.append(R * D)
 
@@ -1457,6 +1560,7 @@ class NUFFT(Linop):
         toeplitz (bool): Use toeplitz PSF to evaluate normal operator.
 
     """
+
     def __init__(self, ishape, coord, oversamp=1.25, width=4, toeplitz=False):
         self.coord = coord
         self.oversamp = oversamp
@@ -1474,20 +1578,22 @@ class NUFFT(Linop):
         with device:
             coord = backend.to_device(self.coord, device)
             return fourier.nufft(
-                input, coord,
-                oversamp=self.oversamp, width=self.width)
+                input, coord, oversamp=self.oversamp, width=self.width
+            )
 
     def _adjoint_linop(self):
-        return NUFFTAdjoint(self.ishape, self.coord,
-                            oversamp=self.oversamp, width=self.width)
+        return NUFFTAdjoint(
+            self.ishape, self.coord, oversamp=self.oversamp, width=self.width
+        )
 
     def _normal_linop(self):
         if self.toeplitz is False:
             return self.H * self
 
         ndim = self.coord.shape[-1]
-        psf = fourier.toeplitz_psf(self.coord, self.ishape, self.oversamp,
-                                   self.width)
+        psf = fourier.toeplitz_psf(
+            self.coord, self.ishape, self.oversamp, self.width
+        )
 
         fft_axes = tuple(range(-1, -(ndim + 1), -1))
 
@@ -1509,6 +1615,7 @@ class NUFFTAdjoint(Linop):
         width (float): Kernel width.
 
     """
+
     def __init__(self, oshape, coord, oversamp=1.25, width=4):
         self.coord = coord
         self.oversamp = oversamp
@@ -1525,12 +1632,17 @@ class NUFFTAdjoint(Linop):
         with device:
             coord = backend.to_device(self.coord, device)
             return fourier.nufft_adjoint(
-                input, coord, self.oshape,
-                oversamp=self.oversamp, width=self.width)
+                input,
+                coord,
+                self.oshape,
+                oversamp=self.oversamp,
+                width=self.width,
+            )
 
     def _adjoint_linop(self):
-        return NUFFT(self.oshape, self.coord,
-                     oversamp=self.oversamp, width=self.width)
+        return NUFFT(
+            self.oshape, self.coord, oversamp=self.oversamp, width=self.width
+        )
 
 
 class ConvolveData(Linop):
@@ -1548,19 +1660,21 @@ class ConvolveData(Linop):
         multi_channel (bool): specify if input/output has multiple channels.
 
     """
-    def __init__(self, data_shape, filt, mode='full', strides=None,
-                 multi_channel=False):
+
+    def __init__(
+        self, data_shape, filt, mode="full", strides=None, multi_channel=False
+    ):
         self.filt = filt
         self.mode = mode
         self.strides = strides
         self.multi_channel = multi_channel
 
         D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
-            data_shape, filt.shape,
-            mode, strides, multi_channel)
+            data_shape, filt.shape, mode, strides, multi_channel
+        )
 
         if multi_channel:
-            output_shape = b + (c_o, ) + p
+            output_shape = b + (c_o,) + p
         else:
             output_shape = b + p
 
@@ -1570,15 +1684,22 @@ class ConvolveData(Linop):
         device = backend.get_device(input)
         filt = backend.to_device(self.filt, device)
         with device:
-            return conv.convolve(input, filt, mode=self.mode,
-                                 strides=self.strides,
-                                 multi_channel=self.multi_channel)
+            return conv.convolve(
+                input,
+                filt,
+                mode=self.mode,
+                strides=self.strides,
+                multi_channel=self.multi_channel,
+            )
 
     def _adjoint_linop(self):
         return ConvolveDataAdjoint(
-            self.ishape, self.filt,
-            mode=self.mode, strides=self.strides,
-            multi_channel=self.multi_channel)
+            self.ishape,
+            self.filt,
+            mode=self.mode,
+            strides=self.strides,
+            multi_channel=self.multi_channel,
+        )
 
 
 class ConvolveDataAdjoint(Linop):
@@ -1596,19 +1717,21 @@ class ConvolveDataAdjoint(Linop):
         multi_channel (bool): specify if input/output has multiple channels.
 
     """
-    def __init__(self, data_shape, filt,
-                 mode='full', strides=None, multi_channel=False):
+
+    def __init__(
+        self, data_shape, filt, mode="full", strides=None, multi_channel=False
+    ):
         self.filt = filt
         self.mode = mode
         self.strides = strides
         self.multi_channel = multi_channel
 
         D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
-            data_shape, filt.shape,
-            mode, strides, multi_channel)
+            data_shape, filt.shape, mode, strides, multi_channel
+        )
 
         if multi_channel:
-            output_shape = b + (c_o, ) + p
+            output_shape = b + (c_o,) + p
         else:
             output_shape = b + p
 
@@ -1619,14 +1742,22 @@ class ConvolveDataAdjoint(Linop):
         filt = backend.to_device(self.filt, device)
         with device:
             return conv.convolve_data_adjoint(
-                input, filt, self.oshape,
-                mode=self.mode, strides=self.strides,
-                multi_channel=self.multi_channel)
+                input,
+                filt,
+                self.oshape,
+                mode=self.mode,
+                strides=self.strides,
+                multi_channel=self.multi_channel,
+            )
 
     def _adjoint_linop(self):
-        return ConvolveData(self.oshape, self.filt,
-                            mode=self.mode, strides=self.strides,
-                            multi_channel=self.multi_channel)
+        return ConvolveData(
+            self.oshape,
+            self.filt,
+            mode=self.mode,
+            strides=self.strides,
+            multi_channel=self.multi_channel,
+        )
 
 
 class ConvolveFilter(Linop):
@@ -1644,20 +1775,21 @@ class ConvolveFilter(Linop):
         multi_channel (bool): specify if input/output has multiple channels.
 
     """
-    def __init__(self, filt_shape, data,
-                 mode='full', strides=None,
-                 multi_channel=False):
+
+    def __init__(
+        self, filt_shape, data, mode="full", strides=None, multi_channel=False
+    ):
         self.data = data
         self.mode = mode
         self.strides = strides
         self.multi_channel = multi_channel
 
         D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
-            data.shape, filt_shape,
-            mode, strides, multi_channel)
+            data.shape, filt_shape, mode, strides, multi_channel
+        )
 
         if multi_channel:
-            output_shape = b + (c_o, ) + p
+            output_shape = b + (c_o,) + p
         else:
             output_shape = b + p
 
@@ -1667,15 +1799,22 @@ class ConvolveFilter(Linop):
         device = backend.get_device(input)
         data = backend.to_device(self.data, device)
         with device:
-            return conv.convolve(data, input,
-                                 mode=self.mode, strides=self.strides,
-                                 multi_channel=self.multi_channel)
+            return conv.convolve(
+                data,
+                input,
+                mode=self.mode,
+                strides=self.strides,
+                multi_channel=self.multi_channel,
+            )
 
     def _adjoint_linop(self):
         return ConvolveFilterAdjoint(
-            self.ishape, self.data,
-            mode=self.mode, strides=self.strides,
-            multi_channel=self.multi_channel)
+            self.ishape,
+            self.data,
+            mode=self.mode,
+            strides=self.strides,
+            multi_channel=self.multi_channel,
+        )
 
 
 class ConvolveFilterAdjoint(Linop):
@@ -1693,20 +1832,21 @@ class ConvolveFilterAdjoint(Linop):
         multi_channel (bool): specify if input/output has multiple channels.
 
     """
-    def __init__(self, filt_shape, data,
-                 mode='full', strides=None,
-                 multi_channel=False):
+
+    def __init__(
+        self, filt_shape, data, mode="full", strides=None, multi_channel=False
+    ):
         self.data = data
         self.mode = mode
         self.strides = strides
         self.multi_channel = multi_channel
 
         D, b, B, m, n, s, c_i, c_o, p = conv._get_convolve_params(
-            data.shape, filt_shape,
-            mode, strides, multi_channel)
+            data.shape, filt_shape, mode, strides, multi_channel
+        )
 
         if multi_channel:
-            output_shape = b + (c_o, ) + p
+            output_shape = b + (c_o,) + p
         else:
             output_shape = b + p
 
@@ -1717,14 +1857,22 @@ class ConvolveFilterAdjoint(Linop):
         data = backend.to_device(self.data, device)
         with device:
             return conv.convolve_filter_adjoint(
-                input, data, self.oshape,
-                mode=self.mode, strides=self.strides,
-                multi_channel=self.multi_channel)
+                input,
+                data,
+                self.oshape,
+                mode=self.mode,
+                strides=self.strides,
+                multi_channel=self.multi_channel,
+            )
 
     def _adjoint_linop(self):
-        return ConvolveFilter(self.oshape, self.data,
-                              mode=self.mode, strides=self.strides,
-                              multi_channel=self.multi_channel)
+        return ConvolveFilter(
+            self.oshape,
+            self.data,
+            mode=self.mode,
+            strides=self.strides,
+            multi_channel=self.multi_channel,
+        )
 
 
 class Slice(Linop):
@@ -1737,6 +1885,7 @@ class Slice(Linop):
         idx (slice or tuple of slices): Index.
 
     """
+
     def __init__(self, ishape, idx):
         self.idx = idx
         oshape = np.empty(ishape)[idx].shape
@@ -1760,6 +1909,7 @@ class Embed(Linop):
         idx (slice or tuple of slices): Index.
 
     """
+
     def __init__(self, oshape, idx):
         self.idx = idx
         ishape = np.empty(oshape)[idx].shape
