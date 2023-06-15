@@ -11,7 +11,6 @@ if __name__ == "__main__":
 
 class TestB1sel(unittest.TestCase):
     def test_b1sel_generic(self):
-
         dt = 2e-6  # sampling period
         d1 = 0.01  # passband ripple
         d2 = 0.01  # stopband ripple

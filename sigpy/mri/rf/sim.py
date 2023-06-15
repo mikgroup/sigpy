@@ -149,16 +149,7 @@ def abrm_hp(rf, gamgdt, xx, dom0dt=0):
 
         for ii in xp.arange(Nt):
             # apply phase accural
-            z = xp.exp(
-                -1j
-                * (
-                    xx
-                    * gamgdt[
-                        ii,
-                    ]
-                    + dom0dt
-                )
-            )
+            z = xp.exp(-1j * (xx * gamgdt[ii,] + dom0dt))
             b = b * z
 
             # apply rf
@@ -217,7 +208,6 @@ def abrm_ptx(b1, x, g, dt, fmap=None, sens=None):
     device = backend.get_device(b1)
     xp = device.xp
     with device:
-
         gam = 267.522 * 1e6 / 1000  # rad/s/mT
 
         dim = int(xp.sqrt(x.shape[0]))

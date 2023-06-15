@@ -21,7 +21,6 @@ def birdcage_maps(shape, r=1.5, nzz=8, dtype=complex):
     """
 
     if len(shape) == 3:
-
         nc, ny, nx = shape
         c, y, x = np.mgrid[:nc, :ny, :nx]
 

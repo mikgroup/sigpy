@@ -11,7 +11,6 @@ if __name__ == "__main__":
 
 
 def check_linop_adjoint(A, dtype=float, device=sp.cpu_device):
-
     device = sp.Device(device)
     x = sp.randn(A.ishape, dtype=dtype, device=device)
     y = sp.randn(A.oshape, dtype=dtype, device=device)

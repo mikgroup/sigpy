@@ -10,7 +10,6 @@ from sigpy import backend, block, conv, fourier, interp, util, wavelet
 
 
 def _check_shape_positive(shape):
-
     if not all(s > 0 for s in shape):
         raise ValueError(
             "Shapes must be positive, got {shape}".format(shape=shape)
@@ -608,7 +607,6 @@ class Vstack(Linop):
         return output
 
     def _adjoint_linop(self):
-
         return Hstack([op.H for op in self.linops], axis=self.axis)
 
 
@@ -747,7 +745,6 @@ class Transpose(Linop):
         return input.transpose(self.axes)
 
     def _adjoint_linop(self):
-
         if self.axes is None:
             iaxes = None
             oshape = self.ishape[::-1]
@@ -801,7 +798,6 @@ class IFFT(Linop):
     """
 
     def __init__(self, shape, axes=None, center=True):
-
         self.axes = axes
         self.center = center
 
@@ -1273,7 +1269,6 @@ class Circshift(Linop):
     """
 
     def __init__(self, shape, shift, axes=None):
-
         self.axes = axes
         self.shift = shift
         self.ishift = [-s for s in self.shift]
@@ -1411,7 +1406,6 @@ class Tile(Linop):
     """
 
     def __init__(self, oshape, axes):
-
         self.axes = tuple(a % len(oshape) for a in axes)
         ishape = [oshape[d] for d in range(len(oshape)) if d not in self.axes]
         self.expanded_ishape = []
