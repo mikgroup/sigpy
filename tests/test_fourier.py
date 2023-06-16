@@ -34,7 +34,6 @@ class TestFourier(unittest.TestCase):
         )
 
     def test_fft_dtype(self):
-
         for dtype in [np.complex64, np.complex128]:
             input = np.array([0, 1, 0], dtype=dtype)
             output = fourier.fft(input)
@@ -65,7 +64,6 @@ class TestFourier(unittest.TestCase):
         )
 
     def test_nufft(self):
-
         # Check deltas
         input = np.array([0, 1, 0], complex)  # delta
         coord = np.array([[-1], [0], [1]], float)
@@ -121,7 +119,6 @@ class TestFourier(unittest.TestCase):
         )
 
     def test_nufft_nd(self):
-
         for ndim in range(3):
             input = np.array([[0], [1], [0]], complex)
             coord = np.array([[-1, 0], [0, 0], [1, 0]], float)
@@ -134,7 +131,6 @@ class TestFourier(unittest.TestCase):
             )
 
     def test_nufft_adjoint(self):
-
         # Check deltas
         oshape = [3]
         input = np.array([1.0, 1.0, 1.0], dtype=complex) / 3**0.5
@@ -197,7 +193,6 @@ class TestFourier(unittest.TestCase):
         )
 
     def test_nufft_adjoint_nd(self):
-
         oshape = [3, 1]
 
         input = np.array([1.0, 1.0, 1.0], dtype=complex) / 3**0.5
@@ -211,7 +206,6 @@ class TestFourier(unittest.TestCase):
         )
 
     def test_nufft_normal(self):
-
         # Check delta
         oshape = [3]
         input = np.array([0.0, 1.0, 0.0], dtype=complex)
@@ -239,7 +233,6 @@ class TestFourier(unittest.TestCase):
         )
 
     def test_nufft_ndft(self):
-
         n = 5
         w = np.exp(-1j * 2 * np.pi / n)
         coord = np.array([[-2], [0], [0.1]])

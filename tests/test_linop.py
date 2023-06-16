@@ -332,7 +332,6 @@ class TestLinop(unittest.TestCase):
         self.check_linop_pickleable(A)
 
     def test_Interpolate(self):
-
         # Test linear interpolation.
         ishape = [5]
         coord = np.array([[0.5], [1.5], [2.5]])
@@ -367,7 +366,6 @@ class TestLinop(unittest.TestCase):
         self.check_linop_pickleable(A)
 
     def test_Wavelet(self):
-
         shape = [16]
         A = linop.Wavelet(shape, level=1, wave_name="haar")
         self.check_linop_adjoint(A)
@@ -392,7 +390,6 @@ class TestLinop(unittest.TestCase):
         self.check_linop_pickleable(A)
 
     def test_Circshift(self):
-
         shape = [8]
         shift = [4]
         A = linop.Circshift(shape, shift)

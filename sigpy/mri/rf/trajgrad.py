@@ -97,7 +97,6 @@ def trap_grad(area, gmax, dgdt, dt, *args):
 
     if np.abs(area) > 0:
         if rampsamp:
-
             ramppts = int(np.ceil(gmax / dgdt / dt))
             triareamax = ramppts * dt * gmax
 
@@ -426,7 +425,6 @@ def spiral_arch(fov, res, gts, gslew, gamp):
         k = np.concatenate((k1, k2), axis=0)
 
     else:
-
         tacq = 2 * np.pi * fov / 3 * np.sqrt(np.pi / (gam * gslew * res**3))
         n_t = int(np.round(tacq / gts))
         t_s = np.linspace(0, tacq, n_t)
@@ -957,7 +955,6 @@ def min_time_gradient(
 
     # solve ODE backwards
     for n in range(s.shape[0] - 2, 0, -1):
-
         kpos_end = n  # to 0
         kpos = kpos_end + 3
         dstds = runge_kutta(ds, stb[n + 1], k[kpos : (kpos - 3) : -1], smax)

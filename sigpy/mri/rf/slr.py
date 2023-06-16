@@ -578,7 +578,6 @@ def ab2rf(a, b):
     b = b.astype(complex)
 
     for ii in range(n - 1, -1, -1):
-
         cj = np.sqrt(1 / (1 + np.abs(b[ii] / a[ii]) ** 2))
         sj = np.conj(cj * b[ii] / a[ii])
         theta = np.arctan2(np.abs(sj), cj)
@@ -633,7 +632,6 @@ def root_flip(b, d1, flip, tb, verbose=False):
     max_rf = np.max(np.abs(b2rf(b)))
 
     for ii in range(ii_min, ii_max):
-
         if ii % 20 == 0:
             if verbose:
                 print(
@@ -829,7 +827,6 @@ def dz_recursive_rf(
     # then get phase of B by dividing phase of A from first pulse's Mxy phase.
     mz = np.ones((z_pad_fact * n), dtype=complex)
     for jj in range(1, n_seg):
-
         # calculate Mz profile after previous pulse
         if se_seq is False:
             mz = mz * (1 - 2 * np.abs(B) ** 2) * np.exp(-tr_seg / t1) + (
@@ -864,7 +861,6 @@ def dz_recursive_rf(
             B = mxy0 / (2 * np.conj(A) * mz)
 
         else:  # design assuming ideal Mz (conventional VFA)
-
             B *= np.sin(np.pi / 180 * flip[jj] / 2) / np.sin(
                 np.pi / 180 * flip[jj - 1] / 2
             )

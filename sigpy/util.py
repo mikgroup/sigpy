@@ -41,7 +41,6 @@ def _normalize_shape(shape):
 
 
 def _expand_shapes(*shapes):
-
     shapes = [list(shape) for shape in shapes]
     max_ndim = max(len(shape) for shape in shapes)
     shapes_exp = [[1] * (max_ndim - len(shape)) + shape for shape in shapes]
@@ -50,7 +49,6 @@ def _expand_shapes(*shapes):
 
 
 def _check_same_dtype(*arrays):
-
     dtype = arrays[0].dtype
     for a in arrays:
         if a.dtype != dtype:
