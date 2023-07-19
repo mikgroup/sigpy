@@ -364,15 +364,23 @@ class LLRL1Reg(Prox):
           MRI reconstruction using iterative random patch adjustments.
           IEEE Trans Med Imaging 36:1209-1220 (2017).
 
+        * Hu Y, Wang X, Tian Q, Yang G, Daniel B, McNab J, Hargreaves B.
+          Multi-shot diffusion-weighted MRI reconstruction
+          with magnitude-based
+          spatial-angular locally low-rank regularization (SPA-LLR).
+          Magn Reson Med 83:1596-1607 (2020).
+
     Author:
         Zhengguo Tan <zhengguo.tan@gmail.com>
     """
 
     def __init__(self, shape, lamda, randshift=True,
                  blk_shape=(8, 8), blk_strides=(8, 8),
+                 reg_magnitude=False,
                  verbose=False):
         self.lamda = lamda
         self.randshift = randshift
+        self.reg_magnitude = reg_magnitude
 
         assert len(blk_shape) == len(blk_strides)
         self.blk_shape = blk_shape
@@ -397,7 +405,15 @@ class LLRL1Reg(Prox):
 
         with device:
 
-            output = self.Fwd(input)
+            if self.reg_magnitude:
+                mag = xp.abs(input)
+                phs = xp.exp(1j * xp.angle(input))
+
+            else:
+                mag = input.copy()
+                phs = xp.ones_like(mag)
+
+            output = self.Fwd(mag)
 
             u, s, vh = xp.linalg.svd(output, full_matrices=False)
             s_thresh = thresh.soft_thresh(self.lamda * alpha, s)
@@ -406,7 +422,7 @@ class LLRL1Reg(Prox):
 
             output = self.Fwd.H(output)
 
-            return output
+            return output * phs
 
     def _linop_randshift(self, shape, blk_shape, randshift):
 
