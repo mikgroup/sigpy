@@ -65,6 +65,35 @@ class TestEpi(unittest.TestCase):
 
         npt.assert_allclose(Dinv, D, atol=1e-5, rtol=1e-5)
 
+
+    def test_get_D_1bval(self):
+        ndif = 31
+        nlin = 3
+        ncol = 3
+
+        b_0 = np.zeros((1, 1))
+        b_1000 = np.ones((ndif-1, 1)) * 1000
+
+        b = np.concatenate((b_0, b_1000))
+
+        g0 = np.zeros((1, 3))
+        g1 = np.random.normal(size=(ndif-1, 3), loc=0, scale=0.212)
+
+        g = np.concatenate((g0, g1))
+
+        B = epi.get_B(b, g)
+
+        D = util.randn((6, nlin, ncol)) * 1e-3
+        Dr = D.reshape(6, -1)
+
+        S0 = np.abs(util.randn((nlin, ncol)))
+        sig = S0 * np.exp(-np.matmul(B, Dr).reshape(ndif, nlin, ncol))
+
+        Dinv = epi.get_D(B, sig, fit_only_tensor=True)
+
+        npt.assert_allclose(Dinv, D, atol=1e-5, rtol=1e-5)
+
+
     def test_get_eig(self):
         #                xx,   xy,   yy,    xz,   yz,   zz
         D = np.array([[2.00,  0.00, 1.00, 0.00, 0.00, 0.50],
