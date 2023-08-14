@@ -643,10 +643,10 @@ class SDMM(Alg):
                 )
             if c_max is not None:
                 self.zMax = self.x
-                self.uMax = xp.zeros(xp.shape(self.x), dtype=xp.complex)
+                self.uMax = xp.zeros(xp.shape(self.x), dtype=complex)
             if c_norm is not None:
                 self.zNorm = self.x
-                self.uNorm = xp.zeros(xp.shape(self.x), dtype=xp.complex)
+                self.uNorm = xp.zeros(xp.shape(self.x), dtype=complex)
 
     def prox_rhog(self, v, c):
         with self.device:

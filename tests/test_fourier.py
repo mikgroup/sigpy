@@ -210,6 +210,7 @@ class TestFourier(unittest.TestCase):
             rtol=0.01,
         )
 
+
     def test_nufft_normal(self):
 
         # Check delta

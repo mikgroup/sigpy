@@ -50,6 +50,7 @@ if config.pytorch_enabled:
                             ),
                         )
 
+
         def test_from_pytorch(self):
             for dtype in [torch.float32, torch.float64]:
                 for device in devices:
@@ -69,7 +70,7 @@ if config.pytorch_enabled:
                         )
 
         def test_from_pytorch_complex(self):
-            for dtype in [torch.float32, torch.float64]:
+            for dtype in [torch.complex64, torch.complex128]:
                 for device in devices:
                     with self.subTest(device=device, dtype=dtype):
                         if device == backend.cpu_device:
@@ -95,6 +96,7 @@ if config.pytorch_enabled:
         def test_to_pytorch_function(self):
             A = linop.Resize([5], [3])
             x = np.array([1, 2, 3], float)
+
             y = np.ones([5])
 
             with self.subTest("forward"):
@@ -132,3 +134,4 @@ if config.pytorch_enabled:
                     x_torch.grad.detach().numpy().ravel(),
                     A.H(A(x) - y).view(float),
                 )
+

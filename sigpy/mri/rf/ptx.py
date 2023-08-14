@@ -201,6 +201,7 @@ def stspk(
             xp.linspace(-kmax / 2, kmax / 2 - 1 / fov, int(fov * kmax)),
             xp.linspace(-kmax / 2, kmax / 2 - 1 / fov, int(fov * kmax)),
         )
+
         # vectorize the grid
         kxs = kxs.flatten()
         kys = kys.flatten()
@@ -252,6 +253,7 @@ def stspk(
 
                 r = xp.exp(1j * phs) - Anum @ w_full
                 rfnorm = xp.zeros(kxs.shape, dtype=xp.complex64)
+
                 for jj in range(kxs.size):
                     ks_test = xp.expand_dims(xp.array([kxs[jj], kys[jj]]), 0)
                     Anum = rf.PtxSpatialExplicit(

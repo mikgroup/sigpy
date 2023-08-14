@@ -49,6 +49,7 @@ class TestPtx(unittest.TestCase):
         target[circle] = 1
         target = gaussian_filter(target, 1)
         target = target.astype(np.complex64)
+
         sens = sp.mri.sim.birdcage_maps(sens_shape)
 
         return target, sens
@@ -64,6 +65,7 @@ class TestPtx(unittest.TestCase):
             golden=True,
             dtype=np.float32,
         )
+
         # reshape to be Nt*2 trajectory
         traj = np.reshape(traj, [traj.shape[0] * traj.shape[1], 2])
 
