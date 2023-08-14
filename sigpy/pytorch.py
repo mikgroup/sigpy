@@ -4,10 +4,9 @@
 """
 import numpy as np
 import torch
-
 from sigpy import backend, config
 
-__all__ = ['to_pytorch', 'from_pytorch', 'to_pytorch_function']
+__all__ = ["to_pytorch", "from_pytorch", "to_pytorch_function"]
 
 
 def to_pytorch(array, requires_grad=True):  # pragma: no cover
@@ -65,6 +64,7 @@ def from_pytorch(tensor):  # pragma: no cover
     from torch.utils.dlpack import to_dlpack
 
     device = tensor.device
+
     if device.type == 'cpu':
         # For CPU just copy
         output = tensor.detach().contiguous().numpy()
@@ -124,5 +124,6 @@ def to_pytorch_function(linop):  # pragma: no cover
         @staticmethod
         def backward(ctx, grad_output):
             return to_pytorch(linop.H(from_pytorch(grad_output)))
+
 
     return LinopFunction

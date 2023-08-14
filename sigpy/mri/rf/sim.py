@@ -4,7 +4,7 @@
 """
 from sigpy import backend
 
-__all__ = ['abrm', 'abrm_nd', 'abrm_hp', 'abrm_ptx']
+__all__ = ["abrm", "abrm_nd", "abrm_hp", "abrm_ptx"]
 
 
 def abrm(rf, x, balanced=False):
@@ -26,7 +26,7 @@ def abrm(rf, x, balanced=False):
         'Parameter Relations for the Shinnar-LeRoux Selective Excitation
         Pulse Design Algorithm'.
         IEEE Transactions on Medical Imaging, Vol 10, No 1, 53-65.
-     """
+    """
 
     device = backend.get_device(rf)
     xp = device.xp
@@ -39,10 +39,10 @@ def abrm(rf, x, balanced=False):
         b = xp.zeros(xp.size(x), dtype=complex)
         for mm in range(xp.size(rf)):
             om = x * g[mm]
-            phi = xp.sqrt(xp.abs(rf[mm]) ** 2 + om ** 2) + eps
-            n = xp.column_stack((xp.real(rf[mm]) / phi,
-                                 xp.imag(rf[mm]) / phi,
-                                 om / phi))
+            phi = xp.sqrt(xp.abs(rf[mm]) ** 2 + om**2) + eps
+            n = xp.column_stack(
+                (xp.real(rf[mm]) / phi, xp.imag(rf[mm]) / phi, om / phi)
+            )
             av = xp.cos(phi / 2) - 1j * n[:, 2] * xp.sin(phi / 2)
             bv = -1j * (n[:, 0] + 1j * n[:, 1]) * xp.sin(phi / 2)
             at = av * a - xp.conj(bv) * b
@@ -85,7 +85,7 @@ def abrm_nd(rf, x, g):
         'Parameter Relations for the Shinnar-LeRoux Selective Excitation
         Pulse Design Algorithm'.
         IEEE Transactions on Medical Imaging, Vol 10, No 1, 53-65.
-     """
+    """
 
     device = backend.get_device(rf)
     xp = device.xp
@@ -96,10 +96,14 @@ def abrm_nd(rf, x, g):
         b = xp.zeros(xp.shape(x)[0], dtype=complex)
         for mm in range(xp.size(rf)):
             om = x @ g[mm, :]
-            phi = xp.sqrt(xp.abs(rf[mm]) ** 2 + om ** 2)
-            n = xp.column_stack((xp.real(rf[mm]) / (phi + eps),
-                                 xp.imag(rf[mm]) / (phi + eps),
-                                 om / (phi + eps)))
+            phi = xp.sqrt(xp.abs(rf[mm]) ** 2 + om**2)
+            n = xp.column_stack(
+                (
+                    xp.real(rf[mm]) / (phi + eps),
+                    xp.imag(rf[mm]) / (phi + eps),
+                    om / (phi + eps),
+                )
+            )
             av = xp.cos(phi / 2) - 1j * n[:, 2] * xp.sin(phi / 2)
             bv = -1j * (n[:, 0] + 1j * n[:, 1]) * xp.sin(phi / 2)
             at = av * a - xp.conj(bv) * b
@@ -130,7 +134,7 @@ def abrm_hp(rf, gamgdt, xx, dom0dt=0):
         'Parameter Relations for the Shinnar-LeRoux Selective Excitation
         Pulse Design Algorithm'.
         IEEE Transactions on Medical Imaging, Vol 10, No 1, 53-65.
-     """
+    """
 
     device = backend.get_device(rf)
     xp = device.xp
@@ -145,7 +149,16 @@ def abrm_hp(rf, gamgdt, xx, dom0dt=0):
 
         for ii in xp.arange(Nt):
             # apply phase accural
-            z = xp.exp(-1j * (xx * gamgdt[ii, ] + dom0dt))
+            z = xp.exp(
+                -1j
+                * (
+                    xx
+                    * gamgdt[
+                        ii,
+                    ]
+                    + dom0dt
+                )
+            )
             b = b * z
 
             # apply rf
@@ -199,7 +212,7 @@ def abrm_ptx(b1, x, g, dt, fmap=None, sens=None):
         Grissom, W., Xu, D., Kerr, A., Fessler, J. and Noll, D. (2009). 'Fast
         large-tip-angle multidimensional and parallel RF pulse design in MRI'
         IEEE Trans Med Imaging, Vol 28, No 10, 1548-59.
-     """
+    """
 
     device = backend.get_device(b1)
     xp = device.xp
@@ -214,37 +227,37 @@ def abrm_ptx(b1, x, g, dt, fmap=None, sens=None):
         dim = int(xp.sqrt(x.shape[0]))
 
         if sens is None:
-            sens = xp.ones((dim*dim, Nc))
+            sens = xp.ones((dim * dim, Nc))
         else:
             sens = xp.transpose(sens)
-            sens = xp.reshape(sens, (dim*dim, Nc))
+            sens = xp.reshape(sens, (dim * dim, Nc))
 
         bxy = sens @ b1
         bz = x @ xp.transpose(g)
 
         if fmap is not None and xp.sum(xp.abs(fmap)) != 0:
-            rep_b0 = xp.repeat(xp.expand_dims(fmap.flatten(),  0), Nt, axis=0)
-            bz += xp.transpose(rep_b0/gam*2*xp.pi)
+            rep_b0 = xp.repeat(xp.expand_dims(fmap.flatten(), 0), Nt, axis=0)
+            bz += xp.transpose(rep_b0 / gam * 2 * xp.pi)
 
         statea = xp.ones((Ns, 1))
         stateb = xp.zeros((Ns, 1))
         a = xp.ones(xp.shape(x)[0], dtype=complex)
         b = xp.zeros(xp.shape(x)[0], dtype=complex)
         for mm in range(Nt):
-            phi = dt*gam*xp.sqrt(xp.abs(bxy[:, mm]) ** 2 + bz[:, mm] ** 2)
-            with xp.errstate(divide='ignore'):
-                normfact = dt*gam*(phi ** -1)
+            phi = dt * gam * xp.sqrt(xp.abs(bxy[:, mm]) ** 2 + bz[:, mm] ** 2)
+            with xp.errstate(divide="ignore"):
+                normfact = dt * gam * (phi**-1)
                 normfact[xp.isinf(normfact)] = 0
                 nxy = normfact * bxy[:, mm]
                 nxy[xp.isinf(nxy)] = 0
             nz = normfact * bz[:, mm]
             nz[xp.isinf(nz)] = 0
-            cp = xp.cos(phi/2)
-            sp = xp.sin(phi/2)
+            cp = xp.cos(phi / 2)
+            sp = xp.sin(phi / 2)
             alpha = xp.expand_dims(cp + 1j * nz * sp, 1)
             beta = xp.expand_dims(1j * xp.conj(nxy) * sp, 1)
 
-            tmpa = xp.multiply(alpha, statea) + xp.multiply(beta,  stateb)
+            tmpa = xp.multiply(alpha, statea) + xp.multiply(beta, stateb)
             tmpb = -xp.conj(beta) * statea + xp.conj(alpha) * stateb
 
             statea, stateb = tmpa, tmpb
@@ -256,9 +269,11 @@ def abrm_ptx(b1, x, g, dt, fmap=None, sens=None):
         mxy0 = 0 + 1j * 0
         mz0 = 1
         m = mz0 * xp.conj(statea) * stateb
-        m += mxy0*xp.conj(statea) ** 2
-        m -= xp.conj(mxy0)*(stateb ** 2)
+        m += mxy0 * xp.conj(statea) ** 2
+        m -= xp.conj(mxy0) * (stateb**2)
         mz = mz0 * (statea * xp.conj(statea) - stateb * xp.conj(stateb))
-        mz += 2 * xp.real(mxy0 * xp.conj(statea)*xp.negative(xp.conj(stateb)))
+        mz += 2 * xp.real(
+            mxy0 * xp.conj(statea) * xp.negative(xp.conj(stateb))
+        )
 
         return a, b, m, mz

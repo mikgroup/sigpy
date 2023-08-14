@@ -3,13 +3,12 @@
 """
 import sigpy as sp
 
+__all__ = ["kspace_precond", "circulant_precond"]
 
-__all__ = ['kspace_precond', 'circulant_precond']
 
-
-def kspace_precond(mps, weights=None, coord=None,
-                   lamda=0, device=sp.cpu_device,
-                   oversamp=1.25):
+def kspace_precond(
+    mps, weights=None, coord=None, lamda=0, device=sp.cpu_device, oversamp=1.25
+):
     r"""Compute a diagonal preconditioner in k-space.
 
     Considers the optimization problem:
@@ -42,10 +41,10 @@ def kspace_precond(mps, weights=None, coord=None,
     img2_shape = [i * 2 for i in img_shape]
     ndim = len(img_shape)
 
-    scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)
+    scale = sp.prod(img2_shape) ** 1.5 / sp.prod(img_shape)
     with device:
         if coord is None:
-            idx = (slice(None, None, 2), ) * ndim
+            idx = (slice(None, None, 2),) * ndim
 
             ones = xp.zeros(img2_shape, dtype=dtype)
             if weights is None:
@@ -65,12 +64,13 @@ def kspace_precond(mps, weights=None, coord=None,
         p_inv = []
         for mps_i in mps:
             mps_i = sp.to_device(mps_i, device)
-            mps_i_norm2 = xp.linalg.norm(mps_i)**2
+            mps_i_norm2 = xp.linalg.norm(mps_i) ** 2
             xcorr_fourier = 0
             for mps_j in mps:
                 mps_j = sp.to_device(mps_j, device)
-                xcorr_fourier += xp.abs(sp.fft(mps_i *
-                                               xp.conj(mps_j), img2_shape))**2
+                xcorr_fourier += (
+                    xp.abs(sp.fft(mps_i * xp.conj(mps_j), img2_shape)) ** 2
+                )
 
             xcorr = sp.ifft(xcorr_fourier)
             xcorr *= psf
@@ -91,8 +91,9 @@ def kspace_precond(mps, weights=None, coord=None,
         return p.astype(dtype)
 
 
-def circulant_precond(mps, weights=None, coord=None,
-                      lamda=0, device=sp.cpu_device):
+def circulant_precond(
+    mps, weights=None, coord=None, lamda=0, device=sp.cpu_device
+):
     r"""Compute circulant preconditioner.
 
     Considers the optimization problem:
@@ -128,9 +129,9 @@ def circulant_precond(mps, weights=None, coord=None,
     img2_shape = [i * 2 for i in img_shape]
     ndim = len(img_shape)
 
-    scale = sp.prod(img2_shape)**1.5 / sp.prod(img_shape)**2
+    scale = sp.prod(img2_shape) ** 1.5 / sp.prod(img_shape) ** 2
     with device:
-        idx = (slice(None, None, 2), ) * ndim
+        idx = (slice(None, None, 2),) * ndim
         if coord is None:
             ones = xp.zeros(img2_shape, dtype=dtype)
             if weights is None:
@@ -150,7 +151,7 @@ def circulant_precond(mps, weights=None, coord=None,
         p_inv = 0
         for mps_i in mps:
             mps_i = sp.to_device(mps_i, device)
-            xcorr_fourier = xp.abs(sp.fft(xp.conj(mps_i), img2_shape))**2
+            xcorr_fourier = xp.abs(sp.fft(xp.conj(mps_i), img2_shape)) ** 2
             xcorr = sp.ifft(xcorr_fourier)
             xcorr *= psf
             p_inv_i = sp.fft(xcorr)

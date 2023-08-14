@@ -4,7 +4,7 @@
 
 import numpy as np
 
-__all__ = ['dinf']
+__all__ = ["dinf"]
 
 
 def dinf(d1=0.01, d2=0.01):
@@ -34,7 +34,8 @@ def dinf(d1=0.01, d2=0.01):
     l10d1 = np.log10(d1)
     l10d2 = np.log10(d2)
 
-    d = (a1 * l10d1 * l10d1 + a2 * l10d1 + a3) * l10d2 \
-        + (a4 * l10d1 * l10d1 + a5 * l10d1 + a6)
+    d = (a1 * l10d1 * l10d1 + a2 * l10d1 + a3) * l10d2 + (
+        a4 * l10d1 * l10d1 + a5 * l10d1 + a6
+    )
 
     return d

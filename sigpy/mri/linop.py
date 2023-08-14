@@ -9,8 +9,16 @@ discrete Fourier transform.
 import sigpy as sp
 
 
-def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
-          coil_batch_size=None, comm=None, transp_nufft=False):
+def Sense(
+    mps,
+    coord=None,
+    weights=None,
+    tseg=None,
+    ishape=None,
+    coil_batch_size=None,
+    comm=None,
+    transp_nufft=False,
+):
     """Sense linear operator.
 
     Args:
@@ -45,9 +53,18 @@ def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
 
     if coil_batch_size < len(mps):
         num_coil_batches = (num_coils + coil_batch_size - 1) // coil_batch_size
-        A = sp.linop.Vstack([Sense(mps[c::num_coil_batches], coord=coord,
-                                   weights=weights, ishape=ishape)
-                             for c in range(num_coil_batches)], axis=0)
+        A = sp.linop.Vstack(
+            [
+                Sense(
+                    mps[c * coil_batch_size : ((c + 1) * coil_batch_size)],
+                    coord=coord,
+                    weights=weights,
+                    ishape=ishape,
+                )
+                for c in range(num_coil_batches)
+            ],
+            axis=0,
+        )
 
         if comm is not None:
             C = sp.linop.AllReduceAdjoint(ishape, comm, in_place=True)
@@ -74,10 +91,11 @@ def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
             F = sp.linop.NUFFT(S.oshape, coord)
         else:
             F = sp.linop.NUFFT(S.oshape, -coord).H
-        time = len(coord) * tseg['dt']
-        b, ct = sp.mri.util.tseg_off_res_b_ct(tseg['b0'], tseg['n_bins'],
-                                              tseg['lseg'], tseg['dt'], time)
-        for ii in range(tseg['lseg']):
+        time = len(coord) * tseg["dt"]
+        b, ct = sp.mri.util.tseg_off_res_b_ct(
+            tseg["b0"], tseg["n_bins"], tseg["lseg"], tseg["dt"], time
+        )
+        for ii in range(tseg["lseg"]):
             Bi = sp.linop.Multiply(F.oshape, b[:, ii])
             Cti = sp.linop.Multiply(S.ishape, ct[:, ii].reshape(S.ishape))
 
@@ -97,12 +115,13 @@ def Sense(mps, coord=None, weights=None, tseg=None, ishape=None,
         C = sp.linop.AllReduceAdjoint(ishape, comm, in_place=True)
         A = A * C
 
-    A.repr_str = 'Sense'
+    A.repr_str = "Sense"
     return A
 
 
-def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, grd_shape=None,
-              comm=None):
+def ConvSense(
+    img_ker_shape, mps_ker, coord=None, weights=None, grd_shape=None, comm=None
+):
     """Convolution linear operator with sensitivity maps kernel in k-space.
 
     Args:
@@ -115,9 +134,10 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, grd_shape=None,
     ndim = len(img_ker_shape)
     num_coils = mps_ker.shape[0]
     mps_ker = mps_ker.reshape((num_coils, 1) + mps_ker.shape[1:])
-    R = sp.linop.Reshape((1, ) + tuple(img_ker_shape), img_ker_shape)
-    C = sp.linop.ConvolveData(R.oshape, mps_ker,
-                              mode='valid', multi_channel=True)
+    R = sp.linop.Reshape((1,) + tuple(img_ker_shape), img_ker_shape)
+    C = sp.linop.ConvolveData(
+        R.oshape, mps_ker, mode="valid", multi_channel=True
+    )
     A = C * R
 
     if coord is not None:
@@ -144,8 +164,9 @@ def ConvSense(img_ker_shape, mps_ker, coord=None, weights=None, grd_shape=None,
     return A
 
 
-def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None,
-              grd_shape=None):
+def ConvImage(
+    mps_ker_shape, img_ker, coord=None, weights=None, grd_shape=None
+):
     """Convolution linear operator with image kernel in k-space.
 
     Args:
@@ -157,11 +178,13 @@ def ConvImage(mps_ker_shape, img_ker, coord=None, weights=None,
     """
     ndim = img_ker.ndim
     num_coils = mps_ker_shape[0]
-    img_ker = img_ker.reshape((1, ) + img_ker.shape)
-    R = sp.linop.Reshape((num_coils, 1) + tuple(mps_ker_shape[1:]),
-                         mps_ker_shape)
-    C = sp.linop.ConvolveFilter(R.oshape, img_ker,
-                                mode='valid', multi_channel=True)
+    img_ker = img_ker.reshape((1,) + img_ker.shape)
+    R = sp.linop.Reshape(
+        (num_coils, 1) + tuple(mps_ker_shape[1:]), mps_ker_shape
+    )
+    C = sp.linop.ConvolveFilter(
+        R.oshape, img_ker, mode="valid", multi_channel=True
+    )
     A = C * R
 
     if coord is not None:

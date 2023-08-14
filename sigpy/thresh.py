@@ -1,14 +1,19 @@
 # -*- coding: utf-8 -*-
 """Thresholding functions.
 """
-import numpy as np
 import numba as nb
+import numpy as np
 
 from sigpy import backend, config, util
 
-
-__all__ = ['soft_thresh', 'hard_thresh', 'l1_proj',
-           'l2_proj', 'linf_proj', 'psd_proj']
+__all__ = [
+    "soft_thresh",
+    "hard_thresh",
+    "l1_proj",
+    "l2_proj",
+    "linf_proj",
+    "psd_proj",
+]
 
 
 def soft_thresh(lamda, input):
@@ -103,7 +108,7 @@ def l2_proj(eps, input, axes=None):
     axes = util._normalize_axes(axes, input.ndim)
 
     xp = backend.get_array_module(input)
-    norm = xp.sum(xp.abs(input)**2, axis=axes, keepdims=True)**0.5
+    norm = xp.sum(xp.abs(input) ** 2, axis=axes, keepdims=True) ** 0.5
     mask = norm < eps
     output = mask * input + (1 - mask) * (eps * input / (norm + mask))
 
@@ -151,7 +156,7 @@ def psd_proj(input):
 @nb.vectorize  # pragma: no cover
 def _soft_thresh(lamda, input):
     abs_input = abs(input)
-    if (abs_input == 0):
+    if abs_input == 0:
         sign = 0
     else:
         sign = input / abs_input
@@ -175,8 +180,8 @@ if config.cupy_enabled:  # pragma: no cover
     import cupy as cp
 
     _soft_thresh_cuda = cp.ElementwiseKernel(
-        'S lamda, T input',
-        'T output',
+        "S lamda, T input",
+        "T output",
         """
         S abs_input = abs(input);
         T sign;
@@ -189,11 +194,12 @@ if config.cupy_enabled:  # pragma: no cover
 
         output = (T) mag * sign;
         """,
-        name='soft_thresh')
+        name="soft_thresh",
+    )
 
     _hard_thresh_cuda = cp.ElementwiseKernel(
-        'S lamda, T input',
-        'T output',
+        "S lamda, T input",
+        "T output",
         """
         S abs_input = abs(input);
         if (abs_input > lamda)
@@ -201,4 +207,5 @@ if config.cupy_enabled:  # pragma: no cover
         else
             output = 0;
         """,
-        name='hard_thresh')
+        name="hard_thresh",
+    )

@@ -4,7 +4,7 @@
 """
 import numpy as np
 
-__all__ = ['bir4', 'hypsec', 'wurst', 'goia_wurst', 'bloch_siegert_fm']
+__all__ = ["bir4", "hypsec", "wurst", "goia_wurst", "bloch_siegert_fm"]
 
 
 def bir4(n, beta, kappa, theta, dw0):
@@ -29,24 +29,26 @@ def bir4(n, beta, kappa, theta, dw0):
         Staewen, R.S. et al. (1990). '3-D FLASH Imaging using a single surface
         coil and a new adiabatic pulse, BIR-4'.
         Invest. Radiology, 25:559-567.
-     """
+    """
 
-    dphi = np.pi + theta/2
+    dphi = np.pi + theta / 2
 
     t = np.arange(0, n) / n
 
-    a1 = np.tanh(beta * (1 - 4 * t[:n // 4]))
-    a2 = np.tanh(beta * (4 * t[n // 4:n // 2] - 1))
-    a3 = np.tanh(beta * (3 - 4 * t[n // 2:3 * n // 4]))
-    a4 = np.tanh(beta * (4 * t[3 * n // 4:] - 3))
+    a1 = np.tanh(beta * (1 - 4 * t[: n // 4]))
+    a2 = np.tanh(beta * (4 * t[n // 4 : n // 2] - 1))
+    a3 = np.tanh(beta * (3 - 4 * t[n // 2 : 3 * n // 4]))
+    a4 = np.tanh(beta * (4 * t[3 * n // 4 :] - 3))
 
-    a = np.concatenate((a1, a2, a3, a4)).astype(complex)
-    a[n // 4:3 * n // 4] = a[n // 4:3 * n // 4] * np.exp(1j * dphi)
+    a = np.concatenate((a1, a2, a3, a4)).astype(np.complex64)
+    a[n // 4 : 3 * n // 4] = a[n // 4 : 3 * n // 4] * np.exp(1j * dphi)
 
-    om1 = dw0 * np.tan(kappa * 4 * t[:n // 4]) / np.tan(kappa)
-    om2 = dw0 * np.tan(kappa * (4 * t[n // 4:n // 2] - 2)) / np.tan(kappa)
-    om3 = dw0 * np.tan(kappa * (4 * t[n // 2:3 * n // 4] - 2)) / np.tan(kappa)
-    om4 = dw0 * np.tan(kappa * (4 * t[3 * n // 4:] - 4)) / np.tan(kappa)
+    om1 = dw0 * np.tan(kappa * 4 * t[: n // 4]) / np.tan(kappa)
+    om2 = dw0 * np.tan(kappa * (4 * t[n // 4 : n // 2] - 2)) / np.tan(kappa)
+    om3 = (
+        dw0 * np.tan(kappa * (4 * t[n // 2 : 3 * n // 4] - 2)) / np.tan(kappa)
+    )
+    om4 = dw0 * np.tan(kappa * (4 * t[3 * n // 4 :] - 4)) / np.tan(kappa)
 
     om = np.concatenate((om1, om2, om3, om4))
 
@@ -74,7 +76,7 @@ def hypsec(n=512, beta=800, mu=4.9, dur=0.012):
         Baum, J., Tycko, R. and Pines, A. (1985). 'Broadband and adiabatic
         inversion of a two-level system by phase-modulated pulses'.
         Phys. Rev. A., 32:3435-3447.
-     """
+    """
 
     t = np.arange(-n // 2, n // 2) / n * dur
 
@@ -106,7 +108,7 @@ def wurst(n=512, n_fac=40, bw=40e3, dur=2e-3):
         Kupce, E. and Freeman, R. (1995). 'Stretched Adiabatic Pulses for
         Broadband Spin Inversion'.
         J. Magn. Reson. Ser. A., 117:246-256.
-     """
+    """
 
     t = np.arange(0, n) * dur / n
 
@@ -116,8 +118,9 @@ def wurst(n=512, n_fac=40, bw=40e3, dur=2e-3):
     return a, om
 
 
-def goia_wurst(n=512, dur=3.5e-3, f=0.9, n_b1=16, m_grad=4,
-               b1_max=817, bw=20000):
+def goia_wurst(
+    n=512, dur=3.5e-3, f=0.9, n_b1=16, m_grad=4, b1_max=817, bw=20000
+):
     r"""Design a GOIA (gradient offset independent adiabaticity) WURST
      inversion pulse
 
@@ -146,18 +149,19 @@ def goia_wurst(n=512, dur=3.5e-3, f=0.9, n_b1=16, m_grad=4,
 
     t = np.arange(0, n) * dur / n
 
-    a = b1_max*(1 - np.abs(np.sin(np.pi / 2 * (2 * t / dur - 1))) ** n_b1)
+    a = b1_max * (1 - np.abs(np.sin(np.pi / 2 * (2 * t / dur - 1))) ** n_b1)
     g = (1 - f) + f * np.abs(np.sin(np.pi / 2 * (2 * t / dur - 1))) ** m_grad
-    om = np.cumsum((a ** 2) / g) * dur / n
-    om = om - om[n//2 + 1]
+    om = np.cumsum((a**2) / g) * dur / n
+    om = om - om[n // 2 + 1]
     om = g * om
     om = om / np.max(np.abs(om)) * bw / 2
 
     return a, om, g
 
 
-def bloch_siegert_fm(n=512, dur=2e-3, b1p=20., k=42.,
-                     gamma=2*np.pi*42.58):
+def bloch_siegert_fm(
+    n=512, dur=2e-3, b1p=20.0, k=42.0, gamma=2 * np.pi * 42.58
+):
     r"""
     U-shaped FM waveform for adiabatic Bloch-Siegert :math:`B_1^{+}` mapping
     and spatial encoding.
@@ -184,7 +188,7 @@ def bloch_siegert_fm(n=512, dur=2e-3, b1p=20., k=42.,
 
     """
 
-    t = np.arange(1, n//2) * dur / n
+    t = np.arange(1, n // 2) * dur / n
 
     om = gamma * b1p / np.sqrt((1 - gamma * b1p / k * t) ** -2 - 1)
     om = np.concatenate((om, om[::-1]))

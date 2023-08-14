@@ -3,8 +3,7 @@
 """
 import numpy as np
 
-
-__all__ = ['birdcage_maps']
+__all__ = ["birdcage_maps"]
 
 
 def birdcage_maps(shape, r=1.5, nzz=8, dtype=complex):
@@ -32,7 +31,7 @@ def birdcage_maps(shape, r=1.5, nzz=8, dtype=complex):
 
         x_co = (x - nx / 2.0) / (nx / 2.0) - coilx
         y_co = (y - ny / 2.0) / (ny / 2.0) - coily
-        rr = np.sqrt(x_co ** 2 + y_co ** 2)
+        rr = np.sqrt(x_co**2 + y_co**2)
         phi = np.arctan2(x_co, -y_co) + coil_phs
         out = (1.0 / rr) * np.exp(1j * phi)
 
@@ -48,13 +47,13 @@ def birdcage_maps(shape, r=1.5, nzz=8, dtype=complex):
         x_co = (x - nx / 2.0) / (nx / 2.0) - coilx
         y_co = (y - ny / 2.0) / (ny / 2.0) - coily
         z_co = (z - nz / 2.0) / (nz / 2.0) - coilz
-        rr = (x_co**2 + y_co**2 + z_co**2)**0.5
+        rr = (x_co**2 + y_co**2 + z_co**2) ** 0.5
         phi = np.arctan2(x_co, -y_co) + coil_phs
         out = (1 / rr) * np.exp(1j * phi)
     else:
-        raise ValueError('Can only generate shape with length 3 or 4')
+        raise ValueError("Can only generate shape with length 3 or 4")
 
-    rss = sum(abs(out) ** 2, 0)**0.5
+    rss = sum(abs(out) ** 2, 0) ** 0.5
     out /= rss
 
     return out.astype(dtype)

@@ -14,6 +14,9 @@ SigPy
 .. image:: https://codecov.io/gh/mikgroup/sigpy/branch/master/graph/badge.svg
 	:target: https://codecov.io/gh/mikgroup/sigpy
 
+.. image:: https://zenodo.org/badge/139635485.svg
+   :target: https://zenodo.org/badge/latestdoi/139635485
+
 
 `Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `MRI Recon Tutorial <https://github.com/mikgroup/sigpy-mri-tutorial>`_ | `MRI Pulse Design Tutorial <https://github.com/jonbmartin/open-source-pulse-design>`_
 
@@ -56,7 +59,7 @@ If you want to contribute to the SigPy source code, we recommend you install it 
 	
 To run tests and contribute, we recommend installing the following packages::
 
-	pip install coverage flake8 sphinx
+	pip install coverage ruff sphinx sphinx_rtd_theme black isort
 
 and run the script ``run_tests.sh``.
 

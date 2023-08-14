@@ -3,13 +3,25 @@
 
 """
 import numpy as np
+
 from sigpy.mri.rf import slr as slr
 from sigpy.mri.rf.util import dinf
-__all__ = ['dz_b1_rf', 'dz_b1_gslider_rf', 'dz_b1_hadamard_rf']
+
+__all__ = ["dz_b1_rf", "dz_b1_gslider_rf", "dz_b1_hadamard_rf"]
 
 
-def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
-             pbc=2, d1=0.01, d2=0.01, os=8, split_and_reflect=True):
+def dz_b1_rf(
+    dt=2e-6,
+    tb=4,
+    ptype="st",
+    flip=np.pi / 6,
+    pbw=0.3,
+    pbc=2,
+    d1=0.01,
+    d2=0.01,
+    os=8,
+    split_and_reflect=True,
+):
     """Design a :math:`B_1^{+}`-selective excitation pulse following Grissom \
     JMR 2014
 
@@ -58,16 +70,22 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
         # between the left and right bands
 
         # build system matrix
-        A = np.exp(1j * 2 * np.pi *
-                   np.outer(np.arange(-n * os / 2, n * os / 2),
-                            np.arange(-n / 2, n / 2)) / (n * os))
+        A = np.exp(
+            1j
+            * 2
+            * np.pi
+            * np.outer(
+                np.arange(-n * os / 2, n * os / 2), np.arange(-n / 2, n / 2)
+            )
+            / (n * os)
+        )
 
         # build target pattern
         ii = np.arange(-n * os / 2, n * os / 2) / (n * os) * 2
         w = dinf(d1, d2) / tb
-        f = np.asarray([0, (1 - w) * (tb / 2),
-                        (1 + w) * (tb / 2),
-                        n / 2]) / (n / 2)
+        f = np.asarray([0, (1 - w) * (tb / 2), (1 + w) * (tb / 2), n / 2]) / (
+            n / 2
+        )
         d = np.double(np.abs(ii) < f[1])
         ds = np.double(np.abs(ii) > f[2])
 
@@ -98,9 +116,9 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
 
     if split_and_reflect:
         # split and flip fm waveform to improve large-tip accuracy
-        dom = np.concatenate((h[n // 2::-1], h, h[n:n // 2:-1])) / 2
+        dom = np.concatenate((h[n // 2 :: -1], h, h[n : n // 2 : -1])) / 2
     else:
-        dom = np.concatenate((0 * h[n // 2::-1], h, 0 * h[n:n // 2:-1]))
+        dom = np.concatenate((0 * h[n // 2 :: -1], h, 0 * h[n : n // 2 : -1]))
 
     # scale to target flip, convert to Hz
     dom = dom * flip / (2 * np.pi * dt)
@@ -111,8 +129,18 @@ def dz_b1_rf(dt=2e-6, tb=4, ptype='st', flip=np.pi / 6, pbw=0.3,
     return om1, dom
 
 
-def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
-                     pbw=0.5, pbc=2, d1=0.01, d2=0.01, split_and_reflect=True):
+def dz_b1_gslider_rf(
+    dt=2e-6,
+    g=5,
+    tb=12,
+    ptype="st",
+    flip=np.pi / 6,
+    pbw=0.5,
+    pbc=2,
+    d1=0.01,
+    d2=0.01,
+    split_and_reflect=True,
+):
     """Design a :math:`B_1^{+}`-selective excitation gSlider pulse following
      Grissom JMR 2014.
 
@@ -164,21 +192,24 @@ def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
     dom = np.zeros((2 * n, g))
     for gind in range(1, g + 1):
         # design filter
-        h = bsf*slr.dz_gslider_b(n, g, gind, tb, d1, d2, np.pi, n // 4)
+        h = bsf * slr.dz_gslider_b(n, g, gind, tb, d1, d2, np.pi, n // 4)
 
         # modulate filter to center and add it to a time-reversed and modulated
         # copy, then take the imaginary part to get an odd filter
         h = np.imag(h * np.exp(1j * om * t) - h[n::-1] * np.exp(1j * -om * t))
         if split_and_reflect:
             # split and flip fm waveform to improve large-tip accuracy
-            dom[:, gind - 1] = np.concatenate((h[n // 2::-1],
-                                               h, h[n:n // 2:-1])) / 2
+            dom[:, gind - 1] = (
+                np.concatenate((h[n // 2 :: -1], h, h[n : n // 2 : -1])) / 2
+            )
         else:
-            dom[:, gind - 1] = np.concatenate((0 * h[n // 2::-1],
-                                              h, 0 * h[n:n // 2:-1]))
+            dom[:, gind - 1] = np.concatenate(
+                (0 * h[n // 2 :: -1], h, 0 * h[n : n // 2 : -1])
+            )
         # build am waveform
-        om1[:, gind - 1] = np.concatenate((-np.ones(n // 2), np.ones(n),
-                                          -np.ones(n // 2)))
+        om1[:, gind - 1] = np.concatenate(
+            (-np.ones(n // 2), np.ones(n), -np.ones(n // 2))
+        )
 
     # scale to target flip, convert to Hz
     dom = dom / (2 * np.pi * dt)
@@ -186,8 +217,18 @@ def dz_b1_gslider_rf(dt=2e-6, g=5, tb=12, ptype='st', flip=np.pi / 6,
     return om1, dom
 
 
-def dz_b1_hadamard_rf(dt=2e-6, g=8, tb=16, ptype='st', flip=np.pi / 6,
-                      pbw=2, pbc=2, d1=0.01, d2=0.01, split_and_reflect=True):
+def dz_b1_hadamard_rf(
+    dt=2e-6,
+    g=8,
+    tb=16,
+    ptype="st",
+    flip=np.pi / 6,
+    pbw=2,
+    pbc=2,
+    d1=0.01,
+    d2=0.01,
+    split_and_reflect=True,
+):
     """Design a :math:`B_1^{+}`-selective Hadamard-encoded pulse following \
      Grissom JMR 2014.
     Args:
@@ -238,23 +279,24 @@ def dz_b1_hadamard_rf(dt=2e-6, g=8, tb=16, ptype='st', flip=np.pi / 6,
     dom = np.zeros((2 * n, g))
     for gind in range(1, g + 1):
         # design filter
-        h = bsf*slr.dz_hadamard_b(n, g, gind, tb, d1, d2, n // 4)
+        h = bsf * slr.dz_hadamard_b(n, g, gind, tb, d1, d2, n // 4)
 
         # modulate filter to center and add it to a time-reversed and modulated
         # copy, then take the imaginary part to get an odd filter
         h = np.imag(h * np.exp(1j * om * t) - h[n::-1] * np.exp(1j * -om * t))
         if split_and_reflect:
             # split and flip fm waveform to improve large-tip accuracy
-            dom[:, gind - 1] = np.concatenate((h[n // 2::-1],
-                                              h,
-                                              h[n:n // 2:-1])) / 2
+            dom[:, gind - 1] = (
+                np.concatenate((h[n // 2 :: -1], h, h[n : n // 2 : -1])) / 2
+            )
         else:
-            dom[:, gind - 1] = np.concatenate((0 * h[n // 2::-1],
-                                              h,
-                                              0 * h[n:n // 2:-1]))
+            dom[:, gind - 1] = np.concatenate(
+                (0 * h[n // 2 :: -1], h, 0 * h[n : n // 2 : -1])
+            )
         # build am waveform
-        om1[:, gind - 1] = np.concatenate((-np.ones(n // 2), np.ones(n),
-                                          -np.ones(n // 2)))
+        om1[:, gind - 1] = np.concatenate(
+            (-np.ones(n // 2), np.ones(n), -np.ones(n // 2))
+        )
 
     # scale to target flip, convert to Hz
     dom = dom / (2 * np.pi * dt)

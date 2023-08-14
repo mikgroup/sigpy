@@ -3,19 +3,31 @@
     including SLR and small tip spatial design
 """
 
-import sigpy as sp
 import numpy as np
-from sigpy.mri import rf as rf
-from sigpy import backend
 from scipy.interpolate import interp1d
 
+import sigpy as sp
+from sigpy import backend
+from sigpy.mri import rf as rf
 
-__all__ = ['stspa', 'stspk']
+__all__ = ["stspa", "stspk"]
 
 
-def stspa(target, sens, coord, dt, roi=None, alpha=0, b0=None, tseg=None,
-          st=None, phase_update_interval=float('inf'), explicit=False,
-          max_iter=1000, tol=1E-6):
+def stspa(
+    target,
+    sens,
+    coord,
+    dt,
+    roi=None,
+    alpha=0,
+    b0=None,
+    tseg=None,
+    st=None,
+    phase_update_interval=float("inf"),
+    explicit=False,
+    max_iter=1000,
+    tol=1e-6,
+):
     """Small tip spatial domain method for multicoil parallel excitation.
        Allows for constrained or unconstrained designs.
 
@@ -58,15 +70,15 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, b0=None, tseg=None,
     device = backend.get_device(target)
     xp = device.xp
     with device:
-        pulses = xp.zeros((Nc, Nt), complex)
+        pulses = xp.zeros((Nc, Nt), xp.complex64)
 
         # set up the system matrix
         if explicit:
-            A = rf.linop.PtxSpatialExplicit(sens, coord, dt,
-                                            target.shape, b0)
+            A = rf.linop.PtxSpatialExplicit(sens, coord, dt, target.shape, b0)
         else:
-            A = sp.mri.linop.Sense(sens, coord, weights=None, tseg=tseg,
-                                   ishape=target.shape).H
+            A = sp.mri.linop.Sense(
+                sens, coord, weights=None, tseg=tseg, ishape=target.shape
+            ).H
 
         # handle the Ns * Ns error weighting ROI matrix
         W = sp.linop.Multiply(A.oshape, xp.ones(target.shape))
@@ -78,32 +90,51 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, b0=None, tseg=None,
 
         # Unconstrained, use conjugate gradient
         if st is None:
-            I = sp.linop.Identity((Nc, coord.shape[0]))
+            Id = sp.linop.Identity((Nc, coord.shape[0]))
             b = A.H * W * target
 
-            alg_method = sp.alg.ConjugateGradient(A.H * A + alpha * I,
-                                                  b, pulses, P=None,
-                                                  max_iter=max_iter, tol=tol)
+            alg_method = sp.alg.ConjugateGradient(
+                A.H * A + alpha * Id,
+                b,
+                pulses,
+                P=None,
+                max_iter=max_iter,
+                tol=tol,
+            )
 
         # Constrained case, use SDMM
         else:
             # vectorize target for SDMM
             target = W * target
             d = xp.expand_dims(target.flatten(), axis=0)
-            alg_method = sp.alg.SDMM(A, d, st['lam'], st['L'], st['c'],
-                                     st['mu'], st['rho'], st['rhoMax'],
-                                     st['rhoNorm'], 10**-5, 10**-2, st['cMax'],
-                                     st['cNorm'], st['cgiter'], st['max_iter'])
+            alg_method = sp.alg.SDMM(
+                A,
+                d,
+                st["lam"],
+                st["L"],
+                st["c"],
+                st["mu"],
+                st["rho"],
+                st["rhoMax"],
+                st["rhoNorm"],
+                10**-5,
+                10**-2,
+                st["cMax"],
+                st["cNorm"],
+                st["cgiter"],
+                st["max_iter"],
+            )
 
         # perform the design: apply optimization method to find solution pulse
         while not alg_method.done():
 
             # phase_update switch
-            if (alg_method.iter > 0) and \
-                    (alg_method.iter % phase_update_interval == 0):
+            if (alg_method.iter > 0) and (
+                alg_method.iter % phase_update_interval == 0
+            ):
                 target = xp.abs(target) * xp.exp(
-                    1j * xp.angle(
-                        xp.reshape(A * alg_method.x, target.shape)))
+                    1j * xp.angle(xp.reshape(A * alg_method.x, target.shape))
+                )
                 b = A.H * target
                 alg_method.b = b
 
@@ -114,8 +145,20 @@ def stspa(target, sens, coord, dt, roi=None, alpha=0, b0=None, tseg=None,
         return pulses
 
 
-def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
-          alpha=1, iter_dif=0.01):
+def stspk(
+    mask,
+    sens,
+    n_spokes,
+    fov,
+    dx_max,
+    gts,
+    sl_thick,
+    tbw,
+    dgdtmax,
+    gmax,
+    alpha=1,
+    iter_dif=0.01,
+):
     """Small tip spokes parallel transmit pulse designer.
 
     Args:
@@ -154,37 +197,39 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
 
         kmax = 1 / dx_max  # /cm, max spatial freq of trajectory
         # greedy kx, ky grid
-        kxs, kys = xp.meshgrid(xp.linspace(-kmax / 2, kmax / 2 - 1 / fov,
-                                           int(fov * kmax)),
-                               xp.linspace(-kmax / 2, kmax / 2 - 1 / fov,
-                                           int(fov * kmax)))
+        kxs, kys = xp.meshgrid(
+            xp.linspace(-kmax / 2, kmax / 2 - 1 / fov, int(fov * kmax)),
+            xp.linspace(-kmax / 2, kmax / 2 - 1 / fov, int(fov * kmax)),
+        )
+
         # vectorize the grid
         kxs = kxs.flatten()
         kys = kys.flatten()
 
         # remove DC
         dc = xp.intersect1d(xp.where((kxs == 0)), xp.where((kys == 0)))[0]
-        kxs = xp.concatenate([kxs[:dc], kxs[dc+1:]])
-        kys = xp.concatenate([kys[:dc], kys[dc+1:]])
+        kxs = xp.concatenate([kxs[:dc], kxs[dc + 1 :]])
+        kys = xp.concatenate([kys[:dc], kys[dc + 1 :]])
 
         # step 2: design the weights
         # initial kx/ky location is DC
         k = xp.expand_dims(xp.array([0, 0]), 0)
 
         # initial target phase
-        phs = xp.zeros((xp.count_nonzero(mask), 1), dtype=complex)
+        phs = xp.zeros((xp.count_nonzero(mask), 1), dtype=xp.complex64)
 
         for ii in range(n_spokes):
 
             # build Afull (and take only 0 locations into matrix)
-            Anum = rf.PtxSpatialExplicit(sens, k, gts, mask.shape,
-                                         ret_array=True)
+            Anum = rf.PtxSpatialExplicit(
+                sens, k, gts, mask.shape, ret_array=True
+            )
             Anum = Anum[~(Anum == 0).all(1)]
 
             # design wfull using MLS:
             # initialize wfull
-            sys_a = (Anum.conj().T @ Anum + alpha * xp.eye((ii+1)*nc))
-            sys_b = (Anum.conj().T @ xp.exp(1j*phs))
+            sys_a = Anum.conj().T @ Anum + alpha * xp.eye((ii + 1) * nc)
+            sys_b = Anum.conj().T @ xp.exp(1j * phs)
             w_full = xp.linalg.solve(sys_a, sys_b)
 
             err = Anum @ w_full - xp.exp(1j * phs)
@@ -196,24 +241,29 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
                 phs = xp.angle(Anum @ w_full)
                 w_full = xp.linalg.solve(
                     (Anum.conj().T @ Anum + alpha * xp.eye((ii + 1) * nc)),
-                    (Anum.conj().T @ xp.exp(1j * phs)))
+                    (Anum.conj().T @ xp.exp(1j * phs)),
+                )
                 err = Anum @ w_full - xp.exp(1j * phs)
-                cost = xp.real(err.conj().T @ err +
-                               alpha * w_full.conj().T @ w_full)
+                cost = xp.real(
+                    err.conj().T @ err + alpha * w_full.conj().T @ w_full
+                )
 
             # add a spoke using greedy method
             if ii < n_spokes - 1:
 
                 r = xp.exp(1j * phs) - Anum @ w_full
-                rfnorm = xp.zeros(kxs.shape, dtype=complex)
+                rfnorm = xp.zeros(kxs.shape, dtype=xp.complex64)
+
                 for jj in range(kxs.size):
                     ks_test = xp.expand_dims(xp.array([kxs[jj], kys[jj]]), 0)
-                    Anum = rf.PtxSpatialExplicit(sens, ks_test, gts,
-                                                 mask.shape, ret_array=True)
+                    Anum = rf.PtxSpatialExplicit(
+                        sens, ks_test, gts, mask.shape, ret_array=True
+                    )
                     Anum = Anum[~(Anum == 0).all(1)]
 
-                    rfm = xp.linalg.solve((Anum.conj().T @ Anum),
-                                          (Anum.conj().T @ r))
+                    rfm = xp.linalg.solve(
+                        (Anum.conj().T @ Anum), (Anum.conj().T @ r)
+                    )
                     rfnorm[jj] = xp.linalg.norm(rfm)
 
                 ind = xp.argmax(rfnorm)
@@ -225,8 +275,8 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
                     k = xp.concatenate((k_new, k))
 
                 # remove chosen point from candidates
-                kxs = xp.concatenate([kxs[:ind], kxs[ind + 1:]])
-                kys = xp.concatenate([kys[:ind], kys[ind + 1:]])
+                kxs = xp.concatenate([kxs[:ind], kxs[ind + 1 :]])
+                kys = xp.concatenate([kys[:ind], kys[ind + 1 :]])
 
         # from our spoke selections, build the whole waveforms
 
@@ -238,12 +288,13 @@ def stspk(mask, sens, n_spokes, fov, dx_max, gts, sl_thick, tbw, dgdtmax, gmax,
         area = tbw / (sl_thick / 10) / 4257  # thick*kwid=twb, kwid=gam*area
         [subgz, nramp] = rf.min_trap_grad(area, gmax, dgdtmax, gts)
         npts = 128
-        subrf = rf.dzrf(npts, tbw, 'st')
+        subrf = rf.dzrf(npts, tbw, "st")
 
         n_plat = subgz.size - 2 * nramp  # time points on trap plateau
         # interpolate to stretch out waveform to appropriate length
-        f = interp1d(np.arange(0, npts, 1) / npts, subrf,
-                     fill_value='extrapolate')
+        f = interp1d(
+            np.arange(0, npts, 1) / npts, subrf, fill_value="extrapolate"
+        )
         subrf = f(xp.arange(0, n_plat, 1) / n_plat)
         subrf = xp.concatenate((xp.zeros(nramp), subrf, xp.zeros(nramp)))
 

@@ -2,19 +2,23 @@
 """MRI applications.
 """
 import numpy as np
-import sigpy as sp
 
+import sigpy as sp
 from sigpy.mri import linop
 
-
-__all__ = ['SenseRecon', 'L1WaveletRecon', 'TotalVariationRecon',
-           'JsenseRecon', 'EspiritCalib']
+__all__ = [
+    "SenseRecon",
+    "L1WaveletRecon",
+    "TotalVariationRecon",
+    "JsenseRecon",
+    "EspiritCalib",
+]
 
 
 def _estimate_weights(y, weights, coord):
     if weights is None and coord is None:
         with sp.get_device(y):
-            weights = (sp.rss(y, axes=(0, )) > 0).astype(y.dtype)
+            weights = (sp.rss(y, axes=(0,)) > 0).astype(y.dtype)
 
     return weights
 
@@ -59,18 +63,36 @@ class SenseRecon(sp.app.LinearLeastSquares):
 
     """
 
-    def __init__(self, y, mps, lamda=0, weights=None, tseg=None,
-                 coord=None, device=sp.cpu_device, coil_batch_size=None,
-                 comm=None, show_pbar=True, transp_nufft=False, **kwargs):
+    def __init__(
+        self,
+        y,
+        mps,
+        lamda=0,
+        weights=None,
+        tseg=None,
+        coord=None,
+        device=sp.cpu_device,
+        coil_batch_size=None,
+        comm=None,
+        show_pbar=True,
+        transp_nufft=False,
+        **kwargs
+    ):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights, tseg=tseg,
-                        coil_batch_size=coil_batch_size, comm=comm,
-                        transp_nufft=transp_nufft)
+        A = linop.Sense(
+            mps,
+            coord=coord,
+            weights=weights,
+            tseg=tseg,
+            coil_batch_size=coil_batch_size,
+            comm=comm,
+            transp_nufft=transp_nufft,
+        )
 
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
@@ -110,20 +132,35 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
 
     """
 
-    def __init__(self, y, mps, lamda,
-                 weights=None, coord=None,
-                 wave_name='db4', device=sp.cpu_device,
-                 coil_batch_size=None, comm=None, show_pbar=True,
-                 transp_nufft=False, **kwargs):
+    def __init__(
+        self,
+        y,
+        mps,
+        lamda,
+        weights=None,
+        coord=None,
+        wave_name="db4",
+        device=sp.cpu_device,
+        coil_batch_size=None,
+        comm=None,
+        show_pbar=True,
+        transp_nufft=False,
+        **kwargs
+    ):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights,
-                        comm=comm, coil_batch_size=coil_batch_size,
-                        transp_nufft=transp_nufft)
+        A = linop.Sense(
+            mps,
+            coord=coord,
+            weights=weights,
+            comm=comm,
+            coil_batch_size=coil_batch_size,
+            transp_nufft=transp_nufft,
+        )
         img_shape = mps.shape[1:]
         W = sp.linop.Wavelet(img_shape, wave_name=wave_name)
         proxg = sp.prox.UnitaryTransform(sp.prox.L1Reg(W.oshape, lamda), W)
@@ -133,6 +170,7 @@ class L1WaveletRecon(sp.app.LinearLeastSquares):
             xp = device.xp
             with device:
                 return lamda * xp.sum(xp.abs(W(input))).item()
+
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
 
@@ -171,19 +209,34 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
 
     """
 
-    def __init__(self, y, mps, lamda,
-                 weights=None, coord=None, device=sp.cpu_device,
-                 coil_batch_size=None, comm=None, show_pbar=True,
-                 transp_nufft=False, **kwargs):
+    def __init__(
+        self,
+        y,
+        mps,
+        lamda,
+        weights=None,
+        coord=None,
+        device=sp.cpu_device,
+        coil_batch_size=None,
+        comm=None,
+        show_pbar=True,
+        transp_nufft=False,
+        **kwargs
+    ):
         weights = _estimate_weights(y, weights, coord)
         if weights is not None:
             y = sp.to_device(y * weights**0.5, device=device)
         else:
             y = sp.to_device(y, device=device)
 
-        A = linop.Sense(mps, coord=coord, weights=weights,
-                        comm=comm, coil_batch_size=coil_batch_size,
-                        transp_nufft=transp_nufft)
+        A = linop.Sense(
+            mps,
+            coord=coord,
+            weights=weights,
+            comm=comm,
+            coil_batch_size=coil_batch_size,
+            transp_nufft=transp_nufft,
+        )
 
         G = sp.linop.FiniteDifference(A.ishape)
         proxg = sp.prox.L1Reg(G.oshape, lamda)
@@ -197,12 +250,13 @@ class TotalVariationRecon(sp.app.LinearLeastSquares):
         if comm is not None:
             show_pbar = show_pbar and comm.rank == 0
 
-        super().__init__(A, y, proxg=proxg, g=g, G=G, show_pbar=show_pbar,
-                         **kwargs)
+        super().__init__(
+            A, y, proxg=proxg, g=g, G=G, show_pbar=show_pbar, **kwargs
+        )
 
 
 class JsenseRecon(sp.app.App):
-    r"""JSENSE reconstruction.
+    r"""JSENSE/NLINV reconstruction.
 
     Considers the problem
 
@@ -211,6 +265,12 @@ class JsenseRecon(sp.app.App):
         \frac{\lambda}{2} (\| l \|_2^2 + \| r \|_2^2)
 
     where :math:`\ast` is the convolution operator.
+
+    This formulation with regularization corresponds to the version
+    described in the NLINV paper. Without regularization (which is the
+    default) this corresponds to the version from the JSENSE paper but using a
+    truncated Fourier representation of the coils (as in NLINV) instead
+    of polynomials.
 
     Args:
         y (array): k-space measurements.
@@ -238,12 +298,23 @@ class JsenseRecon(sp.app.App):
 
     """
 
-    def __init__(self, y,
-                 mps_ker_width=16, ksp_calib_width=24,
-                 lamda=0, device=sp.cpu_device, comm=None,
-                 weights=None, coord=None, img_shape=None, grd_shape=None,
-                 max_iter=10, max_inner_iter=10, normalize=True,
-                 show_pbar=True):
+    def __init__(
+        self,
+        y,
+        mps_ker_width=16,
+        ksp_calib_width=24,
+        lamda=0,
+        device=sp.cpu_device,
+        comm=None,
+        weights=None,
+        coord=None,
+        img_shape=None,
+        grd_shape=None,
+        max_iter=10,
+        max_inner_iter=10,
+        normalize=True,
+        show_pbar=True,
+    ):
         self.y = y
         self.mps_ker_width = mps_ker_width
         self.ksp_calib_width = ksp_calib_width
@@ -274,11 +345,13 @@ class JsenseRecon(sp.app.App):
             ndim = len(self.img_shape)
 
             self.y = sp.resize(
-                self.y, [self.num_coils] + ndim * [self.ksp_calib_width])
+                self.y, [self.num_coils] + ndim * [self.ksp_calib_width]
+            )
 
             if self.weights is not None:
                 self.weights = sp.resize(
-                    self.weights, ndim * [self.ksp_calib_width])
+                    self.weights, ndim * [self.ksp_calib_width]
+                )
 
         else:
             if self.img_shape is None:
@@ -286,8 +359,9 @@ class JsenseRecon(sp.app.App):
             else:
                 self.img_shape = list(self.img_shape)
 
-            calib_idx = np.amax(np.abs(self.coord), axis=-
-                                1) < self.ksp_calib_width / 2
+            calib_idx = (
+                np.amax(np.abs(self.coord), axis=-1) < self.ksp_calib_width / 2
+            )
 
             self.coord = self.coord[calib_idx]
             self.y = self.y[:, calib_idx]
@@ -317,20 +391,24 @@ class JsenseRecon(sp.app.App):
 
         mps_ker_shape = [self.num_coils] + [self.mps_ker_width] * ndim
         if self.coord is None:
-            img_ker_shape = [i + self.mps_ker_width -
-                             1 for i in self.y.shape[1:]]
+            img_ker_shape = [
+                i + self.mps_ker_width - 1 for i in self.y.shape[1:]
+            ]
         else:
             if self.grd_shape is None:
                 self.grd_shape = sp.estimate_shape(self.coord)
 
-            img_ker_shape = [i + self.mps_ker_width - 1
-                             for i in self.grd_shape]
+            img_ker_shape = [
+                i + self.mps_ker_width - 1 for i in self.grd_shape
+            ]
 
         self.img_ker = sp.dirac(
-            img_ker_shape, dtype=self.dtype, device=self.device)
+            img_ker_shape, dtype=self.dtype, device=self.device
+        )
         with self.device:
             self.mps_ker = self.device.xp.zeros(
-                mps_ker_shape, dtype=self.dtype)
+                mps_ker_shape, dtype=self.dtype
+            )
 
     def _get_alg(self):
         def min_mps_ker():
@@ -338,14 +416,16 @@ class JsenseRecon(sp.app.App):
                 self.mps_ker.shape,
                 self.img_ker,
                 coord=self.coord,
-                weights=self.weights)
+                weights=self.weights,
+            )
             sp.app.LinearLeastSquares(
                 self.A_mps_ker,
                 self.y,
                 self.mps_ker,
                 lamda=self.lamda,
                 max_iter=self.max_inner_iter,
-                show_pbar=False).run()
+                show_pbar=False,
+            ).run()
 
         def min_img_ker():
             self.A_img_ker = linop.ConvSense(
@@ -353,17 +433,20 @@ class JsenseRecon(sp.app.App):
                 self.mps_ker,
                 coord=self.coord,
                 weights=self.weights,
-                comm=self.comm)
+                comm=self.comm,
+            )
             sp.app.LinearLeastSquares(
                 self.A_img_ker,
                 self.y,
                 self.img_ker,
                 lamda=self.lamda,
                 max_iter=self.max_inner_iter,
-                show_pbar=False).run()
+                show_pbar=False,
+            ).run()
 
         self.alg = sp.alg.AltMin(
-            min_mps_ker, min_img_ker, max_iter=self.max_iter)
+            min_mps_ker, min_img_ker, max_iter=self.max_iter
+        )
 
     def _output(self):
         xp = self.device.xp
@@ -373,7 +456,7 @@ class JsenseRecon(sp.app.App):
             mps = np.empty([self.num_coils] + self.img_shape, dtype=self.dtype)
             for c in range(self.num_coils):
                 mps_c = sp.ifft(sp.resize(self.mps_ker[c], self.img_shape))
-                rss += xp.abs(mps_c)**2
+                rss += xp.abs(mps_c) ** 2
                 sp.copyto(mps[c], mps_c)
 
             rss = sp.to_device(rss)
@@ -410,10 +493,19 @@ class EspiritCalib(sp.app.App):
         Magnetic Resonance in Medicine, 71:990-1001 (2014)
 
     """
-    def __init__(self, ksp, calib_width=24,
-                 thresh=0.02, kernel_width=6, crop=0.95,
-                 max_iter=100, device=sp.cpu_device,
-                 output_eigenvalue=False, show_pbar=True):
+
+    def __init__(
+        self,
+        ksp,
+        calib_width=24,
+        thresh=0.02,
+        kernel_width=6,
+        crop=0.95,
+        max_iter=100,
+        device=sp.cpu_device,
+        output_eigenvalue=False,
+        show_pbar=True,
+    ):
         self.device = sp.Device(device)
         self.output_eigenvalue = output_eigenvalue
         self.crop = crop
@@ -431,7 +523,8 @@ class EspiritCalib(sp.app.App):
             # Get calibration matrix.
             # Shape [num_coils] + num_blks + [kernel_width] * img_ndim
             mat = sp.array_to_blocks(
-                calib, [kernel_width] * img_ndim, [1] * img_ndim)
+                calib, [kernel_width] * img_ndim, [1] * img_ndim
+            )
             mat = mat.reshape([num_coils, -1, kernel_width**img_ndim])
             mat = mat.transpose([1, 0, 2])
             mat = mat.reshape([-1, num_coils * kernel_width**img_ndim])
@@ -443,21 +536,24 @@ class EspiritCalib(sp.app.App):
             # Get kernels
             num_kernels = len(VH)
             kernels = VH.reshape(
-                [num_kernels, num_coils] + [kernel_width] * img_ndim)
+                [num_kernels, num_coils] + [kernel_width] * img_ndim
+            )
             img_shape = ksp.shape[1:]
 
             # Get covariance matrix in image domain
-            AHA = xp.zeros(img_shape[::-1] + (num_coils, num_coils),
-                           dtype=ksp.dtype)
+            AHA = xp.zeros(
+                img_shape[::-1] + (num_coils, num_coils), dtype=ksp.dtype
+            )
             for kernel in kernels:
-                img_kernel = sp.ifft(sp.resize(kernel, ksp.shape),
-                                     axes=range(-img_ndim, 0))
+                img_kernel = sp.ifft(
+                    sp.resize(kernel, ksp.shape), axes=range(-img_ndim, 0)
+                )
                 aH = xp.expand_dims(img_kernel.T, axis=-1)
                 a = xp.conj(aH.swapaxes(-1, -2))
                 AHA += aH @ a
 
-            AHA *= (sp.prod(img_shape) / kernel_width**img_ndim)
-            self.mps = xp.ones(ksp.shape[::-1] + (1, ), dtype=ksp.dtype)
+            AHA *= sp.prod(img_shape) / kernel_width**img_ndim
+            self.mps = xp.ones(ksp.shape[::-1] + (1,), dtype=ksp.dtype)
 
             def forward(x):
                 with sp.get_device(x):
@@ -465,12 +561,13 @@ class EspiritCalib(sp.app.App):
 
             def normalize(x):
                 with sp.get_device(x):
-                    return xp.sum(xp.abs(x)**2,
-                                  axis=-2, keepdims=True)**0.5
+                    return (
+                        xp.sum(xp.abs(x) ** 2, axis=-2, keepdims=True) ** 0.5
+                    )
 
             alg = sp.alg.PowerMethod(
-                forward, self.mps, norm_func=normalize,
-                max_iter=max_iter)
+                forward, self.mps, norm_func=normalize, max_iter=max_iter
+            )
 
         super().__init__(alg, show_pbar=show_pbar)
 

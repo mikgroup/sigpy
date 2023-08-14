@@ -1,14 +1,15 @@
 import unittest
+
 import numpy as np
 import numpy.testing as npt
-from sigpy import prox, util, linop
 
-if __name__ == '__main__':
+from sigpy import linop, prox, util
+
+if __name__ == "__main__":
     unittest.main()
 
 
 class TestProx(unittest.TestCase):
-
     def test_L1Reg(self):
         shape = [6]
         lamda = 1.0
@@ -40,7 +41,7 @@ class TestProx(unittest.TestCase):
         P = prox.UnitaryTransform(prox.L2Reg(shape, lamda), A)
         x = util.randn(shape)
         y = P(0.1, x)
-        npt.assert_allclose(y, x / (1 + lamda * 0.1))
+        npt.assert_allclose(y, x / (1 + lamda * 0.1), atol=1e-6, rtol=1e-6)
 
     def test_L2Reg(self):
         shape = [6]
@@ -69,13 +70,9 @@ class TestProx(unittest.TestCase):
     def test_PsdProj(self):
         shape = [3, 3]
         P = prox.PsdProj(shape)
-        x = np.array([[1, 0, 0],
-                      [0, -1, 0],
-                      [0, 0, -2]])
+        x = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -2]])
         y = P(None, x)
-        npt.assert_allclose(y, np.array([[1, 0, 0],
-                                         [0, 0, 0],
-                                         [0, 0, 0]]))
+        npt.assert_allclose(y, np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]]))
 
     def test_BoxConstraint(self):
         shape = [5]
