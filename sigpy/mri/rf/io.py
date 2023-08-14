@@ -90,7 +90,6 @@ def signa(wav, filename, scale=-1):
     wmax = int("7ffe", 16)
 
     if not np.iscomplexobj(wav):
-
         if scale == -1:
             scale = 1 / np.max(np.abs(wav))
 
@@ -108,7 +107,6 @@ def signa(wav, filename, scale=-1):
         fid.close()
 
     else:
-
         if scale == -1:
             scale = 1 / np.max(
                 (np.max(np.abs(np.real(wav))), np.max(np.abs(np.imag(wav))))

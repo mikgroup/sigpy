@@ -52,7 +52,6 @@ def PtxSpatialExplicit(sens, coord, dt, img_shape, b0=None, ret_array=False):
             img_shape[1] / 2, -(img_shape[1] - img_shape[1] / 2), img_shape[1]
         )
         if three_d:
-
             z_ = xp.linspace(
                 -img_shape[2] / 2,
                 img_shape[2] - img_shape[2] / 2,

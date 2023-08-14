@@ -70,16 +70,13 @@ def phantom(shape, amps, scales, offsets, angles, dtype):
     """
 
     if len(shape) == 2:
-
         ndim = 2
         shape = (1, shape[-2], shape[-1])
 
     elif len(shape) == 3:
-
         ndim = 3
 
     else:
-
         raise ValueError("Incorrect dimension")
 
     out = np.zeros(shape, dtype=dtype)
@@ -99,15 +96,12 @@ def phantom(shape, amps, scales, offsets, angles, dtype):
     )
 
     for amp, scale, offset, angle in zip(amps, scales, offsets, angles):
-
         ellipsoid(amp, scale, offset, angle, coords, out)
 
     if ndim == 2:
-
         return out[0, :, :]
 
     else:
-
         return out
 
 

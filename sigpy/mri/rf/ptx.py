@@ -127,7 +127,6 @@ def stspa(
 
         # perform the design: apply optimization method to find solution pulse
         while not alg_method.done():
-
             # phase_update switch
             if (alg_method.iter > 0) and (
                 alg_method.iter % phase_update_interval == 0
@@ -219,7 +218,6 @@ def stspk(
         phs = xp.zeros((xp.count_nonzero(mask), 1), dtype=xp.complex64)
 
         for ii in range(n_spokes):
-
             # build Afull (and take only 0 locations into matrix)
             Anum = rf.PtxSpatialExplicit(
                 sens, k, gts, mask.shape, ret_array=True
@@ -250,7 +248,6 @@ def stspk(
 
             # add a spoke using greedy method
             if ii < n_spokes - 1:
-
                 r = xp.exp(1j * phs) - Anum @ w_full
                 rfnorm = xp.zeros(kxs.shape, dtype=xp.complex64)
 

@@ -62,7 +62,6 @@ def mb_phs_tab(n_bands, phs_type="phs_mod"):
     # Return phases to minimize peak b1 amplitude of an MB pulse
 
     if phs_type == "phs_mod":
-
         if n_bands < 3 or n_bands > 16:
             raise Exception("Wongs phases valid for 2 < nBands < 17.")
 
@@ -183,7 +182,6 @@ def mb_phs_tab(n_bands, phs_type="phs_mod"):
         out = p[n_bands - 3, 0:n_bands]
 
     elif phs_type == "amp_mod":
-
         # Malik's Hermitian phases: From S J Malik, ISMRM 2015, p. 2398
         if n_bands < 4 or n_bands > 12:
             raise Exception("Maliks phases valid for 3 < nBands < 13.")
@@ -248,7 +246,6 @@ def mb_phs_tab(n_bands, phs_type="phs_mod"):
         out = p[n_bands - 4, 0:n_bands]
 
     elif phs_type == "quad_mod":
-
         # Grissom's quadratic phases (unpublished)
         k = 3.4 / n_bands  # quadratic phase coefficient
         out = k * (np.arange(0, n_bands, 1) - (n_bands - 1) / 2) ** 2
@@ -273,7 +270,6 @@ def dz_pins(
     d2=0.01,
     gambar=4258,
 ):
-
     r"""PINS multiband pulse design.
 
     Args:

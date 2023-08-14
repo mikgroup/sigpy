@@ -55,7 +55,6 @@ class TestPtx(unittest.TestCase):
         return target, sens
 
     def test_stspa_radial(self):
-
         target, sens = self.problem_2d(8)
 
         # makes dim*dim*2 trajectory
@@ -87,7 +86,6 @@ class TestPtx(unittest.TestCase):
         npt.assert_array_almost_equal(A * pulses, target, 1e-3)
 
     def test_stspa_spiral(self):
-
         target, sens = self.problem_2d(8)
 
         fov = 0.55
@@ -197,7 +195,6 @@ class TestPtx(unittest.TestCase):
         npt.assert_array_almost_equal(A * pulses, target, 1e-3)
 
     def test_spokes(self):
-
         # spokes problem definition:
         dim = 20  # size of the b1 matrix loaded
         n_spokes = 5

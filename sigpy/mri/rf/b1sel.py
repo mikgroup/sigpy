@@ -105,7 +105,6 @@ def dz_b1_rf(
         h = np.imag(np.linalg.pinv(AtA) @ Atd)
 
     else:  # normal design
-
         # design filter
         h = slr.dzls(n, tb, d1, d2)
 

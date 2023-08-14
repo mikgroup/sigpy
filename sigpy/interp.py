@@ -253,7 +253,6 @@ def _get_interpolate(kernel):
             x1 = np.floor(kx + width[-1] / 2)
 
             for x in range(x0, x1 + 1):
-
                 w = kernel((x - kx) / (width[-1] / 2), param[-1])
 
                 for b in range(batch_size):
@@ -263,7 +262,6 @@ def _get_interpolate(kernel):
 
     @nb.jit(nopython=True)  # pragma: no cover
     def _interpolate2(output, input, coord, width, param):
-
         batch_size, ny, nx = input.shape
         npts = coord.shape[0]
 
@@ -381,7 +379,6 @@ def _get_gridding(kernel):
         npts = coord.shape[0]
 
         for i in range(npts):
-
             kx, ky, kz = coord[i, -1], coord[i, -2], coord[i, -3]
 
             x0, y0, z0 = (

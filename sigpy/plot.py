@@ -198,7 +198,6 @@ class ImagePlot(object):
             and self.d not in [self.x, self.y, self.z]
             and self.shape[self.d] == 3
         ):
-
             if self.d == self.c:
                 self.c = None
             else:
@@ -408,7 +407,6 @@ class ImagePlot(object):
             "9",
             "backspace",
         ] and self.d not in [self.x, self.y, self.z, self.c]:
-
             if self.entering_slice:
                 if event.key == "backspace":
                     if self.entered_slice < 10:
@@ -534,11 +532,9 @@ class ImagePlot(object):
         self.help_text.set_visible(self.show_help)
 
     def update_axes(self):
-
         if not self.hide_axes:
             caption = "["
             for i in range(self.ndim):
-
                 if i == self.d:
                     caption += "["
                 else:
@@ -582,7 +578,6 @@ class ImagePlot(object):
 
 
 def mosaic_shape(batch):
-
     mshape = [int(batch**0.5), batch // int(batch**0.5)]
 
     while sp.prod(mshape) < batch:
@@ -712,7 +707,6 @@ class LinePlot(object):
             self.fig.canvas.draw()
 
         elif event.key == "down":
-
             if self.d != self.x:
                 self.slices[self.d] = (self.slices[self.d] - 1) % self.shape[
                     self.d
@@ -725,21 +719,18 @@ class LinePlot(object):
             self.fig.canvas.draw()
 
         elif event.key == "left":
-
             self.d = (self.d - 1) % self.ndim
 
             self.update_axes()
             self.fig.canvas.draw()
 
         elif event.key == "right":
-
             self.d = (self.d + 1) % self.ndim
 
             self.update_axes()
             self.fig.canvas.draw()
 
         elif event.key == "x" and self.d != self.x:
-
             self.x = self.d
 
             self.update_axes()
@@ -762,7 +753,6 @@ class LinePlot(object):
             or event.key == "i"
             or event.key == "l"
         ):
-
             self.mode = event.key
             self.bottom = None
             self.top = None
@@ -889,7 +879,6 @@ class LinePlot(object):
         return
 
     def update_line(self):
-
         order = [i for i in range(self.ndim) if i != self.x] + [self.x]
         idx = tuple(
             [self.slices[i] for i in order[:-1]]
@@ -925,11 +914,9 @@ class LinePlot(object):
             self.ax.set_ylim(self.bottom, self.top)
 
     def update_axes(self):
-
         if not self.hide_axes:
             caption = "Slice: ["
             for i in range(self.ndim):
-
                 if i == self.d:
                     caption += "["
                 else:
@@ -1222,7 +1209,6 @@ class ScatterPlot(object):
             in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "backspace"]
             and self.d != self.z
         ):
-
             if self.entering_slice:
                 if event.key == "backspace":
                     if self.entered_slice < 10:
@@ -1254,7 +1240,6 @@ class ScatterPlot(object):
             return
 
     def update_data(self):
-
         idx = []
         for i in range(self.ndim):
             if i == self.z:
@@ -1311,11 +1296,9 @@ class ScatterPlot(object):
             self.axsc.set_color(datav)
 
     def update_axes(self):
-
         if not self.hide_axes:
             caption = "["
             for i in range(self.ndim):
-
                 if i == self.d:
                     caption += "["
                 else:

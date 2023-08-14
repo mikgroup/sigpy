@@ -264,7 +264,6 @@ def toeplitz_psf(coord, shape, oversamp=1.25, width=4):
 
 
 def _fftc(input, oshape=None, axes=None, norm="ortho"):
-
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
     xp = backend.get_array_module(input)

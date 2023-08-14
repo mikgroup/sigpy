@@ -11,7 +11,6 @@ if __name__ == "__main__":
 
 class TestMultiband(unittest.TestCase):
     def test_multiband(self):
-
         # slr pulse
         tb = 8
         N = 512
@@ -37,7 +36,6 @@ class TestMultiband(unittest.TestCase):
         npt.assert_almost_equal(abs(pts), np.array([1, 0, 1, 0, 1]), decimal=2)
 
     def test_pins(self):
-
         # pins pulse specs
         tb = 8
         d1 = 0.01

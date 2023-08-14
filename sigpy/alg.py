@@ -855,7 +855,6 @@ class GerchbergSaxton(Alg):
     """
 
     def __init__(self, A, y, x0, max_iter=500, tol=0, max_tol=0, lamb=0):
-
         self.A = A
         self.Aholder = A
         self.y = y
@@ -871,7 +870,6 @@ class GerchbergSaxton(Alg):
         device = backend.get_device(self.y)
         xp = device.xp
         with device:
-
             y_hat = self.y * xp.exp(1j * xp.angle(self.A * self.x))
             system = self.A.H * self.A + self.lamb * sp.linop.Identity(
                 self.A.ishape
