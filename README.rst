@@ -4,9 +4,6 @@ SigPy
 .. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
 	:target: https://opensource.org/licenses/BSD-3-Clause
 	   
-.. image:: https://travis-ci.com/mikgroup/sigpy.svg?branch=master
-	:target: https://travis-ci.com/mikgroup/sigpy
-	   
 .. image:: https://readthedocs.org/projects/sigpy/badge/?version=latest
 	:target: https://sigpy.readthedocs.io/en/latest/?badge=latest
 	:alt: Documentation Status
