@@ -12,7 +12,7 @@ class TestDCE(unittest.TestCase):
     def test_dce(self):
 
         # %% DCE Sample Time
-        acq_time = 10 # total acquisition time
+        acq_time = 10 # total acquisition time (minute)
         temp_res = 12 # frames per minute
 
         frames = acq_time * temp_res + 1
