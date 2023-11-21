@@ -13,7 +13,7 @@ from sigpy.mri.dims import *
 
 
 # %%
-def _denoising(input, full_img_shape=None, max_iter=5):
+def _denoising(input, full_img_shape=None, use_iter=True, max_iter=5):
     """
     Args:
         input: acs images
@@ -38,8 +38,13 @@ def _denoising(input, full_img_shape=None, max_iter=5):
                            oshape=list(input.shape[:-2])
                            + list(full_img_shape))
 
-        for m in range(max_iter):
-            k_full = H_full * k_full
+
+        if use_iter:
+            for m in range(max_iter):
+                k_full = H_full * k_full
+        else:
+            k_full = H_full**max_iter * k_full
+
 
         img = sp.ifft(k_full, axes=[-2, -1])
 
