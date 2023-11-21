@@ -283,7 +283,8 @@ class ConjugateGradient(Alg):
 
             if self.verbose:
                 print("  cg iter: " + "%2d" % (self.iter)
-                      + "; resid: " + "%13.6f" % (self.resid))
+                      + "; resid: " + "%13.6f" % (self.resid)
+                      + "; norm: " + "%13.6f" % (xp.linalg.norm(self.x.flatten())))
 
     def _done(self):
         return (
