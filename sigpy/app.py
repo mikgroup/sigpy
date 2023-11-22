@@ -8,7 +8,7 @@ import time
 from tqdm.auto import tqdm
 
 from sigpy import backend, linop, prox, util
-from sigpy.alg import (PowerMethod, GradientMethod, ADMM, IRGNM,
+from sigpy.alg import (PowerMethod, GradientMethod, ADMM, NonLinearLeastSquares,
                        ConjugateGradient, PrimalDualHybridGradient)
 
 import numpy as np
