@@ -377,10 +377,12 @@ class LLRL1Reg(Prox):
     def __init__(self, shape, lamda, randshift=True,
                  blk_shape=(8, 8), blk_strides=(8, 8),
                  reg_magnitude=False,
+                 normalization=False,
                  verbose=False):
         self.lamda = lamda
         self.randshift = randshift
         self.reg_magnitude = reg_magnitude
+        self.normalization = normalization
 
         assert len(blk_shape) == len(blk_strides)
         self.blk_shape = blk_shape
@@ -416,7 +418,14 @@ class LLRL1Reg(Prox):
             output = self.Fwd(mag)
 
             u, s, vh = xp.linalg.svd(output, full_matrices=False)
+
+            if self.normalization is True:
+                s = s / self.blk_shape[-1]
+
             s_thresh = thresh.soft_thresh(self.lamda * alpha, s)
+
+            if self.normalization is True:
+                s_thresh = s_thresh * self.blk_shape[-1]
 
             output = (u * s_thresh[..., None, :]) @ vh
 
