@@ -4,7 +4,7 @@ git clone https://github.com/ZhengguoTan/sigpy.git sigpy_github
 
 cd sigpy_github
 
-conda create -n sigpy_github
+conda create -n sigpy_github python=3.10
 conda activate sigpy_github
 
 conda install -c anaconda pip
