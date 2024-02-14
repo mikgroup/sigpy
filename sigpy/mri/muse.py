@@ -96,7 +96,7 @@ def sms_sense_linop(kdat, coils, yshift, phase_echo=None):
     return W * M * F * S * P
 
 
-def sms_sense_solve(A, y, lamda=0.01, tol=0, max_iter=30):
+def sms_sense_solve(A, y, lamda=0.01, tol=0, max_iter=30, verbose=False):
 
     device = backend.get_device((y))
     xp = device.xp
@@ -107,7 +107,7 @@ def sms_sense_solve(A, y, lamda=0.01, tol=0, max_iter=30):
     img = xp.zeros(A.ishape, dtype=y.dtype)
     alg_method = sp.alg.ConjugateGradient(AHA, AHy, img,
                             tol=tol,
-                            max_iter=max_iter, verbose=True)
+                            max_iter=max_iter, verbose=verbose)
 
     while (not alg_method.done()):
         alg_method.update()
@@ -119,7 +119,7 @@ def sms_sense_solve(A, y, lamda=0.01, tol=0, max_iter=30):
 def MuseRecon(y, coils, MB=1, acs_shape=[64, 64],
               lamda=0.001, max_iter=80, tol=0,
               use_readout_extend_fov=False, yshift=None,
-              device=sp.cpu_device):
+              device=sp.cpu_device, verbose=False):
     """
     MUSE is a novel method to reconstruct one diffusion-weighted image (DWI)
     from multi-shot EPI acquisition. It consists of the following steps:
@@ -267,7 +267,7 @@ def MuseRecon(y, coils, MB=1, acs_shape=[64, 64],
                     A = sms_sense_linop(ksp, mps_acs_slice, yshift)
 
                     img = sms_sense_solve(A, ksp, lamda=5E-5, tol=0,
-                                          max_iter=max_iter)
+                                          max_iter=max_iter, verbose=verbose)
 
                     img_acs_shots.append(img)
 
@@ -287,7 +287,7 @@ def MuseRecon(y, coils, MB=1, acs_shape=[64, 64],
                 A = sms_sense_linop(ksp, mps, yshift, phase_echo=phs_shots)
 
                 img = sms_sense_solve(A, ksp, lamda=lamda, tol=tol,
-                                      max_iter=max_iter)
+                                      max_iter=max_iter, verbose=verbose)
 
                 R_muse.append(sp.to_device(img))
 
