@@ -177,7 +177,7 @@ def MuseRecon(y, coils, MB=1, acs_shape=[64, 64],
         import torchvision.transforms as T
 
         coils_tensor = sp.to_pytorch(coils)
-        TR = T.Resize(acs_shape)
+        TR = T.Resize(acs_shape, antialias=True)
         mps_acs_r = TR(coils_tensor[..., 0]).cpu().detach().numpy()
         mps_acs_i = TR(coils_tensor[..., 1]).cpu().detach().numpy()
         mps_acs = mps_acs_r + 1j * mps_acs_i
