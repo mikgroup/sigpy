@@ -51,9 +51,9 @@ def map_acquire_to_ordered_slice_idx(acq_slice_idx,
         ord_slice_idx.append(so)
 
     # need this when MB=3 and N_slices_uncollap=141
-    if (acq_slice_idx != N_slices_collap_half) or (N_band % 2 == 0):
+    # if (acq_slice_idx != N_slices_collap_half) or (N_band % 2 == 0):
         # and (N_band % 2) and (N_slices_uncollap % 2)
-        ord_slice_idx.sort()
+    ord_slice_idx.sort()
 
     if verbose is True:
         print('acquired slice: ' + str(acq_slice_idx).zfill(3)
