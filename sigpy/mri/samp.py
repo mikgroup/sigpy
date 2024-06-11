@@ -186,7 +186,7 @@ def _poisson(nx, ny, max_attempts, radius_x, radius_y, calib, seed=None):
     pxs[0] = np.random.randint(0, nx)
     pys[0] = np.random.randint(0, ny)
     num_actives = 1
-    while num_actives > 0:
+    while nx * ny > num_actives > 0:
         i = np.random.randint(0, num_actives)
         px = pxs[i]
         py = pys[i]
@@ -220,6 +220,9 @@ def _poisson(nx, ny, max_attempts, radius_x, radius_y, calib, seed=None):
                         ):
                             done = False
                             break
+                    else:
+                        continue
+                    break
 
             k += 1
 
