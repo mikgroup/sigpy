@@ -142,3 +142,22 @@ class TestLinop(unittest.TestCase):
                 A.H(ksp[comm.rank :: comm.size]),
                 np.sum(sp.ifft(ksp, axes=[-1, -2]) * mps.conjugate(), 0),
             )
+
+    def test_sense_subspace_model(self):
+        basis_shape = [80, 5]
+        img_shape = [5, 1, 16, 16]
+        mps_shape = [8, 16, 16]
+
+        basis = sp.randn(basis_shape, dtype=complex)
+        img = sp.randn(img_shape, dtype=complex)
+        mps = sp.randn(mps_shape, dtype=complex)
+
+        A = linop.Sense(mps, basis=basis)
+
+        check_linop_adjoint(A, dtype=complex)
+
+        full_img = basis @ np.reshape(img, (5, -1))
+        full_img = np.reshape(full_img, [80] + img_shape[1:])
+
+        npt.assert_allclose(sp.fft(full_img * mps, axes=[-1, -2]),
+                            A * img)
