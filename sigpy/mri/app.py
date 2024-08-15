@@ -2,13 +2,14 @@
 """MRI applications.
 """
 import numpy as np
-
 import sigpy as sp
-from sigpy.mri import linop
+
+from sigpy.mri import linop, nlop
 from sigpy.mri.dims import *
 
 __all__ = ['SenseRecon', 'L1WaveletRecon', 'TotalVariationRecon',
-           'JsenseRecon', 'EspiritCalib', 'HighDimensionalRecon']
+           'JsenseRecon', 'EspiritCalib', 'HighDimensionalRecon',
+           'ModelDiffRecon']
 
 
 def _estimate_weights(y, weights, coord, coil_dim=0):
@@ -913,3 +914,108 @@ class HighDimensionalRecon(sp.app.LinearLeastSquares):
             if (i1 != i2):
                 raise ValueError('shape mismatch for ref {ref}, got {dst}'.format(
                     ref=ref_shape, dst=dst_shape))
+
+
+class ModelDiffRecon(sp.app.NonLinearLeastSquares):
+    r"""Model-based Diffusion Reconstruction.
+
+    Consider the problem
+
+    .. math::
+        \min_x \frac{1}{2} \| P F S B x - y \|_2^2 +
+        \frac{\lambda}{2} R(x)
+
+    where P is the sampling operator,
+    F is the Fourier transform operator,
+    S is the SENSE operator (multiplication with coil sensitivity maps),
+    B is the non-linear diffusion model,
+    x is the diffusion model parameters, [b0, DTI or DKI], and
+    y is the k-space measurements.
+
+    Therefore, The operation B x outputs
+    non-diffusion-weighted image (b0) and
+    diffusion-weighted images (DWI).
+
+    Args:
+        y (array): Observation.
+        image_shape (list): Shape of Solution.
+        coil (array): Coil sensitivity maps.
+        coil_dim (int): Dimension of coil sensitivity in y.
+        coord (array): Sampling trajectory.
+        x (array): Solution.
+        x0 (array): Bias for regularization.
+        dwi_phase (array): Phase of diffusion weighted images.
+        weights (array): Sampling pattern.
+        encode_matrix (array): Diffusion encoding matrix (B).
+        max_iter (int): Maximum number of iterations.
+        lamda (float): Regularization strength (\rho in ADMM).
+        redu (float): Reduction factor along iterations.
+        gn_iter (int): Gauss-Newton iterations.
+        inner_iter (int): Inner iterations.
+        inner_tol (float): Inner tolerance.
+        G (None or Linop): Regularization linear operator.
+        proxg (None or Prox): Proximal operator for regularization.
+        device (Device): Use CPU or GPU.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+
+    References:
+        Welsh C. L., DiBella E. V. R., Adluru G., Hsu E. W. (2013).
+        Model-based reconstruction of undersampled diffusion tensor k-space data.
+        Magn. Reson. Med., 70, 429-440.
+
+        Knoll F., Raya J. G., Halloran R. O., Baete S., Sigmund E., Bammer R., Block K. T., Otazo R., Sodickson D. K. (2015).
+        A model-based reconstruction for undersampled radial spin-echo DTI with variational penalties on the diffusion tensor.
+        Magn. Reson. Med., 28, 353-366.
+
+        Dong Z., Dai E., Wang F., Zhang Z., Ma X., Yuan C., Guo H. (2018).
+        Model-based reconstruction for simultaneous multislice and parallel imaging accelerated multishot DTI.
+        Med. Phys., 45, 3196-3204.
+
+    """
+    def __init__(self, y, image_shape,
+                 coil=None, coil_dim=-3, coord=None,
+                 x=None, x0=None,
+                 dwi_phase=None, weights=None,
+                 encode_matrix=None,
+                 max_iter=6, lamda=1, redu=2,
+                 gn_iter=6, inner_iter=100, inner_tol=0.01,
+                 G=None, proxg=None,
+                 device=sp.cpu_device,
+                 **kwargs):
+
+        y = sp.to_device(y, device=device)
+
+        xp = device.xp
+
+        with device:
+            weights = _estimate_weights(y, weights, coord, coil_dim=coil_dim)
+
+        A = nlop.Diffusion(image_shape, encode_matrix, coil,
+                           dwi_phase=dwi_phase, weights=weights)
+
+        if x is None:
+            with device:
+                x_b0 = xp.ones([1] + list(image_shape[1:]), dtype=y.dtype) * 1E-5
+                x_D = xp.zeros([image_shape[0]-1] + list(image_shape[1:]), dtype=y.dtype)
+                x = xp.concatenate((x_b0, x_D))
+        else:
+            with device:
+                x = sp.to_device(x, device=device)
+
+        if x0 is None:
+            with device:
+                x0 = 0.9 * x
+        else:
+            with device:
+                x0 = sp.to_device(x0, device=device)
+
+        super().__init__(A, y, x=x, x0=x0,
+                         max_iter=max_iter,
+                         lamda=lamda, redu=redu,
+                         gn_iter=gn_iter,
+                         inner_iter=inner_iter,
+                         inner_tol=inner_tol,
+                         G=G, proxg=proxg,
+                         **kwargs)
