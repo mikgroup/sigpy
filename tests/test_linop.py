@@ -16,6 +16,7 @@ if config.cupy_enabled:
 
 
 class TestLinop(unittest.TestCase):
+
     def check_linop_unitary(self, A, device=backend.cpu_device, dtype=float):
         device = backend.Device(device)
         x = util.randn(A.ishape, dtype=dtype, device=device)
@@ -577,3 +578,21 @@ class TestLinop(unittest.TestCase):
         self.check_linop_adjoint(A)
         self.check_linop_normal(A)
         self.check_linop_pickleable(A)
+
+    def test_RealValueConstraint(self):
+        for device in devices:
+            xp = device.xp
+
+            data = util.randn([6, 6], dtype=complex, device=device)
+
+            RVC = linop.RealValueConstraint(data.shape)
+
+            y1 = RVC(data)
+            y2 = xp.real(data).astype(complex)
+
+            npt.assert_allclose(y1, y2)
+
+            # self.check_linop_linear(A)
+            # self.check_linop_adjoint(A)
+            # self.check_linop_normal(A)
+            # self.check_linop_pickleable(A)

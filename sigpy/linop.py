@@ -2188,3 +2188,31 @@ class Sobolev(Linop):
 
     def _adjoint_linop(self):
         return (self.F * self.S).H
+
+
+class RealValueConstraint(Linop):
+    """real-value constraint linear operator.
+
+    Returns real-value input directly.
+
+    Args:
+        shape (tuple of ints): Input shape
+
+    """
+
+    def __init__(self, shape):
+        super().__init__(shape, shape)
+
+    def _apply(self, input):
+        device = backend.get_device(input)
+        xp = device.xp
+        with device:
+            output = xp.real(input).astype(complex)
+
+        return output
+
+    def _adjoint_linop(self):
+        return self
+
+    def _normal_linop(self):
+        return self
