@@ -53,7 +53,6 @@ def Sense(
             ishape = [basis.shape[-1]] + [1] + list(mps.shape[-2:])
 
     # Serialize linop if coil_batch_size is smaller than num_coils.
-    num_coils = len(mps)
     if coil_batch_size is None:
         coil_batch_size = num_coils
 
