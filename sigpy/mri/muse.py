@@ -55,7 +55,8 @@ def _denoising(input, full_img_shape=None, use_iter=True, max_iter=5):
     return img, phs
 
 
-def sms_sense_linop(kdat, coils, yshift, phase_echo=None):
+def sms_sense_linop(kdat, coils, yshift, phase_echo=None,
+                    real_value_constraint=False):
 
     device = backend.get_device(kdat)
     assert (device == backend.get_device(coils))
@@ -67,6 +68,11 @@ def sms_sense_linop(kdat, coils, yshift, phase_echo=None):
     phase_sms = sms.get_sms_phase_shift([Nz, Ny, Nx], Nz, yshift=yshift)
 
     img_shape = [1, Nz, Ny, Nx]
+
+    if real_value_constraint is True:
+        RVC = sp.linop.RealValueConstraint(img_shape)
+    else:
+        RVC = sp.linop.Identity(img_shape)
 
     if phase_echo is not None:
 
@@ -93,7 +99,7 @@ def sms_sense_linop(kdat, coils, yshift, phase_echo=None):
 
     W = sp.linop.Multiply(M.oshape, weights**0.5)
 
-    return W * M * F * S * P
+    return W * M * F * S * P * RVC
 
 
 def sms_sense_solve(A, y, lamda=0.01, tol=0, max_iter=30, verbose=False):
@@ -119,6 +125,7 @@ def sms_sense_solve(A, y, lamda=0.01, tol=0, max_iter=30, verbose=False):
 def MuseRecon(y, coils, MB=1, acs_shape=[64, 64],
               lamda=0.001, max_iter=80, tol=0,
               use_readout_extend_fov=False, yshift=None,
+              real_value_constraint=False,
               device=sp.cpu_device, verbose=False):
     """
     MUSE is a novel method to reconstruct one diffusion-weighted image (DWI)
@@ -284,7 +291,8 @@ def MuseRecon(y, coils, MB=1, acs_shape=[64, 64],
                 ksp = ksp[..., None, :, :]
                 mps = coils[:, slice_idx, ...]
 
-                A = sms_sense_linop(ksp, mps, yshift, phase_echo=phs_shots)
+                A = sms_sense_linop(ksp, mps, yshift, phase_echo=phs_shots,
+                                    real_value_constraint=real_value_constraint)
 
                 img = sms_sense_solve(A, ksp, lamda=lamda, tol=tol,
                                       max_iter=max_iter, verbose=verbose)
