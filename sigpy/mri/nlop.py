@@ -13,6 +13,9 @@ Author: Zhengguo Tan <zhengguo.tan@gmail.com>
 """
 import sigpy as sp
 
+from sigpy import nlop
+from sigpy.mri import linop
+
 
 class Nlinv(sp.nlop.Nlop):
     """
@@ -147,3 +150,52 @@ class Nlinv(sp.nlop.Nlop):
                 output[1:, :, :] = self.W.H(xp.conj(image) * dcoilimg)
 
             return output
+
+
+# class Diffusion(sp.nlop.Nlop):
+def Diffusion(input_shape, diff_enc, coil,
+              scale=None, rvc=False, dwi_phase=None,
+              coord=None, weights=None):
+    """
+    Construction of the non-linear Diffusion operator.
+
+    Given the unknown x = D
+    , where
+        D: diffusion tensor,
+
+    the forward operation is,
+
+        A(x) = E * P, and E = F * S
+
+    , where
+        E (linop): the SENSE linear operator,
+        F (linop): k-space sampling operator,
+        S (linop): multiply with coil sensitivity maps, and
+        P (nlop): exponential diffusion model.
+
+    Args:
+        input_shape (tuple): shape of input images.
+        diff_enc (array): diffusion encoding matrix,
+        i.e. the output matrix from sp.mri.epi.get_B().
+        coil (array): coil sensitivity maps.
+        coord (None or array): coordinates, i.e. trajectories.
+    """
+    const_b0 = True if input_shape[0] == 6 or input_shape[0] == 21 else False
+
+    P = nlop.Exponential(input_shape, diff_enc,
+                         const_a=const_b0, rvc=rvc, scale=scale)
+
+    # phase correction for every diffusion-weighted image
+    if dwi_phase is not None:
+        I = sp.linop.Multiply(P.oshape, dwi_phase)
+    else:
+        I = sp.linop.Identity(P.oshape)
+
+    # parallel imaging forward model (Sense)
+    E = linop.Sense(coil, ishape=P.oshape, coord=coord, weights=weights)
+
+    # Compose (i.e. Chain) Sense linop with Diffusion nlop
+    A = E * I * P
+    A.repr_str = 'Diffusion'
+
+    return A

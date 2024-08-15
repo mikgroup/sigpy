@@ -1,8 +1,10 @@
 import unittest
 import numpy.testing as npt
-from sigpy import backend, config, linop, util
+from sigpy import backend, config, fourier, linop, util
 
 from sigpy.mri import nlop
+
+import sigpy as sp
 
 if __name__ == '__main__':
     unittest.main()
@@ -61,3 +63,30 @@ class TestNlop(unittest.TestCase):
             npt.assert_allclose(backend.to_device(dx2),
                                 backend.to_device(dx1),
                                 err_msg='adjoint operator!')
+
+    def test_diffusion_model(self):
+        for device in devices:
+            xp = device.xp
+
+            # Exponential
+            tvec = util.randn((15, 6), dtype=float, device=device)
+            b0 = util.randn((1, 1, 3, 3), dtype=complex, device=device)
+            D = util.randn((6, 1, 3, 3), dtype=complex, device=device)
+            x = xp.concatenate((b0, D))
+
+            Dr = xp.reshape(D, (D.shape[0], -1))
+            y1 = xp.exp(xp.matmul(tvec, Dr))
+            y1 = xp.reshape(y1, (15, 1, 3, 3))
+            y1 *= b0
+
+            # Sense
+            coils = util.randn((8, 3, 3), dtype=complex, device=device)
+
+            y2 = fourier.fft(coils * y1, axes=(-2, -1))
+
+            A = nlop.Diffusion(x.shape, tvec, coils)
+            y = A(x)
+
+            npt.assert_allclose(backend.to_device(y),
+                                backend.to_device(y2),
+                                err_msg='Diffusion model mismatch!')
