@@ -18,7 +18,7 @@ class TestNlop(unittest.TestCase):
 
     def check_nlop_derivative(self, A,
                               device=backend.cpu_device,
-                              dtype=np.float):
+                              dtype=float):
         device = backend.Device(device)
 
         scale = 1e-8
@@ -34,7 +34,7 @@ class TestNlop(unittest.TestCase):
                                 atol=1e-5,
                                 err_msg=A.repr_str + ' derivative operator!')
 
-    def check_nlop_adjoint(self, A, device=backend.cpu_device, dtype=np.float):
+    def check_nlop_adjoint(self, A, device=backend.cpu_device, dtype=float):
         device = backend.Device(device)
         x = util.randn(A.ishape, dtype=dtype, device=device)
 
