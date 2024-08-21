@@ -330,3 +330,19 @@ def get_KT(D, B=None):
     MD = get_MD(eigvals)
 
     return DK / (MD**2)
+
+
+def get_ADC(D):
+    """Compute the apparent diffusion coefficient (ADC) map
+
+    Args:
+        D (array): diffusion tensor
+
+    Output:
+        ADC (array): ADC map
+    """
+    Dxx = D[0, ...]
+    Dyy = D[2, ...]
+    Dzz = D[5, ...]
+
+    return (Dxx + Dyy + Dzz) / 3
