@@ -27,7 +27,8 @@ class TestAlg(unittest.TestCase):
         A, x = self.Ax_setup(n)
         x_hat = np.random.random([n, 1])
         alg_method = alg.PowerMethod(lambda x: A.T @ A @ x, x_hat)
-        while not alg_method.done():
+
+        while (not alg_method.done()):
             alg_method.update()
 
         s_numpy = np.linalg.svd(A, compute_uv=False)[0]
@@ -66,7 +67,7 @@ class TestAlg(unittest.TestCase):
                         max_iter=1000,
                     )
 
-                    while not alg_method.done():
+                    while (not alg_method.done()):
                         alg_method.update()
 
                     npt.assert_allclose(x_sigpy, x_numpy)
@@ -79,7 +80,8 @@ class TestAlg(unittest.TestCase):
         alg_method = alg.ConjugateGradient(
             lambda x: A.T @ A @ x + lamda * x, A.T @ y, x, max_iter=1000
         )
-        while not alg_method.done():
+
+        while (not alg_method.done()):
             alg_method.update()
 
         npt.assert_allclose(x, x_numpy)
@@ -107,7 +109,8 @@ class TestAlg(unittest.TestCase):
             sigma,
             max_iter=1000,
         )
-        while not alg_method.done():
+
+        while (not alg_method.done()):
             alg_method.update()
 
         npt.assert_allclose(x, x_numpy)
@@ -138,7 +141,8 @@ class TestAlg(unittest.TestCase):
         alg_method = alg.AugmentedLagrangianMethod(
             minL, None, h, x_z, None, v, mu
         )
-        while not alg_method.done():
+
+        while (not alg_method.done()):
             alg_method.update()
 
         x = x_z[:n]
@@ -176,7 +180,8 @@ class TestAlg(unittest.TestCase):
                 alg_method = alg.NewtonsMethod(
                     gradf, inv_hessf, x, beta=beta, f=f
                 )
-                while not alg_method.done():
+
+                while (not alg_method.done()):
                     alg_method.update()
 
                 npt.assert_allclose(x, x_numpy)
@@ -195,7 +200,7 @@ class TestAlg(unittest.TestCase):
             A, y, x0, max_iter=100, tol=10e-9, lamb=lamda
         )
 
-        while not alg_method.done():
+        while (not alg_method.done()):
             alg_method.update()
 
         phs = np.conj(x_numpy * alg_method.x / abs(x_numpy * alg_method.x))

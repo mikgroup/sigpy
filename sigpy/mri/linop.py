@@ -6,6 +6,7 @@ which integrates multi-channel coil sensitivity maps and
 discrete Fourier transform.
 
 """
+import numpy as np
 import sigpy as sp
 
 
@@ -18,7 +19,8 @@ def Sense(
     coil_batch_size=None,
     comm=None,
     transp_nufft=False,
-):
+    basis=None,
+    phase=None):
     """Sense linear operator.
 
     Args:
@@ -40,14 +42,17 @@ def Sense(
     """
     # Get image shape and dimension.
     num_coils = len(mps)
-    if ishape is None:
-        ishape = mps.shape[1:]
-        img_ndim = mps.ndim - 1
+    img_shape = list(mps.shape[1:])
+    img_ndim = mps.ndim - 1
+
+    if basis is None:
+        if ishape is None:
+            ishape = img_shape
     else:
-        img_ndim = len(ishape)
+        if ishape is None:
+            ishape = [basis.shape[-1]] + [1] + list(mps.shape[-2:])
 
     # Serialize linop if coil_batch_size is smaller than num_coils.
-    num_coils = len(mps)
     if coil_batch_size is None:
         coil_batch_size = num_coils
 
@@ -72,23 +77,40 @@ def Sense(
 
         return A
 
+    # linear subspace
+    if basis is None:
+        B = sp.linop.Identity(ishape)
+    else:
+        sub_ishape = (basis.shape[1], np.prod(ishape[1:]))
+        sub_oshape = [basis.shape[0]] + ishape[1:]
+        B1 = sp.linop.Reshape(sub_ishape, ishape)
+        B2 = sp.linop.MatMul(sub_ishape, basis)
+        B3 = sp.linop.Reshape(sub_oshape, B2.oshape)
+        B = B3 * B2 * B1
+
+    # model image phase evolution
+    if phase is None:
+        PHI = sp.linop.Identity(B.oshape)
+    else:
+        PHI = sp.linop.Multiply(B.oshape, phase)
+
     # Create Sense linear operator
-    S = sp.linop.Multiply(ishape, mps)
+    S = sp.linop.Multiply(PHI.oshape, mps)
     if tseg is None:
         if coord is None:
             F = sp.linop.FFT(S.oshape, axes=range(-img_ndim, 0))
         else:
             if transp_nufft is False:
-                F = sp.linop.NUFFT(S.oshape, coord)
+                F = sp.linop.HDNUFFT(S.oshape, coord)
             else:
-                F = sp.linop.NUFFT(S.oshape, -coord).H
+                F = sp.linop.HDNUFFT(S.oshape, -coord).H
 
-        A = F * S
+        A = F * S * PHI * B
 
     # If B0 provided, perform time-segmented off-resonance compensation
     else:
         if transp_nufft is False:
-            F = sp.linop.NUFFT(S.oshape, coord)
+            F = sp.linop.HDNUFFT(S.oshape, coord)
         else:
             F = sp.linop.NUFFT(S.oshape, -coord).H
         time = len(coord) * tseg["dt"]

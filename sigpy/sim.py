@@ -21,6 +21,39 @@ def shepp_logan(shape, dtype=complex):
     return phantom(shape, sl_amps, sl_scales, sl_offsets, sl_angles, dtype)
 
 
+def dynamic_shepp_logan(shape, dtype=complex,
+                         dynamic_fun='sin',
+                         dynamic_scale=4):
+    """Generates a moving Shepp Logan phantom
+
+    Args:
+        shape (tuple of ints): shape, can be of length 3 or 4.
+        The first dimension is the motion dimension.
+        dtype (Dtype): data type.
+
+    Reuturns:
+        array.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+    """
+
+    N_frame = shape[0]
+
+    if dynamic_fun == 'sin':
+        motion = 0.5 * np.sin(2 * np.pi * np.arange(N_frame) / N_frame) + 1
+
+    output = []
+    for f in range(N_frame):
+        sl_scales_f = np.array(sl_scales)
+        sl_scales_f[dynamic_scale] *= motion[f]
+        sl_scales_f = sl_scales_f.tolist()
+        output.append(phantom(shape[1:], sl_amps, sl_scales_f,
+                              sl_offsets, sl_angles, dtype))
+
+    return np.array(output)
+
+
 sl_amps = [1, -0.8, -0.2, -0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 
 sl_scales = [

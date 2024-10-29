@@ -4,6 +4,8 @@ import numpy as np
 import numpy.testing as npt
 
 import sigpy as sp
+
+from sigpy import util, linop, nlop
 from sigpy.mri import app, sim
 
 if __name__ == "__main__":
@@ -161,3 +163,37 @@ class TestApp(unittest.TestCase):
         ).run()
 
         np.testing.assert_allclose(eig_val, 1, rtol=0.01, atol=0.01)
+
+    def test_model_based_dti_recon(self):
+
+        N_diffenc = 60
+        B0 = np.zeros([1, 6])
+        B1 = util.randn([N_diffenc, 6])
+        B = np.concatenate((B0, B1)) * 1E3
+
+        img_shape = [15, 15]
+        D = util.randn([7, 1] + img_shape, dtype=float) / 1E6
+        D = D + 0. * 1j
+
+        E = nlop.Exponential(D.shape, B, rvc=True)
+
+        mps_shape = [8] + img_shape
+        mps = sim.birdcage_maps(mps_shape)
+        S = linop.Multiply(E.oshape, mps)
+
+        F = linop.FFT(S.oshape, axes=range(-2, 0))
+
+        A = F * S * E
+
+        yn = A(D) + util.randn(A.oshape) * 1E-8
+
+        x = np.concatenate((
+            np.ones([1, 1] + img_shape) * 1e-5,
+            np.zeros([6, 1] + img_shape)), dtype=yn.dtype)
+
+        x = sp.app.NonLinearLeastSquares(A, yn, x=x,
+                                         max_iter=6, lamda=1E-3, redu=3,
+                                         gn_iter=6, inner_iter=100,
+                                         show_pbar=False).run()
+
+        npt.assert_allclose(x, D, rtol=1E-5, atol=1E-5)

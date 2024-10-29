@@ -24,6 +24,7 @@ if config.pytorch_enabled:
                         array = xp.array([1, 2, 3], dtype=dtype)
                         tensor = pytorch.to_pytorch(array)
                         array[0] = 0
+
                         torch.testing.assert_allclose(
                             tensor,
                             torch.tensor(
@@ -41,6 +42,7 @@ if config.pytorch_enabled:
                         array = xp.array([1 + 1j, 2 + 2j, 3 + 3j], dtype=dtype)
                         tensor = pytorch.to_pytorch(array)
                         array[0] = 0
+
                         torch.testing.assert_allclose(
                             tensor,
                             torch.tensor(
@@ -120,6 +122,7 @@ if config.pytorch_enabled:
                     A, input_iscomplex=True, output_iscomplex=True
                 ).apply
                 x_torch = pytorch.to_pytorch(x)
+
                 npt.assert_allclose(
                     f(x_torch).detach().numpy().ravel(), A(x).view(float)
                 )
@@ -128,6 +131,7 @@ if config.pytorch_enabled:
                 y_torch = pytorch.to_pytorch(y)
                 loss = (f(x_torch) - y_torch).pow(2).sum() / 2
                 loss.backward()
+
                 npt.assert_allclose(
                     x_torch.grad.detach().numpy().ravel(),
                     A.H(A(x) - y).view(float),

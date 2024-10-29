@@ -228,12 +228,13 @@ class ConjugateGradient(Alg):
 
     """
 
-    def __init__(self, A, b, x, P=None, max_iter=100, tol=0):
+    def __init__(self, A, b, x, P=None, max_iter=100, tol=0, verbose=False):
         self.A = A
         self.b = b
         self.P = P
         self.x = x
         self.tol = tol
+        self.verbose = verbose
         self.device = backend.get_device(x)
         with self.device:
             xp = self.device.xp
@@ -278,7 +279,12 @@ class ConjugateGradient(Alg):
                 util.xpay(self.p, beta, z)
                 self.rzold = rznew
 
-            self.resid = self.rzold.item() ** 0.5
+            self.resid = self.rzold.item()**0.5
+
+            if self.verbose:
+                print("  cg iter: " + "%2d" % (self.iter)
+                      + "; resid: " + "%13.6f" % (self.resid)
+                      + "; norm: " + "%13.6f" % (xp.linalg.norm(self.x.flatten())))
 
     def _done(self):
         return (
@@ -838,6 +844,106 @@ class NewtonsMethod(Alg):
 
     def _done(self):
         return self.iter >= self.max_iter or self.residual <= self.tol
+
+
+class IRGNM(Alg):
+    r"""Iteratively Regularized Gauss-Newton Method (IRGNM)
+
+    Args:
+        A (nlop): Non-linear forward model.
+        y (array): Observation.
+        x (array): Variable.
+        x0 (array): bias for L2 regularization.
+        max_iter (int): maximum number of iterations.
+        alpha (int): regularization strength.
+        redu (float): reduction factor along iterations.
+        inner_iter (int): maximum number of inner iterations.
+        inner_tol (float): tolerance for the inner iterations.
+
+    References:
+        Bauer F., Kannengiesser S. (2007).
+        An alternative approach to the image reconstruction
+        for parallel data acquisition in MRI.
+        Math. Meth. Appl. Sci. 30, 1437-1451.
+
+        Uecker M., Hohage T., Block K. T., Frahm J. (2008)
+        Image reconstruction by regularized nonlinear inversion
+        -- joint estimation of coil sensitivities and image content.
+        Magn. Reson. Med. 60, 674-682.
+
+        Tan Z., Roeloffs V., Voit D., Joseph A. A., Untenberger M.,
+        Merboldt K. D., Frahm J. (2016).
+        Model-based reconstruction for real-time phase-contrast flow MRI:
+        Improved spatiotemporal accuracy.
+        Magn. Reson. Med. 77, 1082-1093.
+
+    """
+    def __init__(self, A, y, x, x0=None,
+                 max_iter=6, alpha=1, redu=2,
+                 inner_iter=100, inner_tol=0.01, verbose=True):
+        self.A = A
+        self.y = y
+        self.device = backend.get_device(y)
+
+        # outer iteration
+        self.max_iter = max_iter
+        self.alpha = alpha
+        self.redu = redu
+
+        # inner iteration
+        self.inner_iter = inner_iter
+        self.inner_tol = inner_tol
+
+        self.verbose = verbose
+
+        xp = self.device.xp
+        with self.device:
+            self.x = sp.to_device(x, device=self.device)
+
+            self.x0 = xp.zeros(x.shape, dtype=y.dtype)
+            if x0 is not None:
+                self.x0 = sp.to_device(x0, device=self.device)
+
+        super().__init__(max_iter)
+
+    def _update(self):
+        xp = self.device.xp
+
+        with self.device:
+            dx = xp.zeros_like(self.x)
+
+            r = self.y - self.A(self.x)
+
+            resid = xp.linalg.norm(r).item()
+
+            if self.verbose:
+                print("gn iter: " + "%2d" % (self.iter)
+                      + "; alpha: " + "%.6f" % (self.alpha)
+                      + "; resid: " + "%.6f" % (resid))
+
+            p = self.A.adjoint(self.x, r)
+            p += self.alpha * (self.x0 - self.x)
+
+            # update dx
+            def AHA(x):
+                return self.A.adjoint(self.x, self.A.derivative(self.x, x)) \
+                    + self.alpha * x
+
+            inner_tol = self.inner_tol * xp.linalg.norm(p).item()
+
+            inner_alg = ConjugateGradient(AHA, p, dx,
+                                          max_iter=self.inner_iter,
+                                          tol=inner_tol)
+            while not inner_alg.done():
+                inner_alg.update()
+
+            # update x
+            self.x += 1. * dx
+            self.alpha /= self.redu
+
+    def _done(self):
+        over_iter = self.iter >= self.max_iter
+        return over_iter
 
 
 class GerchbergSaxton(Alg):

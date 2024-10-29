@@ -6,8 +6,7 @@ such as reshape, transpose, and resize.
 """
 import numpy as np
 
-from sigpy import backend, block, conv, fourier, interp, util, wavelet
-
+from sigpy import backend, block, fourier, util, interp, conv, wavelet, nlop
 
 def _check_shape_positive(shape):
     if not all(s > 0 for s in shape):
@@ -153,6 +152,8 @@ class Linop:
     def __mul__(self, input):
         if isinstance(input, Linop):
             return Compose([self, input])
+        elif isinstance(input, nlop.Nlop):
+            return nlop.Compose([self, input])
         elif np.isscalar(input):
             M = Multiply(self.ishape, input)
             return Compose([self, M])
@@ -1378,11 +1379,20 @@ class Sum(Linop):
     Args:
         ishape (tuple of ints): Input shape.
         axes (tuple of ints): Axes to sum over.
+        keepdims (boolean): Keep the summed dims (axes).
     """
 
-    def __init__(self, ishape, axes):
+    def __init__(self, ishape, axes, keepdims=False):
         self.axes = tuple(i % len(ishape) for i in axes)
-        oshape = [ishape[i] for i in range(len(ishape)) if i not in self.axes]
+
+        self.keepdims = keepdims
+
+        if self.keepdims is False:
+            oshape = [ishape[i] for i in range(len(ishape)) if i not in self.axes]
+        else:
+            oshape = [ishape[i] for i in range(len(ishape))]
+            for i in self.axes:
+                oshape[i] = 1
 
         super().__init__(oshape, ishape)
 
@@ -1390,10 +1400,10 @@ class Sum(Linop):
         device = backend.get_device(input)
         xp = device.xp
         with device:
-            return xp.sum(input, axis=self.axes)
+            return xp.sum(input, axis=self.axes, keepdims=self.keepdims)
 
     def _adjoint_linop(self):
-        return Tile(self.ishape, self.axes)
+        return Tile(self.ishape, self.axes, keepdims=self.keepdims)
 
 
 class Tile(Linop):
@@ -1402,12 +1412,22 @@ class Tile(Linop):
     Args:
         oshape (tuple of ints): Output shape.
         axes (tuple of ints): Axes to tile.
+        keepdims (boolean): Keep the summed dims (axes).
 
     """
 
-    def __init__(self, oshape, axes):
+    def __init__(self, oshape, axes, keepdims=False):
         self.axes = tuple(a % len(oshape) for a in axes)
-        ishape = [oshape[d] for d in range(len(oshape)) if d not in self.axes]
+
+        self.keepdims = keepdims
+
+        if self.keepdims is False:
+            ishape = [oshape[d] for d in range(len(oshape)) if d not in self.axes]
+        else:
+            ishape = [oshape[d] for d in range(len(oshape))]
+            for i in self.axes:
+                ishape[i] = 1
+
         self.expanded_ishape = []
         self.reps = []
         for d in range(len(oshape)):
@@ -1437,20 +1457,22 @@ class ArrayToBlocks(Linop):
         ishape (array): input array of shape [..., N_1, ..., N_D]
         blk_shape (tuple): block shape of length D, with D <= 4.
         blk_strides (tuple): block strides of length D.
+        mean (boolean): take the mean of repeated position.
 
     See Also:
         :func:`sigpy.block.array_to_blocks`
 
     """
 
-    def __init__(self, ishape, blk_shape, blk_strides):
+    def __init__(self, ishape, blk_shape, blk_strides, mean=True):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
         D = len(blk_shape)
-        num_blks = [
-            (i - b + s) // s
-            for i, b, s in zip(ishape[-D:], blk_shape, blk_strides)
-        ]
+        num_blks = [(i - b + s) // s for i, b,
+                    s in zip(ishape[-D:], blk_shape, blk_strides)]
+        self.num_blks = num_blks
+        self.mean = mean
+
         oshape = list(ishape[:-D]) + num_blks + list(blk_shape)
 
         super().__init__(oshape, ishape)
@@ -1463,7 +1485,8 @@ class ArrayToBlocks(Linop):
             )
 
     def _adjoint_linop(self):
-        return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides)
+        return BlocksToArray(self.ishape, self.blk_shape, self.blk_strides,
+                             mean=self.mean)
 
     def _normal_linop(self):
         return Identity(self.ishape)
@@ -1476,13 +1499,14 @@ class BlocksToArray(Linop):
         oshape (tuple): output shape.
         blk_shape (tuple): block shape of length D.
         blk_strides (tuple): block strides of length D.
+        mean (boolean): take the mean of repeated position.
 
     Returns:
         array: array of shape oshape.
 
     """
 
-    def __init__(self, oshape, blk_shape, blk_strides):
+    def __init__(self, oshape, blk_shape, blk_strides, mean=True):
         self.blk_shape = blk_shape
         self.blk_strides = blk_strides
         D = len(blk_shape)
@@ -1492,17 +1516,40 @@ class BlocksToArray(Linop):
         ]
         ishape = list(oshape[:-D]) + num_blks + list(blk_shape)
 
+        self.mean = mean
+
+        # Inspired by:
+        # https://pytorch.org/docs/stable/generated/torch.nn.Fold.html#torch.nn.Fold
+        # Switch on this option such that:
+        # BlockToArrays(ArrayToBlocks(input, ...), ...) = input
+        # i.e. average duplicated values
+        divisor = np.ones(oshape)
+        if self.mean:
+            divisor = block.array_to_blocks(divisor, blk_shape, blk_strides)
+            divisor = block.blocks_to_array(divisor, oshape,
+                                            blk_shape, blk_strides)
+
+        self.divisor = divisor
+
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
         device = backend.get_device(input)
+        xp = device.xp
+
+        divisor = backend.to_device(self.divisor, device=device)
+
         with device:
-            return block.blocks_to_array(
-                input, self.oshape, self.blk_shape, self.blk_strides
-            )
+            output = block.blocks_to_array(
+                input, self.oshape, self.blk_shape, self.blk_strides)
+
+            output = xp.where(divisor > 0, xp.divide(output, divisor), 0)
+
+            return output
 
     def _adjoint_linop(self):
-        return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides)
+        return ArrayToBlocks(self.oshape, self.blk_shape, self.blk_strides,
+                             mean=self.mean)
 
     def _normal_linop(self):
         return Identity(self.ishape)
@@ -1637,6 +1684,190 @@ class NUFFTAdjoint(Linop):
         return NUFFT(
             self.oshape, self.coord, oversamp=self.oversamp, width=self.width
         )
+
+
+class HDNUFFT(NUFFT):
+    """High-dimensional (HD) NUFFT.
+
+    Args:
+        ishape (tuple of int): Input shape.
+        coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
+        oversamp (float): Oversampling factor.
+        width (float): Kernel width.
+        toeplitz (bool): Use toeplitz PSF to evaluate normal operator.
+        nr_hd (int): number of higher dimensions (HD).
+                    HD starts from left most to right in ishape and coord.
+                    Default 1.
+        When nr_hd == 0, HDNUFFT is idential to NUFFT.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+    """
+    def __init__(self, ishape, coord,
+                 oversamp=1.25, width=4, toeplitz=False, nr_hd=1,
+                 use_dcf=False):
+        self.coord = coord
+        self.oversamp = oversamp
+        self.width = width
+        self.toeplitz = toeplitz
+
+        if len(ishape) <= 3 and len(coord.shape) <= 3:
+            nr_hd = 0
+
+        self.nr_hd = nr_hd
+        self.use_dcf = use_dcf
+
+        self._check_higher_dim(ishape, coord)
+
+        ndim = coord.shape[-1]
+        cshape = coord.shape
+        excl_hd = len(cshape) - nr_hd
+
+        oshape = list(ishape[:-ndim]) + list(cshape[-excl_hd:-1])
+
+        super(NUFFT, self).__init__(oshape, ishape)
+
+    def _check_higher_dim(self, ishape, coord):
+        cshape = coord.shape
+
+        for n in range(self.nr_hd):
+            if ishape[n] != cshape[n]:
+                raise ValueError(
+                    'shape mismatch for {s} between input {ishape} and coord {cshape}'.format(
+                        s=self, ishape=ishape, cshape=coord.shape))
+
+    def _apply(self, input):
+        # call the parent method
+        # when this is not high-dimensional
+        if self.nr_hd == 0:
+            return super(HDNUFFT, self)._apply(input)
+
+        sz_hd = np.prod(self.ishape[:self.nr_hd])
+        output = np.zeros([sz_hd] + list(self.oshape[self.nr_hd:]),
+                          dtype=complex)
+
+        device = backend.get_device(input)
+        with device:
+            xp = device.xp
+            coord = backend.to_device(self.coord, device)
+            output = backend.to_device(output, device=device)
+
+            coord = xp.reshape(coord, [sz_hd] + list(coord.shape[self.nr_hd:]))
+            input = xp.reshape(input, [sz_hd] + list(input.shape[self.nr_hd:]))
+
+            ld_ishape = self.ishape[self.nr_hd:]
+
+            for nhd in range(sz_hd):
+                ld_coord = coord[nhd, ...]
+                ld_input = input[nhd, ...]
+
+                F = NUFFT(ld_ishape, ld_coord,
+                          oversamp=self.oversamp, width=self.width,
+                          toeplitz=self.toeplitz)
+
+                output[nhd, ...] = F(ld_input)
+
+            output = xp.reshape(output, self.oshape)
+            return output
+
+    def _adjoint_linop(self):
+        return HDNUFFTAdjoint(self.ishape, self.coord,
+                              oversamp=self.oversamp, width=self.width,
+                              toeplitz=self.toeplitz, nr_hd=self.nr_hd,
+                              use_dcf=self.use_dcf)
+
+    def _normal_linop(self):
+        if self.toeplitz is False:
+            return self.H * self
+
+
+class HDNUFFTAdjoint(NUFFTAdjoint):
+    """high-dimensional NUFFT adjoint linear operator.
+
+    Args:
+        oshape (tuple of int): Output shape.
+        coord (array): Coordinates, with values [-ishape / 2, ishape / 2]
+        oversamp (float): Oversampling factor.
+        width (float): Kernel width.
+        toeplitz (bool): Use toeplitz PSF to evaluate normal operator.
+        nr_hd (int): number of higher dimensions (HD).
+        HD starts from left most to right in ishape and coord. Default 1.
+        When nr_hd == 0, HDNUFFT is idential to NUFFT.
+
+    Author:
+        Zhengguo Tan <zhengguo.tan@gmail.com>
+    """
+    def __init__(self, oshape, coord,
+                 oversamp=1.25, width=4, toeplitz=False, nr_hd=1,
+                 use_dcf=False):
+        self.coord = coord
+        self.oversamp = oversamp
+        self.width = width
+        self.toeplitz = toeplitz
+
+        if len(oshape) <= 3 and len(coord.shape) <= 3:
+            nr_hd = 0
+
+        self.nr_hd = nr_hd
+        self.use_dcf = use_dcf
+
+        ndim = coord.shape[-1]
+        cshape = coord.shape
+        excl_hd = len(cshape) - nr_hd
+
+        ishape = list(oshape[:-ndim]) + list(cshape[-excl_hd:-1])
+
+        super(NUFFTAdjoint, self).__init__(oshape, ishape)
+
+    def _apply(self, input):
+        # call the parent method
+        # when this is not high-dimensional
+        if self.nr_hd == 0:
+            return super(HDNUFFTAdjoint, self)._apply(input)
+
+        sz_hd = np.prod(self.ishape[:self.nr_hd])
+        output = np.zeros([sz_hd] + list(self.oshape[self.nr_hd:]),
+                          dtype=complex)
+
+        device = backend.get_device(input)
+        with device:
+            xp = device.xp
+            coord = backend.to_device(self.coord, device)
+            output = backend.to_device(output, device)
+
+            coord = xp.reshape(coord, [sz_hd] + list(coord.shape[self.nr_hd:]))
+            input = xp.reshape(input, [sz_hd] + list(input.shape[self.nr_hd:]))
+
+            if self.use_dcf is True:
+                from sigpy.mri import dcf
+                N_dim = coord.shape[-1]
+                dcf = dcf.pipe_menon_dcf(coord,
+                                         img_shape=self.oshape[-N_dim:],
+                                         device=device)
+                dcf_c = dcf.astype(input.dtype)
+            else:
+                dcf_c = xp.ones_like(input)
+
+            ld_oshape = self.oshape[self.nr_hd:]
+
+            for nhd in range(sz_hd):
+                ld_coord = coord[nhd, ...]
+                ld_input = input[nhd, ...]
+                ld_dcf_c = dcf_c[nhd, ...]
+
+                F = NUFFTAdjoint(ld_oshape, ld_coord,
+                                 oversamp=self.oversamp,
+                                 width=self.width)
+
+                output[nhd, ...] = F(ld_input * ld_dcf_c)
+
+            output = xp.reshape(output, self.oshape)
+            return output
+
+    def _adjoint_linop(self):
+        return HDNUFFT(self.oshape, self.coord,
+                       oversamp=self.oversamp, width=self.width,
+                       toeplitz=self.toeplitz, nr_hd=self.nr_hd)
 
 
 class ConvolveData(Linop):
@@ -1886,7 +2117,9 @@ class Slice(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        return input[self.idx]
+        device = backend.get_device(input)
+        with device:
+            return input[self.idx]
 
     def _adjoint_linop(self):
         return Embed(self.ishape, self.idx)
@@ -1910,9 +2143,91 @@ class Embed(Linop):
         super().__init__(oshape, ishape)
 
     def _apply(self, input):
-        output = np.zeros(self.oshape, dtype=input.dtype)
-        output[self.idx] = input
+        device = backend.get_device(input)
+        xp = device.xp
+
+        with device:
+            output = xp.zeros(self.oshape, dtype=input.dtype)
+            output[self.idx] = input
+
         return output
 
     def _adjoint_linop(self):
         return Slice(self.oshape, self.idx)
+
+
+class Sobolev(Linop):
+    """Sobolev weight
+
+    Given input in k-space,
+    returns output as:
+
+        output = ifft(W(input))
+
+        W = _get_Sobolev_weight(W_shape)
+          = ( 1 + a*|k|^2 )^(-b)
+
+        where k is the meshgrid of the ishape, normalized to [-0.5, 0.5].
+
+    Args:
+        ishape (tuple of ints): input shape
+        a (int): a in Sobolev weight [default: 440]
+        b (int): b in Sobolev weight [default: 16]
+    """
+    def __init__(self, ishape, a=440, b=16):
+        wshape = ishape[-2:]
+        self.W = self._get_Sobolev_weight(wshape, a, b)
+        self.S = Multiply(ishape, self.W)
+        self.F = IFFT(ishape, axes=range(-2, 0))
+        super().__init__(ishape, ishape)
+
+    def _get_Sobolev_weight(self, weight_shape, a=440, b=16):
+        _check_shape_positive(weight_shape)
+
+        W = np.zeros(shape=weight_shape, dtype=complex)
+
+        NY = weight_shape[1]
+        NX = weight_shape[0]
+
+        for y in range(0, NY):
+            for x in range(0, NX):
+                dist = pow(x/NX - 0.5, 2.) + pow(y/NY - 0.5, 2.)
+                W[x, y] = 1./pow(1 + a*dist, b) + 0j
+
+        return W
+
+    def _apply(self, input):
+        device = backend.get_device(input)
+        with device:
+            return self.F * self.S * input
+
+    def _adjoint_linop(self):
+        return (self.F * self.S).H
+
+
+class RealValueConstraint(Linop):
+    """real-value constraint linear operator.
+
+    Returns real-value input directly.
+
+    Args:
+        shape (tuple of ints): Input shape
+
+    """
+
+    def __init__(self, shape):
+        super().__init__(shape, shape)
+
+    def _apply(self, input):
+        device = backend.get_device(input)
+        xp = device.xp
+        with device:
+            output = xp.real(input).astype(complex)
+
+        return output
+
+    def _adjoint_linop(self):
+        return self
+
+    def _normal_linop(self):
+        return self

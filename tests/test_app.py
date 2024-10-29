@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from sigpy import app, linop, prox, util
+from sigpy import app, linop, util, prox, nlop
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -131,3 +132,28 @@ class TestApp(unittest.TestCase):
             show_pbar=False,
         ).run()
         npt.assert_allclose(x_rec, x_lstsq, atol=1e-3)
+
+    def test_NonlinearLeastSquares(self):
+        N_diffenc = 60
+        B0 = np.zeros([1, 6])
+        B1 = util.randn([N_diffenc, 6])
+        B = np.concatenate((B0, B1)) * 1E3
+
+        img_shape = [1, 15, 15]
+        D = util.randn([7] + img_shape, dtype=float) / 1E6
+        D = D + 0. * 1j
+
+        E = nlop.Exponential(D.shape, B, rvc=True)
+
+        y = E(D) + util.randn(E.oshape) * 1E-8
+
+        x = np.concatenate((
+            np.ones([1] + img_shape) * 1e-5,
+            np.zeros([6] + img_shape)), dtype=y.dtype)
+
+        x = app.NonLinearLeastSquares(E, abs(y), x=x,
+                                      max_iter=6, lamda=1E-3, redu=3,
+                                      gn_iter=6, inner_iter=100,
+                                      show_pbar=False).run()
+
+        npt.assert_allclose(x, D, rtol=1E-5, atol=1E-5)

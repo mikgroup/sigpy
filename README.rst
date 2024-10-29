@@ -1,25 +1,6 @@
 SigPy
 =====
 
-.. image:: https://img.shields.io/badge/License-BSD%203--Clause-blue.svg
-	:target: https://opensource.org/licenses/BSD-3-Clause
-	   
-.. image:: https://travis-ci.com/mikgroup/sigpy.svg?branch=master
-	:target: https://travis-ci.com/mikgroup/sigpy
-	   
-.. image:: https://readthedocs.org/projects/sigpy/badge/?version=latest
-	:target: https://sigpy.readthedocs.io/en/latest/?badge=latest
-	:alt: Documentation Status
-	
-.. image:: https://codecov.io/gh/mikgroup/sigpy/branch/master/graph/badge.svg
-	:target: https://codecov.io/gh/mikgroup/sigpy
-
-.. image:: https://zenodo.org/badge/139635485.svg
-   :target: https://zenodo.org/badge/latestdoi/139635485
-
-
-`Source Code <https://github.com/mikgroup/sigpy>`_ | `Documentation <https://sigpy.readthedocs.io>`_ | `MRI Recon Tutorial <https://github.com/mikgroup/sigpy-mri-tutorial>`_ | `MRI Pulse Design Tutorial <https://github.com/jonbmartin/open-source-pulse-design>`_
-
 SigPy is a package for signal processing, with emphasis on iterative methods. It is built to operate directly on NumPy arrays on CPU and CuPy arrays on GPU. SigPy also provides several domain-specific submodules: ``sigpy.plot`` for multi-dimensional array plotting, ``sigpy.mri`` for MRI reconstruction, and ``sigpy.mri.rf`` for MRI pulse design.
 
 Installation
@@ -48,7 +29,7 @@ SigPy can also be installed through ``pip``::
 	# (optional for plot support) pip install matplotlib
 	# (optional for CUDA support) pip install cupy
         # (optional for MPI support) pip install mpi4py
-	
+
 Installation for Developers
 ***************************
 
@@ -56,7 +37,7 @@ If you want to contribute to the SigPy source code, we recommend you install it 
 
 	cd /path/to/sigpy
 	pip install -e .
-	
+
 To run tests and contribute, we recommend installing the following packages::
 
 	pip install coverage ruff sphinx sphinx_rtd_theme black isort
@@ -101,4 +82,3 @@ Want to do machine learning without giving up signal processing? SigPy has conve
 
 	  x_torch = sigpy.to_pytorch(x)
 	  A_torch = sigpy.to_pytorch_function(A)
-
