@@ -748,6 +748,7 @@ class HighDimensionalRecon(sp.app.LinearLeastSquares):
     """
     def __init__(self, y, mps, lamda=0,
                  weights=None, coord=None,
+                 use_dcf=False,
                  basis=None,
                  phase_echo=None, combine_echo=True,
                  phase_sms=None,
@@ -834,7 +835,7 @@ class HighDimensionalRecon(sp.app.LinearLeastSquares):
             F = sp.linop.FFT(S.oshape, axes=range(-2, 0))
 
         else:
-            F = sp.linop.HDNUFFT(S.oshape, coord)
+            F = sp.linop.HDNUFFT(S.oshape, coord, use_dcf=use_dcf)
 
 
         # SMS

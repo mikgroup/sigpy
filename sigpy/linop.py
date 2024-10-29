@@ -8,7 +8,6 @@ import numpy as np
 
 from sigpy import backend, block, fourier, util, interp, conv, wavelet, nlop
 
-
 def _check_shape_positive(shape):
     if not all(s > 0 for s in shape):
         raise ValueError(
@@ -1705,7 +1704,8 @@ class HDNUFFT(NUFFT):
         Zhengguo Tan <zhengguo.tan@gmail.com>
     """
     def __init__(self, ishape, coord,
-                 oversamp=1.25, width=4, toeplitz=False, nr_hd=1):
+                 oversamp=1.25, width=4, toeplitz=False, nr_hd=1,
+                 use_dcf=False):
         self.coord = coord
         self.oversamp = oversamp
         self.width = width
@@ -1715,6 +1715,7 @@ class HDNUFFT(NUFFT):
             nr_hd = 0
 
         self.nr_hd = nr_hd
+        self.use_dcf = use_dcf
 
         self._check_higher_dim(ishape, coord)
 
@@ -1772,7 +1773,8 @@ class HDNUFFT(NUFFT):
     def _adjoint_linop(self):
         return HDNUFFTAdjoint(self.ishape, self.coord,
                               oversamp=self.oversamp, width=self.width,
-                              toeplitz=self.toeplitz, nr_hd=self.nr_hd)
+                              toeplitz=self.toeplitz, nr_hd=self.nr_hd,
+                              use_dcf=self.use_dcf)
 
     def _normal_linop(self):
         if self.toeplitz is False:
@@ -1796,7 +1798,8 @@ class HDNUFFTAdjoint(NUFFTAdjoint):
         Zhengguo Tan <zhengguo.tan@gmail.com>
     """
     def __init__(self, oshape, coord,
-                 oversamp=1.25, width=4, toeplitz=False, nr_hd=1):
+                 oversamp=1.25, width=4, toeplitz=False, nr_hd=1,
+                 use_dcf=False):
         self.coord = coord
         self.oversamp = oversamp
         self.width = width
@@ -1806,6 +1809,7 @@ class HDNUFFTAdjoint(NUFFTAdjoint):
             nr_hd = 0
 
         self.nr_hd = nr_hd
+        self.use_dcf = use_dcf
 
         ndim = coord.shape[-1]
         cshape = coord.shape
@@ -1834,17 +1838,28 @@ class HDNUFFTAdjoint(NUFFTAdjoint):
             coord = xp.reshape(coord, [sz_hd] + list(coord.shape[self.nr_hd:]))
             input = xp.reshape(input, [sz_hd] + list(input.shape[self.nr_hd:]))
 
+            if self.use_dcf is True:
+                from sigpy.mri import dcf
+                N_dim = coord.shape[-1]
+                dcf = dcf.pipe_menon_dcf(coord,
+                                         img_shape=self.oshape[-N_dim:],
+                                         device=device)
+                dcf_c = dcf.astype(input.dtype)
+            else:
+                dcf_c = xp.ones_like(input)
+
             ld_oshape = self.oshape[self.nr_hd:]
 
             for nhd in range(sz_hd):
                 ld_coord = coord[nhd, ...]
                 ld_input = input[nhd, ...]
+                ld_dcf_c = dcf_c[nhd, ...]
 
                 F = NUFFTAdjoint(ld_oshape, ld_coord,
                                  oversamp=self.oversamp,
                                  width=self.width)
 
-                output[nhd, ...] = F(ld_input)
+                output[nhd, ...] = F(ld_input * ld_dcf_c)
 
             output = xp.reshape(output, self.oshape)
             return output
