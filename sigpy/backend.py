@@ -3,7 +3,9 @@
 
 """
 import numpy as np
+
 from sigpy import config
+
 if config.cupy_enabled:
     import cupy as cp
 
@@ -14,8 +16,15 @@ if config.mpi4py_enabled:
         from cupy.cuda import nccl
 
 
-__all__ = ['Device', 'get_device', 'get_array_module', 'cpu_device',
-           'to_device', 'copyto', 'Communicator']
+__all__ = [
+    "Device",
+    "get_device",
+    "get_array_module",
+    "cpu_device",
+    "to_device",
+    "copyto",
+    "Communicator",
+]
 
 
 class Device(object):
@@ -52,15 +61,18 @@ class Device(object):
             id = id_or_device.id
         else:
             raise ValueError(
-                'Accepts int, Device or cupy.cuda.Device, got {}'.format(
-                    id_or_device))
+                "Accepts int, Device or cupy.cuda.Device, got {}".format(
+                    id_or_device
+                )
+            )
 
         if id != -1:
             if config.cupy_enabled:
                 self.cpdevice = cp.cuda.Device(id)
             else:
                 raise ValueError(
-                    'cupy not installed, but set device {}.'.format(id))
+                    "cupy not installed, but set device {}.".format(id)
+                )
 
         self.id = id
 
@@ -110,7 +122,7 @@ class Device(object):
 
     def __repr__(self):
         if self.id == -1:
-            return '<CPU Device>'
+            return "<CPU Device>"
 
         return self.cpdevice.__repr__()
 
@@ -236,11 +248,14 @@ class Communicator(object):
                     nccl_comm = self._get_nccl_comm(device, devices)
                     nccl_dtype, nccl_size = self._get_nccl_dtype_size(input)
                     with device:
-                        nccl_comm.allReduce(input.data.ptr,
-                                            input.data.ptr,
-                                            nccl_size, nccl_dtype,
-                                            nccl.NCCL_SUM,
-                                            cp.cuda.Stream.null.ptr)
+                        nccl_comm.allReduce(
+                            input.data.ptr,
+                            input.data.ptr,
+                            nccl_size,
+                            nccl_dtype,
+                            nccl.NCCL_SUM,
+                            cp.cuda.Stream.null.ptr,
+                        )
                         return
 
             cpu_input = to_device(input, cpu_device)
@@ -303,7 +318,8 @@ class Communicator(object):
             if self.rank == root:
                 cpu_output = np.empty(sum(sizes), dtype=input.dtype)
                 self.mpi_comm.Gatherv(
-                    cpu_input, [cpu_output, sizes], root=root)
+                    cpu_input, [cpu_output, sizes], root=root
+                )
                 return to_device(cpu_output, get_device(input))
             else:
                 self.mpi_comm.Gatherv(cpu_input, [None, sizes], root=root)
@@ -323,7 +339,8 @@ class Communicator(object):
 
         with device:
             nccl_comm = nccl.NcclCommunicator(
-                self.size, nccl_comm_id, self.rank)
+                self.size, nccl_comm_id, self.rank
+            )
             self.nccl_comms[str(devices)] = nccl_comm
 
         return nccl_comm
@@ -343,6 +360,7 @@ class Communicator(object):
             nccl_size = input.size * 2
         else:
             raise ValueError(
-                'dtype not supported, got {dtype}.'.format(dtype=input.dtype))
+                "dtype not supported, got {dtype}.".format(dtype=input.dtype)
+            )
 
         return nccl_dtype, nccl_size

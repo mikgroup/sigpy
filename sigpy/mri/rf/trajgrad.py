@@ -2,16 +2,25 @@
 """MRI gradient and excitation trajectory design
 """
 
-import numpy as np
-from scipy import interpolate
-from scipy import integrate
-import numba as nb
 import math
 
+import numba as nb
+import numpy as np
+from scipy import integrate, interpolate
 
-__all__ = ['min_trap_grad', 'trap_grad', 'spiral_varden', 'spiral_arch', 'epi',
-           'rosette', 'spokes_grad', 'stack_of', 'traj_array_to_complex',
-           'traj_complex_to_array', 'min_time_gradient']
+__all__ = [
+    "min_trap_grad",
+    "trap_grad",
+    "spiral_varden",
+    "spiral_arch",
+    "epi",
+    "rosette",
+    "spokes_grad",
+    "stack_of",
+    "traj_array_to_complex",
+    "traj_complex_to_array",
+    "min_time_gradient",
+]
 
 
 def min_trap_grad(area, gmax, dgdt, dt):
@@ -48,8 +57,12 @@ def min_trap_grad(area, gmax, dgdt, dt):
 
         # make attack and decay ramps
         ramppts = int(np.ceil(np.max(flat) / dgdt / dt))
-        ramp_up = np.linspace(0, ramppts, num=ramppts+1) / ramppts*np.max(flat)
-        ramp_dn = np.linspace(ramppts, 0, num=ramppts+1) / ramppts*np.max(flat)
+        ramp_up = (
+            np.linspace(0, ramppts, num=ramppts + 1) / ramppts * np.max(flat)
+        )
+        ramp_dn = (
+            np.linspace(ramppts, 0, num=ramppts + 1) / ramppts * np.max(flat)
+        )
 
         trap = np.concatenate((ramp_up, np.squeeze(flat), ramp_dn))
 
@@ -84,22 +97,21 @@ def trap_grad(area, gmax, dgdt, dt, *args):
 
     if np.abs(area) > 0:
         if rampsamp:
-
-            ramppts = int(np.ceil(gmax/dgdt/dt))
+            ramppts = int(np.ceil(gmax / dgdt / dt))
             triareamax = ramppts * dt * gmax
 
             if triareamax > np.abs(area):
                 # triangle pulse
                 newgmax = np.sqrt(np.abs(area) * dgdt)
-                ramppts = int(np.ceil(newgmax/dgdt/dt))
-                ramp_up = np.linspace(0, ramppts, num=ramppts+1)/ramppts
-                ramp_dn = np.linspace(ramppts, 0, num=ramppts+1)/ramppts
+                ramppts = int(np.ceil(newgmax / dgdt / dt))
+                ramp_up = np.linspace(0, ramppts, num=ramppts + 1) / ramppts
+                ramp_dn = np.linspace(ramppts, 0, num=ramppts + 1) / ramppts
                 pulse = np.concatenate((ramp_up, ramp_dn))
             else:
                 # trapezoid pulse
-                nflat = int(np.ceil((area - triareamax)/gmax / dt / 2) * 2)
-                ramp_up = np.linspace(0, ramppts, num=ramppts+1) / ramppts
-                ramp_dn = np.linspace(ramppts, 0, num=ramppts+1) / ramppts
+                nflat = int(np.ceil((area - triareamax) / gmax / dt / 2) * 2)
+                ramp_up = np.linspace(0, ramppts, num=ramppts + 1) / ramppts
+                ramp_dn = np.linspace(ramppts, 0, num=ramppts + 1) / ramppts
                 pulse = np.concatenate((ramp_up, np.ones(nflat), ramp_dn))
 
             trap = pulse * (area / (sum(pulse) * dt))
@@ -107,14 +119,18 @@ def trap_grad(area, gmax, dgdt, dt, *args):
         else:
             # make a flat portion of magnitude gmax
             # and enough area for the entire swath
-            flat = np.ones(1, np.ceil(area/gmax/dt))
+            flat = np.ones(1, np.ceil(area / gmax / dt))
             flat = flat / sum(flat) * area / dt
             flat_top = np.max(flat)
 
             # make attack and decay ramps
             ramppts = int(np.ceil(np.max(flat) / dgdt / dt))
-            ramp_up = np.linspace(0, ramppts, num=ramppts+1) / ramppts*flat_top
-            ramp_dn = np.linspace(ramppts, 0, num=ramppts+1) / ramppts*flat_top
+            ramp_up = (
+                np.linspace(0, ramppts, num=ramppts + 1) / ramppts * flat_top
+            )
+            ramp_dn = (
+                np.linspace(ramppts, 0, num=ramppts + 1) / ramppts * flat_top
+            )
             trap = np.concatenate((ramp_up, flat, ramp_dn))
 
     else:
@@ -123,8 +139,9 @@ def trap_grad(area, gmax, dgdt, dt, *args):
     return np.expand_dims(trap, axis=0), ramppts
 
 
-def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
-                  rewinder=False):
+def spiral_varden(
+    fov, res, gts, gslew, gamp, densamp, dentrans, nl, rewinder=False
+):
     r"""Variable density spiral designer. Produces trajectory, gradients,
     and slew rate. Gradient units returned are in g/cm, g/cm/s
 
@@ -157,7 +174,7 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
     risetime = gamp / gslew * 10000  # us
     ts = gts  # sampling time
     gts = gts  # gradient sampling time
-    N = np.floor(fov/res)
+    N = np.floor(fov / res)
     targetk = N / 2
     A = 32766  # output scaling of waveform (fullscale)
 
@@ -208,7 +225,7 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
                     den1 = 1
 
                 if realn > densamp + dentrans:
-                    if 'scthat' not in locals():
+                    if "scthat" not in locals():
                         scthat = 0
                     scoffset = scthat
                     denoffset = taun_1
@@ -220,8 +237,8 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
                     denoffset = taun_1
                     fractrans = (realn - densamp) / dentrans
                     fractrans = 1 - ((fractrans - 1) * (fractrans - 1))
-                    scthat = (omf + (om - omf) * fractrans)
-                    scthat *= (tauhat - denoffset)
+                    scthat = omf + (om - omf) * fractrans
+                    scthat *= tauhat - denoffset
                     scthat += scoffset
 
             else:
@@ -241,7 +258,7 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
                     dec_ratio = dec_ratio * 2.0
 
                     if dec_ratio > max_dec_ratio:
-                        print('k-space calculation failed.\n')
+                        print("k-space calculation failed.\n")
                         return
 
                     loop = 1
@@ -311,10 +328,12 @@ def spiral_varden(fov, res, gts, gslew, gamp, densamp, dentrans, nl,
 
     # rewinder
     if rewinder:
-        rewx, ramppts = np.squeeze(trap_grad(abs(np.real(sum(g))) * gts,
-                                   gamp, gslew * 50, gts))
-        rewy, ramppts = np.squeeze(trap_grad(abs(np.imag(sum(g))) * gts,
-                                   gamp, gslew * 50, gts))
+        rewx, ramppts = np.squeeze(
+            trap_grad(abs(np.real(sum(g))) * gts, gamp, gslew * 50, gts)
+        )
+        rewy, ramppts = np.squeeze(
+            trap_grad(abs(np.imag(sum(g))) * gts, gamp, gslew * 50, gts)
+        )
 
         # append rewinder gradient
         if len(rewx) > len(rewy):
@@ -381,24 +400,24 @@ def spiral_arch(fov, res, gts, gslew, gamp):
     a_2 = (9 * beta / 4) ** (1 / 3)  # rad ** (1/3) / s ** (2/3)
     lamb = 5
     theta_max = kmax / lam
-    ts = (3 * gam * gamp / (4 * np.pi * lam * a_2 ** 2)) ** 3
-    theta_s = 0.5 * beta * ts ** 2
-    theta_s /= (lamb + beta / (2 * a_2) * ts ** (4 / 3))
-    t_g = np.pi * lam * (theta_max ** 2 - theta_s ** 2) / (gam * gamp)
+    ts = (3 * gam * gamp / (4 * np.pi * lam * a_2**2)) ** 3
+    theta_s = 0.5 * beta * ts**2
+    theta_s /= lamb + beta / (2 * a_2) * ts ** (4 / 3)
+    t_g = np.pi * lam * (theta_max**2 - theta_s**2) / (gam * gamp)
     n_s = int(np.round(ts / gts))
     n_g = int(np.round(t_g / gts))
 
     if theta_max > theta_s:
-        print(' Spiral trajectory is slewrate limited or amplitude limited')
+        print(" Spiral trajectory is slewrate limited or amplitude limited")
 
         tacq = ts + t_g
 
         t_s = np.linspace(0, ts, n_s)
         t_g = np.linspace(ts + gts, tacq, n_g)
 
-        theta_1 = beta / 2 * t_s ** 2
-        theta_1 /= (lamb + beta / (2 * a_2) * t_s ** (4 / 3))
-        theta_2 = theta_s ** 2 + gam / (np.pi * lam) * gamp * (t_g - ts)
+        theta_1 = beta / 2 * t_s**2
+        theta_1 /= lamb + beta / (2 * a_2) * t_s ** (4 / 3)
+        theta_2 = theta_s**2 + gam / (np.pi * lam) * gamp * (t_g - ts)
         theta_2 = np.sqrt(theta_2)
 
         k1 = lam * theta_1 * (np.cos(theta_1) + 1j * np.sin(theta_1))
@@ -406,20 +425,19 @@ def spiral_arch(fov, res, gts, gslew, gamp):
         k = np.concatenate((k1, k2), axis=0)
 
     else:
-
-        tacq = 2 * np.pi * fov / 3 * np.sqrt(np.pi / (gam * gslew * res ** 3))
+        tacq = 2 * np.pi * fov / 3 * np.sqrt(np.pi / (gam * gslew * res**3))
         n_t = int(np.round(tacq / gts))
         t_s = np.linspace(0, tacq, n_t)
-        theta_1 = beta / 2 * t_s ** 2
-        theta_1 /= (lamb + beta / (2 * a_2) * t_s ** (4 / 3))
+        theta_1 = beta / 2 * t_s**2
+        theta_1 /= lamb + beta / (2 * a_2) * t_s ** (4 / 3)
 
         k = lam * theta_1 * (np.cos(theta_1) + 1j * np.sin(theta_1))
 
     # end of trajectory calculation; prepare outputs
     g = np.diff(k, 1, axis=0) / (gts * gambar)  # gradient
-    g = np.pad(g, (0, 1), 'constant')
+    g = np.pad(g, (0, 1), "constant")
     s = np.diff(g, 1, axis=0) / (gts * 1000)  # slew rate factor
-    s = np.pad(s, (0, 1), 'constant')
+    s = np.pad(s, (0, 1), "constant")
 
     # change from (real, imag) notation to (Nt, 2) notation
     k = traj_complex_to_array(k)
@@ -467,15 +485,17 @@ def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     g = (1 / (1000 * dt)) / (gamma * fov)  # Gauss/cm
     if g > gamp:
         g = gamp
-        print('max g reduced to {}'.format(g))
+        print("max g reduced to {}".format(g))
 
     # readout trapezoid
     gxro = g * np.ones((1, n))  # plateau of readout trapezoid
     areapd = np.sum(gxro) * dt
 
-    ramp = np.expand_dims(np.linspace(s, g, int(g/s)), axis=0)
-    gxro = np.concatenate((np.expand_dims(np.array([0]), axis=1), ramp, gxro,
-                           np.fliplr(ramp)), axis=1)
+    ramp = np.expand_dims(np.linspace(s, g, int(g / s)), axis=0)
+    gxro = np.concatenate(
+        (np.expand_dims(np.array([0]), axis=1), ramp, gxro, np.fliplr(ramp)),
+        axis=1,
+    )
 
     # x prewinder. make sure res_kpre is even. Handle even N by changing prew.
     if n % 2 == 0:
@@ -484,8 +504,9 @@ def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
         area = np.sum(gxro) * dt
     gxprew = dirx * trap_grad(area / 2, gamp, gslew * 1000, dt)[0]
 
-    gxprew = np.concatenate((np.zeros((1, (gxprew.size + ramp.size) % 2)),
-                            gxprew), axis=1)
+    gxprew = np.concatenate(
+        (np.zeros((1, (gxprew.size + ramp.size) % 2)), gxprew), axis=1
+    )
 
     # partial dephaser (one cycle of phase across each voxel)
     gxpd = -trap_grad(areapd / 2, gamp, gslew * 1000, dt)[0]
@@ -512,8 +533,9 @@ def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     # changed readout patterns to create interleaved EPIs
     areagyblip = areapd / etl
     gyblip = trap_grad(areagyblip, gamp, gslew / scaley * 1000, dt)[0]
-    gyro = np.concatenate((np.zeros((1, gxro.size - gyblip.size)), gyblip),
-                          axis=1)
+    gyro = np.concatenate(
+        (np.zeros((1, gxro.size - gyblip.size)), gyblip), axis=1
+    )
     gyro2 = np.expand_dims(np.array([0]), axis=1)
 
     # put together gx and gy
@@ -531,11 +553,11 @@ def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
     else:
         gx = np.concatenate((gx, np.zeros((1, ly - lx))), axis=1)
 
-    gy = np.concatenate((gy, np.zeros((1, int(gyblip.size/2)))), axis=1)
+    gy = np.concatenate((gy, np.zeros((1, int(gyblip.size / 2)))), axis=1)
 
     for ee in range(1, etl):
-        flip = ((-1) ** (ee + 1))
-        gx = np.concatenate((gx,  flip * gxro), axis=1)
+        flip = (-1) ** (ee + 1)
+        gx = np.concatenate((gx, flip * gxro), axis=1)
         gy = np.concatenate((gy, gyro), axis=1)
 
     if etl == 1:
@@ -544,8 +566,10 @@ def epi(fov, n, etl, dt, gamp, gslew, offset=0, dirx=-1, diry=1):
         ee += 1
 
     # concatenate with added 0 to limit max s
-    gx = np.concatenate((gx, (-1 ** (ee + 1) * gxro),
-                         np.expand_dims(np.array([0]), axis=1)), axis=1)
+    gx = np.concatenate(
+        (gx, (-(1 ** (ee + 1)) * gxro), np.expand_dims(np.array([0]), axis=1)),
+        axis=1,
+    )
     gy = np.concatenate((gy, np.zeros((1, gx.size - gy.size))), axis=1)
 
     # add rephasers at end of gx and gy readout
@@ -615,7 +639,7 @@ def rosette(kmax, w1, w2, dt, dur, gamp=None, gslew=None):
             print("gmax exceeded, decrease rosette kmax or w1")
             return
     if gslew is not None:
-        if (1 / gambar) * kmax * (w1 ** 2 + w2 ** 2) / 1000 > gslew:
+        if (1 / gambar) * kmax * (w1**2 + w2**2) / 1000 > gslew:
             print("smax exceeded, dcrease rosette kmax, w1, or w2")
             return
     t = np.linspace(0, dur, dur / dt)
@@ -623,9 +647,9 @@ def rosette(kmax, w1, w2, dt, dur, gamp=None, gslew=None):
 
     # end of trajectory calculation; prepare outputs
     g = np.diff(k, 1, axis=0) / (dt * gambar)  # gradient
-    g = np.pad(g, (0, 1), 'constant')
+    g = np.pad(g, (0, 1), "constant")
     s = np.diff(g, 1, axis=0) / (dt * 1000)  # slew rate factor
-    s = np.pad(s, (0, 1), 'constant')
+    s = np.pad(s, (0, 1), "constant")
 
     # change from (real, imag) notation to (Nt, 2) notation
     k = traj_complex_to_array(k)
@@ -638,7 +662,7 @@ def rosette(kmax, w1, w2, dt, dur, gamp=None, gslew=None):
 
 
 def spokes_grad(k, tbw, sl_thick, gmax, dgdtmax, gts):
-    r""" Spokes gradient designer. Given some chosen spoke locations k, return
+    r"""Spokes gradient designer. Given some chosen spoke locations k, return
     the gradients required to move between those spoke locations.
 
     Args:
@@ -678,18 +702,18 @@ def spokes_grad(k, tbw, sl_thick, gmax, dgdtmax, gts):
         if np.absolute(gxarea[ii]) > 0:
             [gblip, _] = trap_grad(abs(gxarea[ii]), gmax, dgdtmax, gts)
             gxblip = int(np.sign(gxarea[ii])) * gblip
-            gx = gx[:len(gx) - len(gxblip.T)]
+            gx = gx[: len(gx) - len(gxblip.T)]
             gx.extend(np.squeeze(gxblip).tolist())
 
         gy.extend([0] * np.size(subgz))
         if np.absolute(gyarea[ii]) > 0:
             [gblip, _] = trap_grad(abs(gyarea[ii]), gmax, dgdtmax, gts)
             gyblip = int(np.sign(gyarea[ii])) * gblip
-            gy = gy[:len(gy) - len(gyblip.T)]
+            gy = gy[: len(gy) - len(gyblip.T)]
             gy.extend(np.squeeze(gyblip).tolist())
 
     [gref, _] = trap_grad(gts * np.sum(subgz) / 2, gmax, dgdtmax, gts)
-    gzref = - gref
+    gzref = -gref
     gz.extend(np.squeeze(gzref).tolist())
     gx.extend([0] * np.size(gzref))
     gy.extend([0] * np.size(gzref))
@@ -711,8 +735,8 @@ def stack_of(k, num, zres):
         zres (float): spacing between stacks in cm.
     """
 
-    z = np.linspace(- num * zres / 2, num * zres / 2, num)
-    kout = np.zeros((k.shape[0]*num, 3))
+    z = np.linspace(-num * zres / 2, num * zres / 2, num)
+    kout = np.zeros((k.shape[0] * num, 3))
 
     # we will be performing a complex rotation on our trajectory
     k = traj_array_to_complex(k)
@@ -722,7 +746,7 @@ def stack_of(k, num, zres):
         z_coord = np.expand_dims(np.ones(len(kr)) * z[ii], axis=1)
         krz = np.concatenate((traj_complex_to_array(kr), z_coord), axis=1)
 
-        kout[ii * len(krz):(ii + 1) * len(krz), :] = krz
+        kout[ii * len(krz) : (ii + 1) * len(krz), :] = krz
 
     return kout
 
@@ -749,8 +773,9 @@ def traj_array_to_complex(k):
 
 
 @nb.jit(nopython=True, cache=True)  # pragma: no cover
-def runge_kutta(ds: float, st: float, kvals: np.ndarray, smax=None,
-                gamma=4.257):
+def runge_kutta(
+    ds: float, st: float, kvals: np.ndarray, smax=None, gamma=4.257
+):
     r"""Runge-Kutta 4 for curve constrained
 
     Args:
@@ -763,25 +788,26 @@ def runge_kutta(ds: float, st: float, kvals: np.ndarray, smax=None,
     Returns:
         float or None: step size dsdt or None
     """
-    temp = (gamma ** 2 * smax ** 2 - abs(kvals[0]) ** 2 * st ** 4)
+    temp = gamma**2 * smax**2 - abs(kvals[0]) ** 2 * st**4
     if temp < 0.0:
         return None
     k1 = ds / st * math.sqrt(temp)
 
-    temp = \
-        (gamma ** 2 * smax ** 2 - abs(kvals[1]) ** 2 * (st + ds * k1 / 2) ** 4)
+    temp = (
+        gamma**2 * smax**2 - abs(kvals[1]) ** 2 * (st + ds * k1 / 2) ** 4
+    )
     if temp < 0.0:
         return None
     k2 = ds / (st + ds * k1 / 2) * math.sqrt(temp)
 
-    temp = \
-        (gamma ** 2 * smax ** 2 - abs(kvals[1]) ** 2 * (st + ds * k2 / 2) ** 4)
+    temp = (
+        gamma**2 * smax**2 - abs(kvals[1]) ** 2 * (st + ds * k2 / 2) ** 4
+    )
     if temp < 0.0:
         return None
     k3 = ds / (st + ds * k2 / 2) * math.sqrt(temp)
 
-    temp = \
-        (gamma ** 2 * smax ** 2 - abs(kvals[2]) ** 2 * (st + ds * k3) ** 4)
+    temp = gamma**2 * smax**2 - abs(kvals[2]) ** 2 * (st + ds * k3) ** 4
     if temp < 0.0:
         return None
     k4 = ds / (st + ds * k3) * math.sqrt(temp)
@@ -793,8 +819,9 @@ def runge_kutta(ds: float, st: float, kvals: np.ndarray, smax=None,
 #    (c) Michael Lustig 2005
 #    modified 2006 and 2007
 #    Rewritten in Python in 2020 by Kevin Johnson
-def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
-                      dt=4e-3, gamma=4.257):
+def min_time_gradient(
+    c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15, dt=4e-3, gamma=4.257
+):
     r"""
     Given a k-space trajectory c(n), gradient and slew constraints. This
     function will return a new parametrization that will meet these
@@ -827,8 +854,9 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
         Imaging. 2008;27(6):866-873. doi:10.1109/TMI.2008.922699
     """
 
-    def sdotmax(cs: interpolate.CubicSpline, s: np.ndarray,
-                gmax, smax, gamma=4.257):
+    def sdotmax(
+        cs: interpolate.CubicSpline, s: np.ndarray, gmax, smax, gamma=4.257
+    ):
         # [sdot, k, ] = sdotMax(PP, p_of_s, s, gmax, smax)
         #
         # Given a k-space curve C (in [1/cm] units), maximum gradient amplitude
@@ -878,11 +906,11 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
     ds_p = np.linalg.norm(cp1_highres, axis=1)
 
     # s vs p to enable conversion
-    s_of_p = integrate.cumtrapz(ds_p, p_highres, initial=0)
+    s_of_p = integrate.cumulative_trapezoid(ds_p, p_highres, initial=0)
     curve_length = s_of_p[-1]
 
     # decide ds and compute st for the first point
-    stt0 = (gamma * smax)  # always assumes first point is max slew
+    stt0 = gamma * smax  # always assumes first point is max slew
     st0 = stt0 * dt / 8  # start at 1/8 the gradient for accuracy close to g=0
     s0 = st0 * dt
     ds = s0 / 4.0  # smaller step size for numerical accuracy
@@ -902,7 +930,7 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
     phi, k = sdotmax(cs, s, gmax, smax)
 
     # extend for the Runge-Kutte method
-    k = np.pad(k, (0, 3), 'constant', constant_values=(0,))
+    k = np.pad(k, (0, 3), "constant", constant_values=(0,))
 
     # Get the start
     sta = np.zeros_like(s)
@@ -911,7 +939,7 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
     # solve ODE forward
     for n in range(1, s.shape[0]):
         kpos = n
-        dstds = runge_kutta(ds, sta[n - 1], k[kpos:kpos + 4], smax)
+        dstds = runge_kutta(ds, sta[n - 1], k[kpos : kpos + 4], smax)
 
         if dstds is None:
             sta[n] = phi[n]
@@ -927,10 +955,9 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
 
     # solve ODE backwards
     for n in range(s.shape[0] - 2, 0, -1):
-
         kpos_end = n  # to 0
         kpos = kpos_end + 3
-        dstds = runge_kutta(ds, stb[n + 1], k[kpos:(kpos - 3):-1], smax)
+        dstds = runge_kutta(ds, stb[n + 1], k[kpos : (kpos - 3) : -1], smax)
 
         if dstds is None:
             stb[n] = phi[n - 1]
@@ -954,7 +981,7 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
     st_of_s = np.minimum(sta, stb)
 
     # compute time
-    t_of_s = integrate.cumtrapz(1. / st_of_s, initial=0) * ds
+    t_of_s = integrate.cumulative_trapezoid(1.0 / st_of_s, initial=0) * ds
 
     t = np.arange(0, t_of_s[-1] + np.finfo(float).eps, dt)
 
@@ -965,7 +992,7 @@ def min_time_gradient(c: np.ndarray, g0=0, gfin=None, gmax=4, smax=15,
     g = np.diff(c, axis=0, append=np.zeros((1, 3))) / gamma / dt
     g[-1, :] = g[-2, :] + g[-2, :] - g[-3, :]
 
-    k = integrate.cumtrapz(g, t, initial=0, axis=0) * gamma
+    k = integrate.cumulative_trapezoid(g, t, initial=0, axis=0) * gamma
 
     s = np.diff(g, axis=0) / dt
 

@@ -3,9 +3,10 @@
 
 """
 import numpy as np
+
 from sigpy import backend, config
 
-__all__ = ['to_pytorch', 'from_pytorch', 'to_pytorch_function']
+__all__ = ["to_pytorch", "from_pytorch", "to_pytorch_function"]
 
 
 def to_pytorch(array, requires_grad=True):  # pragma: no cover
@@ -30,7 +31,7 @@ def to_pytorch(array, requires_grad=True):  # pragma: no cover
         with device:
             shape = array.shape
             array = array.view(dtype=array.real.dtype)
-            array = array.reshape(shape + (2, ))
+            array = array.reshape(shape + (2,))
 
     if device == backend.cpu_device:
         tensor = torch.from_numpy(array)
@@ -58,20 +59,25 @@ def from_pytorch(tensor, iscomplex=False):  # pragma: no cover
     from torch.utils.dlpack import to_dlpack
 
     device = tensor.device
-    if device.type == 'cpu':
+    if device.type == "cpu":
         output = tensor.detach().contiguous().numpy()
     else:
         if config.cupy_enabled:
             import cupy as cp
+
             output = cp.fromDlpack(to_dlpack(tensor.contiguous()))
         else:
-            raise TypeError('CuPy not installed, '
-                            'but trying to convert GPU PyTorch Tensor.')
+            raise TypeError(
+                "CuPy not installed, "
+                "but trying to convert GPU PyTorch Tensor."
+            )
 
     if iscomplex:
         if output.shape[-1] != 2:
-            raise ValueError('shape[-1] must be 2 when iscomplex is '
-                             'specified, but got {}'.format(output.shape))
+            raise ValueError(
+                "shape[-1] must be 2 when iscomplex is "
+                "specified, but got {}".format(output.shape)
+            )
 
         with backend.get_device(output):
             if output.dtype == np.float32:
@@ -84,9 +90,9 @@ def from_pytorch(tensor, iscomplex=False):  # pragma: no cover
     return output
 
 
-def to_pytorch_function(linop,
-                        input_iscomplex=False,
-                        output_iscomplex=False):  # pragma: no cover
+def to_pytorch_function(
+    linop, input_iscomplex=False, output_iscomplex=False
+):  # pragma: no cover
     """Convert SigPy Linop to PyTorch Function.
 
     The returned function can be treated as a native
@@ -113,12 +119,14 @@ def to_pytorch_function(linop,
     class LinopFunction(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input):
-            return to_pytorch(linop(from_pytorch(
-                input, iscomplex=input_iscomplex)))
+            return to_pytorch(
+                linop(from_pytorch(input, iscomplex=input_iscomplex))
+            )
 
         @staticmethod
         def backward(ctx, grad_output):
-            return to_pytorch(linop.H(from_pytorch(
-                grad_output, iscomplex=output_iscomplex)))
+            return to_pytorch(
+                linop.H(from_pytorch(grad_output, iscomplex=output_iscomplex))
+            )
 
     return LinopFunction

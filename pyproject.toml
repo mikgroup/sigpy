@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+
+[project]
+name = "sigpy"
+description = "Python package for signal reconstruction." 
+authors = [
+    {name = "Frank Ong", email = "frankong@berkeley.edu"},
+]    
+license = {text = "BSD"}
+dependencies = [
+    "numpy",
+    "pywavelets", 
+    "numba", 
+    "scipy", 
+    "tqdm"
+]
+classifiers=[
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+     "Operating System :: OS Independent",
+]
+dynamic = [
+    "version",
+    "readme"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest < 5.0.0",
+    "pytest-cov[all]",
+    "coverage"
+]
+lint = [
+    "ruff",
+    "black",
+    "isort",
+    "sphinx",
+    "sphinx_rtd_theme"
+] 
+
+
+[project.urls]
+homepage = "https://github.com/mikgroup/sigpy"
+documentation = "https://sigpy.readthedocs.io/en/latest/"
+repository = "https://github.com/mikgroup/sigpy"
+
+
+[tool.black]
+line-length = 79
+
+[tool.isort]
+profile = "black"
+
+[tool.setuptools.dynamic]
+version = {attr = "sigpy.version.__version__"}
+readme = {file = "README.rst" }

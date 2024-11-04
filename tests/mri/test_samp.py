@@ -1,10 +1,11 @@
 import unittest
+
 import numpy as np
 import numpy.testing as npt
 
 from sigpy.mri import samp
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
 
 
@@ -39,5 +40,6 @@ class TestPoisson(unittest.TestCase):
                 for tol in [0.1, 0.2]:
                     for accel in [4, 5, 6, 7, 8]:
                         mask = samp.poisson(
-                            (x, y), accel=accel, seed=80, tol=tol)
+                            (x, y), accel=accel, seed=80, tol=tol
+                        )
                         assert abs(mask.size / np.sum(mask) - accel) < tol

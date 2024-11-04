@@ -5,10 +5,25 @@ import numpy as np
 
 from sigpy import backend
 
-
-__all__ = ['prod', 'vec', 'split', 'rss', 'resize',
-           'flip', 'circshift', 'downsample', 'upsample', 'dirac', 'randn',
-           'triang', 'hanning', 'monte_carlo_sure', 'axpy', 'xpay', 'leja']
+__all__ = [
+    "prod",
+    "vec",
+    "split",
+    "rss",
+    "resize",
+    "flip",
+    "circshift",
+    "downsample",
+    "upsample",
+    "dirac",
+    "randn",
+    "triang",
+    "hanning",
+    "monte_carlo_sure",
+    "axpy",
+    "xpay",
+    "leja",
+]
 
 
 def _normalize_axes(axes, ndim):
@@ -20,29 +35,28 @@ def _normalize_axes(axes, ndim):
 
 def _normalize_shape(shape):
     if isinstance(shape, int):
-        return (shape, )
+        return (shape,)
     else:
         return tuple(shape)
 
 
 def _expand_shapes(*shapes):
-
     shapes = [list(shape) for shape in shapes]
     max_ndim = max(len(shape) for shape in shapes)
-    shapes_exp = [[1] * (max_ndim - len(shape)) + shape
-                  for shape in shapes]
+    shapes_exp = [[1] * (max_ndim - len(shape)) + shape for shape in shapes]
 
     return tuple(shapes_exp)
 
 
 def _check_same_dtype(*arrays):
-
     dtype = arrays[0].dtype
     for a in arrays:
         if a.dtype != dtype:
             raise TypeError(
-                'inputs dtype mismatch, got {a_dtype}, and {dtype}.'.format(
-                    a_dtype=a.dtype, dtype=dtype))
+                "inputs dtype mismatch, got {a_dtype}, and {dtype}.".format(
+                    a_dtype=a.dtype, dtype=dtype
+                )
+            )
 
 
 def prod(shape):
@@ -89,7 +103,7 @@ def split(vec, oshapes):
     return outputs
 
 
-def rss(input, axes=(0, )):
+def rss(input, axes=(0,)):
     """Root sum of squares.
 
     Args:
@@ -100,7 +114,7 @@ def rss(input, axes=(0, )):
         array: Result.
     """
     xp = backend.get_array_module(input)
-    return xp.sum(xp.abs(input)**2, axis=axes)**0.5
+    return xp.sum(xp.abs(input) ** 2, axis=axes) ** 0.5
 
 
 def resize(input, oshape, ishift=None, oshift=None):
@@ -127,8 +141,10 @@ def resize(input, oshape, ishift=None, oshift=None):
     if oshift is None:
         oshift = [max(o // 2 - i // 2, 0) for i, o in zip(ishape1, oshape1)]
 
-    copy_shape = [min(i - si, o - so)
-                  for i, si, o, so in zip(ishape1, ishift, oshape1, oshift)]
+    copy_shape = [
+        min(i - si, o - so)
+        for i, si, o, so in zip(ishape1, ishift, oshape1, oshift)
+    ]
     islice = tuple([slice(si, si + c) for si, c in zip(ishift, copy_shape)])
     oslice = tuple([slice(so, so + c) for so, c in zip(oshift, copy_shape)])
 
@@ -181,7 +197,7 @@ def circshift(input, shifts, axes=None):
     if axes is None:
         axes = range(input.ndim)
 
-    assert(len(axes) == len(shifts))
+    assert len(axes) == len(shifts)
     xp = backend.get_array_module(input)
 
     for axis, shift in zip(axes, shifts):
@@ -233,7 +249,7 @@ def upsample(input, oshape, factors, shift=None):
     return output
 
 
-def dirac(shape, dtype=np.float, device=backend.cpu_device):
+def dirac(shape, dtype=float, device=backend.cpu_device):
     """Create Dirac delta.
 
     Args:
@@ -252,7 +268,7 @@ def dirac(shape, dtype=np.float, device=backend.cpu_device):
         return resize(xp.ones([1], dtype=dtype), shape)
 
 
-def randn(shape, scale=1, dtype=np.float, device=backend.cpu_device):
+def randn(shape, scale=1, dtype=float, device=backend.cpu_device):
     """Create random Gaussian array.
 
     Args:
@@ -271,7 +287,7 @@ def randn(shape, scale=1, dtype=np.float, device=backend.cpu_device):
     with device:
         if np.issubdtype(dtype, np.complexfloating):
             real_dtype = np.array([], dtype=dtype).real.dtype
-            real_shape = tuple(shape) + (2, )
+            real_shape = tuple(shape) + (2,)
             output = xp.random.normal(size=real_shape, scale=scale / 2**0.5)
             output = output.astype(real_dtype)
             output = output.view(dtype=dtype).reshape(shape)
@@ -280,7 +296,7 @@ def randn(shape, scale=1, dtype=np.float, device=backend.cpu_device):
             return xp.random.normal(size=shape, scale=scale).astype(dtype)
 
 
-def triang(shape, dtype=np.float, device=backend.cpu_device):
+def triang(shape, dtype=float, device=backend.cpu_device):
     """Create multi-dimensional triangular window.
 
     Args:
@@ -305,7 +321,7 @@ def triang(shape, dtype=np.float, device=backend.cpu_device):
     return window
 
 
-def hanning(shape, dtype=np.float, device=backend.cpu_device):
+def hanning(shape, dtype=float, device=backend.cpu_device):
     """Create multi-dimensional hanning window.
 
     Args:
@@ -359,13 +375,17 @@ def monte_carlo_sure(f, y, sigma, eps=1e-10):
     f_y = f(y)
     b = randn(y.shape, dtype=y.dtype, device=device)
     divf_y = xp.real(xp.vdot(b, (f(y + eps * b) - f_y))) / eps
-    sure = xp.mean(xp.abs(y - f_y)**2) - sigma**2 + 2 * sigma**2 * divf_y / n
+    sure = (
+        xp.mean(xp.abs(y - f_y) ** 2)
+        - sigma**2
+        + 2 * sigma**2 * divf_y / n
+    )
 
     return sure
 
 
 def leja(x):
-    """ Perform leja ordering of roots of a polynomial.
+    """Perform leja ordering of roots of a polynomial.
 
     Orders roots in a way suitable to accurately compute polynomial
     coefficients.
@@ -384,11 +404,11 @@ def leja(x):
 
     n = np.size(x)
     # duplicate roots to n+1 rows
-    a = np.tile(np.reshape(x, (1, n)), (n+1, 1))
+    a = np.tile(np.reshape(x, (1, n)), (n + 1, 1))
     # take abs of first row
     a[0, :] = np.abs(a[0, :])
 
-    tmp = np.zeros(n+1, dtype=complex)
+    tmp = np.zeros(n + 1, dtype=complex)
 
     # find index of max abs value
     ind = np.argmax(a[0, :])
@@ -398,25 +418,25 @@ def leja(x):
         a[:, ind] = tmp
 
     x_out = np.zeros(n, dtype=complex)
-    x_out[0] = a[n-1, 0]  # first entry of last row
+    x_out[0] = a[n - 1, 0]  # first entry of last row
     a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
 
     foo = a[0, 0:n]
 
-    for l in range(1, n-1):
-        foo = np.multiply(foo, a[l, :])
-        ind = np.argmax(foo[l:])
-        ind = ind + l
-        if l != ind:
-            tmp[:] = a[:, l]
-            a[:, l] = a[:, ind]
+    for ll in range(1, n - 1):
+        foo = np.multiply(foo, a[ll, :])
+        ind = np.argmax(foo[ll:])
+        ind = ind + ll
+        if ll != ind:
+            tmp[:] = a[:, ll]
+            a[:, ll] = a[:, ind]
             a[:, ind] = tmp
             # also swap inds in foo
-            tmp[0] = foo[l]
-            foo[l] = foo[ind]
+            tmp[0] = foo[ll]
+            foo[ll] = foo[ind]
             foo[ind] = tmp[0]
-        x_out[l] = a[n-1, l]
-        a[l+1, (l+1):n] = np.abs(a[l+1, (l+1):] - x_out[l])
+        x_out[ll] = a[n - 1, ll]
+        a[ll + 1, (ll + 1) : n] = np.abs(a[ll + 1, (ll + 1) :] - x_out[ll])
 
     x_out = a[n, :]
 

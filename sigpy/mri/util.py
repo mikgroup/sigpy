@@ -2,9 +2,10 @@
 """MRI utilities.
 """
 import numpy as np
+
 import sigpy as sp
 
-__all__ = ['get_cov', 'whiten', 'tseg_off_res_b_ct', 'apply_tseg']
+__all__ = ["get_cov", "whiten", "tseg_off_res_b_ct", "apply_tseg"]
 
 
 def get_cov(noise):
@@ -48,7 +49,7 @@ def whiten(ksp, cov):
 
 
 def tseg_off_res_b_ct(b0, bins, lseg, dt, T):
-    """ Creates B and Ct matrices needed for time-segmented off-resonance
+    """Creates B and Ct matrices needed for time-segmented off-resonance
     compensation.
 
     Args:
@@ -66,20 +67,22 @@ def tseg_off_res_b_ct(b0, bins, lseg, dt, T):
     """
 
     # create time vector
-    t = np.linspace(0, T, int(T/dt))
-    hist_wt, bin_edges = np.histogram(np.imag(2j * np.pi * np.concatenate(b0)),
-                                      bins)
+    t = np.linspace(0, T, int(T / dt))
+    hist_wt, bin_edges = np.histogram(
+        np.imag(2j * np.pi * np.concatenate(b0)), bins
+    )
 
     # Build B and Ct
-    bin_centers = bin_edges[1:] - bin_edges[1]/2
+    bin_centers = bin_edges[1:] - bin_edges[1] / 2
     zk = 0 + 1j * bin_centers
     tl = np.linspace(0, lseg, lseg) / lseg * T / 1000  # time seg centers
     # calculate off-resonance phase @ each time seg, for hist bins
     ch = np.exp(-np.expand_dims(tl, axis=1) @ np.expand_dims(zk, axis=0))
     w = np.diag(np.sqrt(hist_wt))
     p = np.linalg.pinv(w @ np.transpose(ch)) @ w
-    b = p @ np.exp(-np.expand_dims(zk, axis=1)
-                   @ np.expand_dims(t, axis=0) / 1000)
+    b = p @ np.exp(
+        -np.expand_dims(zk, axis=1) @ np.expand_dims(t, axis=0) / 1000
+    )
     b = np.transpose(b)
     b0_v = np.expand_dims(2j * np.pi * np.concatenate(b0), axis=0)
     ct = np.transpose(np.exp(-np.expand_dims(tl, axis=1) @ b0_v))
@@ -90,16 +93,16 @@ def tseg_off_res_b_ct(b0, bins, lseg, dt, T):
 def apply_tseg(array_in, coord, b, ct, fwd=True):
     """Apply the temporal interpolator and phase shift maps calculated
 
-        Args:
-            array_in (array): array to apply correction to.
-            coord (array): coordinates for noncartesian trajectories. [Nt 2].
-            b (array): temporal interpolator.
-            ct (array): off-resonance phase at each time segment center.
-            fwd (Boolean): indicates forward direction (img -> kspace) or
-                backward (kspace->img)
+    Args:
+        array_in (array): array to apply correction to.
+        coord (array): coordinates for noncartesian trajectories. [Nt 2].
+        b (array): temporal interpolator.
+        ct (array): off-resonance phase at each time segment center.
+        fwd (Boolean): indicates forward direction (img -> kspace) or
+            backward (kspace->img)
 
-        Returns:
-            out (array): array with correction applied.
+    Returns:
+        out (array): array with correction applied.
     """
 
     # get number of time segments from B input.
@@ -114,8 +117,9 @@ def apply_tseg(array_in, coord, b, ct, fwd=True):
 
     else:
         for ii in range(lseg):
-            ctd = np.reshape(np.conj(ct[:, ii]) * array_in.flatten(),
-                             (dim, dim))
+            ctd = np.reshape(
+                np.conj(ct[:, ii]) * array_in.flatten(), (dim, dim)
+            )
             out = out + sp.fourier.nufft(ctd, coord * 20) * np.conj(b[:, ii])
 
     return np.expand_dims(out, 1)

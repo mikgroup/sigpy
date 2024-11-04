@@ -3,7 +3,7 @@
 """
 from sigpy import backend
 
-__all__ = ['blochsim', 'deriv']
+__all__ = ["blochsim", "deriv"]
 
 
 def blochsim(rf, x, g):
@@ -19,7 +19,7 @@ def blochsim(rf, x, g):
      Returns:
          array: SLR alpha parameter
          array: SLR beta parameter
-     """
+    """
 
     device = backend.get_device(rf)
     xp = device.xp
@@ -27,7 +27,6 @@ def blochsim(rf, x, g):
         a = xp.ones(xp.shape(x)[0], dtype=complex)
         b = xp.zeros(xp.shape(x)[0], dtype=complex)
         for mm in range(0, xp.size(rf), 1):  # loop over time
-
             # apply RF
             c = xp.cos(xp.abs(rf[mm]) / 2)
             s = 1j * xp.exp(1j * xp.angle(rf[mm])) * xp.sin(xp.abs(rf[mm]) / 2)
@@ -71,7 +70,7 @@ def deriv(rf, x, g, auxa, auxb, af, bf):
      Returns:
          array: SLR alpha parameter
          array: SLR beta parameter
-     """
+    """
 
     device = backend.get_device(rf)
     xp = device.xp
@@ -81,7 +80,6 @@ def deriv(rf, x, g, auxa, auxb, af, bf):
         br = xp.zeros(xp.shape(bf), dtype=complex)
 
         for mm in range(xp.size(rf) - 1, -1, -1):
-
             # calculate gradient blip phase
             if g.ndim > 1:
                 z = xp.exp(1j / 2 * x @ g[mm, :])

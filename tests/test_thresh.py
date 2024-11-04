@@ -1,17 +1,18 @@
 import unittest
+
 import numpy as np
 import numpy.testing as npt
-from sigpy import thresh, config
+
+from sigpy import config, thresh
 
 if config.cupy_enabled:
     import cupy as cp
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
 
 
 class TestThresh(unittest.TestCase):
-
     def test_l2_proj(self):
         x = np.ones(5)
         y = np.full(5, 1 / 5**0.5)
@@ -39,12 +40,8 @@ class TestThresh(unittest.TestCase):
         npt.assert_allclose(thresh.linf_proj(1, x), y)
 
     def test_psd_proj(self):
-        x = np.array([[1, 0, 0],
-                      [0, -1, 0],
-                      [0, 0, -2]])
-        y = np.array([[1, 0, 0],
-                      [0, 0, 0],
-                      [0, 0, 0]])
+        x = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -2]])
+        y = np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]])
         npt.assert_allclose(thresh.psd_proj(x), y)
 
     def test_soft_thresh(self):

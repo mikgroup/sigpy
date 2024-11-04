@@ -2,17 +2,23 @@
 """FFT and non-uniform FFT (NUFFT) functions.
 
 """
+from math import ceil
+
 import numpy as np
 
-from math import ceil
 from sigpy import backend, interp, util
 
+__all__ = [
+    "fft",
+    "ifft",
+    "nufft",
+    "nufft_adjoint",
+    "estimate_shape",
+    "toeplitz_psf",
+]
 
-__all__ = ['fft', 'ifft', 'nufft', 'nufft_adjoint', 'estimate_shape',
-           'toeplitz_psf']
 
-
-def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
+def fft(input, oshape=None, axes=None, center=True, norm="ortho"):
     """FFT function that supports centering.
 
     Args:
@@ -37,14 +43,16 @@ def fft(input, oshape=None, axes=None, center=True, norm='ortho'):
     else:
         output = xp.fft.fftn(input, s=oshape, axes=axes, norm=norm)
 
-    if np.issubdtype(input.dtype,
-                     np.complexfloating) and input.dtype != output.dtype:
+    if (
+        np.issubdtype(input.dtype, np.complexfloating)
+        and input.dtype != output.dtype
+    ):
         output = output.astype(input.dtype, copy=False)
 
     return output
 
 
-def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
+def ifft(input, oshape=None, axes=None, center=True, norm="ortho"):
     """IFFT function that supports centering.
 
     Args:
@@ -70,8 +78,10 @@ def ifft(input, oshape=None, axes=None, center=True, norm='ortho'):
     else:
         output = xp.fft.ifftn(input, s=oshape, axes=axes, norm=norm)
 
-    if np.issubdtype(input.dtype,
-                     np.complexfloating) and input.dtype != output.dtype:
+    if (
+        np.issubdtype(input.dtype, np.complexfloating)
+        and input.dtype != output.dtype
+    ):
         output = output.astype(input.dtype)
 
     return output
@@ -108,7 +118,7 @@ def nufft(input, coord, oversamp=1.25, width=4):
 
     """
     ndim = coord.shape[-1]
-    beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
+    beta = np.pi * (((width / oversamp) * (oversamp - 0.5)) ** 2 - 0.8) ** 0.5
     os_shape = _get_oversamp_shape(input.shape, ndim, oversamp)
 
     output = input.copy()
@@ -117,7 +127,7 @@ def nufft(input, coord, oversamp=1.25, width=4):
     _apodize(output, ndim, oversamp, width, beta)
 
     # Zero-pad
-    output /= util.prod(input.shape[-ndim:])**0.5
+    output /= util.prod(input.shape[-ndim:]) ** 0.5
     output = util.resize(output, os_shape)
 
     # FFT
@@ -126,7 +136,8 @@ def nufft(input, coord, oversamp=1.25, width=4):
     # Interpolate
     coord = _scale_coord(coord, input.shape, oversamp)
     output = interp.interpolate(
-        output, coord, kernel='kaiser_bessel', width=width, param=beta)
+        output, coord, kernel="kaiser_bessel", width=width, param=beta
+    )
     output /= width**ndim
 
     return output
@@ -143,8 +154,9 @@ def estimate_shape(coord):
     """
     ndim = coord.shape[-1]
     with backend.get_device(coord):
-        shape = [int(coord[..., i].max() - coord[..., i].min())
-                 for i in range(ndim)]
+        shape = [
+            int(coord[..., i].max() - coord[..., i].min()) for i in range(ndim)
+        ]
 
     return shape
 
@@ -176,9 +188,9 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4):
 
     """
     ndim = coord.shape[-1]
-    beta = np.pi * (((width / oversamp) * (oversamp - 0.5))**2 - 0.8)**0.5
+    beta = np.pi * (((width / oversamp) * (oversamp - 0.5)) ** 2 - 0.8) ** 0.5
     if oshape is None:
-        oshape = list(input.shape[:-coord.ndim + 1]) + estimate_shape(coord)
+        oshape = list(input.shape[: -coord.ndim + 1]) + estimate_shape(coord)
     else:
         oshape = list(oshape)
 
@@ -186,8 +198,9 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4):
 
     # Gridding
     coord = _scale_coord(coord, oshape, oversamp)
-    output = interp.gridding(input, coord, os_shape,
-                             kernel='kaiser_bessel', width=width, param=beta)
+    output = interp.gridding(
+        input, coord, os_shape, kernel="kaiser_bessel", width=width, param=beta
+    )
     output /= width**ndim
 
     # IFFT
@@ -195,7 +208,7 @@ def nufft_adjoint(input, coord, oshape=None, oversamp=1.25, width=4):
 
     # Crop
     output = util.resize(output, oshape)
-    output *= util.prod(os_shape[-ndim:]) / util.prod(oshape[-ndim:])**0.5
+    output *= util.prod(os_shape[-ndim:]) / util.prod(oshape[-ndim:]) ** 0.5
 
     # Apodize
     _apodize(output, ndim, oversamp, width, beta)
@@ -235,9 +248,9 @@ def toeplitz_psf(coord, shape, oversamp=1.25, width=4):
         new_shape = _get_oversamp_shape(shape, ndim, 2)
         new_coord = _scale_coord(coord, new_shape, 2)
 
-        idx = [slice(None)]*len(new_shape)
+        idx = [slice(None)] * len(new_shape)
         for k in range(-1, -(ndim + 1), -1):
-            idx[k] = new_shape[k]//2
+            idx[k] = new_shape[k] // 2
 
         d = xp.zeros(new_shape, dtype=xp.complex64)
         d[tuple(idx)] = 1
@@ -250,8 +263,7 @@ def toeplitz_psf(coord, shape, oversamp=1.25, width=4):
         return psf
 
 
-def _fftc(input, oshape=None, axes=None, norm='ortho'):
-
+def _fftc(input, oshape=None, axes=None, norm="ortho"):
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
     xp = backend.get_array_module(input)
@@ -266,7 +278,7 @@ def _fftc(input, oshape=None, axes=None, norm='ortho'):
     return output
 
 
-def _ifftc(input, oshape=None, axes=None, norm='ortho'):
+def _ifftc(input, oshape=None, axes=None, norm="ortho"):
     ndim = input.ndim
     axes = util._normalize_axes(axes, ndim)
     xp = backend.get_array_module(input)
@@ -306,7 +318,9 @@ def _apodize(input, ndim, oversamp, width, beta):
         idx = xp.arange(i, dtype=output.dtype)
 
         # Calculate apodization
-        apod = (beta**2 - (np.pi * width * (idx - i // 2) / os_i)**2)**0.5
+        apod = (
+            beta**2 - (np.pi * width * (idx - i // 2) / os_i) ** 2
+        ) ** 0.5
         apod /= xp.sinh(apod)
         output *= apod.reshape([i] + [1] * (-a - 1))
 
