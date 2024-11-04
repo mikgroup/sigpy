@@ -121,7 +121,9 @@ class TestFourier(unittest.TestCase):
     def test_nufft_nd(self):
         for ndim in range(3):
             input = np.array([[0], [1], [0]], complex)
-            coord = np.array([[-1, 0], [0, 0], [1, 0]], float)
+            coord = np.array([[-1, 0],
+                              [0, 0],
+                              [1, 0]], float)
 
             npt.assert_allclose(
                 fourier.nufft(input, coord),
