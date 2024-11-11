@@ -35,8 +35,8 @@ def abrm(rf, x, balanced=False):
 
         g = xp.ones(xp.size(rf)) * 2 * xp.pi / xp.size(rf)
 
-        a = xp.ones(xp.size(x), dtype=complex)
-        b = xp.zeros(xp.size(x), dtype=complex)
+        a = xp.ones(xp.size(x), dtype=xp.complex128)
+        b = xp.zeros(xp.size(x), dtype=xp.complex128)
         for mm in range(xp.size(rf)):
             om = x * g[mm]
             phi = xp.sqrt(xp.abs(rf[mm]) ** 2 + om**2) + eps
@@ -92,8 +92,8 @@ def abrm_nd(rf, x, g):
     with device:
         eps = 1e-16
 
-        a = xp.ones(xp.shape(x)[0], dtype=complex)
-        b = xp.zeros(xp.shape(x)[0], dtype=complex)
+        a = xp.ones(xp.shape(x)[0], dtype=xp.complex128)
+        b = xp.zeros(xp.shape(x)[0], dtype=xp.complex128)
         for mm in range(xp.size(rf)):
             om = x @ g[mm, :]
             phi = xp.sqrt(xp.abs(rf[mm]) ** 2 + om**2)
@@ -231,8 +231,8 @@ def abrm_ptx(b1, x, g, dt, fmap=None, sens=None):
 
         statea = xp.ones((Ns, 1))
         stateb = xp.zeros((Ns, 1))
-        a = xp.ones(xp.shape(x)[0], dtype=complex)
-        b = xp.zeros(xp.shape(x)[0], dtype=complex)
+        a = xp.ones(xp.shape(x)[0], dtype=xp.complex128)
+        b = xp.zeros(xp.shape(x)[0], dtype=xp.complex128)
         for mm in range(Nt):
             phi = dt * gam * xp.sqrt(xp.abs(bxy[:, mm]) ** 2 + bz[:, mm] ** 2)
             with xp.errstate(divide="ignore"):

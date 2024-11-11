@@ -447,8 +447,8 @@ def dz_hadamard_b(n=128, g=5, gind=1, tb=4, d1=0.01, d2=0.01, shift=32):
         w = np.append(w, d1 / d2)
 
         # separate the positive and negative bands
-        mp = (m > 0).astype(float)
-        mn = (m < 0).astype(float)
+        mp = (m > 0).astype(np.float64)
+        mn = (m < 0).astype(np.float64)
 
         # design the positive and negative filters
         c = np.exp(
@@ -514,7 +514,7 @@ def dz_gslider_rf(
     """
     bsf = np.sin(flip / 2)  # beta scaling factor
 
-    rf = np.zeros((n, g), dtype="complex")
+    rf = np.zeros((n, g), dtype=np.complex128)
     for gind in range(1, g + 1):
         b = bsf * dz_gslider_b(n, g, gind, tb, d1, d2, phi)
         rf[:, gind - 1] = b2rf(b, cancel_alpha_phs)
@@ -539,7 +539,7 @@ def b2a(b):
     n = np.size(b)
 
     npad = n * 16
-    bcp = np.zeros(npad, dtype=complex)
+    bcp = np.zeros(npad, dtype=np.complex128)
     bcp[0:n:1] = b
     bf = sp.fft(bcp, center=False, norm=None)
     bfmax = np.max(np.abs(bf))
@@ -572,10 +572,10 @@ def mag2mp(x):
 
 def ab2rf(a, b):
     n = np.size(a)
-    rf = np.zeros(n, dtype=complex)
+    rf = np.zeros(n, dtype=np.complex128)
 
-    a = a.astype(complex)
-    b = b.astype(complex)
+    a = a.astype(np.complex128)
+    b = b.astype(np.complex128)
 
     for ii in range(n - 1, -1, -1):
         cj = np.sqrt(1 / (1 + np.abs(b[ii] / a[ii]) ** 2))
@@ -653,7 +653,7 @@ def root_flip(b, d1, flip, tb, verbose=False):
         do_flip = tmp
 
         # flip those indices
-        r_flip = np.zeros(np.shape(r), dtype=complex)
+        r_flip = np.zeros(np.shape(r), dtype=np.complex128)
         r_flip[:] = r[:]
         r_flip[do_flip] = np.conj(1 / r_flip[do_flip])
 
@@ -751,7 +751,7 @@ def dz_recursive_rf(
             flip[jj] = flip[jj] * 180 / np.pi  # deg
 
     # design first RF pulse
-    b = np.zeros((int(z_pad_fact * n), n_seg), dtype=complex)
+    b = np.zeros((int(z_pad_fact * n), n_seg), dtype=np.complex128)
     b[
         int(z_pad_fact * n / 2 - n / 2) : int(z_pad_fact * n / 2 + n / 2), 0
     ] = dzls(n, tb, d1, d2)
@@ -770,7 +770,7 @@ def dz_recursive_rf(
     B = np.multiply(B, c)
     b[:, 0] = sp.ifft(B / np.max(np.abs(B)), norm=None)
     b[:, 0] *= np.sin(flip[0] * (np.pi / 180) / 2)
-    rf = np.zeros((z_pad_fact * n, n_seg), dtype=complex)
+    rf = np.zeros((z_pad_fact * n, n_seg), dtype=np.complex128)
     a = b2a(b[:, 0])
     if cancel_alpha_phs:
         # cancel a phase by absorbing into b
@@ -825,7 +825,7 @@ def dz_recursive_rf(
     # equation 4*Mz^2*(1-B^2)*B^2 = |Mxy_1|^2.
     # Subsequently solve for |A|, and get phase of A via min-phase, and
     # then get phase of B by dividing phase of A from first pulse's Mxy phase.
-    mz = np.ones((z_pad_fact * n), dtype=complex)
+    mz = np.ones((z_pad_fact * n), dtype=np.complex128)
     for jj in range(1, n_seg):
         # calculate Mz profile after previous pulse
         if se_seq is False:

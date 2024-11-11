@@ -6,6 +6,7 @@ and a maximum eigenvalue estimation App.
 import time
 
 from tqdm.auto import tqdm
+import numpy as np
 
 from sigpy import backend, linop, prox, util
 from sigpy.alg import (
@@ -121,7 +122,7 @@ class MaxEig(App):
     def __init__(
         self,
         A,
-        dtype=float,
+        dtype=np.float64,
         device=backend.cpu_device,
         max_iter=30,
         show_pbar=True,

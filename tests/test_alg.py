@@ -189,7 +189,7 @@ class TestAlg(unittest.TestCase):
         x_numpy = np.expand_dims(x_numpy, 1)
         A = np.csingle(A)
         A = linop.MatMul(y.shape, A)
-        x0 = np.zeros(A.ishape, dtype=complex)
+        x0 = np.zeros(A.ishape, dtype=np.complex128)
 
         alg_method = alg.GerchbergSaxton(
             A, y, x0, max_iter=100, tol=10e-9, lamb=lamda

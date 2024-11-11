@@ -631,7 +631,7 @@ class SDMM(Alg):
         M = len(self.L)
         with self.device:
             xp = self.device.xp
-            self.x = xp.zeros(self.A.ishape, dtype=complex).flatten()
+            self.x = xp.zeros(self.A.ishape, dtype=xp.complex128).flatten()
             self.x = xp.expand_dims(self.x, axis=1)
             self.z, self.u = [], []
 
@@ -639,15 +639,15 @@ class SDMM(Alg):
                 self.z.append(L[ii] @ self.x)
                 self.u.append(
                     xp.expand_dims(
-                        xp.zeros(xp.shape(L[ii])[0], dtype=xp.complex), axis=1
+                        xp.zeros(xp.shape(L[ii])[0], dtype=xp.complex128), axis=1
                     )
                 )
             if c_max is not None:
                 self.zMax = self.x
-                self.uMax = xp.zeros(xp.shape(self.x), dtype=complex)
+                self.uMax = xp.zeros(xp.shape(self.x), dtype=xp.complex128)
             if c_norm is not None:
                 self.zNorm = self.x
-                self.uNorm = xp.zeros(xp.shape(self.x), dtype=complex)
+                self.uNorm = xp.zeros(xp.shape(self.x), dtype=xp.complex128)
 
     def prox_rhog(self, v, c):
         with self.device:
