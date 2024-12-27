@@ -887,7 +887,7 @@ def min_time_gradient(
         sdot1 = gamma * gmax * np.ones_like(s)
 
         # calc II constraint curve (curve curvature dependent)
-        sdot2 = np.sqrt(gamma * smax / (k + np.finfo(float).eps))
+        sdot2 = np.sqrt(gamma * smax / (k + np.finfo(np.float64).eps))
 
         # calc total constraint
         sdot = np.minimum(sdot1, sdot2)
@@ -983,7 +983,7 @@ def min_time_gradient(
     # compute time
     t_of_s = integrate.cumulative_trapezoid(1.0 / st_of_s, initial=0) * ds
 
-    t = np.arange(0, t_of_s[-1] + np.finfo(float).eps, dt)
+    t = np.arange(0, t_of_s[-1] + np.finfo(np.float64).eps, dt)
 
     t_of_s = interpolate.CubicSpline(t_of_s, s)
     s_of_t = t_of_s(t)
