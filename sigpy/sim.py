@@ -7,7 +7,7 @@ import numpy as np
 __all__ = ["shepp_logan"]
 
 
-def shepp_logan(shape, dtype=complex):
+def shepp_logan(shape, dtype=np.complex128):
     """Generates a Shepp Logan phantom with a given shape and dtype.
 
     Args:

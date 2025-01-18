@@ -8,4 +8,4 @@ if __name__ == "__main__":
 
 class TestVersion(unittest.TestCase):
     def test_version(self):
-        assert version.__version__ == "0.1.25"
+        assert version.__version__ == "0.1.27"

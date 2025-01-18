@@ -41,7 +41,7 @@ def mb_rf(pulse_in, n_bands=3, band_sep=5, phs_0_pt="None"):
 
     # build multiband modulation function
     n = np.size(pulse_in)
-    b = np.zeros(n, dtype="complex")
+    b = np.zeros(n, dtype=np.complex128)
     for ii in range(0, n_bands):
         b += np.exp(
             1j

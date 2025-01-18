@@ -23,8 +23,8 @@ class TestAdiabatic(unittest.TestCase):
         # check relatively homogeneous over range of B1 values
         b1 = np.arange(0.2, 0.8, 0.1)
         b1 = np.reshape(b1, (np.size(b1), 1))
-        a = np.zeros(np.shape(b1), dtype="complex")
-        b = np.zeros(np.shape(b1), dtype="complex")
+        a = np.zeros(np.shape(b1), dtype=np.complex128)
+        b = np.zeros(np.shape(b1), dtype=np.complex128)
 
         for ii in range(0, np.size(b1)):
             [a[ii], b[ii]] = rf.sim.abrm_nd(
@@ -51,8 +51,8 @@ class TestAdiabatic(unittest.TestCase):
         b1 = np.arange(0.2, 0.8, 0.1)
         b1 = np.reshape(b1, (np.size(b1), 1))
 
-        a = np.zeros(np.shape(b1), dtype="complex")
-        b = np.zeros(np.shape(b1), dtype="complex")
+        a = np.zeros(np.shape(b1), dtype=np.complex128)
+        b = np.zeros(np.shape(b1), dtype=np.complex128)
         for ii in range(0, np.size(b1)):
             [a[ii], b[ii]] = rf.sim.abrm_nd(
                 2 * np.pi * (dur / n) * 4258 * b1[ii] * am_sech,

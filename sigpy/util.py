@@ -249,7 +249,7 @@ def upsample(input, oshape, factors, shift=None):
     return output
 
 
-def dirac(shape, dtype=float, device=backend.cpu_device):
+def dirac(shape, dtype=np.float64, device=backend.cpu_device):
     """Create Dirac delta.
 
     Args:
@@ -268,7 +268,7 @@ def dirac(shape, dtype=float, device=backend.cpu_device):
         return resize(xp.ones([1], dtype=dtype), shape)
 
 
-def randn(shape, scale=1, dtype=float, device=backend.cpu_device):
+def randn(shape, scale=1, dtype=np.float64, device=backend.cpu_device):
     """Create random Gaussian array.
 
     Args:
@@ -296,7 +296,7 @@ def randn(shape, scale=1, dtype=float, device=backend.cpu_device):
             return xp.random.normal(size=shape, scale=scale).astype(dtype)
 
 
-def triang(shape, dtype=float, device=backend.cpu_device):
+def triang(shape, dtype=np.float64, device=backend.cpu_device):
     """Create multi-dimensional triangular window.
 
     Args:
@@ -321,7 +321,7 @@ def triang(shape, dtype=float, device=backend.cpu_device):
     return window
 
 
-def hanning(shape, dtype=float, device=backend.cpu_device):
+def hanning(shape, dtype=np.float64, device=backend.cpu_device):
     """Create multi-dimensional hanning window.
 
     Args:
@@ -408,7 +408,7 @@ def leja(x):
     # take abs of first row
     a[0, :] = np.abs(a[0, :])
 
-    tmp = np.zeros(n + 1, dtype=complex)
+    tmp = np.zeros(n + 1, dtype=np.complex128)
 
     # find index of max abs value
     ind = np.argmax(a[0, :])
@@ -417,7 +417,7 @@ def leja(x):
         a[:, 0] = a[:, ind]
         a[:, ind] = tmp
 
-    x_out = np.zeros(n, dtype=complex)
+    x_out = np.zeros(n, dtype=np.complex128)
     x_out[0] = a[n - 1, 0]  # first entry of last row
     a[1, 1:] = np.abs(a[1, 1:] - x_out[0])
 

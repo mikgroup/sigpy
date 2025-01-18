@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """MRI RF excitation pulse design functions,
-    including SLR and small tip spatial design
+including SLR and small tip spatial design
 """
 
 import numpy as np
@@ -135,7 +135,7 @@ def dzls(n=64, tb=4, d1=0.01, d2=0.01):
     m = [1, 1, 0, 0]
     w = [1, d1 / d2]
 
-    h = signal.firls(n + 1, f, m, w)
+    h = signal.firls(n + 1, f, m, weight=w)
     # shift the filter half a sample to make it symmetric, like in MATLAB
     c = np.exp(
         1j
@@ -160,7 +160,7 @@ def dzmp(n=64, tb=4, d1=0.01, d2=0.01):
     m = [1, 0]
     w = [1, 2 * d1 / (0.5 * d2 * d2)]
 
-    hl = signal.remez(n2, f, m, w)
+    hl = signal.remez(n2, f, m, weight=w)
 
     h = fmp(hl)
 
@@ -188,7 +188,7 @@ def dzlp(n=64, tb=4, d1=0.01, d2=0.01):
     m = [1, 0]
     w = [1, d1 / d2]
 
-    h = signal.remez(n, f, m, w)
+    h = signal.remez(n, f, m, weight=w)
 
     return h
 
@@ -253,8 +253,8 @@ def dz_gslider_b(
             m_sub = [1, 1, 0, 0, 0, 0]
             w = [1, 1, d1 / d2]
 
-            b_notch = signal.firls(n + 1, f, m_notch, w)  # the notched filter
-            b_sub = signal.firls(n + 1, f, m_sub, w)  # the subslice filter
+            b_notch = signal.firls(n + 1, f, m_notch, weight=w)  # the notched filter
+            b_sub = signal.firls(n + 1, f, m_sub, weight=w)  # the subslice filter
             # add them with the subslice phase
             b = np.add(b_notch, np.multiply(np.exp(1j * phi), b_sub))
             # shift the filter half a sample to make it symmetric,
@@ -344,7 +344,7 @@ def dz_gslider_b(
             )
         )
 
-        b_notch = signal.firls(n + 1, f, m_notch, w)  # the notched filter
+        b_notch = signal.firls(n + 1, f, m_notch, weight=w)  # the notched filter
         b_notch = sp.ifft(
             np.multiply(sp.fft(b_notch, center=False), c), center=False
         )
@@ -352,7 +352,7 @@ def dz_gslider_b(
         # hilbert transform to suppress negative passband
         b_notch = signal.hilbert(b_notch)
 
-        b_sub = signal.firls(n + 1, f, m_sub, w)  # the sub-band filter
+        b_sub = signal.firls(n + 1, f, m_sub, weight=w)  # the sub-band filter
         b_sub = sp.ifft(
             np.multiply(sp.fft(b_sub, center=False), c), center=False
         )
@@ -447,8 +447,8 @@ def dz_hadamard_b(n=128, g=5, gind=1, tb=4, d1=0.01, d2=0.01, shift=32):
         w = np.append(w, d1 / d2)
 
         # separate the positive and negative bands
-        mp = (m > 0).astype(float)
-        mn = (m < 0).astype(float)
+        mp = (m > 0).astype(np.float64)
+        mn = (m < 0).astype(np.float64)
 
         # design the positive and negative filters
         c = np.exp(
@@ -460,8 +460,8 @@ def dz_hadamard_b(n=128, g=5, gind=1, tb=4, d1=0.01, d2=0.01, shift=32):
                 [np.arange(0, n / 2 + 1, 1), np.arange(-n / 2, 0, 1)]
             )
         )
-        bp = signal.firls(n + 1, f, mp, w)  # the positive filter
-        bn = signal.firls(n + 1, f, mn, w)  # the negative filter
+        bp = signal.firls(n + 1, f, mp, weight=w)  # the positive filter
+        bn = signal.firls(n + 1, f, mn, weight=w)  # the negative filter
 
         # combine the filters and demodulate
         b = sp.ifft(
@@ -514,7 +514,7 @@ def dz_gslider_rf(
     """
     bsf = np.sin(flip / 2)  # beta scaling factor
 
-    rf = np.zeros((n, g), dtype="complex")
+    rf = np.zeros((n, g), dtype=np.complex128)
     for gind in range(1, g + 1):
         b = bsf * dz_gslider_b(n, g, gind, tb, d1, d2, phi)
         rf[:, gind - 1] = b2rf(b, cancel_alpha_phs)
@@ -539,7 +539,7 @@ def b2a(b):
     n = np.size(b)
 
     npad = n * 16
-    bcp = np.zeros(npad, dtype=complex)
+    bcp = np.zeros(npad, dtype=np.complex128)
     bcp[0:n:1] = b
     bf = sp.fft(bcp, center=False, norm=None)
     bfmax = np.max(np.abs(bf))
@@ -572,10 +572,10 @@ def mag2mp(x):
 
 def ab2rf(a, b):
     n = np.size(a)
-    rf = np.zeros(n, dtype=complex)
+    rf = np.zeros(n, dtype=np.complex128)
 
-    a = a.astype(complex)
-    b = b.astype(complex)
+    a = a.astype(np.complex128)
+    b = b.astype(np.complex128)
 
     for ii in range(n - 1, -1, -1):
         cj = np.sqrt(1 / (1 + np.abs(b[ii] / a[ii]) ** 2))
@@ -653,7 +653,7 @@ def root_flip(b, d1, flip, tb, verbose=False):
         do_flip = tmp
 
         # flip those indices
-        r_flip = np.zeros(np.shape(r), dtype=complex)
+        r_flip = np.zeros(np.shape(r), dtype=np.complex128)
         r_flip[:] = r[:]
         r_flip[do_flip] = np.conj(1 / r_flip[do_flip])
 
@@ -751,7 +751,7 @@ def dz_recursive_rf(
             flip[jj] = flip[jj] * 180 / np.pi  # deg
 
     # design first RF pulse
-    b = np.zeros((int(z_pad_fact * n), n_seg), dtype=complex)
+    b = np.zeros((int(z_pad_fact * n), n_seg), dtype=np.complex128)
     b[
         int(z_pad_fact * n / 2 - n / 2) : int(z_pad_fact * n / 2 + n / 2), 0
     ] = dzls(n, tb, d1, d2)
@@ -770,7 +770,7 @@ def dz_recursive_rf(
     B = np.multiply(B, c)
     b[:, 0] = sp.ifft(B / np.max(np.abs(B)), norm=None)
     b[:, 0] *= np.sin(flip[0] * (np.pi / 180) / 2)
-    rf = np.zeros((z_pad_fact * n, n_seg), dtype=complex)
+    rf = np.zeros((z_pad_fact * n, n_seg), dtype=np.complex128)
     a = b2a(b[:, 0])
     if cancel_alpha_phs:
         # cancel a phase by absorbing into b
@@ -793,7 +793,7 @@ def dz_recursive_rf(
         win_len = (win_fact - 1) * n
         npad = n * z_pad_fact - win_fact * n
         # blackman window?
-        window = signal.blackman(int((win_fact - 1) * n))
+        window = signal.windows.blackman(int((win_fact - 1) * n))
         # split in half; stick N ones in the middle
         window = np.concatenate(
             (
@@ -825,7 +825,7 @@ def dz_recursive_rf(
     # equation 4*Mz^2*(1-B^2)*B^2 = |Mxy_1|^2.
     # Subsequently solve for |A|, and get phase of A via min-phase, and
     # then get phase of B by dividing phase of A from first pulse's Mxy phase.
-    mz = np.ones((z_pad_fact * n), dtype=complex)
+    mz = np.ones((z_pad_fact * n), dtype=np.complex128)
     for jj in range(1, n_seg):
         # calculate Mz profile after previous pulse
         if se_seq is False:

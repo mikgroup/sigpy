@@ -11,7 +11,7 @@ def poisson(
     img_shape,
     accel,
     calib=(0, 0),
-    dtype=complex,
+    dtype=np.complex128,
     crop_corner=True,
     return_density=False,
     seed=0,
