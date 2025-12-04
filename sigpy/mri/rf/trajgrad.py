@@ -862,7 +862,7 @@ def min_time_gradient(
         # Given a k-space curve C (in [1/cm] units), maximum gradient amplitude
         # (in G/cm) and maximum slew-rate (in G/(cm*ms)).
         # This function calculates the upper bound for the time parametrization
-        # sdot (which is a non scaled max gradient constaint) as a function
+        # sdot (which is a non scaled max gradient constraint) as a function
         # of s.
         #
         #   cs      --  spline polynomial
@@ -894,12 +894,12 @@ def min_time_gradient(
 
         return sdot, k
 
-    # Curve in arbitrary paramater space, cubic spline
+    # Curve in arbitrary parameter space, cubic spline
     num_p = c.shape[0]
     p = np.linspace(0, 1, num_p, endpoint=True)
     cp = interpolate.CubicSpline(p, c, axis=0)
 
-    # Integrate absolute value to find length and s(arc) vs p(paramater)
+    # Integrate absolute value to find length and s(arc) vs p(parameter)
     cp1_spline = cp.derivative()
     p_highres = np.linspace(0, 1, num_p * 10)
     cp1_highres = cp1_spline(p_highres)

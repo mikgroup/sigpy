@@ -264,7 +264,7 @@ class AllReduce(Linop):
 
 
 class AllReduceAdjoint(Linop):
-    """All reduce adjoint operator. Equivalant to identity.
+    """All reduce adjoint operator. Equivalent to identity.
 
     Args:
         shape (tuple of ints): Input/output shape.
@@ -460,7 +460,7 @@ class Hstack(Linop):
 
     Creates a Linop that splits the input, applies Linops independently,
     and sums outputs.
-    In matrix form, this is equivalant to given matrices {A1, ..., An},
+    In matrix form, this is equivalent to given matrices {A1, ..., An},
     returns [A1, ..., An].
 
     Input and output devices must be the same.
@@ -553,7 +553,7 @@ class Vstack(Linop):
 
     Creates a Linop that applies linops independently,
     and concatenates outputs.
-    In matrix form, this is equivalant to given matrices {A1, ..., An},
+    In matrix form, this is equivalent to given matrices {A1, ..., An},
     returns [A1.T, ..., An.T].T.
 
     Args:
@@ -722,7 +722,7 @@ class Reshape(Linop):
 
 
 class Transpose(Linop):
-    """Tranpose input with the given axes.
+    """Transpose input with the given axes.
 
     Args:
         ishape (tuple of ints): Input shape.

@@ -525,7 +525,7 @@ class LinearLeastSquares(App):
 
 
 class L2ConstrainedMinimization(App):
-    r"""L2 contrained minimization application.
+    r"""L2 constrained minimization application.
 
     Solves for problem:
 

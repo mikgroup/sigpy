@@ -138,7 +138,7 @@ def linf_proj(eps, input, bias=None):
 
 
 def psd_proj(input):
-    """Projection onto postiive semi-definite matrices.
+    """Projection onto positive semi-definite matrices.
 
     Args:
         input (array): a two-dimensional matrix.

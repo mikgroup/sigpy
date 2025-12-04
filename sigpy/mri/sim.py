@@ -7,7 +7,7 @@ __all__ = ["birdcage_maps"]
 
 
 def birdcage_maps(shape, r=1.5, nzz=8, dtype=np.complex128):
-    """Simulates birdcage coil sensitivies.
+    """Simulates birdcage coil sensitivities.
 
     Args:
         shape (tuple of ints): sensitivity maps shape,

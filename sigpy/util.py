@@ -92,7 +92,7 @@ def split(vec, oshapes):
         oshapes (list of tuple of ints): Output shapes.
 
     Returns:
-        list of arrays: Splitted outputs.
+        list of arrays: Split outputs.
     """
     outputs = []
     for oshape in oshapes:

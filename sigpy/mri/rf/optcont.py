@@ -94,7 +94,7 @@ def deriv(rf, x, g, auxa, auxb, af, bf):
             ar = ar * z
             br = br * z
 
-            # strip off the curent rf rotation from forward sim
+            # strip off the current rf rotation from forward sim
             c = xp.cos(xp.abs(rf[mm]) / 2)
             s = 1j * xp.exp(1j * xp.angle(rf[mm])) * xp.sin(xp.abs(rf[mm]) / 2)
             at = af * c + bf * xp.conj(s)

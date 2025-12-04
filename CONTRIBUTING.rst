@@ -40,9 +40,9 @@ $ python -m unittest
 Documentation
 =============
 
-Each new feature should be documented in the documentation. The documention is stored under the directory``docs/``.
+Each new feature should be documented in the documentation. The documentation is stored under the directory``docs/``.
 
-You can build the docmentation in HTML format locally using Sphinx::
+You can build the documentation in HTML format locally using Sphinx::
 
 $ cd docs
 $ make html
