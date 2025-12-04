@@ -602,7 +602,7 @@ def root_flip(b, d1, flip, tb, verbose=False):
         d1 (float): passband ripple level.
         flip (array): target flip angle.
         tb (int): pulse time bandwidth product.
-        verbose (bool): print feeback on iterations.
+        verbose (bool): print feedback on iterations.
 
     Returns:
         2-element tuple containing

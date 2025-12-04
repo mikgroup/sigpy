@@ -387,7 +387,7 @@ class PrimalDualHybridGradient(Alg):
             util.axpy(self.x, -self.tau, self.AH(self.u))
             backend.copyto(self.x, self.proxg(self.tau, self.x))
 
-        # Update step-size if neccessary.
+        # Update step-size if necessary.
         if self.gamma_primal > 0 and self.gamma_dual == 0:
             with self.x_device:
                 xp = self.x_device.xp
@@ -425,7 +425,7 @@ class AltMin(Alg):
 
     Args:
         min1 (function): Function to minimize over variable 1.
-        min2 (function): Funciton to minimize over variable 2.
+        min2 (function): Function to minimize over variable 2.
         max_iter (int): Maximum number of iterations.
 
     """

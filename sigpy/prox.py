@@ -84,7 +84,7 @@ class Conj(Prox):
 
 
 class NoOp(Prox):
-    r"""Proximal operator for empty function. Equivalant to an identity function.
+    r"""Proximal operator for empty function. Equivalent to an identity function.
 
     Args:
        shape (tuple of ints): Input shape
