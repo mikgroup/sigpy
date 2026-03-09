@@ -478,9 +478,9 @@ class EspiritCalib(sp.app.App):
         calib (tuple of ints): length-2 image shape.
         thresh (float): threshold for the calibration matrix.
         kernel_width (int): kernel width for the calibration matrix.
-        max_power_iter (int): maximum number of power iterations.
+        max_iter (int): maximum number of power iterations.
         device (Device): computing device.
-        crop (int): cropping threshold.
+        crop (float): cropping threshold.
 
     Returns:
         array: ESPIRiT maps of the same shape as ksp.
