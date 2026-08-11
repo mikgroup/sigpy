@@ -37,7 +37,12 @@ lint = [
     "isort",
     "sphinx",
     "sphinx_rtd_theme"
-] 
+]
+# CuPy 14 removed cuDNN. Installing this restores cuDNN-backed GPU
+# convolution there; without it sigpy falls back to a batched FFT.
+cudnn = [
+    "nvidia-cudnn-frontend"
+]
 
 
 [project.urls]
