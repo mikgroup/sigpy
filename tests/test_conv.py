@@ -442,3 +442,175 @@ class TestConv(unittest.TestCase):
                         npt.assert_allclose(
                             filt, [[[[2, 1, 2]]], [[[2, 1, 2]]]], atol=1e-5
                         )
+
+    @unittest.skipIf(not config.cupy_enabled, "cupy not installed")
+    def test_convolve_gpu_matches_cpu(self):
+        # The GPU results must match the CPU results bit-for-bit in intent,
+        # whether the GPU path goes through cuDNN or the FFT fallback.
+        np.random.seed(0)
+        device = backend.Device(0)
+        for D in [1, 2, 3]:
+            for mode in ["full", "valid"]:
+                for strides in [None, [2] * D]:
+                    # Equal sizes make valid mode degenerate to a single
+                    # output sample, which is worth covering separately.
+                    for m, n in [([5] * D, [3] * D), ([4] * D, [4] * D)]:
+                        for dtype in dtypes:
+                            for multi_channel in [False, True]:
+                                with self.subTest(
+                                    D=D,
+                                    mode=mode,
+                                    strides=strides,
+                                    m=m,
+                                    n=n,
+                                    dtype=dtype,
+                                    multi_channel=multi_channel,
+                                ):
+                                    self._check_gpu_matches_cpu(
+                                        device,
+                                        D,
+                                        m,
+                                        n,
+                                        mode,
+                                        strides,
+                                        dtype,
+                                        multi_channel,
+                                    )
+
+    def _check_gpu_matches_cpu(
+        self, device, D, m, n, mode, strides, dtype, multi_channel
+    ):
+        if multi_channel:
+            c_i, c_o = 2, 3
+            data_shape = [2, c_i] + m
+            filt_shape = [c_o, c_i] + n
+        else:
+            data_shape = [2] + m
+            filt_shape = n
+
+        # Generate on CPU and copy, so both devices see identical inputs.
+        data = util.randn(data_shape, dtype=dtype)
+        filt = util.randn(filt_shape, dtype=dtype)
+        data_gpu = backend.to_device(data, device)
+        filt_gpu = backend.to_device(filt, device)
+
+        kwargs = {
+            "mode": mode,
+            "strides": strides,
+            "multi_channel": multi_channel,
+        }
+
+        output = conv.convolve(data, filt, **kwargs)
+        self._assert_close(
+            conv.convolve(data_gpu, filt_gpu, **kwargs), output, dtype
+        )
+
+        output_gpu = backend.to_device(output, device)
+        self._assert_close(
+            conv.convolve_data_adjoint(
+                output_gpu, filt_gpu, data_shape, **kwargs
+            ),
+            conv.convolve_data_adjoint(output, filt, data_shape, **kwargs),
+            dtype,
+        )
+        self._assert_close(
+            conv.convolve_filter_adjoint(
+                output_gpu, data_gpu, filt_shape, **kwargs
+            ),
+            conv.convolve_filter_adjoint(output, data, filt_shape, **kwargs),
+            dtype,
+        )
+
+    def _assert_close(self, actual, desired, dtype):
+        # Without cuDNN the GPU convolves via FFT while scipy picks the
+        # direct method for these sizes. The two agree only to roundoff,
+        # which scales with the magnitude of the inputs, so compare the
+        # normalized error rather than an element-wise absolute tolerance.
+        actual = backend.to_device(actual)
+        desired = backend.to_device(desired)
+        self.assertEqual(actual.shape, desired.shape)
+        self.assertEqual(actual.dtype, desired.dtype)
+        err = np.linalg.norm(actual - desired) / np.linalg.norm(desired)
+        self.assertLess(err, 1e3 * np.finfo(dtype).eps)
+
+    def test_convolve_adjoint_consistency(self):
+        # <convolve(data, filt), output> must equal both
+        # <data, convolve_data_adjoint(output, filt)> and
+        # <filt, convolve_filter_adjoint(output, data)>.
+        np.random.seed(0)
+        devices = [backend.cpu_device]
+        if config.cupy_enabled:
+            devices.append(backend.Device(0))
+
+        for device in devices:
+            xp = device.xp
+            for D in [1, 2, 3]:
+                for mode in ["full", "valid"]:
+                    for strides in [None, [2] * D]:
+                        for dtype in dtypes:
+                            with self.subTest(
+                                D=D,
+                                mode=mode,
+                                strides=strides,
+                                dtype=dtype,
+                                device=device,
+                            ):
+                                c_i, c_o = 2, 3
+                                data_shape = [4, c_i] + [6] * D
+                                filt_shape = [c_o, c_i] + [3] * D
+                                data = util.randn(
+                                    data_shape, dtype=dtype, device=device
+                                )
+                                filt = util.randn(
+                                    filt_shape, dtype=dtype, device=device
+                                )
+                                kwargs = {
+                                    "mode": mode,
+                                    "strides": strides,
+                                    "multi_channel": True,
+                                }
+                                with device:
+                                    output = conv.convolve(
+                                        data, filt, **kwargs
+                                    )
+                                    shape = output.shape
+                                    adj_output = util.randn(
+                                        shape, dtype=dtype, device=device
+                                    )
+                                    lhs = xp.vdot(adj_output, output)
+                                    rhs_data = xp.vdot(
+                                        conv.convolve_data_adjoint(
+                                            adj_output,
+                                            filt,
+                                            data_shape,
+                                            **kwargs,
+                                        ),
+                                        data,
+                                    )
+                                    rhs_filt = xp.vdot(
+                                        conv.convolve_filter_adjoint(
+                                            adj_output,
+                                            data,
+                                            filt_shape,
+                                            **kwargs,
+                                        ),
+                                        filt,
+                                    )
+
+                                atol = (
+                                    1e-3
+                                    if np.dtype(dtype).itemsize <= 8
+                                    else 1e-9
+                                )
+                                npt.assert_allclose(
+                                    backend.to_device(rhs_data),
+                                    backend.to_device(lhs),
+                                    atol=atol,
+                                    rtol=1e-4,
+                                )
+                                npt.assert_allclose(
+                                    backend.to_device(rhs_filt),
+                                    backend.to_device(lhs),
+                                    atol=atol,
+                                    rtol=1e-4,
+                                )

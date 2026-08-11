@@ -20,15 +20,15 @@ if cupy_enabled:
 
 if cupy_enabled:  # pragma: no cover
     try:
-        cudnn_enabled = util.find_spec("cupy.cuda.cudnn") is not None
-        if cudnn_enabled:
+        cupycudnn_enabled = util.find_spec("cupy.cuda.cudnn") is not None
+        if cupycudnn_enabled:
             from cupy import cudnn  # noqa: F401
     except ImportError as e:
         warnings.warn(
             f"Importing cupy.cuda.cudnn failed. "
             f"For more details, see the error stack below:\n{e}"
         )
-        cudnn_enabled = False
+        cupycudnn_enabled = False
     try:
         nccl_enabled = util.find_spec("cupy.cuda.nccl") is not None
         if nccl_enabled:
@@ -39,8 +39,24 @@ if cupy_enabled:  # pragma: no cover
             f"For more details, see the error stack below:\n{e}"
         )
         nccl_enabled = False
+    cudnn_frontend_enabled = False
+    if not cupycudnn_enabled:
+        # CuPy 14 dropped cuDNN; try using cudnn-frontend instead. 
+        if util.find_spec("cudnn") is not None:
+            try:
+                import cudnn as _cudnn_frontend
+
+                cudnn_frontend_enabled = _cudnn_frontend.backend_version() > 0
+            except Exception as e:
+                warnings.warn(
+                    f"cudnn-frontend is installed but no cuDNN backend "
+                    f"CuPy array convolutions will use the FFT implementation, not cuDNN."
+                    f"For more details, see the error stack below:\n{e}"
+                )
+                cudnn_frontend_enabled = False
 else:
-    cudnn_enabled = False
+    cupycudnn_enabled = False
+    cudnn_frontend_enabled = False
     nccl_enabled = False
 
 mpi4py_enabled = util.find_spec("mpi4py") is not None
