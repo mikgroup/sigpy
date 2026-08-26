@@ -149,7 +149,7 @@ def spiral_varden(
         fov (float): imaging field of view (cm).
         res (float): imaging isotropic resolution (cm).
         gts (float): gradient sample time in sec.
-        gslew (float): max slew rate in g/cm/s.
+        gslew (float): max slew rate in g/cm/ms.
         gamp (float): max gradient amplitude in g/cm.
         densamp (float):  duration of full density sampling (# of samples).
         dentrans (float): duration of transition from higher to lower
