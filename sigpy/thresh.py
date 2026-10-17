@@ -148,7 +148,7 @@ def psd_proj(input):
 
     """
     xp = backend.get_array_module(input)
-    w, v = xp.linalg.eig((input + xp.conj(input).T) / 2)
+    w, v = xp.linalg.eigh((input + xp.conj(input).T) / 2)
     w[w < 0] = 0
     return (v * w) @ v.conjugate().T
 
