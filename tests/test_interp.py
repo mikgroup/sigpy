@@ -69,6 +69,54 @@ class TestInterp(unittest.TestCase):
 
     if config.cupy_enabled:
 
+        def test_kaiser_bessel_boundary_cpu_gpu(self):
+            # Rounding in the support bounds can include a point just outside
+            # the kernel. Keep the guard in the precision of the coordinates.
+            for ndim in [1, 2, 3]:
+                for dtype in [
+                    np.float32,
+                    np.float64,
+                    np.complex64,
+                    np.complex128,
+                ]:
+                    with self.subTest(ndim=ndim, dtype=dtype):
+                        coord = np.full((1, ndim), np.nextafter(4.0, -np.inf))
+                        x = np.ones((8,) * ndim, dtype=dtype)
+                        expected = interp.interpolate(
+                            x, coord, kernel="kaiser_bessel", width=4, param=5
+                        )
+                        actual = interp.interpolate(
+                            cp.asarray(x),
+                            cp.asarray(coord),
+                            kernel="kaiser_bessel",
+                            width=4,
+                            param=5,
+                        )
+                        cp.testing.assert_allclose(
+                            actual, cp.asarray(expected), rtol=1e-5
+                        )
+
+                        samples = np.ones(1, dtype=dtype)
+                        expected = interp.gridding(
+                            samples,
+                            coord,
+                            x.shape,
+                            kernel="kaiser_bessel",
+                            width=4,
+                            param=5,
+                        )
+                        actual = interp.gridding(
+                            cp.asarray(samples),
+                            cp.asarray(coord),
+                            x.shape,
+                            kernel="kaiser_bessel",
+                            width=4,
+                            param=5,
+                        )
+                        cp.testing.assert_allclose(
+                            actual, cp.asarray(expected), rtol=1e-5
+                        )
+
         def test_interpolate_cpu_gpu(self):
             for ndim in [1, 2, 3]:
                 for dtype in [np.float32, np.complex64]:

@@ -439,7 +439,7 @@ if config.cupy_enabled:  # pragma: no cover
 
     _kaiser_bessel_kernel_cuda = """
     __device__ inline S kernel(S x, S beta) {
-        if (fabsf(x) > 1)
+        if (fabs(x) > 1)
             return 0;
 
         x = beta * sqrt(1 - x * x);
