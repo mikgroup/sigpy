@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
+import pywt
 
 from sigpy import backend, config, linop, util
 
@@ -388,6 +389,53 @@ class TestLinop(unittest.TestCase):
         self.check_linop_unitary(A)
         self.check_linop_linear(A)
         self.check_linop_pickleable(A)
+
+    def test_Wavelet_biorthogonal_adjoint(self):
+        rng = np.random.RandomState(4)
+        for shape, axes, level in [
+            ([17], None, 1),
+            ([18], None, 2),
+            ([18, 20], None, 2),
+            ([3, 18], (-1,), 2),
+        ]:
+            wave_names = ["bior2.2", "rbio3.1", pywt.Wavelet("bior2.2")]
+            if len(shape) == 2 and axes is None:
+                wave_names.extend([("bior2.2", "db2"), ("db2", "haar")])
+            for wave_name in wave_names:
+                for cls in [linop.Wavelet, linop.InverseWavelet]:
+                    A = cls(shape, axes=axes, wave_name=wave_name, level=level)
+                    # The conjugate transpose of the explicit forward matrix
+                    # is an independent reference for either operator's H.
+                    basis = np.eye(np.prod(A.ishape))
+                    matrix = np.stack(
+                        [A(e.reshape(A.ishape)).ravel() for e in basis], axis=1
+                    )
+                    for dtype in [
+                        np.float32,
+                        np.float64,
+                        np.complex64,
+                        np.complex128,
+                    ]:
+                        with self.subTest(
+                            shape=shape,
+                            axes=axes,
+                            level=level,
+                            wave_name=wave_name,
+                            operator=cls.__name__,
+                            dtype=dtype,
+                        ):
+                            y = rng.normal(size=A.oshape).astype(dtype)
+                            if np.issubdtype(dtype, np.complexfloating):
+                                y += 1j * rng.normal(size=A.oshape).astype(
+                                    dtype
+                                )
+                            npt.assert_allclose(
+                                A.H(y).ravel(),
+                                matrix.conj().T @ y.ravel(),
+                                rtol=2e-6,
+                                atol=2e-6,
+                            )
+                            self.check_linop_pickleable(A.H)
 
     def test_Circshift(self):
         shape = [8]

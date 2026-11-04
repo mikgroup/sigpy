@@ -1,12 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Wavelet transform functions.
-"""
+"""Wavelet transform functions."""
+
 import numpy as np
 import pywt
 
 from sigpy import backend, util
 
 __all__ = ["fwt", "iwt"]
+
+
+def _get_adjoint_wavelet(wave_name):
+    """Reverse analysis/synthesis filters for the transposed transform."""
+    if isinstance(wave_name, (tuple, list)):
+        return tuple(_get_adjoint_wavelet(wave) for wave in wave_name)
+    wave = pywt.Wavelet(wave_name) if isinstance(wave_name, str) else wave_name
+    if wave.orthogonal:
+        return wave_name
+    return pywt.Wavelet(wave.name, filter_bank=wave.inverse_filter_bank)
 
 
 def get_wavelet_shape(shape, wave_name="db4", axes=None, level=None):
