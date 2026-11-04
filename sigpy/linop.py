@@ -4,6 +4,7 @@ and provides commonly used linear operators, including signal transforms
 such as FFT, NUFFT, and wavelet, and array manipulation operators,
 such as reshape, transpose, and resize.
 """
+
 import numpy as np
 
 from sigpy import backend, block, conv, fourier, interp, util, wavelet
@@ -1293,6 +1294,9 @@ class Wavelet(Linop):
     Currently only has CPU implementation. GPU inputs will be copied to CPU,
     and back to compute on CPU.
 
+    For biorthogonal wavelets, the adjoint differs from the inverse. Use
+    :class:`InverseWavelet` for inverse reconstruction.
+
     Args:
         ishape (tuple of int): Input shape.
         axes (None or tuple of int): Axes to perform wavelet transform.
@@ -1324,7 +1328,7 @@ class Wavelet(Linop):
         return InverseWavelet(
             self.ishape,
             axes=self.axes,
-            wave_name=self.wave_name,
+            wave_name=wavelet._get_adjoint_wavelet(self.wave_name),
             level=self.level,
         )
 
@@ -1334,6 +1338,8 @@ class InverseWavelet(Linop):
 
     Currently only has CPU implementation. GPU inputs will be copied to CPU,
     and back to compute on CPU.
+
+    For biorthogonal wavelets, the adjoint differs from the forward transform.
 
     Args:
         oshape (tuple of int): Output shape.
@@ -1367,7 +1373,7 @@ class InverseWavelet(Linop):
         return Wavelet(
             self.oshape,
             axes=self.axes,
-            wave_name=self.wave_name,
+            wave_name=wavelet._get_adjoint_wavelet(self.wave_name),
             level=self.level,
         )
 
